@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:get/get.dart';
 import 'package:multi_select_flutter/chip_display/multi_select_chip_display.dart';
@@ -69,6 +72,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       TextEditingController(text: "0");
 
   String? parentCategory;
+  String? productId;
 
   GetStoreModelData? storeSelected;
   GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -118,6 +122,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         accessToken: accessToken ?? "",
         taxInclude: 'Y',
         categoryId: parentCategory ?? "",
+        productId: productId.toString(),
         retailPrice: retailPriceController.text,
       );
 
@@ -129,20 +134,20 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       retailPriceWithOutTaxController.text =
           AmountHelper.formatAmount(result.retailPrice)
               .toString(); // Example value for including tax
-      retailPriceController.text =
-          AmountHelper.formatAmount(result.retailPrice).toString();
+      // retailPriceController.text = result.retailPrice.toString();
       double wholesalePrice = double.parse(wholeSalePriceController.text);
       wholesalePriceWithOutTaxController.text =
           AmountHelper.formatAmount((wholesalePrice - result.taxAmount))
               .toString();
-      wholeSalePriceController.text =
-          AmountHelper.formatAmount((wholesalePrice - result.taxAmount))
-              .toString();
+      // wholeSalePriceController.text =
+      //     AmountHelper.formatAmount((wholesalePrice - result.taxAmount))
+      // .toString();
     } else if (taxOption == 'excludingTax') {
       final result = await getCategoryTax(
         accessToken: accessToken ?? "",
         taxInclude: 'N',
         categoryId: parentCategory ?? "",
+        productId: productId.toString(),
         retailPrice: retailPriceController.text,
       );
 
@@ -154,8 +159,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       retailPriceWithOutTaxController.text =
           AmountHelper.formatAmount(result.retailPrice)
               .toString(); // Example value for including tax
-      retailPriceController.text =
-          AmountHelper.formatAmount(result.retailPrice).toString();
+      retailPriceController.text = result.retailPrice.toString();
       double wholesalePrice = double.parse(wholeSalePriceController.text);
       wholesalePriceWithOutTaxController.text =
           AmountHelper.formatAmount((wholesalePrice + result.taxAmount))
@@ -163,6 +167,40 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       wholeSalePriceController.text =
           AmountHelper.formatAmount((wholesalePrice + result.taxAmount))
               .toString();
+    }
+  }
+
+  Future<void> fetchStockInfo(BuildContext context, String productId) async {
+    final String apiUrl =
+        'https://epos.enke.in/api/product/stock-info?product_id=$productId';
+    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+
+    try {
+      final response = await http.get(Uri.parse(apiUrl), headers: {
+        // 'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      });
+
+      if (response.statusCode == 200) {
+        // If the server returns a 200 OK response, parse the JSON
+        final Map<String, dynamic> data = json.decode(response.body);
+
+        // Print the fetched data
+        print('Stock Info:');
+        print(json.encode(data)); // This will print the entire JSON response
+
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(content: Text('Stock info fetched successfully')),
+        // );
+      } else {
+        // If the server did not return a 200 OK response, throw an exception
+        throw Exception('Failed to load stock info');
+      }
+    } catch (e) {
+      print('Error fetching stock info: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching stock info')),
+      );
     }
   }
 
@@ -374,14 +412,20 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                           selectedCategory
                                                                   .categoryId ??
                                                               0);
-
+                                                  await gridSelectionProvider
+                                                      .listAllProducts(
+                                                          filterCategory:
+                                                              selectedCategory
+                                                                  .categoryId
+                                                                  .toString());
                                                   setState(() {
                                                     parentCategory =
                                                         "${selectedCategory.categoryId ?? 0}";
                                                     debugPrint(parentCategory);
+
                                                     productList =
                                                         gridSelectionProvider
-                                                            .selectedProductsUpOnCategory;
+                                                            .getCategoryProductList;
                                                   });
 
                                                   // debugPrint(
@@ -468,6 +512,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                       "${value?.productProps.toString()}");
                                                   setState(() {
                                                     selectedValue = value;
+                                                    productId = value!.productId
+                                                        .toString();
                                                   });
                                                   idController.text = value ==
                                                           null
@@ -500,6 +546,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                           null
                                                       ? ""
                                                       : "${price == null ? 0 : price.price ?? 0}";
+
+                                                  fetchStockInfo(
+                                                      context,
+                                                      value!.productId
+                                                          .toString());
                                                 },
                                                 buttonStyleData:
                                                     ButtonStyleData(
@@ -1030,7 +1081,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                   ),
                                   if (selectedValue != null)
                                     SizedBox(
-                                      height: size.height * 0.35,
+                                      height: size.height * 0.18,
                                       child: ListView.builder(
                                         itemCount:
                                             selectedValue!.productProps!.length,

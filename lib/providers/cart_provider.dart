@@ -36,6 +36,7 @@ class CartProvider with ChangeNotifier {
 
   Future<void> fetchCartDataFromApi(
       {required int customerId, required String accessToken}) async {
+    debugPrint("fetching cart of $customerId");
     // Fetch cart data from your API and add it to the stream
     List<ListCartModelData> cartData =
         await fetchCartData(customerId: customerId, token: accessToken);
@@ -282,5 +283,46 @@ class CartProvider with ChangeNotifier {
         return false;
       }
     } finally {}
+  }
+
+  Future<dynamic> applyCoupon({
+    required int totalAmount,
+    required String couponCode,
+    required String accessToken,
+  }) async {
+    debugPrint("********************APPLY COUPON API******************** ");
+
+    final url = Uri.parse(APPUrl.applyCoupon).replace(queryParameters: {
+      'total_amount': totalAmount.toString(),
+      'coupon_code': couponCode,
+    });
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        // Here you can parse the response and update the UI accordingly
+        // For example, you might want to update the price summary with the new discounted price
+        // updateSummary(PriceSummary.fromJson(jsonData['price_summary']));
+        return jsonData;
+      } else {
+        // Handle error cases
+        debugPrint('Failed to apply coupon: ${response.reasonPhrase}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error applying coupon: $e');
+      return null;
+    }
   }
 }

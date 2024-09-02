@@ -55,7 +55,7 @@ class SideBarController extends GetxController {
   }
 
   var screens = const [
-    CategoryList(), //0
+    HomeNew(), //0
     DashboardScreen(), //1
     SalesScreen(), //2
     CartScreen(), //3
@@ -100,6 +100,6 @@ class SideBarController extends GetxController {
     SupplierSalesReportScreen(), //42
     LocationManagementScreen(), //43
     LocationManagementScreen(), //44
-    HomeNew(), //45
+    CategoryList(), //45 Home Old
   ];
 }

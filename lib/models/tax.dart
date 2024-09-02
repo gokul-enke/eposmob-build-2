@@ -27,11 +27,13 @@ Future<TaxCalculationResult> getCategoryTax({
   required String accessToken,
   required String taxInclude,
   required String categoryId,
+  required String productId,
   required String retailPrice,
 }) async {
   final queryParameters = <String, String>{
     'tax_include': taxInclude,
     'category_id': categoryId.toString(),
+    'product_id': productId.toString(),
     'retail_price': retailPrice.toString(),
   };
 

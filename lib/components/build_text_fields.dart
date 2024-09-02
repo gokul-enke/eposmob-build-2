@@ -316,12 +316,12 @@ class BuildTextFieldColumn3 extends StatelessWidget {
                           ),
                         ),
                         controller: controller,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'This field is required';
-                          }
-                          return null;
-                        },
+                        // validator: (value) {
+                        //   if (value == null || value.isEmpty) {
+                        //     return 'This field is required';
+                        //   }
+                        //   return null;
+                        // },
                         style: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s12,

@@ -177,9 +177,9 @@ class SideMenu extends StatelessWidget {
           Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.homeIcon,
-              title: 'Home New',
+              title: 'Home Old',
               onTap: () {
-                debugPrint(" 'Home New',${sideBarController.index.value}");
+                debugPrint(" 'Home Old',${sideBarController.index.value}");
                 sideBarController.index.value = 45;
               },
               selected: sideBarController.index.value == 45,
@@ -190,9 +190,9 @@ class SideMenu extends StatelessWidget {
               iconPath: ImageAssets.homeIcon,
               title: 'Kiosk',
               onTap: () {
-                Get.to(() => const KioskScreen());
+                Get.to(() => KioskScreen());
               },
-              selected: sideBarController.index.value == 45,
+              selected: sideBarController.index.value == 900,
             ),
           ),
           Obx(

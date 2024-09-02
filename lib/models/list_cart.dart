@@ -44,6 +44,7 @@ class ListCartModelData {
   final int? itemCount;
   final int? storeId;
   final List<ListCartModelDataCartItem>? cartItems;
+  final List<String>? taxNames;
   final PriceSummary? priceSummary;
 
   ListCartModelData({
@@ -53,6 +54,7 @@ class ListCartModelData {
     this.itemCount,
     this.storeId,
     this.cartItems,
+    this.taxNames,
     this.priceSummary,
   });
 
@@ -67,6 +69,9 @@ class ListCartModelData {
             ? []
             : List<ListCartModelDataCartItem>.from(json["cart_items"]!
                 .map((x) => ListCartModelDataCartItem.fromJson(x))),
+        taxNames: json["tax_names"] == null
+            ? []
+            : List<String>.from(json["tax_names"]!.map((x) => x)),
         priceSummary: json["price_summary"] == null
             ? null
             : PriceSummary.fromJson(json["price_summary"]),
@@ -81,6 +86,8 @@ class ListCartModelData {
         "cart_items": cartItems == null
             ? []
             : List<dynamic>.from(cartItems!.map((x) => x.toJson())),
+        "tax_names":
+            taxNames == null ? [] : List<dynamic>.from(taxNames!.map((x) => x)),
         "price_summary": priceSummary?.toJson(),
       };
 }
@@ -95,6 +102,8 @@ class ListCartModelDataCartItem {
   final String? productUnit;
   final int? unitPrice;
   final String? totalPrice;
+  final int? taxRate;
+  final int? taxAmount;
   final String? currency;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -110,6 +119,8 @@ class ListCartModelDataCartItem {
     this.productUnit,
     this.unitPrice,
     this.totalPrice,
+    this.taxRate,
+    this.taxAmount,
     this.currency,
     this.createdAt,
     this.updatedAt,
@@ -129,6 +140,8 @@ class ListCartModelDataCartItem {
         productUnit: json["product_unit"],
         unitPrice: json["unit_price"],
         totalPrice: json["total_price"],
+        taxRate: json["tax_rate"],
+        taxAmount: json["tax_amount"],
         currency: json["currency"],
         createdAt: json["created_at"] == null
             ? null
@@ -150,6 +163,8 @@ class ListCartModelDataCartItem {
         "product_unit": productUnit,
         "unit_price": unitPrice,
         "total_price": totalPrice,
+        "tax_rate": taxRate,
+        "tax_amount": taxAmount,
         "currency": currency,
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),

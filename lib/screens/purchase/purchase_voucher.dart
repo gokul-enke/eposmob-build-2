@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
+import 'package:pos_machine/models/get_store.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
@@ -26,6 +28,10 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
   bool initLoading = false;
   List<VoucherDetail>? voucherDetailsList = [];
   final TextEditingController searchTextController = TextEditingController();
+  final TextEditingController storeController = TextEditingController();
+  final TextEditingController dateController = TextEditingController();
+  DateTime? selectedDate;
+  GetStoreModelData? storeSelected;
 
   @override
   void initState() {
@@ -55,6 +61,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
     PurchaseProvider purchaseProvider =
         Provider.of<PurchaseProvider>(context, listen: false);
     SideBarController sideBarController = Get.put(SideBarController());
+    List<GetStoreModelData>? storeList = purchaseProvider.getStoreList;
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
@@ -87,6 +94,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                   // scrollDirection: Axis.horizontal,
                   // physics: const BouncingScrollPhysics(),
                   children: [
+                    // Store
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0),
                       child: Column(
@@ -106,37 +114,62 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                           ),
                           SizedBox(
                             height: 45,
-                            width: 120,
-                            child: TextFormField(
-                              onChanged: (value) {
-                                setState(() {
-                                  // Update state if needed
-                                });
-                              },
-                              cursorColor: ColorManager.kPrimaryColor,
-                              cursorHeight: 13,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s10,
-                                0.18,
-                                ColorManager.textColor,
-                              ),
-                              // controller: purchaserNameController,
-                              decoration: decoration.copyWith(
-                                hintText: "Store Name",
-                                hintStyle: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s10,
-                                  0.18,
-                                  ColorManager.textColor,
+                            width: 150,
+                            child: BuildBoxShadowContainer(
+                              circleRadius: 7,
+                              alignment: Alignment.centerLeft,
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 5, vertical: 0),
+                              padding: const EdgeInsets.only(left: 15),
+                              height: size.height * .07,
+                              width: size.width / 4.5,
+                              child: DropdownButtonFormField<GetStoreModelData>(
+                                decoration: const InputDecoration(
+                                  border:
+                                      InputBorder.none, // Remove the underline
                                 ),
-                                prefixIconColor: Colors.black,
+                                value: storeSelected,
+                                hint: Text(
+                                  'Select Store',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s12,
+                                    0.27,
+                                    ColorManager.textColor.withOpacity(.5),
+                                  ),
+                                ),
+                                items:
+                                    storeList!.map((GetStoreModelData store) {
+                                  return DropdownMenuItem<GetStoreModelData>(
+                                      value: store,
+                                      child: Text(
+                                        store.name ?? '',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s12,
+                                          0.27,
+                                          ColorManager.textColor
+                                              .withOpacity(.5),
+                                        ),
+                                      ));
+                                }).toList(),
+                                onChanged: (GetStoreModelData? storeModelData) {
+                                  if (storeModelData != null) {
+                                    // Update the selected category in the provider
+                                    setState(() {
+                                      storeSelected = storeModelData;
+                                      storeController.text =
+                                          "${storeModelData.id ?? 1}";
+                                    });
+                                  }
+                                },
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
+                    // Date
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0),
                       child: Column(
@@ -154,39 +187,29 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(
-                            height: 45,
-                            width: 120,
-                            child: TextFormField(
-                              onChanged: (value) {
-                                setState(() {
-                                  // Update state if needed
-                                });
-                              },
-                              cursorColor: ColorManager.kPrimaryColor,
-                              cursorHeight: 13,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s10,
-                                0.18,
-                                ColorManager.textColor,
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: ColorManager.grey.withOpacity(0.7),
+                                width: 0.4, // You can adjust the border width
                               ),
-                              // controller: purchaserNameController,
-                              decoration: decoration.copyWith(
-                                hintText: "Date",
-                                hintStyle: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s10,
-                                  0.18,
-                                  ColorManager.textColor,
-                                ),
-                                prefixIconColor: Colors.black,
+                              borderRadius: BorderRadius.circular(
+                                  6), // Optional: for rounded corners
+                            ),
+                            height: 45,
+                            width: 150,
+                            child: Center(
+                              child: CalendarPickerTableCell(
+                                onDateSelected: (DateTime date) {
+                                  selectedDate = date;
+                                },
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
+
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0),
                       child: Column(

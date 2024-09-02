@@ -377,7 +377,7 @@ class _EditProductImageOrVideoScreenState
                                   Padding(
                                     padding: const EdgeInsets.only(left: 20.0),
                                     child: CustomRoundButton(
-                                      title: "Select Image Animated",
+                                      title: "Select Image",
                                       fct: () async {
                                         showDialogFunctionForProductDetailsAnimated(
                                             context, 0, imageFiles ?? [], size);

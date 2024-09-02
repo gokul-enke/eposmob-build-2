@@ -116,6 +116,13 @@ class _SalesScreenState extends State<SalesScreen> {
   void resetSearch() {
     setState(() {
       orderNumberController.clear();
+      customerNameController.clear();
+      amountController.clear();
+      emailController.clear();
+      phoneController.clear();
+      storeController.clear();
+      selectedDate = null;
+      dateController.clear();
     });
     loadInitData();
   }
@@ -401,7 +408,15 @@ class _SalesScreenState extends State<SalesScreen> {
                           ],
                         ),
                       ),
-
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 90,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    children: [
                       // Email
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0),

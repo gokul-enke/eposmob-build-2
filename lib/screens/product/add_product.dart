@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
+import 'package:pos_machine/components/build_title.dart';
+import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_store.dart';
-import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/models/get_suppliers.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:provider/provider.dart';
@@ -30,6 +32,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final TextEditingController storeController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
   GetStoreModelData? storeSelected;
+  GetSuppliersModelData? supplier;
+  final TextEditingController supplierIdController = TextEditingController();
 
   // Variables for selected filters
   String? selectedCategoryId;
@@ -37,6 +41,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
   String? selectedSupplierId;
   int page = 1;
   bool initLoading = false;
+
+  String? selectedProperty;
+  final List<String> propertyList = [
+    'MANUFACTURER',
+    'COLOR',
+    'SHIRT_SIZE',
+    'SHOE_SIZE',
+  ];
 
   @override
   void initState() {
@@ -49,8 +61,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
       setState(() {
         initLoading = true;
       });
-      // String? accessToken =
-      //     Provider.of<AuthModel>(context, listen: false).token;
 
       GridSelectionProvider gridSelectionProvider =
           Provider.of<GridSelectionProvider>(context, listen: false);
@@ -84,9 +94,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
         filterCategory: selectedCategoryId,
         filterPrice: amountController.text,
         filterCreatedBy: createdByController.text,
-        filterProperties: selectedProperties,
+        filterProperties: selectedProperty,
         filterStore: storeController.text,
-        filterSupplier: selectedSupplierId,
+        // filterSupplier: supplierIdController.text,
         page: page,
       );
     } catch (error) {
@@ -106,6 +116,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
       selectedCategoryId = null;
       selectedProperties = null;
       selectedSupplierId = null;
+      selectedProperty = null;
+      supplierIdController.clear();
       page = 1;
     });
     loadInitData();
@@ -124,6 +136,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
     PurchaseProvider purchaseProvider =
         Provider.of<PurchaseProvider>(context, listen: false);
     List<GetStoreModelData>? storeList = purchaseProvider.getStoreList;
+    List<GetSuppliersModelData>? supplierList =
+        purchaseProvider.getSupplierList;
+
+    List<Category>? categoryList = categoryProvider.category;
 
     return SafeArea(
       child: Container(
@@ -281,30 +297,72 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           ),
                           SizedBox(
                             height: 45,
-                            width: 120,
-                            child: TextFormField(
-                              onChanged: (value) {
-                                setState(() {
-                                  // Update state if needed
-                                });
-                              },
-                              cursorColor: ColorManager.kPrimaryColor,
-                              cursorHeight: 13,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s10,
-                                0.18,
-                                ColorManager.textColor,
+                            width: 180,
+                            child: BuildBoxShadowContainer(
+                              circleRadius: 7,
+                              alignment: Alignment.centerLeft,
+                              margin: const EdgeInsets.only(
+                                left: 15,
                               ),
-                              decoration: decoration.copyWith(
-                                hintText: "Category",
-                                hintStyle: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s10,
-                                  0.18,
-                                  ColorManager.textColor,
+                              padding: const EdgeInsets.only(left: 15),
+                              height: size.height * .07,
+                              width: size.width / 3,
+                              child: DropdownButtonFormField<Category>(
+                                decoration: const InputDecoration(
+                                  border:
+                                      InputBorder.none, // Remove the underline
                                 ),
-                                prefixIconColor: Colors.black,
+                                value: categoryProvider.selectedCategoryIndex >=
+                                        0
+                                    ? categoryList![
+                                        categoryProvider.selectedCategoryIndex]
+                                    : null,
+                                hint: Text(
+                                  'Select Category',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s12,
+                                    0.27,
+                                    ColorManager.textColor.withOpacity(.5),
+                                  ),
+                                ),
+                                items: categoryList!
+                                    .map((Category category) {
+                                      return DropdownMenuItem<Category>(
+                                          value: category,
+                                          child: category.categoryName == "ALL"
+                                              ? Text(
+                                                  ' Please Select',
+                                                  style: buildCustomStyle(
+                                                    FontWeightManager.medium,
+                                                    FontSize.s12,
+                                                    0.27,
+                                                    ColorManager.textColor
+                                                        .withOpacity(.5),
+                                                  ),
+                                                )
+                                              : Text(
+                                                  category.categoryName ?? '',
+                                                  style: buildCustomStyle(
+                                                    FontWeightManager.medium,
+                                                    FontSize.s12,
+                                                    0.27,
+                                                    ColorManager.textColor
+                                                        .withOpacity(.5),
+                                                  ),
+                                                ));
+                                    })
+                                    .toSet()
+                                    .toList(),
+                                onChanged: (Category? selectedCategory) async {
+                                  if (selectedCategory != null) {
+                                    setState(() {
+                                      selectedCategoryId = selectedCategory
+                                          .categoryId
+                                          .toString();
+                                    });
+                                  }
+                                },
                               ),
                             ),
                           ),
@@ -363,8 +421,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         ],
                       ),
                     ),
-
-                    // Filter Properties
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 90,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0),
                       child: Column(
@@ -373,41 +438,65 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              "Properties",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
+                              "Product Properties",
+                              style: TextStyle(
+                                fontWeight: FontWeight.normal,
+                                fontSize: 14,
+                                color: Colors.black.withOpacity(0.6),
                               ),
                             ),
                           ),
-                          SizedBox(
+                          Container(
                             height: 45,
-                            width: 120,
-                            child: TextFormField(
-                              onChanged: (value) {
-                                setState(() {
-                                  // Update state if needed
-                                });
-                              },
-                              cursorColor: ColorManager.kPrimaryColor,
-                              cursorHeight: 13,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s10,
-                                0.18,
-                                ColorManager.textColor,
-                              ),
-                              decoration: decoration.copyWith(
-                                hintText: "Properties",
-                                hintStyle: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s10,
-                                  0.18,
-                                  ColorManager.textColor,
+                            width: 150,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(7),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.2),
+                                  spreadRadius: 1,
+                                  blurRadius: 2,
+                                  offset: const Offset(0, 1),
                                 ),
-                                prefixIconColor: Colors.black,
+                              ],
+                            ),
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: selectedProperty,
+                                  hint: Text(
+                                    'Select Property',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s12,
+                                      0.27,
+                                      ColorManager.textColor.withOpacity(.5),
+                                    ),
+                                  ),
+                                  items: propertyList.map((String property) {
+                                    return DropdownMenuItem<String>(
+                                      value: property,
+                                      child: Text(
+                                        property,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                          fontSize: 12,
+                                          color: Colors.black.withOpacity(0.5),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? newValue) {
+                                    setState(() {
+                                      selectedProperty = newValue;
+                                    });
+                                  },
+                                  isExpanded: true,
+                                  icon: const Icon(Icons.arrow_drop_down),
+                                ),
                               ),
                             ),
                           ),
@@ -511,30 +600,62 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           ),
                           SizedBox(
                             height: 45,
-                            width: 120,
-                            child: TextFormField(
-                              onChanged: (value) {
-                                setState(() {
-                                  // Update state if needed
-                                });
-                              },
-                              cursorColor: ColorManager.kPrimaryColor,
-                              cursorHeight: 13,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s10,
-                                0.18,
-                                ColorManager.textColor,
-                              ),
-                              decoration: decoration.copyWith(
-                                hintText: "Supplier",
-                                hintStyle: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s10,
-                                  0.18,
-                                  ColorManager.textColor,
+                            width: 150,
+                            child: BuildBoxShadowContainer(
+                              circleRadius: 7,
+                              alignment: Alignment.centerLeft,
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 5, vertical: 0),
+                              padding: const EdgeInsets.only(left: 15),
+                              height: size.height * .07,
+                              width: size.width / 4.5,
+                              child: DropdownButtonFormField<
+                                  GetSuppliersModelData>(
+                                decoration: const InputDecoration(
+                                  border:
+                                      InputBorder.none, // Remove the underline
                                 ),
-                                prefixIconColor: Colors.black,
+                                value: supplier,
+                                hint: Text(
+                                  'Select Supplier',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s12,
+                                    0.27,
+                                    ColorManager.textColor.withOpacity(.5),
+                                  ),
+                                ),
+                                items: supplierList!
+                                    .map((GetSuppliersModelData supplier) {
+                                  return DropdownMenuItem<
+                                          GetSuppliersModelData>(
+                                      value: supplier,
+                                      child: Text(
+                                        supplier.name ?? '',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s12,
+                                          0.27,
+                                          ColorManager.textColor
+                                              .withOpacity(.5),
+                                        ),
+                                      ));
+                                }).toList(),
+                                onChanged: (GetSuppliersModelData?
+                                    suppliersModelData) {
+                                  debugPrint(
+                                      "Supplier Id: ${suppliersModelData!.id}");
+
+                                  if (suppliersModelData != null) {
+                                    debugPrint(
+                                        "Supplier Id: ${suppliersModelData.id}");
+                                    setState(() {
+                                      supplier = suppliersModelData;
+                                      supplierIdController.text =
+                                          "${suppliersModelData.id ?? 1}";
+                                    });
+                                  }
+                                },
                               ),
                             ),
                           ),

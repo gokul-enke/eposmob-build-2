@@ -177,7 +177,8 @@ class GridSelectionProvider extends ChangeNotifier {
     // Build query parameters
     final queryParams = <String, String>{
       if (filterName != null) 'filter_name': filterName,
-      if (filterCategory != null) 'filter_category': filterCategory,
+      if (filterCategory != null && filterCategory != "0")
+        'filter_category': filterCategory,
       if (filterPrice != null) 'filter_price': filterPrice,
       if (filterCreatedBy != null) 'filter_created_by': filterCreatedBy,
       if (filterProperties != null) 'filter_properties': filterProperties,

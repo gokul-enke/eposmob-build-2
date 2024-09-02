@@ -102,4 +102,5 @@ class APPUrl {
   static const String salesReport = '$baseURL/api/reports/sales-report';
   static const String supplierSalesReport =
       '$baseURL/api/reports/supplier-sales-report';
+  static const String applyCoupon = '$baseURL/api/discount/apply-coupon';
 }
