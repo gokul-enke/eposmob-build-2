@@ -37,7 +37,7 @@ class TaxDetailsDialog extends StatelessWidget {
               debugPrint(
                   "cartItems Tax ${cartItems[index].taxAmount * cartItems[index].quantity}");
 
-              double taxRate =
+              int taxRate =
                   cartItems[index].taxAmount * cartItems[index].quantity;
 
               return Text("$taxName: ${AmountHelper.formatAmount(taxRate)}");

@@ -171,1063 +171,1081 @@ class _OrderListNewState extends State<OrderListNew> {
           color: Colors.white),
       child: Padding(
         padding: const EdgeInsets.only(left: 15.0, right: 15),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'New Order',
-                  style: buildCustomStyle(FontWeightManager.semiBold,
-                      FontSize.s20, 0.30, ColorManager.textColor),
-                ),
-                // Row(
-                //   children: [
-                //     BuildBoxShadowContainer(
-                //       height: 29,
-                //       width: 30,
-                //       circleRadius: 7,
-                //       child: WebsafeSvg.asset(
-                //         ImageAssets.deleteIcon,
-                //         fit: BoxFit.none,
-                //       ),
-                //     ),
-                //     const SizedBox(width: 15),
-                //     WebsafeSvg.asset(
-                //       ImageAssets.verticalDotsIcon,
-                //       fit: BoxFit.none,
-                //     ),
-                //   ],
-                // ),
-              ],
-            ),
-            Text(
-              'Order No #00000',
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s12,
-                  0.18, ColorManager.textColor),
-            ),
-            const Divider(thickness: 1),
-            // Text(
-            //   'Enter mobile number',
-            //   style: buildCustomStyle(FontWeightManager.regular,
-            //       FontSize.s10, 0.16, ColorManager.textColor),
-            // ),
-            const SizedBox(height: 5),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    children: [
-                      // BuildBoxShadowContainer(
-                      //   padding: const EdgeInsets.all(10),
-                      //   height: 30,
-                      //   circleRadius: 5,
-                      //   alignment: Alignment.center,
-                      //   child: TextField(
-                      //     textAlign: TextAlign.start,
-                      //     style: buildCustomStyle(
-                      //         FontWeight.normal, 8, 0.16, Colors.black),
-                      //     controller: mobileNumberTextController,
-                      //     cursorHeight: 10,
-                      //     cursorWidth: 1,
-                      //     cursorColor: Colors.blue,
-                      //     decoration: const InputDecoration(
-                      //         border: InputBorder.none),
-                      //   ),
-                      // ),
-                      // const SizedBox(height: 20),
-                      // customerList!.isNotEmpty
-                      //     ?
-                      BuildBoxShadowContainer(
-                        circleRadius: 7,
-                        alignment: Alignment.centerLeft,
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 0, vertical: 0),
-                        padding: const EdgeInsets.only(left: 15),
-                        height: MediaQuery.of(context).size.height * .07,
-                        width: MediaQuery.of(context).size.width / 3,
-                        child: Autocomplete<CustomerListModelData>(
-                          optionsBuilder: (mobileNumberTextController) async {
-                            debugPrint(mobileNumberTextController.text);
-                            if (mobileNumberTextController.text.isEmpty) {
-                              return const Iterable<
-                                  CustomerListModelData>.empty();
-                            }
-                            if (mobileNumberTextController.text.length < 3) {
-                              debugPrint("called");
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'New Order',
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s20, 0.30, ColorManager.textColor),
+                  ),
+                  // Row(
+                  //   children: [
+                  //     BuildBoxShadowContainer(
+                  //       height: 29,
+                  //       width: 30,
+                  //       circleRadius: 7,
+                  //       child: WebsafeSvg.asset(
+                  //         ImageAssets.deleteIcon,
+                  //         fit: BoxFit.none,
+                  //       ),
+                  //     ),
+                  //     const SizedBox(width: 15),
+                  //     WebsafeSvg.asset(
+                  //       ImageAssets.verticalDotsIcon,
+                  //       fit: BoxFit.none,
+                  //     ),
+                  //   ],
+                  // ),
+                ],
+              ),
+              Text(
+                'Order No #00000',
+                style: buildCustomStyle(FontWeightManager.regular, FontSize.s12,
+                    0.18, ColorManager.textColor),
+              ),
+              const Divider(thickness: 1),
+              // Text(
+              //   'Enter mobile number',
+              //   style: buildCustomStyle(FontWeightManager.regular,
+              //       FontSize.s10, 0.16, ColorManager.textColor),
+              // ),
+              const SizedBox(height: 5),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      children: [
+                        // BuildBoxShadowContainer(
+                        //   padding: const EdgeInsets.all(10),
+                        //   height: 30,
+                        //   circleRadius: 5,
+                        //   alignment: Alignment.center,
+                        //   child: TextField(
+                        //     textAlign: TextAlign.start,
+                        //     style: buildCustomStyle(
+                        //         FontWeight.normal, 8, 0.16, Colors.black),
+                        //     controller: mobileNumberTextController,
+                        //     cursorHeight: 10,
+                        //     cursorWidth: 1,
+                        //     cursorColor: Colors.blue,
+                        //     decoration: const InputDecoration(
+                        //         border: InputBorder.none),
+                        //   ),
+                        // ),
+                        // const SizedBox(height: 20),
+                        // customerList!.isNotEmpty
+                        //     ?
+                        BuildBoxShadowContainer(
+                          circleRadius: 7,
+                          alignment: Alignment.centerLeft,
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 0, vertical: 0),
+                          padding: const EdgeInsets.only(left: 15),
+                          height: MediaQuery.of(context).size.height * .07,
+                          width: MediaQuery.of(context).size.width / 3,
+                          child: Autocomplete<CustomerListModelData>(
+                            optionsBuilder: (mobileNumberTextController) async {
+                              debugPrint(mobileNumberTextController.text);
+                              if (mobileNumberTextController.text.isEmpty) {
+                                return const Iterable<
+                                    CustomerListModelData>.empty();
+                              }
+                              if (mobileNumberTextController.text.length < 3) {
+                                debugPrint("called");
+                                String? accessToken = Provider.of<AuthModel>(
+                                        context,
+                                        listen: false)
+                                    .token;
+                                debugPrint(
+                                    "accessToken From AuthModel $accessToken");
+
+                                debugPrint(mobileNumberTextController.text);
+
+                                try {
+                                  final response = await CustomerProvider()
+                                      .findCustomerByPhone(
+                                          accessToken ?? "",
+                                          mobileNumberTextController.text,
+                                          context);
+
+                                  if (response["status"] == "success") {
+                                    CustomerListModel customerListModel =
+                                        CustomerListModel.fromJson(response);
+
+                                    List<CustomerListModelData>?
+                                        filterdCustomerList =
+                                        customerListModel.data;
+
+                                    return filterdCustomerList!;
+                                    // setState(() {
+                                    // });
+                                  } else {
+                                    // Handle error
+                                    debugPrint(
+                                        'Error in response: ${response["message"]}');
+                                  }
+                                } catch (error) {
+                                  // Handle network or parsing error
+                                  debugPrint('Exception caught: $error');
+                                }
+                              }
+                              return customerList!;
+                              // !.where(
+                              //     (CustomerListModelData customer) {
+                              //   return customer.name!
+                              //       .toLowerCase()
+                              //       .contains(textEditingValue.text
+                              //           .toLowerCase());
+                              // });
+                            },
+                            displayStringForOption:
+                                (CustomerListModelData customer) =>
+                                    customer.name ?? '',
+                            onSelected: (CustomerListModelData selection) {
                               String? accessToken =
                                   Provider.of<AuthModel>(context, listen: false)
                                       .token;
                               debugPrint(
                                   "accessToken From AuthModel $accessToken");
-
-                              debugPrint(mobileNumberTextController.text);
-
-                              try {
-                                final response = await CustomerProvider()
-                                    .findCustomerByPhone(
-                                        accessToken ?? "",
-                                        mobileNumberTextController.text,
-                                        context);
-
-                                if (response["status"] == "success") {
-                                  CustomerListModel customerListModel =
-                                      CustomerListModel.fromJson(response);
-
-                                  List<CustomerListModelData>?
-                                      filterdCustomerList =
-                                      customerListModel.data;
-
-                                  return filterdCustomerList!;
-                                  // setState(() {
-                                  // });
-                                } else {
-                                  // Handle error
-                                  debugPrint(
-                                      'Error in response: ${response["message"]}');
-                                }
-                              } catch (error) {
-                                // Handle network or parsing error
-                                debugPrint('Exception caught: $error');
-                              }
-                            }
-                            return customerList!;
-                            // !.where(
-                            //     (CustomerListModelData customer) {
-                            //   return customer.name!
-                            //       .toLowerCase()
-                            //       .contains(textEditingValue.text
-                            //           .toLowerCase());
-                            // });
-                          },
-                          displayStringForOption:
-                              (CustomerListModelData customer) =>
-                                  customer.name ?? '',
-                          onSelected: (CustomerListModelData selection) {
-                            String? accessToken =
-                                Provider.of<AuthModel>(context, listen: false)
-                                    .token;
-                            debugPrint(
-                                "accessToken From AuthModel $accessToken");
-                            Provider.of<CartProvider>(context, listen: false)
-                                .fetchCartDataFromApi(
-                                    customerId: selection.id ?? 0,
-                                    accessToken: accessToken ?? '');
-                            setState(() {
-                              // mobileNumberTextController.text =
-                              //     selection.phone!;
-                              mobileNumberText = selection.phone!;
-                              selectedCustomer = selection;
-                            });
-                          },
-                          fieldViewBuilder: (BuildContext context,
-                              mobileNumberTextController,
-                              FocusNode focusNode,
-                              VoidCallback onFieldSubmitted) {
-                            return TextField(
-                              controller: mobileNumberTextController,
-                              focusNode: focusNode,
-                              decoration: InputDecoration(
-                                hintText: 'Enter mobile number',
-                                hintStyle: buildCustomStyle(
+                              Provider.of<CartProvider>(context, listen: false)
+                                  .fetchCartDataFromApi(
+                                      customerId: selection.id ?? 0,
+                                      accessToken: accessToken ?? '');
+                              setState(() {
+                                // mobileNumberTextController.text =
+                                //     selection.phone!;
+                                mobileNumberText = selection.phone!;
+                                selectedCustomer = selection;
+                              });
+                            },
+                            fieldViewBuilder: (BuildContext context,
+                                mobileNumberTextController,
+                                FocusNode focusNode,
+                                VoidCallback onFieldSubmitted) {
+                              return TextField(
+                                controller: mobileNumberTextController,
+                                focusNode: focusNode,
+                                decoration: InputDecoration(
+                                  hintText: 'Enter mobile number',
+                                  hintStyle: buildCustomStyle(
+                                    FontWeight.w500,
+                                    12,
+                                    0.27,
+                                    Colors.grey.withOpacity(.5),
+                                  ),
+                                  border: InputBorder.none,
+                                ),
+                                onChanged: (value) {
+                                  setState(() {
+                                    mobileNumberText = value;
+                                  });
+                                },
+                                style: buildCustomStyle(
                                   FontWeight.w500,
                                   12,
                                   0.27,
-                                  Colors.grey.withOpacity(.5),
+                                  Colors.black.withOpacity(.5),
                                 ),
-                                border: InputBorder.none,
-                              ),
-                              onChanged: (value) {
-                                setState(() {
-                                  mobileNumberText = value;
-                                });
-                              },
-                              style: buildCustomStyle(
+                              );
+                            },
+                            optionsViewBuilder: (BuildContext context,
+                                AutocompleteOnSelected<CustomerListModelData>
+                                    onSelected,
+                                Iterable<CustomerListModelData> options) {
+                              return Align(
+                                alignment: Alignment.topLeft,
+                                child: Material(
+                                  elevation: 4,
+                                  child: Container(
+                                    width:
+                                        MediaQuery.of(context).size.width / 3,
+                                    color: Colors.white,
+                                    constraints: const BoxConstraints(
+                                      maxHeight: 200, // Set the height limit
+                                    ),
+                                    child: ListView.builder(
+                                      padding: const EdgeInsets.all(8.0),
+                                      shrinkWrap: true,
+                                      physics: const BouncingScrollPhysics(),
+                                      itemCount: options.length,
+                                      itemBuilder:
+                                          (BuildContext context, int index) {
+                                        final CustomerListModelData option =
+                                            options.elementAt(index);
+                                        return MouseRegion(
+                                          onEnter: (_) {
+                                            setState(() {
+                                              hoverMap[index] = true;
+                                            });
+                                          },
+                                          onExit: (_) {
+                                            setState(() {
+                                              hoverMap[index] = false;
+                                            });
+                                          },
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              onSelected(option);
+                                            },
+                                            child: Container(
+                                              color: hoverMap[index] == true
+                                                  ? Colors.grey[200]
+                                                  : Colors.white,
+                                              child: ListTile(
+                                                title: Text(
+                                                  option.name ?? '',
+                                                  style: buildCustomStyle(
+                                                    FontWeight.w500,
+                                                    12,
+                                                    0.27,
+                                                    Colors.black
+                                                        .withOpacity(.5),
+                                                  ),
+                                                ),
+                                                hoverColor: Colors
+                                                    .grey[200], // Hover effect
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                        // : Container(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  BuildBoxShadowContainer(
+                    height: MediaQuery.of(context).size.height * .07,
+                    width: 50,
+                    circleRadius: 5,
+                    child: InkWell(
+                      onTap: () => {
+                        showAddCustomerModal(context, size,
+                            mobileNumber: mobileNumberText),
+                      },
+                      child: WebsafeSvg.asset(
+                        ImageAssets.userIcon,
+                        fit: BoxFit.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: size.height * 0.22, // 150,
+
+                child: Consumer<CartProvider>(
+                    builder: (context, cartProvider, child) {
+                  return StreamBuilder<List<ListCartModelData>>(
+                      stream: cartProvider.cartStream,
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData) {
+                          debugPrint("Inside Order List Consumer");
+                          List<ListCartModelData>? cartItems = snapshot.data;
+                          // List<ListCartModelDataCartItem>? cart =
+                          //     cartItems.;
+                          List<ListCartModelDataCartItem>? cartItem =
+                              cartProductItems = cartItems!.isEmpty
+                                  ? []
+                                  : cartItems.map((e) => e.cartItems).first;
+
+                          if (cartItems.isNotEmpty) {
+                            taxNames = cartItems.first.taxNames ?? [];
+                          }
+
+                          return ListView.builder(
+                              // physics: NeverScrollableScrollPhysics(),
+                              padding: EdgeInsets.zero,
+                              itemCount: cartItem!.length, //3,
+                              shrinkWrap: true,
+                              itemBuilder: (BuildContext context, int index) {
+                                return Theme(
+                                    data: ThemeData(
+                                        dividerColor: Colors.transparent),
+                                    child: ExpansionTile(
+                                      maintainState: true,
+                                      childrenPadding:
+                                          const EdgeInsets.only(bottom: 10),
+                                      collapsedBackgroundColor: index % 2 == 0
+                                          ? Colors.grey.withOpacity(0.1)
+                                          : null,
+                                      backgroundColor: index % 2 == 0
+                                          ? Colors.grey.withOpacity(0.1)
+                                          : null,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(3)),
+                                      tilePadding: const EdgeInsets.symmetric(
+                                          horizontal: 10),
+                                      key: ValueKey(cartItem[index].id),
+                                      trailing: GestureDetector(
+                                        onTap: () {
+                                          String? accessToken =
+                                              Provider.of<AuthModel>(context,
+                                                      listen: false)
+                                                  .token;
+                                          Provider.of<CartProvider>(context,
+                                                  listen: false)
+                                              .removeFromCartAPI(
+                                            accessToken: accessToken ?? "",
+                                            customerId: Provider.of<AuthModel>(
+                                                    context,
+                                                    listen: false)
+                                                .userId!,
+                                            productId: cartItem[index].id ?? 1,
+                                            remove: "true",
+                                          );
+                                        },
+                                        child: WebsafeSvg.asset(
+                                          ImageAssets.oderlistCloseIcon,
+                                          fit: BoxFit.none,
+                                          width: 10, // Adjust icon size
+                                        ),
+                                      ),
+                                      controlAffinity:
+                                          ListTileControlAffinity.leading,
+                                      iconColor: ColorManager.textColor,
+                                      collapsedIconColor:
+                                          ColorManager.textColor,
+                                      title: LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          // Calculate responsive sizes
+                                          double fontSize =
+                                              constraints.maxWidth < 600
+                                                  ? 12
+                                                  : 14;
+                                          // double iconSize =
+                                          //     constraints.maxWidth < 600
+                                          //         ? 20
+                                          //         : 24;
+
+                                          return Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    flex: 2,
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          '${index + 1}. ${cartItem[index].productName}',
+                                                          style: buildCustomStyle(
+                                                              FontWeightManager
+                                                                  .regular,
+                                                              fontSize,
+                                                              0.21,
+                                                              ColorManager
+                                                                  .textColor),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          maxLines: 1,
+                                                        ),
+                                                        Text(
+                                                          '${cartItem[index].productUnit}',
+                                                          style: buildCustomStyle(
+                                                              FontWeightManager
+                                                                  .medium,
+                                                              fontSize - 2,
+                                                              0.21,
+                                                              ColorManager
+                                                                  .textColor),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    flex: 2,
+                                                    child: Center(
+                                                      child:
+                                                          CompactQuantityControl(
+                                                        quantity:
+                                                            cartItem[index]
+                                                                .quantity!,
+                                                        onIncrement: () {
+                                                          String? accessToken =
+                                                              Provider.of<AuthModel>(
+                                                                      context,
+                                                                      listen:
+                                                                          false)
+                                                                  .token;
+                                                          Provider.of<CartProvider>(
+                                                                  context,
+                                                                  listen: false)
+                                                              .addToCartAPI(
+                                                            accessToken:
+                                                                accessToken ??
+                                                                    "",
+                                                            customerId: Provider.of<
+                                                                        AuthModel>(
+                                                                    context,
+                                                                    listen:
+                                                                        false)
+                                                                .userId!,
+                                                            productId: cartItem[
+                                                                        index]
+                                                                    .productId ??
+                                                                1,
+                                                            quantity: 1,
+                                                          );
+                                                        },
+                                                        onDecrement: () {
+                                                          String? accessToken =
+                                                              Provider.of<AuthModel>(
+                                                                      context,
+                                                                      listen:
+                                                                          false)
+                                                                  .token;
+                                                          Provider.of<CartProvider>(
+                                                                  context,
+                                                                  listen: false)
+                                                              .removeFromCartAPI(
+                                                            accessToken:
+                                                                accessToken ??
+                                                                    "",
+                                                            customerId: Provider.of<
+                                                                        AuthModel>(
+                                                                    context,
+                                                                    listen:
+                                                                        false)
+                                                                .userId!,
+                                                            productId:
+                                                                cartItem[index]
+                                                                        .id ??
+                                                                    1,
+                                                            remove: '',
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    flex: 2,
+                                                    child: Text(
+                                                      '${cartItem[index].currency} ${cartItem[index].unitPrice}',
+                                                      style: buildCustomStyle(
+                                                          FontWeightManager
+                                                              .regular,
+                                                          fontSize,
+                                                          0.21,
+                                                          ColorManager
+                                                              .textColor),
+                                                      textAlign: TextAlign.end,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: LayoutBuilder(
+                                            builder: (context, constraints) {
+                                              return Container(
+                                                width: constraints.maxWidth,
+                                                child: Text(
+                                                  cartItem[index].productName!,
+                                                  textAlign: TextAlign.start,
+                                                  maxLines: 4,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: buildCustomStyle(
+                                                    FontWeightManager.regular,
+                                                    12,
+                                                    0.21,
+                                                    ColorManager.textColor,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ));
+                              });
+                        } else if (snapshot.hasError) {
+                          return Text('Error: ${snapshot.error}');
+                        } else {
+                          // cartProvider.fetchCartData(customerId: 1);
+                          return const BuildOrderListDesign();
+
+                          // const Center(
+                          //   child: SizedBox(
+                          //     height: 50,
+                          //     width: 50,
+                          //     child: CircularProgressIndicator(
+                          //       color: ColorManager.kPrimaryColor,
+                          //     ),
+                          //   ),
+                          // );
+                        }
+                      });
+                }),
+              ),
+
+              const SizedBox(height: 5),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      children: [
+                        BuildBoxShadowContainer(
+                          circleRadius: 7,
+                          alignment: Alignment.centerLeft,
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 0, vertical: 0),
+                          padding: const EdgeInsets.only(left: 15),
+                          height: MediaQuery.of(context).size.height * .07,
+                          width: MediaQuery.of(context).size.width / 3,
+                          child: TextField(
+                            controller: coupenCodeTextController,
+                            decoration: InputDecoration(
+                              hintText: 'Apply Coupon',
+                              hintStyle: buildCustomStyle(
                                 FontWeight.w500,
                                 12,
                                 0.27,
-                                Colors.black.withOpacity(.5),
+                                Colors.grey.withOpacity(.5),
                               ),
-                            );
-                          },
-                          optionsViewBuilder: (BuildContext context,
-                              AutocompleteOnSelected<CustomerListModelData>
-                                  onSelected,
-                              Iterable<CustomerListModelData> options) {
-                            return Align(
-                              alignment: Alignment.topLeft,
-                              child: Material(
-                                elevation: 4,
-                                child: Container(
-                                  width: MediaQuery.of(context).size.width / 3,
-                                  color: Colors.white,
-                                  constraints: const BoxConstraints(
-                                    maxHeight: 200, // Set the height limit
-                                  ),
-                                  child: ListView.builder(
-                                    padding: const EdgeInsets.all(8.0),
-                                    shrinkWrap: true,
-                                    physics: const BouncingScrollPhysics(),
-                                    itemCount: options.length,
-                                    itemBuilder:
-                                        (BuildContext context, int index) {
-                                      final CustomerListModelData option =
-                                          options.elementAt(index);
-                                      return MouseRegion(
-                                        onEnter: (_) {
-                                          setState(() {
-                                            hoverMap[index] = true;
-                                          });
-                                        },
-                                        onExit: (_) {
-                                          setState(() {
-                                            hoverMap[index] = false;
-                                          });
-                                        },
-                                        child: GestureDetector(
-                                          onTap: () {
-                                            onSelected(option);
-                                          },
-                                          child: Container(
-                                            color: hoverMap[index] == true
-                                                ? Colors.grey[200]
-                                                : Colors.white,
-                                            child: ListTile(
-                                              title: Text(
-                                                option.name ?? '',
-                                                style: buildCustomStyle(
-                                                  FontWeight.w500,
-                                                  12,
-                                                  0.27,
-                                                  Colors.black.withOpacity(.5),
-                                                ),
-                                              ),
-                                              hoverColor: Colors
-                                                  .grey[200], // Hover effect
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      )
-                      // : Container(),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 15),
-                BuildBoxShadowContainer(
-                  height: MediaQuery.of(context).size.height * .07,
-                  width: 50,
-                  circleRadius: 5,
-                  child: InkWell(
-                    onTap: () => {
-                      showAddCustomerModal(context, size,
-                          mobileNumber: mobileNumberText),
-                    },
-                    child: WebsafeSvg.asset(
-                      ImageAssets.userIcon,
-                      fit: BoxFit.none,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              height: size.height * 0.22, // 150,
-
-              child: Consumer<CartProvider>(
-                  builder: (context, cartProvider, child) {
-                return StreamBuilder<List<ListCartModelData>>(
-                    stream: cartProvider.cartStream,
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        debugPrint("Inside Order List Consumer");
-                        List<ListCartModelData>? cartItems = snapshot.data;
-                        // List<ListCartModelDataCartItem>? cart =
-                        //     cartItems.;
-                        List<ListCartModelDataCartItem>? cartItem =
-                            cartProductItems = cartItems!.isEmpty
-                                ? []
-                                : cartItems.map((e) => e.cartItems).first;
-
-                        if (cartItems.isNotEmpty) {
-                          taxNames = cartItems.first.taxNames ?? [];
-                        }
-
-                        return ListView.builder(
-                            // physics: NeverScrollableScrollPhysics(),
-                            padding: EdgeInsets.zero,
-                            itemCount: cartItem!.length, //3,
-                            shrinkWrap: true,
-                            itemBuilder: (BuildContext context, int index) {
-                              return Theme(
-                                  data: ThemeData(
-                                      dividerColor: Colors.transparent),
-                                  child: ExpansionTile(
-                                    maintainState: true,
-                                    childrenPadding:
-                                        const EdgeInsets.only(bottom: 10),
-                                    collapsedBackgroundColor: index % 2 == 0
-                                        ? Colors.grey.withOpacity(0.1)
-                                        : null,
-                                    backgroundColor: index % 2 == 0
-                                        ? Colors.grey.withOpacity(0.1)
-                                        : null,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(3)),
-                                    tilePadding: const EdgeInsets.symmetric(
-                                        horizontal: 10),
-                                    key: ValueKey(cartItem[index].id),
-                                    trailing: GestureDetector(
-                                      onTap: () {
-                                        String? accessToken =
-                                            Provider.of<AuthModel>(context,
-                                                    listen: false)
-                                                .token;
-                                        Provider.of<CartProvider>(context,
-                                                listen: false)
-                                            .removeFromCartAPI(
-                                          accessToken: accessToken ?? "",
-                                          customerId: Provider.of<AuthModel>(
-                                                  context,
-                                                  listen: false)
-                                              .userId!,
-                                          productId: cartItem[index].id ?? 1,
-                                          remove: "true",
-                                        );
-                                      },
-                                      child: WebsafeSvg.asset(
-                                        ImageAssets.oderlistCloseIcon,
-                                        fit: BoxFit.none,
-                                        width: 10, // Adjust icon size
-                                      ),
-                                    ),
-                                    controlAffinity:
-                                        ListTileControlAffinity.leading,
-                                    iconColor: ColorManager.textColor,
-                                    collapsedIconColor: ColorManager.textColor,
-                                    title: LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        // Calculate responsive sizes
-                                        double fontSize =
-                                            constraints.maxWidth < 600
-                                                ? 12
-                                                : 14;
-                                        // double iconSize =
-                                        //     constraints.maxWidth < 600
-                                        //         ? 20
-                                        //         : 24;
-
-                                        return Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  flex: 2,
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                        '${index + 1}. ${cartItem[index].productName}',
-                                                        style: buildCustomStyle(
-                                                            FontWeightManager
-                                                                .regular,
-                                                            fontSize,
-                                                            0.21,
-                                                            ColorManager
-                                                                .textColor),
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        maxLines: 1,
-                                                      ),
-                                                      Text(
-                                                        '${cartItem[index].productUnit}',
-                                                        style: buildCustomStyle(
-                                                            FontWeightManager
-                                                                .medium,
-                                                            fontSize - 2,
-                                                            0.21,
-                                                            ColorManager
-                                                                .textColor),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                Expanded(
-                                                  flex: 2,
-                                                  child: Center(
-                                                    child:
-                                                        CompactQuantityControl(
-                                                      quantity: cartItem[index]
-                                                          .quantity!,
-                                                      onIncrement: () {
-                                                        String? accessToken =
-                                                            Provider.of<AuthModel>(
-                                                                    context,
-                                                                    listen:
-                                                                        false)
-                                                                .token;
-                                                        Provider.of<CartProvider>(
-                                                                context,
-                                                                listen: false)
-                                                            .addToCartAPI(
-                                                          accessToken:
-                                                              accessToken ?? "",
-                                                          customerId: Provider
-                                                                  .of<AuthModel>(
-                                                                      context,
-                                                                      listen:
-                                                                          false)
-                                                              .userId!,
-                                                          productId: cartItem[
-                                                                      index]
-                                                                  .productId ??
-                                                              1,
-                                                          quantity: 1,
-                                                        );
-                                                      },
-                                                      onDecrement: () {
-                                                        String? accessToken =
-                                                            Provider.of<AuthModel>(
-                                                                    context,
-                                                                    listen:
-                                                                        false)
-                                                                .token;
-                                                        Provider.of<CartProvider>(
-                                                                context,
-                                                                listen: false)
-                                                            .removeFromCartAPI(
-                                                          accessToken:
-                                                              accessToken ?? "",
-                                                          customerId: Provider
-                                                                  .of<AuthModel>(
-                                                                      context,
-                                                                      listen:
-                                                                          false)
-                                                              .userId!,
-                                                          productId:
-                                                              cartItem[index]
-                                                                      .id ??
-                                                                  1,
-                                                          remove: '',
-                                                        );
-                                                      },
-                                                    ),
-                                                  ),
-                                                ),
-                                                Expanded(
-                                                  flex: 2,
-                                                  child: Text(
-                                                    '${cartItem[index].currency} ${cartItem[index].unitPrice}',
-                                                    style: buildCustomStyle(
-                                                        FontWeightManager
-                                                            .regular,
-                                                        fontSize,
-                                                        0.21,
-                                                        ColorManager.textColor),
-                                                    textAlign: TextAlign.end,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    ),
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            return Container(
-                                              width: constraints.maxWidth,
-                                              child: Text(
-                                                cartItem[index].productName!,
-                                                textAlign: TextAlign.start,
-                                                maxLines: 4,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.regular,
-                                                  12,
-                                                  0.21,
-                                                  ColorManager.textColor,
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ));
-                            });
-                      } else if (snapshot.hasError) {
-                        return Text('Error: ${snapshot.error}');
-                      } else {
-                        // cartProvider.fetchCartData(customerId: 1);
-                        return const BuildOrderListDesign();
-
-                        // const Center(
-                        //   child: SizedBox(
-                        //     height: 50,
-                        //     width: 50,
-                        //     child: CircularProgressIndicator(
-                        //       color: ColorManager.kPrimaryColor,
-                        //     ),
-                        //   ),
-                        // );
-                      }
-                    });
-              }),
-            ),
-
-            const SizedBox(height: 5),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    children: [
-                      BuildBoxShadowContainer(
-                        circleRadius: 7,
-                        alignment: Alignment.centerLeft,
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 0, vertical: 0),
-                        padding: const EdgeInsets.only(left: 15),
-                        height: MediaQuery.of(context).size.height * .07,
-                        width: MediaQuery.of(context).size.width / 3,
-                        child: TextField(
-                          controller: coupenCodeTextController,
-                          decoration: InputDecoration(
-                            hintText: 'Apply Coupon',
-                            hintStyle: buildCustomStyle(
+                              border: InputBorder.none,
+                            ),
+                            style: buildCustomStyle(
                               FontWeight.w500,
                               12,
                               0.27,
-                              Colors.grey.withOpacity(.5),
+                              Colors.black.withOpacity(.5),
                             ),
-                            border: InputBorder.none,
                           ),
-                          style: buildCustomStyle(
-                            FontWeight.w500,
-                            12,
-                            0.27,
-                            Colors.black.withOpacity(.5),
-                          ),
-                        ),
-                      )
-                    ],
+                        )
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                CustomRoundButton(
-                  title: "Apply",
-                  fct: () async {
-                    String? accessToken =
-                        Provider.of<AuthModel>(context, listen: false).token;
-                    debugPrint("accessToken From AuthModel $accessToken");
+                  const SizedBox(width: 10),
+                  CustomRoundButton(
+                    title: "Apply",
+                    fct: () async {
+                      String? accessToken =
+                          Provider.of<AuthModel>(context, listen: false).token;
+                      debugPrint("accessToken From AuthModel $accessToken");
 
-                    // Get the total amount and coupon code from your UI
-                    int? totalAmount =
-                        Provider.of<CartProvider>(context, listen: false)
-                            .priceSummary!
-                            .netTotal; // Get this from your cart total
-                    String couponCode = coupenCodeTextController
-                        .text; // Get this from a text field in your UI
+                      // Get the total amount and coupon code from your UI
+                      int? totalAmount =
+                          Provider.of<CartProvider>(context, listen: false)
+                              .priceSummary!
+                              .netTotal; // Get this from your cart total
+                      String couponCode = coupenCodeTextController
+                          .text; // Get this from a text field in your UI
 
-                    if (accessToken != null) {
-                      final result = await Provider.of<CartProvider>(context,
-                              listen: false)
-                          .applyCoupon(
-                        totalAmount: totalAmount!,
-                        couponCode: couponCode,
-                        accessToken: accessToken,
-                      );
-                      if (result != null) {
-                        if (result['status'] == 'success') {
-                          final couponData = result['data']['data'];
-                          final discountType = couponData['discount_type'];
-                          final discountValue = double.parse(
-                              couponData['discount_value'].toString());
-                          final discountLimit = double.parse(
-                              couponData['discount_coupon_limit_amount']
-                                  .toString());
+                      if (accessToken != null) {
+                        final result = await Provider.of<CartProvider>(context,
+                                listen: false)
+                            .applyCoupon(
+                          totalAmount: totalAmount!,
+                          couponCode: couponCode,
+                          accessToken: accessToken,
+                        );
+                        if (result != null) {
+                          if (result['status'] == 'success') {
+                            final couponData = result['data']['data'];
+                            final discountType = couponData['discount_type'];
+                            final discountValue = double.parse(
+                                couponData['discount_value'].toString());
+                            final discountLimit = double.parse(
+                                couponData['discount_coupon_limit_amount']
+                                    .toString());
 
-                          double discountAmount;
-                          if (discountType == 'percent') {
-                            discountAmount =
-                                totalAmount * (discountValue / 100);
-                            if (discountAmount > discountLimit) {
-                              discountAmount = discountLimit;
+                            double discountAmount;
+                            if (discountType == 'percent') {
+                              discountAmount =
+                                  totalAmount * (discountValue / 100);
+                              if (discountAmount > discountLimit) {
+                                discountAmount = discountLimit;
+                              }
+                            } else if (discountType == 'fixed') {
+                              discountAmount = discountValue;
+                              if (discountAmount > discountLimit) {
+                                discountAmount = discountLimit;
+                              }
+                            } else {
+                              // Handle unexpected discount type
+                              showScaffoldError(
+                                context: context,
+                                message: 'Unknown discount type',
+                              );
+                              return;
                             }
-                          } else if (discountType == 'fixed') {
-                            discountAmount = discountValue;
-                            if (discountAmount > discountLimit) {
-                              discountAmount = discountLimit;
-                            }
+
+                            // Calculate the new total after discount
+                            double newTotal = totalAmount - discountAmount;
+
+                            setState(() {
+                              _discount = discountAmount;
+                              _discountedTotal = newTotal;
+                            });
+
+                            debugPrint("${discountAmount} and $newTotal");
+
+                            showScaffold(
+                              context: context,
+                              message: result['message'] ??
+                                  'Coupon Applied Successfully',
+                            );
+                            // Update your UI with the new discounted price if provided in the response
                           } else {
-                            // Handle unexpected discount type
                             showScaffoldError(
                               context: context,
-                              message: 'Unknown discount type',
+                              message:
+                                  result['message'] ?? 'Failed to Apply Coupon',
                             );
-                            return;
                           }
-
-                          // Calculate the new total after discount
-                          double newTotal = totalAmount - discountAmount;
-
-                          setState(() {
-                            _discount = discountAmount;
-                            _discountedTotal = newTotal;
-                          });
-
-                          debugPrint("${discountAmount} and $newTotal");
-
-                          showScaffold(
-                            context: context,
-                            message: result['message'] ??
-                                'Coupon Applied Successfully',
-                          );
-                          // Update your UI with the new discounted price if provided in the response
                         } else {
                           showScaffoldError(
                             context: context,
-                            message:
-                                result['message'] ?? 'Failed to Apply Coupon',
+                            message: 'Error Occurred! Try Again',
                           );
                         }
                       } else {
                         showScaffoldError(
                           context: context,
-                          message: 'Error Occurred! Try Again',
+                          message: 'Not Authenticated',
                         );
                       }
-                    } else {
-                      showScaffoldError(
-                        context: context,
-                        message: 'Not Authenticated',
-                      );
-                    }
-                  },
-                  fontSize: FontSize.s14,
-                  height: MediaQuery.of(context).size.height * .07,
-                  width: 100,
-                ),
-                // BuildBoxShadowContainer(
-                //   height: MediaQuery.of(context).size.height * .07,
-                //   width: 50,
-                //   circleRadius: 5,
-                //   child: InkWell(
-                //     onTap: () => {
-                //       showAddCustomerModal(context, size,
-                //           mobileNumber: mobileNumberText),
-                //     },
-                //     child: WebsafeSvg.asset(
-                //       ImageAssets.userIcon,
-                //       fit: BoxFit.none,
-                //     ),
-                //   ),
-                // ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            BuildPaymentRow(
-              amount: AmountHelper.formatAmount(
-                  Provider.of<CartProvider>(context, listen: true)
-                          .priceSummary!
-                          .subTotal ??
-                      0.00),
-              title: "Net amount",
-              color: ColorManager.textColor,
-            ),
-            BuildPaymentRow(
-              amount: AmountHelper.formatAmount(
-                  Provider.of<CartProvider>(context, listen: true)
-                          .priceSummary!
-                          .discount ??
-                      0.00),
-              title: "Shipping",
-              color: ColorManager.textColor,
-            ),
-            BuildPaymentRow(
-              amount: AmountHelper.formatAmount(_discount ?? 0.00),
-              title: "Discount",
-              color: ColorManager.textColor,
-            ),
-            GestureDetector(
-              child: BuildPaymentRow(
-                amount: AmountHelper.formatAmount(
-                  Provider.of<CartProvider>(context, listen: true)
-                          .priceSummary!
-                          .totalTax ??
-                      0.00,
-                ),
-                title: "GST",
-                color: ColorManager.kPrimaryColor,
-              ),
-              onTap: () {
-                debugPrint("Tax Details ${taxNames.toString()}");
-                showDialog(
-                  context: context,
-                  builder: (context) {
-                    return Center(
-                      child: TaxDetailsDialog(
-                        cartItems: cartProductItems!,
-                        taxNames: taxNames!,
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-            const Divider(thickness: 2),
-            BuildPaymentRow(
-              amount: _discountedTotal == 0
-                  ? AmountHelper.formatAmount(
-                      Provider.of<CartProvider>(context, listen: true)
-                              .priceSummary!
-                              .netTotal ??
-                          0.00)
-                  : _discountedTotal.toString(),
-              title: "Total Payable",
-              secondRowTextStyle: buildCustomStyle(
-                FontWeightManager.bold,
-                FontSize.s15,
-                0.23,
-                ColorManager.textColor,
-              ),
-              firstRowTextStyle: buildCustomStyle(
-                FontWeightManager.bold,
-                FontSize.s15,
-                0.23,
-                ColorManager.textColor,
-              ),
-              color: ColorManager.textColor,
-            ),
-            const SizedBox(height: 5),
-            BuildPaymentRow(
-              amount: "",
-              title: "Payment Method",
-              firstRowTextStyle: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s14,
-                0.21,
-                ColorManager.kPrimaryColor,
-              ),
-              color: ColorManager.kPrimaryColor,
-            ),
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    // _getBalanceAmount();
-                    setState(() {
-                      iconColor = 1;
-                    });
-                  },
-                  child: BuildBoxShadowContainer(
-                    border: iconColor == 1
-                        ? Border.all(color: ColorManager.kPrimaryColor)
-                        : null,
-                    margin: const EdgeInsets.only(top: 10),
-                    padding: const EdgeInsets.all(8),
-                    blurRadius: 4,
-                    circleRadius: 5,
-                    child: Column(
-                      children: [
-                        WebsafeSvg.asset(
-                          ImageAssets.cashIcon,
-                          color: Colors.black,
-                          fit: BoxFit.none,
-                        ),
-                        Text(
-                          'Cash',
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s8, 0.12, Colors.black),
-                        ),
-                      ],
-                    ),
+                    },
+                    fontSize: FontSize.s14,
+                    height: MediaQuery.of(context).size.height * .07,
+                    width: 100,
                   ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      iconColor = 2;
-                    });
-                  },
-                  child: BuildBoxShadowContainer(
-                    border: iconColor == 2
-                        ? Border.all(color: ColorManager.kPrimaryColor)
-                        : null,
-                    margin: const EdgeInsets.only(left: 10, top: 10),
-                    padding: const EdgeInsets.only(
-                        left: 12, top: 8, bottom: 8, right: 12),
-                    blurRadius: 4,
-                    circleRadius: 5,
-                    child: Column(
-                      children: [
-                        WebsafeSvg.asset(
-                          ImageAssets.creditCardIcon,
-                          color: Colors.black,
-                          fit: BoxFit.none,
-                        ),
-                        Text(
-                          'Card',
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s8, 0.12, Colors.black),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      iconColor = 3;
-                    });
-                  },
-                  child: BuildBoxShadowContainer(
-                    border: iconColor == 3
-                        ? Border.all(color: ColorManager.kPrimaryColor)
-                        : null,
-                    margin: const EdgeInsets.only(left: 10, top: 10),
-                    padding: const EdgeInsets.only(
-                        left: 12, top: 8, bottom: 8, right: 12),
-                    blurRadius: 4,
-                    circleRadius: 5,
-                    child: Column(
-                      children: [
-                        WebsafeSvg.asset(
-                          ImageAssets.creditCardIcon,
-                          color: Colors.black,
-                          fit: BoxFit.none,
-                        ),
-                        Text(
-                          'Upi',
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s8, 0.12, Colors.black),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // TextFormField for transaction number
-                if (iconColor == 2 ||
-                    iconColor == 3 ||
-                    iconColor == 1) // Assuming 1 is for Cash and 3 is for UPI
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 10),
-                      child: iconColor != 1
-                          ? TextFormField(
-                              controller: _transactionNumberController,
-                              decoration: const InputDecoration(
-                                hintText: 'Transaction Reference No:',
-                              ),
-                            )
-                          : TextFormField(
-                              controller: _paidAmountController,
-                              onChanged: (value) {
-                                _getBalanceAmount();
-                              },
-                              decoration: const InputDecoration(
-                                hintText: 'Enter Paid Amount Here:',
-                              ),
-                            ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            if (iconColor == 1)
+                  // BuildBoxShadowContainer(
+                  //   height: MediaQuery.of(context).size.height * .07,
+                  //   width: 50,
+                  //   circleRadius: 5,
+                  //   child: InkWell(
+                  //     onTap: () => {
+                  //       showAddCustomerModal(context, size,
+                  //           mobileNumber: mobileNumberText),
+                  //     },
+                  //     child: WebsafeSvg.asset(
+                  //       ImageAssets.userIcon,
+                  //       fit: BoxFit.none,
+                  //     ),
+                  //   ),
+                  // ),
+                ],
+              ),
+              const SizedBox(height: 10),
               BuildPaymentRow(
-                amount: _balanceAmount.toStringAsFixed(2),
-                title: "Balance amount",
+                amount: AmountHelper.formatAmount(
+                    Provider.of<CartProvider>(context, listen: true)
+                            .priceSummary!
+                            .subTotal ??
+                        0.00),
+                title: "Net amount",
+                color: ColorManager.textColor,
+              ),
+              BuildPaymentRow(
+                amount: AmountHelper.formatAmount(
+                    Provider.of<CartProvider>(context, listen: true)
+                            .priceSummary!
+                            .discount ??
+                        0.00),
+                title: "Shipping",
+                color: ColorManager.textColor,
+              ),
+              BuildPaymentRow(
+                amount: AmountHelper.formatAmount(_discount ?? 0.00),
+                title: "Discount",
+                color: ColorManager.textColor,
+              ),
+              GestureDetector(
+                child: BuildPaymentRow(
+                  amount: AmountHelper.formatAmount(
+                    Provider.of<CartProvider>(context, listen: true)
+                            .priceSummary!
+                            .totalTax ??
+                        0.00,
+                  ),
+                  title: "GST",
+                  color: ColorManager.kPrimaryColor,
+                ),
+                onTap: () {
+                  debugPrint("Tax Details ${taxNames.toString()}");
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return Center(
+                        child: TaxDetailsDialog(
+                          cartItems: cartProductItems!,
+                          taxNames: taxNames!,
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+              const Divider(thickness: 2),
+              BuildPaymentRow(
+                amount: _discountedTotal == 0
+                    ? AmountHelper.formatAmount(
+                        Provider.of<CartProvider>(context, listen: true)
+                                .priceSummary!
+                                .netTotal ??
+                            0.00)
+                    : _discountedTotal.toString(),
+                title: "Total Payable",
                 secondRowTextStyle: buildCustomStyle(
-                  FontWeightManager.medium,
+                  FontWeightManager.bold,
                   FontSize.s15,
-                  0.18,
-                  ColorManager.textColorRed,
+                  0.23,
+                  ColorManager.textColor,
                 ),
                 firstRowTextStyle: buildCustomStyle(
                   FontWeightManager.bold,
                   FontSize.s15,
                   0.23,
-                  ColorManager.textColorRed,
+                  ColorManager.textColor,
                 ),
-                color: ColorManager.textColorRed,
+                color: ColorManager.textColor,
               ),
-            if (iconColor == 1) const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Container(
-                // height: 55,
-                // margin: const EdgeInsets.only(
-                //     left: 10, top: 10, right: 10),
-                //  padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(
-                    borderRadius: BorderRadius.only(
-                        topRight: Radius.circular(13.0),
-                        bottomRight: Radius.circular(13.0),
-                        topLeft: Radius.circular(13.0),
-                        bottomLeft: Radius.circular(13.0)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: ColorManager.boxShadowColor,
-                        blurRadius: 6,
-                        offset: Offset(1, 1),
-                      ),
-                    ],
-                    color: ColorManager.greyWithOpacity60),
-                child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: GestureDetector(
-                          onTap: () async {
-                            String? accessToken =
-                                Provider.of<AuthModel>(context, listen: false)
-                                    .token;
-                            debugPrint(
-                                "accessToken From AuthModel $accessToken");
-                            final provider = Provider.of<CartProvider>(context,
-                                listen: false);
-                            int cartId = provider.getCartIDForOrder;
-                            debugPrint("$cartId");
-                            debugPrint(
-                                "selectedCustomer${selectedCustomer!.id.toString()}");
-
-                            try {
-                              await Provider.of<CartProvider>(context,
-                                      listen: false)
-                                  .addToOrderAPI(
-                                cartIds: cartId,
-                                accessToken: accessToken ?? "",
-                                transactionId:
-                                    _transactionNumberController.text,
-                                totalPrice: Provider.of<CartProvider>(context,
-                                        listen: false)
-                                    .priceSummary!
-                                    .netTotal
-                                    .toString(),
-                                customerId: Provider.of<AuthModel>(context,
-                                        listen: false)
-                                    .userId!,
-                              )
-                                  .then((response) {
-                                AddToOrderModel addToOrderModel =
-                                    AddToOrderModel.fromJson(response);
-                                debugPrint(
-                                    "$response  Provider.of<CartProvider>(context,listen: false).addToOrderAPI(); ");
-                                if (response["status"] == "success") {
-                                  showScaffold(
-                                    context: context,
-                                    message:
-                                        "${addToOrderModel.message}", //  'Order Placed Successfully',
-                                  );
-                                } else {
-                                  showScaffoldError(
-                                    context: context,
-                                    message:
-                                        "${addToOrderModel.message}", //   'Error Occured! Try Again ',
-                                  );
-                                }
-                              });
-                            } catch (error) {
-                              debugPrint(error.toString());
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(13),
-                            decoration: const BoxDecoration(
-                              borderRadius: BorderRadius.only(
-                                  topRight: Radius.circular(0.0),
-                                  bottomLeft: Radius.circular(13.0),
-                                  topLeft: Radius.circular(13.0),
-                                  bottomRight: Radius.circular(0.0)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: ColorManager.boxShadowColor,
-                                  blurRadius: 6,
-                                  offset: Offset(1, 1),
-                                ),
-                              ],
-                              color: ColorManager.kPrimaryColor,
-                            ),
-                            child: Text(
-                              'Save Sales ${_discountedTotal == 0 ? AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal) : _discountedTotal}',
-                              style: buildCustomStyle(FontWeightManager.medium,
-                                  FontSize.s16, 0.27, Colors.white),
-                            ),
+              const SizedBox(height: 5),
+              BuildPaymentRow(
+                amount: "",
+                title: "Payment Method",
+                firstRowTextStyle: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  FontSize.s14,
+                  0.21,
+                  ColorManager.kPrimaryColor,
+                ),
+                color: ColorManager.kPrimaryColor,
+              ),
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      // _getBalanceAmount();
+                      setState(() {
+                        iconColor = 1;
+                      });
+                    },
+                    child: BuildBoxShadowContainer(
+                      border: iconColor == 1
+                          ? Border.all(color: ColorManager.kPrimaryColor)
+                          : null,
+                      margin: const EdgeInsets.only(top: 10),
+                      padding: const EdgeInsets.all(8),
+                      blurRadius: 4,
+                      circleRadius: 5,
+                      child: Column(
+                        children: [
+                          WebsafeSvg.asset(
+                            ImageAssets.cashIcon,
+                            color: Colors.black,
+                            fit: BoxFit.none,
                           ),
-                        ),
+                          Text(
+                            'Cash',
+                            style: buildCustomStyle(FontWeightManager.medium,
+                                FontSize.s8, 0.12, Colors.black),
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            String formattedTotal = AmountHelper.formatAmount(
-                                Provider.of<CartProvider>(context,
-                                        listen: false)
-                                    .priceSummary!
-                                    .netTotal);
-                            debugPrint(cartProductItems!.length.toString());
-                            debugPrint(formattedTotal.toString());
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => PrintPage(
-                                  cartItems: cartProductItems!,
-                                  formattedTotal: formattedTotal,
-                                  orderDate:
-                                      DateHelper.formatDate(DateTime.now()),
-                                  orderNumber: "#000000",
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        iconColor = 2;
+                      });
+                    },
+                    child: BuildBoxShadowContainer(
+                      border: iconColor == 2
+                          ? Border.all(color: ColorManager.kPrimaryColor)
+                          : null,
+                      margin: const EdgeInsets.only(left: 10, top: 10),
+                      padding: const EdgeInsets.only(
+                          left: 12, top: 8, bottom: 8, right: 12),
+                      blurRadius: 4,
+                      circleRadius: 5,
+                      child: Column(
+                        children: [
+                          WebsafeSvg.asset(
+                            ImageAssets.creditCardIcon,
+                            color: Colors.black,
+                            fit: BoxFit.none,
+                          ),
+                          Text(
+                            'Card',
+                            style: buildCustomStyle(FontWeightManager.medium,
+                                FontSize.s8, 0.12, Colors.black),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        iconColor = 3;
+                      });
+                    },
+                    child: BuildBoxShadowContainer(
+                      border: iconColor == 3
+                          ? Border.all(color: ColorManager.kPrimaryColor)
+                          : null,
+                      margin: const EdgeInsets.only(left: 10, top: 10),
+                      padding: const EdgeInsets.only(
+                          left: 12, top: 8, bottom: 8, right: 12),
+                      blurRadius: 4,
+                      circleRadius: 5,
+                      child: Column(
+                        children: [
+                          WebsafeSvg.asset(
+                            ImageAssets.creditCardIcon,
+                            color: Colors.black,
+                            fit: BoxFit.none,
+                          ),
+                          Text(
+                            'Upi',
+                            style: buildCustomStyle(FontWeightManager.medium,
+                                FontSize.s8, 0.12, Colors.black),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // TextFormField for transaction number
+                  if (iconColor == 2 ||
+                      iconColor == 3 ||
+                      iconColor == 1) // Assuming 1 is for Cash and 3 is for UPI
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 10),
+                        child: iconColor != 1
+                            ? TextFormField(
+                                controller: _transactionNumberController,
+                                decoration: const InputDecoration(
+                                  hintText: 'Transaction Reference No:',
+                                ),
+                              )
+                            : TextFormField(
+                                controller: _paidAmountController,
+                                onChanged: (value) {
+                                  _getBalanceAmount();
+                                },
+                                decoration: const InputDecoration(
+                                  hintText: 'Enter Paid Amount Here:',
                                 ),
                               ),
-                            );
-                          },
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              WebsafeSvg.asset(
-                                ImageAssets.printIcon,
-                                color: Colors.white,
-                                fit: BoxFit.none,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              if (iconColor == 1)
+                BuildPaymentRow(
+                  amount: _balanceAmount.toStringAsFixed(2),
+                  title: "Balance amount",
+                  secondRowTextStyle: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s15,
+                    0.18,
+                    ColorManager.textColorRed,
+                  ),
+                  firstRowTextStyle: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s15,
+                    0.23,
+                    ColorManager.textColorRed,
+                  ),
+                  color: ColorManager.textColorRed,
+                ),
+              if (iconColor == 1) const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Container(
+                  // height: 55,
+                  // margin: const EdgeInsets.only(
+                  //     left: 10, top: 10, right: 10),
+                  //  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                      borderRadius: BorderRadius.only(
+                          topRight: Radius.circular(13.0),
+                          bottomRight: Radius.circular(13.0),
+                          topLeft: Radius.circular(13.0),
+                          bottomLeft: Radius.circular(13.0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: ColorManager.boxShadowColor,
+                          blurRadius: 6,
+                          offset: Offset(1, 1),
+                        ),
+                      ],
+                      color: ColorManager.greyWithOpacity60),
+                  child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: GestureDetector(
+                            onTap: () async {
+                              debugPrint(_discountedTotal.toString());
+                              String? accessToken =
+                                  Provider.of<AuthModel>(context, listen: false)
+                                      .token;
+                              debugPrint(
+                                  "accessToken From AuthModel $accessToken");
+                              final provider = Provider.of<CartProvider>(
+                                  context,
+                                  listen: false);
+                              int cartId = provider.getCartIDForOrder;
+                              debugPrint("$cartId");
+                              debugPrint(
+                                  "selectedCustomer${selectedCustomer!.id.toString()}");
+
+                              try {
+                                await Provider.of<CartProvider>(context,
+                                        listen: false)
+                                    .addToOrderAPI(
+                                  cartIds: cartId,
+                                  accessToken: accessToken ?? "",
+                                  transactionId:
+                                      _transactionNumberController.text,
+                                  totalPrice: Provider.of<CartProvider>(context,
+                                          listen: false)
+                                      .priceSummary!
+                                      .netTotal
+                                      .toString(),
+                                  customerId: Provider.of<AuthModel>(context,
+                                          listen: false)
+                                      .userId!,
+                                )
+                                    .then((response) {
+                                  AddToOrderModel addToOrderModel =
+                                      AddToOrderModel.fromJson(response);
+                                  debugPrint(
+                                      "$response  Provider.of<CartProvider>(context,listen: false).addToOrderAPI(); ");
+                                  if (response["status"] == "success") {
+                                    showScaffold(
+                                      context: context,
+                                      message:
+                                          "${addToOrderModel.message}", //  'Order Placed Successfully',
+                                    );
+                                  } else {
+                                    showScaffoldError(
+                                      context: context,
+                                      message:
+                                          "${addToOrderModel.message}", //   'Error Occured! Try Again ',
+                                    );
+                                  }
+                                });
+                              } catch (error) {
+                                debugPrint(error.toString());
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(13),
+                              decoration: const BoxDecoration(
+                                borderRadius: BorderRadius.only(
+                                    topRight: Radius.circular(0.0),
+                                    bottomLeft: Radius.circular(13.0),
+                                    topLeft: Radius.circular(13.0),
+                                    bottomRight: Radius.circular(0.0)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: ColorManager.boxShadowColor,
+                                    blurRadius: 6,
+                                    offset: Offset(1, 1),
+                                  ),
+                                ],
+                                color: ColorManager.kPrimaryColor,
                               ),
-                              Text(
-                                'Print',
+                              child: Text(
+                                'Save Sales ${_discountedTotal == 0 ? AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal) : _discountedTotal}',
                                 style: buildCustomStyle(
                                     FontWeightManager.medium,
-                                    FontSize.s10,
-                                    0.16,
+                                    FontSize.s16,
+                                    0.27,
                                     Colors.white),
                               ),
-                            ],
+                            ),
                           ),
                         ),
-                      )
-                    ]),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              String formattedTotal = AmountHelper.formatAmount(
+                                  Provider.of<CartProvider>(context,
+                                          listen: false)
+                                      .priceSummary!
+                                      .netTotal);
+                              debugPrint(cartProductItems!.length.toString());
+                              debugPrint(formattedTotal.toString());
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PrintPage(
+                                    cartItems: cartProductItems!,
+                                    formattedTotal: formattedTotal,
+                                    orderDate:
+                                        DateHelper.formatDate(DateTime.now()),
+                                    orderNumber: "#000000",
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                WebsafeSvg.asset(
+                                  ImageAssets.printIcon,
+                                  color: Colors.white,
+                                  fit: BoxFit.none,
+                                ),
+                                Text(
+                                  'Print',
+                                  style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s10,
+                                      0.16,
+                                      Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      ]),
+                ),
               ),
-            ),
-            // ],
-            // ),
-          ],
+              // ],
+              // ),
+            ],
+          ),
         ),
       ),
     );

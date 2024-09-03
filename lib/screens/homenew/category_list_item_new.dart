@@ -57,350 +57,353 @@ class CategoryListItemNew extends StatelessWidget {
     debugPrint(size.width.toString());
     return Padding(
       padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Search Category',
-            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-                0.30, ColorManager.textColor),
-          ),
-          const SizedBox(
-            height: 10,
-          ),
-          TextField(
-            cursorWidth: 1,
-            //  controller: searchTextController,
-            cursorColor: ColorManager.kPrimaryColor,
-            onChanged: (query) {
-              debugPrint(query);
-              final filteredCategories =
-                  categoryProvider.searchCategories(query);
-
-              categoryProvider.updateFilteredCategories(filteredCategories);
-            },
-            decoration: decoration.copyWith(
-              prefixIcon: WebsafeSvg.asset(
-                ImageAssets.categorySearchIcon,
-                fit: BoxFit.none,
-              ),
-              // suffixIcon: WebsafeSvg.asset(
-              //   ImageAssets.barcodeIcon,
-              //   fit: BoxFit.none,
-              // ),
-              labelStyle: buildCustomStyle(FontWeightManager.regular,
-                  FontSize.s10, 0.10, ColorManager.textColor),
-              hintText: 'Search category',
-              hintStyle: buildCustomStyle(FontWeightManager.regular,
-                  FontSize.s10, 0.13, ColorManager.textColor1),
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Search Category',
+              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
+                  0.30, ColorManager.textColor),
             ),
-          ),
-          const SizedBox(
-            height: 10,
-          ),
-          SizedBox(
-              height: 110,
-              child: Consumer<CategoryProvider>(
-                  builder: (context, provider, child) {
-                final filteredCategories = provider.categoryList!.isEmpty
-                    ? provider.categoryList
-                    : provider.categoryList;
-                if (provider.category!.isEmpty) {
-                  provider.listAllCategory();
-
-                  return ListView.builder(
-                      shrinkWrap: true,
-                      scrollDirection: Axis.horizontal,
-                      itemCount: 1, //5,
-                      itemBuilder: (context, index) {
-                        return const BuildCategoryContainerDummy();
-                      });
-                  //const Center(child: CircularProgressIndicator());
-                } else {
-                  return ListView.builder(
-                      shrinkWrap: true,
-                      scrollDirection: Axis.horizontal,
-                      itemCount: filteredCategories!
-                          .length, //provider.category!.length,
-                      itemBuilder: (context, index) {
-                        final categorys = provider.category![index];
-                        // final categorys = filteredCategories[index];
-                        // final categoryProviders =
-                        //     Provider.of<GridSelectionProvider>(context,
-                        //         listen: true);
-                        final isSelected =
-                            index == provider.selectedCategoryIndex;
-
-                        // debugPrint(
-                        //     "Inside category ListItem Widgetcategorys.categorySlug");
-                        // debugPrint("categorys.categoryImage");
-                        // debugPrint(categorys.categoryIcon);
-                        // debugPrint("${provider.category!.length}");
-                        return GestureDetector(
-                          onTap: () {
-                            provider.selectCategory(
-                                index,
-                                provider.category![index].categoryName ?? "",
-                                index == 0
-                                    ? productProvider.productList!.length
-                                    : provider.category![index].productsCount ??
-                                        0);
-                            productProvider.updateCategory(
-                                provider.category![index].categoryId ?? 0);
-
-                            // productProvider.selectedProductsUpOnCategory;
-                            // productProvider.selectedProducts(index == 0
-                            //     ? 0
-                            //     : provider.category![index].categoryId ?? 0);
-                            //  productProvider.selectedProductsUpOnCategory;
-                            productProvider.listAllProducts(
-                                filterCategory: provider
-                                    .category![index].categoryId
-                                    .toString());
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 10.0),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: isSelected
-                                      ? ColorManager.kPrimaryColor
-                                      : ColorManager.textColor1,
-                                  radius: 40,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(
-                                        40), // Half of the height/width to make it a circle
-                                    child: Image.network(
-                                      provider.category![index].categoryIcon ??
-                                          'https://epos-bucket.s3.ap-southeast-1.amazonaws.com/images/Owtpjeb18CalthcsGsfnWlBIZxb137QI5TIneBdd.jpg',
-                                      fit: BoxFit.cover,
-                                      height: 80,
-                                      width: 80,
+            const SizedBox(
+              height: 10,
+            ),
+            TextField(
+              cursorWidth: 1,
+              //  controller: searchTextController,
+              cursorColor: ColorManager.kPrimaryColor,
+              onChanged: (query) {
+                debugPrint(query);
+                final filteredCategories =
+                    categoryProvider.searchCategories(query);
+        
+                categoryProvider.updateFilteredCategories(filteredCategories);
+              },
+              decoration: decoration.copyWith(
+                prefixIcon: WebsafeSvg.asset(
+                  ImageAssets.categorySearchIcon,
+                  fit: BoxFit.none,
+                ),
+                // suffixIcon: WebsafeSvg.asset(
+                //   ImageAssets.barcodeIcon,
+                //   fit: BoxFit.none,
+                // ),
+                labelStyle: buildCustomStyle(FontWeightManager.regular,
+                    FontSize.s10, 0.10, ColorManager.textColor),
+                hintText: 'Search category',
+                hintStyle: buildCustomStyle(FontWeightManager.regular,
+                    FontSize.s10, 0.13, ColorManager.textColor1),
+              ),
+            ),
+            const SizedBox(
+              height: 10,
+            ),
+            SizedBox(
+                height: 110,
+                child: Consumer<CategoryProvider>(
+                    builder: (context, provider, child) {
+                  final filteredCategories = provider.categoryList!.isEmpty
+                      ? provider.categoryList
+                      : provider.categoryList;
+                  if (provider.category!.isEmpty) {
+                    provider.listAllCategory();
+        
+                    return ListView.builder(
+                        shrinkWrap: true,
+                        scrollDirection: Axis.horizontal,
+                        itemCount: 1, //5,
+                        itemBuilder: (context, index) {
+                          return const BuildCategoryContainerDummy();
+                        });
+                    //const Center(child: CircularProgressIndicator());
+                  } else {
+                    return ListView.builder(
+                        shrinkWrap: true,
+                        scrollDirection: Axis.horizontal,
+                        itemCount: filteredCategories!
+                            .length, //provider.category!.length,
+                        itemBuilder: (context, index) {
+                          final categorys = provider.category![index];
+                          // final categorys = filteredCategories[index];
+                          // final categoryProviders =
+                          //     Provider.of<GridSelectionProvider>(context,
+                          //         listen: true);
+                          final isSelected =
+                              index == provider.selectedCategoryIndex;
+        
+                          // debugPrint(
+                          //     "Inside category ListItem Widgetcategorys.categorySlug");
+                          // debugPrint("categorys.categoryImage");
+                          // debugPrint(categorys.categoryIcon);
+                          // debugPrint("${provider.category!.length}");
+                          return GestureDetector(
+                            onTap: () {
+                              provider.selectCategory(
+                                  index,
+                                  provider.category![index].categoryName ?? "",
+                                  index == 0
+                                      ? productProvider.productList!.length
+                                      : provider.category![index].productsCount ??
+                                          0);
+                              productProvider.updateCategory(
+                                  provider.category![index].categoryId ?? 0);
+        
+                              // productProvider.selectedProductsUpOnCategory;
+                              // productProvider.selectedProducts(index == 0
+                              //     ? 0
+                              //     : provider.category![index].categoryId ?? 0);
+                              //  productProvider.selectedProductsUpOnCategory;
+                              productProvider.listAllProducts(
+                                  filterCategory: provider
+                                      .category![index].categoryId
+                                      .toString());
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 10.0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: isSelected
+                                        ? ColorManager.kPrimaryColor
+                                        : ColorManager.textColor1,
+                                    radius: 40,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(
+                                          40), // Half of the height/width to make it a circle
+                                      child: Image.network(
+                                        provider.category![index].categoryIcon ??
+                                            'https://epos-bucket.s3.ap-southeast-1.amazonaws.com/images/Owtpjeb18CalthcsGsfnWlBIZxb137QI5TIneBdd.jpg',
+                                        fit: BoxFit.cover,
+                                        height: 80,
+                                        width: 80,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(
-                                  height: 5,
-                                ),
-                                Text(
-                                  categorys.categoryName ?? 'All',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      FontSize.s11,
-                                      0.17,
-                                      Colors.black),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      });
-                }
-              })),
-          // const SizedBox(
-          //   width: 20,
-          // ),
-          const Divider(
-            color: ColorManager.boxShadowColor,
-          ),
-          const SizedBox(
-            height: 10,
-          ),
-          TextField(
-            cursorWidth: 1,
-            //  controller: searchTextController,
-            cursorColor: ColorManager.kPrimaryColor,
-            onChanged: (query) {
-              debugPrint(query);
-              final filteredProducts = productProvider.searchProducts(query);
-
-              productProvider.updateFilteredProducts(filteredProducts);
-            },
-            decoration: decoration.copyWith(
-              prefixIcon: WebsafeSvg.asset(
-                ImageAssets.categorySearchIcon,
-                fit: BoxFit.none,
-              ),
-              // suffixIcon: WebsafeSvg.asset(
-              //   ImageAssets.barcodeIcon,
-              //   fit: BoxFit.none,
-              // ),
-              labelStyle: buildCustomStyle(FontWeightManager.regular,
-                  FontSize.s10, 0.10, ColorManager.textColor),
-              hintText: 'Search Product',
-              hintStyle: buildCustomStyle(FontWeightManager.regular,
-                  FontSize.s10, 0.13, ColorManager.textColor1),
-            ),
-          ),
-          const SizedBox(
-            height: 10,
-          ),
-          Consumer<GridSelectionProvider>(
-              builder: (context, selectionProvider, child) {
-            return DragSelectGridView(
-                // gridController: gridController,
-                physics: const NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: ResponsiveWidget.isDesktop(context)
-                        ? MediaQuery.of(context).orientation ==
-                                    Orientation.portrait ||
-                                size.width < 930
-                            ? 3
-                            : size.width < 1200
-                                ? 3
-                                : 3
-                        : MediaQuery.of(context).orientation ==
-                                    Orientation.portrait ||
-                                size.width < 930
-                            ? 3
-                            : 3,
-                    childAspectRatio: MediaQuery.of(context).orientation ==
-                            Orientation.portrait
-                        ? 0.5
-                        : size.width < 1200
-                            ? 0.6
-                            : 0.7,
-                    crossAxisSpacing: 1.0,
-                    mainAxisSpacing: 1.0),
-                itemCount: selectionProvider.productList!
-                    .length, //selectionProvider.getProducts!.length,
-                itemBuilder: (ctx, index, isSelected) {
-                  final product = selectionProvider.productList![index];
-                  // selectionProvider.productList![index];
-                  //   final isSelected = product.isSelected;
-                  final isSelected =
-                      selectionProvider.selectedProductList.contains(product);
-                  // final isSelected =
-                  //     selectionProvider.selectedIndices.contains(index);
-
-                  debugPrint("selectionProvider.getProducts!.length");
-                  debugPrint("${selectionProvider.productList!.length}");
-                  // if (selectionProvider.isLoading ||
-                  //     selectionProvider.productList!.isEmpty) {
-                  if (selectionProvider.productList!.isEmpty) {
-                    return const BuildProductDummy();
-                  } else {
-                    String? file = "";
-                    debugPrint("file-$index$file");
-                    for (var v in product.attachment ?? []) {
-                      debugPrint(v.filePath);
-
-                      if (v.isPrimary == 1) {
-                        debugPrint("file$file");
-                        file = v.filePath;
-                      } else {
-                        debugPrint("fileShanidha$file");
-                      }
-                    }
-
-                    return isSelected
-                        ? Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: GestureDetector(
-                              onTap: () {
-                                selectionProvider.toggleSelectionProduct(
-                                    index, product);
-
-                                // await cartProvider.addToCartAPI(
-                                //     customerId: 1,
-                                //     productId: p[index].productId ?? 1,
-                                //     quantity: 1);
-                                //  product.isSelected = !product.isSelected;
-                              },
-                              child: SelectedCategoryListItemWidget(
-                                isSelected: isSelected,
-                                currency: selectionProvider
-                                        .productList![index].currency ??
-                                    '',
-                                file: file ?? "",
-                                imageUrlPath: _items[0].imageUrl,
-                                price: "${product.price!.price}",
-                                title: product.productName ?? '',
-                                productId: product.productId ?? 1,
-                                customerId: customerId ?? 1,
-                                weight: selectionProvider
-                                        .productList![index].unit ??
-                                    '',
-                                attachment: selectionProvider
-                                        .productList![index].attachment ??
-                                    [],
-                              ),
-                            ),
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: GestureDetector(
-                              onTap: () {
-                                selectionProvider.toggleSelectionProduct(
-                                    index, product);
-                                debugPrint("selected");
-                                // selectionProvider.setSelection(true);
-
-                                showDialogFunctionForProductDetailsAnimated(
-                                    context,
-                                    selectionProvider
-                                            .productList![index].productName ??
-                                        '',
-                                    "${selectionProvider.productList![index].price!.price}",
-                                    selectionProvider
-                                            .productList![index].currency ??
-                                        '',
-                                    selectionProvider
-                                            .productList![index].unit ??
-                                        '',
-                                    customerId ?? 1,
-                                    selectionProvider.productList![index]
-                                            .category![0].name ??
-                                        "",
-                                    selectionProvider
-                                            .productList![index].productId ??
-                                        0,
-                                    selectionProvider
-                                        .productList![index].attachment!
-                                        .map((e) => e.filePath)
-                                        .toList());
-                                // Provider.of<CartProvider>(context,
-                                //         listen: false)
-                                //     .addToCartAPI(
-                                //         customerId: 1,
-                                //         productId: p[index].productId ?? 1,
-                                //         quantity: 1);
-                                debugPrint(
-                                    "product id ${selectionProvider.productList![index].productId}");
-                              },
-                              child: CategoryListItemWidget(
-                                file: file ?? "",
-                                attachment: selectionProvider
-                                        .productList![index].attachment ??
-                                    [],
-                                isSelected: isSelected,
-                                imageUrlPath: _items[0].imageUrl,
-                                price:
-                                    "${selectionProvider.productList![index].price!.price}",
-                                title: selectionProvider
-                                        .productList![index].productName ??
-                                    '',
-                                weight: selectionProvider
-                                        .productList![index].unit ??
-                                    '',
-                                customerId: customerId ?? 1,
-                                productId: selectionProvider
-                                        .productList![index].productId ??
-                                    1,
-                                currency: selectionProvider
-                                        .productList![index].currency ??
-                                    '',
-                                fileType: '',
+                                  const SizedBox(
+                                    height: 5,
+                                  ),
+                                  Text(
+                                    categorys.categoryName ?? 'All',
+                                    style: buildCustomStyle(
+                                        FontWeightManager.regular,
+                                        FontSize.s11,
+                                        0.17,
+                                        Colors.black),
+                                  ),
+                                ],
                               ),
                             ),
                           );
+                        });
                   }
-                });
-          }),
-        ],
+                })),
+            // const SizedBox(
+            //   width: 20,
+            // ),
+            const Divider(
+              color: ColorManager.boxShadowColor,
+            ),
+            const SizedBox(
+              height: 10,
+            ),
+            TextField(
+              cursorWidth: 1,
+              //  controller: searchTextController,
+              cursorColor: ColorManager.kPrimaryColor,
+              onChanged: (query) {
+                debugPrint(query);
+                final filteredProducts = productProvider.searchProducts(query);
+        
+                productProvider.updateFilteredProducts(filteredProducts);
+              },
+              decoration: decoration.copyWith(
+                prefixIcon: WebsafeSvg.asset(
+                  ImageAssets.categorySearchIcon,
+                  fit: BoxFit.none,
+                ),
+                // suffixIcon: WebsafeSvg.asset(
+                //   ImageAssets.barcodeIcon,
+                //   fit: BoxFit.none,
+                // ),
+                labelStyle: buildCustomStyle(FontWeightManager.regular,
+                    FontSize.s10, 0.10, ColorManager.textColor),
+                hintText: 'Search Product',
+                hintStyle: buildCustomStyle(FontWeightManager.regular,
+                    FontSize.s10, 0.13, ColorManager.textColor1),
+              ),
+            ),
+            const SizedBox(
+              height: 10,
+            ),
+            Consumer<GridSelectionProvider>(
+                builder: (context, selectionProvider, child) {
+              return DragSelectGridView(
+                  // gridController: gridController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: ResponsiveWidget.isDesktop(context)
+                          ? MediaQuery.of(context).orientation ==
+                                      Orientation.portrait ||
+                                  size.width < 930
+                              ? 3
+                              : size.width < 1200
+                                  ? 3
+                                  : 3
+                          : MediaQuery.of(context).orientation ==
+                                      Orientation.portrait ||
+                                  size.width < 930
+                              ? 3
+                              : 3,
+                      childAspectRatio: MediaQuery.of(context).orientation ==
+                              Orientation.portrait
+                          ? 0.5
+                          : size.width < 1200
+                              ? 0.6
+                              : 0.7,
+                      crossAxisSpacing: 1.0,
+                      mainAxisSpacing: 1.0),
+                  itemCount: selectionProvider.productList!
+                      .length, //selectionProvider.getProducts!.length,
+                  itemBuilder: (ctx, index, isSelected) {
+                    final product = selectionProvider.productList![index];
+                    // selectionProvider.productList![index];
+                    //   final isSelected = product.isSelected;
+                    final isSelected =
+                        selectionProvider.selectedProductList.contains(product);
+                    // final isSelected =
+                    //     selectionProvider.selectedIndices.contains(index);
+        
+                    debugPrint("selectionProvider.getProducts!.length");
+                    debugPrint("${selectionProvider.productList!.length}");
+                    // if (selectionProvider.isLoading ||
+                    //     selectionProvider.productList!.isEmpty) {
+                    if (selectionProvider.productList!.isEmpty) {
+                      return const BuildProductDummy();
+                    } else {
+                      String? file = "";
+                      debugPrint("file-$index$file");
+                      for (var v in product.attachment ?? []) {
+                        debugPrint(v.filePath);
+        
+                        if (v.isPrimary == 1) {
+                          debugPrint("file$file");
+                          file = v.filePath;
+                        } else {
+                          debugPrint("fileShanidha$file");
+                        }
+                      }
+        
+                      return isSelected
+                          ? Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: GestureDetector(
+                                onTap: () {
+                                  selectionProvider.toggleSelectionProduct(
+                                      index, product);
+        
+                                  // await cartProvider.addToCartAPI(
+                                  //     customerId: 1,
+                                  //     productId: p[index].productId ?? 1,
+                                  //     quantity: 1);
+                                  //  product.isSelected = !product.isSelected;
+                                },
+                                child: SelectedCategoryListItemWidget(
+                                  isSelected: isSelected,
+                                  currency: selectionProvider
+                                          .productList![index].currency ??
+                                      '',
+                                  file: file ?? "",
+                                  imageUrlPath: _items[0].imageUrl,
+                                  price: "${product.price!.price}",
+                                  title: product.productName ?? '',
+                                  productId: product.productId ?? 1,
+                                  customerId: customerId ?? 1,
+                                  weight: selectionProvider
+                                          .productList![index].unit ??
+                                      '',
+                                  attachment: selectionProvider
+                                          .productList![index].attachment ??
+                                      [],
+                                ),
+                              ),
+                            )
+                          : Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: GestureDetector(
+                                onTap: () {
+                                  selectionProvider.toggleSelectionProduct(
+                                      index, product);
+                                  debugPrint("selected");
+                                  // selectionProvider.setSelection(true);
+        
+                                  showDialogFunctionForProductDetailsAnimated(
+                                      context,
+                                      selectionProvider
+                                              .productList![index].productName ??
+                                          '',
+                                      "${selectionProvider.productList![index].price!.price}",
+                                      selectionProvider
+                                              .productList![index].currency ??
+                                          '',
+                                      selectionProvider
+                                              .productList![index].unit ??
+                                          '',
+                                      customerId ?? 1,
+                                      selectionProvider.productList![index]
+                                              .category![0].name ??
+                                          "",
+                                      selectionProvider
+                                              .productList![index].productId ??
+                                          0,
+                                      selectionProvider
+                                          .productList![index].attachment!
+                                          .map((e) => e.filePath)
+                                          .toList());
+                                  // Provider.of<CartProvider>(context,
+                                  //         listen: false)
+                                  //     .addToCartAPI(
+                                  //         customerId: 1,
+                                  //         productId: p[index].productId ?? 1,
+                                  //         quantity: 1);
+                                  debugPrint(
+                                      "product id ${selectionProvider.productList![index].productId}");
+                                },
+                                child: CategoryListItemWidget(
+                                  file: file ?? "",
+                                  attachment: selectionProvider
+                                          .productList![index].attachment ??
+                                      [],
+                                  isSelected: isSelected,
+                                  imageUrlPath: _items[0].imageUrl,
+                                  price:
+                                      "${selectionProvider.productList![index].price!.price}",
+                                  title: selectionProvider
+                                          .productList![index].productName ??
+                                      '',
+                                  weight: selectionProvider
+                                          .productList![index].unit ??
+                                      '',
+                                  customerId: customerId ?? 1,
+                                  productId: selectionProvider
+                                          .productList![index].productId ??
+                                      1,
+                                  currency: selectionProvider
+                                          .productList![index].currency ??
+                                      '',
+                                  fileType: '',
+                                ),
+                              ),
+                            );
+                    }
+                  });
+            }),
+          ],
+        ),
       ),
     );
   }

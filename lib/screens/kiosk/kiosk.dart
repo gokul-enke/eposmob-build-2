@@ -3,6 +3,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/widgets/category_list_item_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
@@ -17,6 +18,8 @@ class KioskScreen extends StatefulWidget {
 }
 
 class _KioskScreenState extends State<KioskScreen> {
+  bool _isListView = true;
+
   @override
   void initState() {
     super.initState();
@@ -42,15 +45,25 @@ class _KioskScreenState extends State<KioskScreen> {
           'Place Your Order',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: FontSize.s16),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(_isListView ? Icons.grid_view : Icons.list),
+            onPressed: () {
+              setState(() {
+                _isListView = !_isListView;
+              });
+            },
+          ),
+        ],
       ),
       body: SizedBox(
         height: size.height,
         child: Column(
           children: [
             _buildCategoryList(),
-            Expanded(
-              child: _buildMenuItems(),
-            ),
+            // Expanded(
+            //   child: _isListView ? _buildListView() : _buildGridView(),
+            // ),
             _buildCheckoutButton(),
           ],
         ),
@@ -114,7 +127,7 @@ class _KioskScreenState extends State<KioskScreen> {
     );
   }
 
-  Widget _buildMenuItems() {
+  Widget _buildListView() {
     return Consumer<GridSelectionProvider>(
       builder: (context, productProvider, child) {
         if (productProvider.productList!.isEmpty) {
@@ -125,9 +138,11 @@ class _KioskScreenState extends State<KioskScreen> {
           itemBuilder: (context, index) {
             final product = productProvider.productList![index];
             return _menuItem(
-              product.productName ?? 'Unknown',
+              product.productName ?? 'Name',
               product.description ?? 'This is description',
-              product.price!.price ?? 0.0,
+              product.attachment![0].filePath ??
+                  'https://via.placeholder.com/150',
+              product.price!.price ?? 0,
               product.productId ?? 0,
               product.currency ?? 'Rs',
             );
@@ -137,13 +152,48 @@ class _KioskScreenState extends State<KioskScreen> {
     );
   }
 
-  Widget _menuItem(String title, String description, double price,
-      int productId, String currency) {
+  // Widget _buildGridView() {
+  //   return Consumer<GridSelectionProvider>(
+  //     builder: (context, productProvider, child) {
+  //       if (productProvider.productList!.isEmpty) {
+  //         return const Center(child: CircularProgressIndicator());
+  //       }
+  //       return GridView.builder(
+  //         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+  //           crossAxisCount: 2,
+  //           childAspectRatio: 3 / 2,
+  //           crossAxisSpacing: 10,
+  //           mainAxisSpacing: 10,
+  //         ),
+  //         itemCount: productProvider.productList!.length,
+  //         itemBuilder: (context, index) {
+  //           final selectionProvider = productProvider.productList![index];
+  //           return CategoryListItemWidget(
+  //             file: file ?? "",
+  //             attachment:
+  //                 selectionProvider.productList![index].attachment ?? [],
+  //             isSelected: isSelected,
+  //             imageUrlPath: _items[0].imageUrl,
+  //             price: "${selectionProvider.productList![index].price!.price}",
+  //             title: selectionProvider.productList![index].productName ?? '',
+  //             weight: selectionProvider.productList![index].unit ?? '',
+  //             customerId: customerId ?? 1,
+  //             productId: selectionProvider.productList![index].productId ?? 1,
+  //             currency: selectionProvider.productList![index].currency ?? '',
+  //             fileType: '',
+  //           );
+  //         },
+  //       );
+  //     },
+  //   );
+  // }
+
+  Widget _menuItem(String title, String description, String imageLink,
+      int price, int productId, String currency) {
     return Consumer<CartProvider>(
       builder: (context, cartProvider, child) {
         int count = 0;
         // int count = cartProvider.getItemCount(productId);
-
         return Container(
           height: 100,
           padding: const EdgeInsets.all(8),
@@ -151,8 +201,7 @@ class _KioskScreenState extends State<KioskScreen> {
             children: [
               Expanded(
                 flex: 2,
-                child: Image.network('https://via.placeholder.com/150',
-                    fit: BoxFit.cover),
+                child: Image.network(imageLink, fit: BoxFit.cover),
               ),
               Expanded(
                 flex: 4,
