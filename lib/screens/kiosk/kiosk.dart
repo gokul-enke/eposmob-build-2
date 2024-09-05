@@ -4,6 +4,8 @@ import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/widgets/category_list_item_widget.dart';
+import 'package:pos_machine/widgets/product_card_kiosk.dart';
+import 'package:pos_machine/widgets/showEmptyMessege.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
@@ -41,6 +43,7 @@ class _KioskScreenState extends State<KioskScreen> {
             Navigator.pop(context);
           },
         ),
+        centerTitle: true,
         title: const Text(
           'Place Your Order',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: FontSize.s16),
@@ -61,9 +64,9 @@ class _KioskScreenState extends State<KioskScreen> {
         child: Column(
           children: [
             _buildCategoryList(),
-            // Expanded(
-            //   child: _isListView ? _buildListView() : _buildGridView(),
-            // ),
+            Expanded(
+              child: _isListView ? _buildListView() : _buildGridView(),
+            ),
             _buildCheckoutButton(),
           ],
         ),
@@ -77,18 +80,21 @@ class _KioskScreenState extends State<KioskScreen> {
         if (categoryProvider.category!.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
-        return Container(
-          height: 50,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: categoryProvider.category!.length,
-            itemBuilder: (context, index) {
-              final category = categoryProvider.category![index];
-              final isSelected =
-                  categoryProvider.selectedCategoryIndex == index;
-              return _categoryButton(category.categoryName ?? 'Unknown',
-                  isSelected, index, categoryProvider);
-            },
+        return SizedBox(
+          height: 60,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: categoryProvider.category!.length,
+              itemBuilder: (context, index) {
+                final category = categoryProvider.category![index];
+                final isSelected =
+                    categoryProvider.selectedCategoryIndex == index;
+                return _categoryButton(category.categoryName ?? 'Unknown',
+                    isSelected, index, categoryProvider);
+              },
+            ),
           ),
         );
       },
@@ -97,28 +103,45 @@ class _KioskScreenState extends State<KioskScreen> {
 
   Widget _categoryButton(String title, bool isSelected, int index,
       CategoryProvider categoryProvider) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-      child: GestureDetector(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6.0),
+      child: InkWell(
         onTap: () {
           categoryProvider.setSelectCategoryIndex(index);
           categoryProvider.updateCategoryPageFilteredCategories(
               categoryProvider.filteredcategoryList ?? []);
+          final productProvider =
+              Provider.of<GridSelectionProvider>(context, listen: false);
+          productProvider.listAllProducts(
+              filterCategory:
+                  categoryProvider.category![index].categoryId.toString());
         },
-        child: Container(
-          height: 20,
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 0),
+        borderRadius: BorderRadius.circular(20.0),
+        child: Ink(
           decoration: BoxDecoration(
-            color: isSelected ? ColorManager.kPrimaryColor : Colors.transparent,
-            border: Border.all(color: ColorManager.kPrimaryColor),
-            borderRadius: BorderRadius.circular(8.0),
+            color: isSelected ? ColorManager.kPrimaryColor : Colors.white,
+            borderRadius: BorderRadius.circular(20.0),
+            boxShadow: [
+              BoxShadow(
+                color: isSelected
+                    ? ColorManager.kPrimaryColor.withOpacity(0.4)
+                    : ColorManager.boxShadowColor,
+                blurRadius: 6,
+                offset: const Offset(1, 1),
+              ),
+            ],
           ),
-          child: Center(
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 10.0,
-                color: isSelected ? Colors.white : ColorManager.kPrimaryColor,
+          child: Container(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Center(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14.0,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : ColorManager.kPrimaryColor,
+                ),
               ),
             ),
           ),
@@ -130,63 +153,104 @@ class _KioskScreenState extends State<KioskScreen> {
   Widget _buildListView() {
     return Consumer<GridSelectionProvider>(
       builder: (context, productProvider, child) {
-        if (productProvider.productList!.isEmpty) {
+        debugPrint("Products loaded ${productProvider.productList.toString()}");
+        if (productProvider.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
-        return ListView.builder(
-          itemCount: productProvider.productList!.length,
-          itemBuilder: (context, index) {
-            final product = productProvider.productList![index];
-            return _menuItem(
-              product.productName ?? 'Name',
-              product.description ?? 'This is description',
-              product.attachment![0].filePath ??
-                  'https://via.placeholder.com/150',
-              product.price!.price ?? 0,
-              product.productId ?? 0,
-              product.currency ?? 'Rs',
-            );
-          },
+
+        if (productProvider.productList!.isEmpty) {
+          return showEmptyMessege(
+            message: 'No products available',
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: ListView.builder(
+            itemCount: productProvider.productList!.length,
+            itemBuilder: (context, index) {
+              final product = productProvider.productList![index];
+              return _menuItem(
+                product.productName ?? 'Name',
+                product.description ?? 'This is description',
+                product.attachment?.isNotEmpty == true
+                    ? product.attachment![0].filePath ??
+                        'https://via.placeholder.com/150'
+                    : 'https://via.placeholder.com/150',
+                product.price?.price ?? 0,
+                product.productId ?? 0,
+                product.currency ?? 'INR',
+              );
+            },
+          ),
         );
       },
     );
   }
 
-  // Widget _buildGridView() {
-  //   return Consumer<GridSelectionProvider>(
-  //     builder: (context, productProvider, child) {
-  //       if (productProvider.productList!.isEmpty) {
-  //         return const Center(child: CircularProgressIndicator());
-  //       }
-  //       return GridView.builder(
-  //         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-  //           crossAxisCount: 2,
-  //           childAspectRatio: 3 / 2,
-  //           crossAxisSpacing: 10,
-  //           mainAxisSpacing: 10,
-  //         ),
-  //         itemCount: productProvider.productList!.length,
-  //         itemBuilder: (context, index) {
-  //           final selectionProvider = productProvider.productList![index];
-  //           return CategoryListItemWidget(
-  //             file: file ?? "",
-  //             attachment:
-  //                 selectionProvider.productList![index].attachment ?? [],
-  //             isSelected: isSelected,
-  //             imageUrlPath: _items[0].imageUrl,
-  //             price: "${selectionProvider.productList![index].price!.price}",
-  //             title: selectionProvider.productList![index].productName ?? '',
-  //             weight: selectionProvider.productList![index].unit ?? '',
-  //             customerId: customerId ?? 1,
-  //             productId: selectionProvider.productList![index].productId ?? 1,
-  //             currency: selectionProvider.productList![index].currency ?? '',
-  //             fileType: '',
-  //           );
-  //         },
-  //       );
-  //     },
-  //   );
-  // }
+  Widget _buildGridView() {
+    return Consumer<GridSelectionProvider>(
+      builder: (context, productProvider, child) {
+        if (productProvider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (productProvider.productList!.isEmpty) {
+          return showEmptyMessege(
+            message: 'No products available',
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 200, // Maximum width for each item
+              childAspectRatio: 3 / 3, // Updated to match 180w x 150h
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemCount: productProvider.productList!.length,
+            itemBuilder: (context, index) {
+              int? customerId =
+                  Provider.of<AuthModel>(context, listen: false).userId;
+
+              String? file = "";
+              debugPrint("file-$index$file");
+              final product = productProvider.productList![index];
+              for (var v in product.attachment ?? []) {
+                debugPrint(v.filePath);
+
+                if (v.isPrimary == 1) {
+                  debugPrint("file$file");
+                  file = v.filePath;
+                } else {
+                  debugPrint("fileShanidha$file");
+                }
+              }
+              final selectionProvider = productProvider;
+              return ProductCardSquare(
+                file: file ?? "",
+                attachment:
+                    selectionProvider.productList![index].attachment ?? [],
+                isSelected: false,
+                price: "${selectionProvider.productList![index].price!.price}",
+                title: selectionProvider.productList![index].productName ?? '',
+                weight: selectionProvider.productList![index].unit ?? '',
+                customerId: customerId ?? 1,
+                productId: selectionProvider.productList![index].productId ?? 1,
+                currency: selectionProvider.productList![index].currency ?? '',
+                fileType: '',
+                removeFromCart: _removeFromCart,
+                addToCart: _addToCart,
+                count: 0,
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
 
   Widget _menuItem(String title, String description, String imageLink,
       int price, int productId, String currency) {
@@ -195,65 +259,82 @@ class _KioskScreenState extends State<KioskScreen> {
         int count = 0;
         // int count = cartProvider.getItemCount(productId);
         return Container(
-          height: 100,
-          padding: const EdgeInsets.all(8),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: Image.network(imageLink, fit: BoxFit.cover),
-              ),
-              Expanded(
-                flex: 4,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          padding: const EdgeInsets.all(16),
+          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: const [
+                BoxShadow(
+                  color: ColorManager.boxShadowColor,
+                  blurRadius: 6,
+                  offset: Offset(1, 1),
+                ),
+              ],
+              color: Colors.white),
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            height: 100,
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(imageLink, fit: BoxFit.cover),
+                  ),
+                ),
+                Expanded(
+                  flex: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(title,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        Text(description, style: const TextStyle(fontSize: 12)),
+                        Text(
+                          '$currency ${price.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(title,
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text(description, style: const TextStyle(fontSize: 12)),
-                      Text(
-                        '$currency ${price.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline,
+                                color: ColorManager.kPrimaryColor),
+                            onPressed: () {
+                              _removeFromCart(context, productId);
+                            },
+                          ),
+                          Text('$count'),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle,
+                                color: ColorManager.kPrimaryColor),
+                            onPressed: () {
+                              _addToCart(context, productId);
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Text('$currency ${price.toStringAsFixed(2)}'),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.remove_circle_outline,
-                              color: ColorManager.kPrimaryColor),
-                          onPressed: () {
-                            _removeFromCart(context, productId);
-                          },
-                        ),
-                        Text('$count'),
-                        IconButton(
-                          icon: const Icon(Icons.add_circle,
-                              color: ColorManager.kPrimaryColor),
-                          onPressed: () {
-                            _addToCart(context, productId);
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

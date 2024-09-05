@@ -12,7 +12,7 @@ import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
 
 class CategoryListItemWidget extends StatelessWidget {
-  final String imageUrlPath;
+  final String? imageUrlPath;
   final String price;
   final String title;
   final String weight;
@@ -27,7 +27,7 @@ class CategoryListItemWidget extends StatelessWidget {
 
   const CategoryListItemWidget(
       {super.key,
-      required this.imageUrlPath,
+       this.imageUrlPath,
       required this.price,
       required this.title,
       required this.weight,
