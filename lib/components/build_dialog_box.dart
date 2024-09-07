@@ -1,10 +1,8 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
-import 'build_round_button.dart';
 
 // void showErrorDialog({required String error, required BuildContext ctx}) {
 //   showCupertinoDialog(
@@ -67,7 +65,7 @@ ScaffoldMessengerState showScaffold({required BuildContext context, message}) {
         elevation: 0,
         margin: EdgeInsets.only(
             top: 50, left: MediaQuery.of(context).size.width / 1.9, right: 10),
-        backgroundColor: ColorManager.kSuccessColor.withOpacity(0.6),
+        backgroundColor: ColorManager.kSuccessColor.withOpacity(0.8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         content: Text(
           message, //  'Added To Cart',
@@ -89,7 +87,7 @@ ScaffoldMessengerState showScaffoldError(
         elevation: 0,
         margin: EdgeInsets.only(
             top: 50, left: MediaQuery.of(context).size.width / 1.9, right: 10),
-        backgroundColor: ColorManager.kErrorColor.withOpacity(0.6),
+        backgroundColor: ColorManager.kErrorColor.withOpacity(0.8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         content: Text(
           message, //  'Added To Cart',

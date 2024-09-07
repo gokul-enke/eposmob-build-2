@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/extensions/widget_functions.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/location_provider.dart';
 import 'package:provider/provider.dart';
@@ -253,7 +254,7 @@ void showAddCustomerModal(BuildContext context, Size size,
                               child: DropdownButton<String>(
                                 isExpanded: true,
                                 value: selectedStateId,
-                                hint: Text("Select State"),
+                                hint: const Text("Select State"),
                                 items: locationProvider.stateList.map((state) {
                                   return DropdownMenuItem<String>(
                                     value: state.key,
@@ -447,45 +448,4 @@ void showAddCustomerModal(BuildContext context, Size size,
       });
     },
   );
-}
-
-String? validateEmail(String? value) {
-  const pattern = r"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'"
-      r'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-'
-      r'\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*'
-      r'[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4]'
-      r'[0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9]'
-      r'[0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\'
-      r'x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])';
-  final regex = RegExp(pattern);
-
-  return value!.isNotEmpty && !regex.hasMatch(value)
-      ? 'Enter a valid email address'
-      : null;
-}
-
-class PhoneNumberFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    String formattedText = formatPhoneNumber(newValue.text);
-
-    return TextEditingValue(
-      text: formattedText,
-      selection: TextSelection.collapsed(offset: formattedText.length),
-    );
-  }
-
-  String formatPhoneNumber(String input) {
-    input = input.replaceAll(RegExp(r'\D'), '');
-    if (input.length > 3) {
-      input = '${input.substring(0, 3)}-${input.substring(3)}';
-    }
-    if (input.length > 7) {
-      input = '${input.substring(0, 7)}-${input.substring(7)}';
-    }
-    return input;
-  }
 }

@@ -7,15 +7,15 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/add_to_cart.dart';
-import '../models/add_to_order.dart';
 import '../models/list_cart.dart';
 import '../resources/app_url.dart';
 import 'package:http/http.dart' as http;
 
 class CartProvider with ChangeNotifier {
-  // ignore: prefer_final_fields
-  StreamController<List<ListCartModelData>> _cartStreamController =
+  final StreamController<List<ListCartModelData>> _cartStreamController =
       StreamController<List<ListCartModelData>>.broadcast();
+
+  List<ListCartModelData> cartData = [];
 
   Stream<List<ListCartModelData>> get cartStream =>
       _cartStreamController.stream;
@@ -27,20 +27,79 @@ class CartProvider with ChangeNotifier {
     netTotal: 0,
   );
   int cartId = 0;
+
+  final Map<int, int> _itemCounts = {}; // Map to track item counts
+
   setCartIDForOrder(int value) {
     cartId = value;
     notifyListeners();
   }
 
+  void updatePriceSummary(
+      {required double discountAmount, required double discountedTotal}) {
+    if (priceSummary != null) {
+      priceSummary!.discount = discountAmount;
+      priceSummary!.netTotal = discountedTotal;
+      notifyListeners();
+    }
+  }
+
   int get getCartIDForOrder => cartId;
+
+  int? getCartIdFromProductId(int productId) {
+    if (cartData.isNotEmpty) {
+      for (var item in cartData) {
+        debugPrint("erererererer");
+        debugPrint(item.toString());
+        for (var cartItem in item.cartItems ?? []) {
+          debugPrint(cartItem.toString());
+          if (cartItem.productId == productId) {
+            // Return the cart ID if found
+            debugPrint(cartItem.id.toString());
+            return cartItem
+                .id; // Assuming `id` is the cartId you want to return
+          }
+        }
+      }
+    }
+    return null; // Return null if no cart ID was found for the product ID
+  }
+
+  int getItemCount(int productId) {
+    return _itemCounts[productId] ?? 0; // Return 0 if not in cart
+  }
+
+  void incrementCount(int productId) {
+    if (_itemCounts.containsKey(productId)) {
+      _itemCounts[productId] = _itemCounts[productId]! + 1;
+    } else {
+      _itemCounts[productId] = 1; // Set to 1 if not present
+    }
+    notifyListeners();
+  }
+
+  void decrementCount(int productId) {
+    if (_itemCounts.containsKey(productId) && _itemCounts[productId]! > 0) {
+      _itemCounts[productId] = _itemCounts[productId]! - 1;
+      if (_itemCounts[productId] == 0) {
+        _itemCounts.remove(productId); // Remove if count is 0
+      }
+      notifyListeners();
+    }
+  }
+
+  void resetProductCounts() {
+    _itemCounts.clear();
+    notifyListeners();
+  }
 
   Future<void> fetchCartDataFromApi(
       {required int customerId, required String accessToken}) async {
     debugPrint("fetching cart of $customerId");
     // Fetch cart data from your API and add it to the stream
-    List<ListCartModelData> cartData =
-        await fetchCartData(customerId: customerId, token: accessToken);
+    cartData = await fetchCartData(customerId: customerId, token: accessToken);
     _cartStreamController.add(cartData.isEmpty ? [] : cartData);
+    notifyListeners();
   }
 
   CartProvider() {
@@ -189,17 +248,16 @@ class CartProvider with ChangeNotifier {
   Future<dynamic> removeFromCartAPI({
     required int customerId,
     required int productId,
-    required String remove,
-    // required int quantity,
+    String remove = "false",
     required String accessToken,
   }) async {
     debugPrint("********************REMOVE FROM CART API******************** ");
+    debugPrint("product id is ${productId.toString()}");
     final Map<String, dynamic> apiBodyData = {
       'cart_item_id': productId,
       'remove': remove
     };
     debugPrint("productId $productId");
-    // debugPrint("customerId $customerId");
     final url = Uri.parse(APPUrl
         .removeFromCartUrl); // Update this to the correct endpoint for removing items
     try {
@@ -221,10 +279,12 @@ class CartProvider with ChangeNotifier {
         debugPrint(addToCartModel.status);
         if (addToCartModel.status == 'success') {
           debugPrint("  if (addToCartModel.status == 'success') {");
-          debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
+          // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
 
-          setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
+          // setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
         }
+
+        debugPrint("Removed from cart successfully");
 
         return jsonData; // Return response data or success status
       } else {
@@ -286,7 +346,7 @@ class CartProvider with ChangeNotifier {
   }
 
   Future<dynamic> applyCoupon({
-    required int totalAmount,
+    required double totalAmount,
     required String couponCode,
     required String accessToken,
   }) async {

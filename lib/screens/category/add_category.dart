@@ -1,18 +1,12 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
-import 'package:pos_machine/providers/auth_model.dart';
 import 'package:provider/provider.dart';
-import 'package:websafe_svg/websafe_svg.dart';
-
 import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../models/category_list.dart';
 import '../../providers/category_providers.dart';
-import '../../resources/asset_manager.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -21,10 +15,10 @@ class AddCategoryScreen extends StatefulWidget {
   const AddCategoryScreen({Key? key}) : super(key: key);
 
   @override
-  _AddCategoryScreenState createState() => _AddCategoryScreenState();
+  AddCategoryScreenState createState() => AddCategoryScreenState();
 }
 
-class _AddCategoryScreenState extends State<AddCategoryScreen> {
+class AddCategoryScreenState extends State<AddCategoryScreen> {
   final TextEditingController categoryNameController = TextEditingController();
   final TextEditingController parentCategoryController =
       TextEditingController();
@@ -75,8 +69,6 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
       setState(() {
         initLoading = true;
       });
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
       CategoryProvider categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
 

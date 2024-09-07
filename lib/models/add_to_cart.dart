@@ -196,11 +196,11 @@ class AddToCartProductName {
 }
 
 class PriceSummary {
-  final int? subTotal;
-  final int? totalTax;
-  final int? netTotal;
-  final int? discount;
-  final int? netPayable;
+  double? subTotal;
+  double? totalTax;
+  double? netTotal;
+  double? discount;
+  double? netPayable;
 
   PriceSummary({
     this.subTotal,
@@ -211,11 +211,11 @@ class PriceSummary {
   });
 
   factory PriceSummary.fromJson(Map<String, dynamic> json) => PriceSummary(
-        subTotal: json["sub_total"],
-        totalTax: json["total_tax"],
-        netTotal: json["net_total"],
-        discount: json["discount"],
-        netPayable: json["net_payable"],
+        subTotal: (json["sub_total"] as num?)?.toDouble(),
+        totalTax: (json["total_tax"] as num?)?.toDouble(),
+        netTotal: (json["net_total"] as num?)?.toDouble(),
+        discount: (json["discount"] as num?)?.toDouble(),
+        netPayable: (json["net_payable"] as num?)?.toDouble(),
       );
 
   Map<String, dynamic> toJson() => {

@@ -1,12 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:provider/provider.dart';
-
-import '../components/build_round_button.dart';
-import '../models/add_to_cart.dart';
 import '../models/get_product.dart';
-import '../providers/auth_model.dart';
-import '../providers/cart_provider.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';

@@ -1,10 +1,17 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/components/main_screen.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
-import 'package:pos_machine/widgets/category_list_item_widget.dart';
-import 'package:pos_machine/widgets/product_card_kiosk.dart';
+import 'package:pos_machine/screens/kiosk/kiosk_order_page.dart';
+import 'package:pos_machine/widgets/product_card_list_kiosk.dart';
+import 'package:pos_machine/widgets/product_card_square_kiosk.dart';
 import 'package:pos_machine/widgets/showEmptyMessege.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -40,7 +47,7 @@ class _KioskScreenState extends State<KioskScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context);
+            Get.to(() => MainScreen());
           },
         ),
         centerTitle: true,
@@ -216,34 +223,37 @@ class _KioskScreenState extends State<KioskScreen> {
                   Provider.of<AuthModel>(context, listen: false).userId;
 
               String? file = "";
-              debugPrint("file-$index$file");
+              debugPrint("file-");
               final product = productProvider.productList![index];
               for (var v in product.attachment ?? []) {
-                debugPrint(v.filePath);
-
                 if (v.isPrimary == 1) {
-                  debugPrint("file$file");
                   file = v.filePath;
-                } else {
-                  debugPrint("fileShanidha$file");
                 }
               }
-              final selectionProvider = productProvider;
-              return ProductCardSquare(
-                file: file ?? "",
-                attachment:
-                    selectionProvider.productList![index].attachment ?? [],
-                isSelected: false,
-                price: "${selectionProvider.productList![index].price!.price}",
-                title: selectionProvider.productList![index].productName ?? '',
-                weight: selectionProvider.productList![index].unit ?? '',
-                customerId: customerId ?? 1,
-                productId: selectionProvider.productList![index].productId ?? 1,
-                currency: selectionProvider.productList![index].currency ?? '',
-                fileType: '',
-                removeFromCart: _removeFromCart,
-                addToCart: _addToCart,
-                count: 0,
+              return Consumer<CartProvider>(
+                builder: (context, cartProvider, child) {
+                  int count = cartProvider.getItemCount(productProvider
+                      .productList![index]
+                      .productId!); // Get count from CartProvider
+                  return ProductCardSquare(
+                    file: file ?? "",
+                    attachment:
+                        productProvider.productList![index].attachment ?? [],
+                    isSelected: false,
+                    price:
+                        "${productProvider.productList![index].price!.price}",
+                    title: productProvider.productList![index].productName!,
+                    weight: productProvider.productList![index].unit ?? '',
+                    customerId: customerId ?? 1,
+                    productId: productProvider.productList![index].productId!,
+                    currency:
+                        productProvider.productList![index].currency ?? '',
+                    fileType: '',
+                    removeFromCart: _removeFromCart,
+                    addToCart: _addToCart,
+                    count: count,
+                  );
+                },
               );
             },
           ),
@@ -256,86 +266,17 @@ class _KioskScreenState extends State<KioskScreen> {
       int price, int productId, String currency) {
     return Consumer<CartProvider>(
       builder: (context, cartProvider, child) {
-        int count = 0;
-        // int count = cartProvider.getItemCount(productId);
-        return Container(
-          padding: const EdgeInsets.all(16),
-          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: const [
-                BoxShadow(
-                  color: ColorManager.boxShadowColor,
-                  blurRadius: 6,
-                  offset: Offset(1, 1),
-                ),
-              ],
-              color: Colors.white),
-          child: Container(
-            padding: const EdgeInsets.all(4),
-            height: 100,
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(imageLink, fit: BoxFit.cover),
-                  ),
-                ),
-                Expanded(
-                  flex: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(title,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
-                        Text(description, style: const TextStyle(fontSize: 12)),
-                        Text(
-                          '$currency ${price.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.remove_circle_outline,
-                                color: ColorManager.kPrimaryColor),
-                            onPressed: () {
-                              _removeFromCart(context, productId);
-                            },
-                          ),
-                          Text('$count'),
-                          IconButton(
-                            icon: const Icon(Icons.add_circle,
-                                color: ColorManager.kPrimaryColor),
-                            onPressed: () {
-                              _addToCart(context, productId);
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+        int count =
+            cartProvider.getItemCount(productId); // Get count from CartProvider
+        return ProductCardList(
+          imageLink: imageLink,
+          title: title,
+          currency: currency,
+          price: price,
+          count: count,
+          productId: productId,
+          removeFromCart: () => _removeFromCart(context, productId),
+          addToCart: () => _addToCart(context, productId),
         );
       },
     );
@@ -355,15 +296,16 @@ class _KioskScreenState extends State<KioskScreen> {
         .then((value) {
       AddToCartModel addToCartModel = AddToCartModel.fromJson(value);
       if (value["status"] == "success") {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(addToCartModel.message ?? "Added To Cart")),
-        );
+        showScaffold(
+            context: context,
+            message: addToCartModel.message ?? "Added to Cart");
+        // Notify the cart provider of the change so it updates count
+        Provider.of<CartProvider>(context, listen: false)
+            .incrementCount(productId);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text(addToCartModel.message ?? "Error Occurred! Try Again!")),
-        );
+        showScaffoldError(
+            context: context,
+            message: addToCartModel.message ?? "Error Occurred! Try Again!");
       }
     });
   }
@@ -372,25 +314,35 @@ class _KioskScreenState extends State<KioskScreen> {
     final customerId = Provider.of<AuthModel>(context, listen: false).userId;
     final accessToken = Provider.of<AuthModel>(context, listen: false).token;
 
+    // Get the cartId associated with the productId
+    int? cartId = Provider.of<CartProvider>(context, listen: false)
+        .getCartIdFromProductId(productId);
+
+    debugPrint("product id is ${productId.toString()}");
+    debugPrint("cart id is ${cartId.toString()}");
+
     Provider.of<CartProvider>(context, listen: false)
         .removeFromCartAPI(
       customerId: customerId ?? 1,
-      productId: productId,
+      productId: cartId!,
       accessToken: accessToken ?? "",
-      remove: "true",
+      remove: "false",
     )
         .then((value) {
+      debugPrint("removed succesrfully");
+
       AddToCartModel addToCartModel = AddToCartModel.fromJson(value);
       if (value["status"] == "success") {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(addToCartModel.message ?? "Added To Cart")),
-        );
+        showScaffold(
+            context: context,
+            message: addToCartModel.message ?? "Removed From Cart");
+        // Notify the cart provider of the change so it updates count
+        Provider.of<CartProvider>(context, listen: false)
+            .decrementCount(productId);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text(addToCartModel.message ?? "Error Occurred! Try Again!")),
-        );
+        showScaffoldError(
+            context: context,
+            message: addToCartModel.message ?? "Error Occurred! Try Again!");
       }
     });
   }
@@ -398,16 +350,17 @@ class _KioskScreenState extends State<KioskScreen> {
   Widget _buildCheckoutButton() {
     return Consumer<CartProvider>(
       builder: (context, cartProvider, child) {
-        double total = 5000;
-        // double total = cartProvider.getTotalAmount();
         return Container(
           padding: const EdgeInsets.all(16),
           child: CustomRoundButton(
             fontSize: FontSize.s14,
             height: MediaQuery.of(context).size.height * .07,
             width: MediaQuery.of(context).size.width * .8,
-            fct: () {},
-            title: 'CHECKOUT INR ${total.toStringAsFixed(2)}',
+            fct: () {
+              Get.to(() => const KioskOrderPage());
+            },
+            title:
+                'CHECKOUT INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal)}',
           ),
         );
       },

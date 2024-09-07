@@ -46,6 +46,7 @@ class ListCartModelData {
   final List<ListCartModelDataCartItem>? cartItems;
   final List<String>? taxNames;
   final PriceSummary? priceSummary;
+  final Map<String, int>? taxAmounts;
 
   ListCartModelData({
     this.id,
@@ -56,6 +57,7 @@ class ListCartModelData {
     this.cartItems,
     this.taxNames,
     this.priceSummary,
+    this.taxAmounts,
   });
 
   factory ListCartModelData.fromJson(Map<String, dynamic> json) =>
@@ -75,6 +77,10 @@ class ListCartModelData {
         priceSummary: json["price_summary"] == null
             ? null
             : PriceSummary.fromJson(json["price_summary"]),
+        taxAmounts: json["tax_amounts"] is Map // Check if tax_amounts is a Map
+            ? Map<String, int>.from(json["tax_amounts"]
+                .map((k, v) => MapEntry(k as String, v as int)))
+            : null, // Handle the empty array case by assigning `null`
       );
 
   Map<String, dynamic> toJson() => {
@@ -89,6 +95,8 @@ class ListCartModelData {
         "tax_names":
             taxNames == null ? [] : List<dynamic>.from(taxNames!.map((x) => x)),
         "price_summary": priceSummary?.toJson(),
+        "tax_amounts":
+            taxAmounts != null ? Map<String, dynamic>.from(taxAmounts!) : null,
       };
 }
 
@@ -96,7 +104,6 @@ class ListCartModelDataCartItem {
   final int? id;
   final int? productId;
   final String? productName;
-
   final int? categoryId;
   final int? quantity;
   final String? productUnit;

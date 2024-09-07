@@ -47,12 +47,9 @@ class _OrderListNewState extends State<OrderListNew> {
   List<CustomerListModelData>? customerList = [];
   CustomerListModelData? selectedCustomer;
   List<ListCartModelDataCartItem>? cartProductItems = [];
-  List<String>? taxNames = [];
+  Map<String, int> taxNames = {};
 
   Map<int, bool> hoverMap = {};
-
-  double? _discount;
-  double? _discountedTotal = 0;
 
   @override
   void initState() {
@@ -466,8 +463,10 @@ class _OrderListNewState extends State<OrderListNew> {
                                   ? []
                                   : cartItems.map((e) => e.cartItems).first;
 
+                          debugPrint("Tax ${cartItems.first.toString()}");
+
                           if (cartItems.isNotEmpty) {
-                            taxNames = cartItems.first.taxNames ?? [];
+                            taxNames = cartItems.first.taxAmounts ?? {};
                           }
 
                           return ListView.builder(
@@ -749,94 +748,7 @@ class _OrderListNewState extends State<OrderListNew> {
                   const SizedBox(width: 10),
                   CustomRoundButton(
                     title: "Apply",
-                    fct: () async {
-                      String? accessToken =
-                          Provider.of<AuthModel>(context, listen: false).token;
-                      debugPrint("accessToken From AuthModel $accessToken");
-
-                      // Get the total amount and coupon code from your UI
-                      int? totalAmount =
-                          Provider.of<CartProvider>(context, listen: false)
-                              .priceSummary!
-                              .netTotal; // Get this from your cart total
-                      String couponCode = coupenCodeTextController
-                          .text; // Get this from a text field in your UI
-
-                      if (accessToken != null) {
-                        final result = await Provider.of<CartProvider>(context,
-                                listen: false)
-                            .applyCoupon(
-                          totalAmount: totalAmount!,
-                          couponCode: couponCode,
-                          accessToken: accessToken,
-                        );
-                        if (result != null) {
-                          if (result['status'] == 'success') {
-                            final couponData = result['data']['data'];
-                            final discountType = couponData['discount_type'];
-                            final discountValue = double.parse(
-                                couponData['discount_value'].toString());
-                            final discountLimit = double.parse(
-                                couponData['discount_coupon_limit_amount']
-                                    .toString());
-
-                            double discountAmount;
-                            if (discountType == 'percent') {
-                              discountAmount =
-                                  totalAmount * (discountValue / 100);
-                              if (discountAmount > discountLimit) {
-                                discountAmount = discountLimit;
-                              }
-                            } else if (discountType == 'fixed') {
-                              discountAmount = discountValue;
-                              if (discountAmount > discountLimit) {
-                                discountAmount = discountLimit;
-                              }
-                            } else {
-                              // Handle unexpected discount type
-                              showScaffoldError(
-                                context: context,
-                                message: 'Unknown discount type',
-                              );
-                              return;
-                            }
-
-                            // Calculate the new total after discount
-                            double newTotal = totalAmount - discountAmount;
-
-                            setState(() {
-                              _discount = discountAmount;
-                              _discountedTotal = newTotal;
-                            });
-
-                            debugPrint("${discountAmount} and $newTotal");
-
-                            showScaffold(
-                              context: context,
-                              message: result['message'] ??
-                                  'Coupon Applied Successfully',
-                            );
-                            // Update your UI with the new discounted price if provided in the response
-                          } else {
-                            showScaffoldError(
-                              context: context,
-                              message:
-                                  result['message'] ?? 'Failed to Apply Coupon',
-                            );
-                          }
-                        } else {
-                          showScaffoldError(
-                            context: context,
-                            message: 'Error Occurred! Try Again',
-                          );
-                        }
-                      } else {
-                        showScaffoldError(
-                          context: context,
-                          message: 'Not Authenticated',
-                        );
-                      }
-                    },
+                    fct: _applyCoupon,
                     fontSize: FontSize.s14,
                     height: MediaQuery.of(context).size.height * .07,
                     width: 100,
@@ -868,17 +780,17 @@ class _OrderListNewState extends State<OrderListNew> {
                 title: "Net amount",
                 color: ColorManager.textColor,
               ),
+              const BuildPaymentRow(
+                amount: "0.00",
+                title: "Shipping",
+                color: ColorManager.textColor,
+              ),
               BuildPaymentRow(
                 amount: AmountHelper.formatAmount(
                     Provider.of<CartProvider>(context, listen: true)
                             .priceSummary!
                             .discount ??
                         0.00),
-                title: "Shipping",
-                color: ColorManager.textColor,
-              ),
-              BuildPaymentRow(
-                amount: AmountHelper.formatAmount(_discount ?? 0.00),
                 title: "Discount",
                 color: ColorManager.textColor,
               ),
@@ -900,8 +812,7 @@ class _OrderListNewState extends State<OrderListNew> {
                     builder: (context) {
                       return Center(
                         child: TaxDetailsDialog(
-                          cartItems: cartProductItems!,
-                          taxNames: taxNames!,
+                          taxAmounts: taxNames,
                         ),
                       );
                     },
@@ -910,13 +821,11 @@ class _OrderListNewState extends State<OrderListNew> {
               ),
               const Divider(thickness: 2),
               BuildPaymentRow(
-                amount: _discountedTotal == 0
-                    ? AmountHelper.formatAmount(
-                        Provider.of<CartProvider>(context, listen: true)
-                                .priceSummary!
-                                .netTotal ??
-                            0.00)
-                    : _discountedTotal.toString(),
+                amount: AmountHelper.formatAmount(
+                    Provider.of<CartProvider>(context, listen: true)
+                            .priceSummary!
+                            .netTotal ??
+                        0.00),
                 title: "Total Payable",
                 secondRowTextStyle: buildCustomStyle(
                   FontWeightManager.bold,
@@ -1114,7 +1023,6 @@ class _OrderListNewState extends State<OrderListNew> {
                           flex: 3,
                           child: GestureDetector(
                             onTap: () async {
-                              debugPrint(_discountedTotal.toString());
                               String? accessToken =
                                   Provider.of<AuthModel>(context, listen: false)
                                       .token;
@@ -1125,8 +1033,7 @@ class _OrderListNewState extends State<OrderListNew> {
                                   listen: false);
                               int cartId = provider.getCartIDForOrder;
                               debugPrint("$cartId");
-                              debugPrint(
-                                  "selectedCustomer${selectedCustomer!.id.toString()}");
+                           
 
                               try {
                                 await Provider.of<CartProvider>(context,
@@ -1186,7 +1093,7 @@ class _OrderListNewState extends State<OrderListNew> {
                                 color: ColorManager.kPrimaryColor,
                               ),
                               child: Text(
-                                'Save Sales ${_discountedTotal == 0 ? AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal) : _discountedTotal}',
+                                'Save Sales ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal)}',
                                 style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s16,
@@ -1249,6 +1156,69 @@ class _OrderListNewState extends State<OrderListNew> {
         ),
       ),
     );
+  }
+
+  Future<void> _applyCoupon() async {
+    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    double? totalAmount = Provider.of<CartProvider>(context, listen: false)
+        .priceSummary!
+        .netTotal;
+
+    String couponCode = coupenCodeTextController.text;
+
+    if (accessToken != null) {
+      final result =
+          await Provider.of<CartProvider>(context, listen: false).applyCoupon(
+        totalAmount: totalAmount!,
+        couponCode: couponCode,
+        accessToken: accessToken,
+      );
+
+      if (result != null) {
+        if (result['status'] == 'success') {
+          final couponData = result['data']['data'];
+          double discountAmount = _calculateDiscount(totalAmount, couponData);
+          double discountedTotal = totalAmount - discountAmount;
+
+          Provider.of<CartProvider>(context, listen: false).updatePriceSummary(
+              discountAmount: discountAmount, discountedTotal: discountedTotal);
+
+          showScaffold(
+              context: context,
+              message: result['message'] ?? 'Coupon Applied Successfully');
+        } else {
+          showScaffoldError(
+              context: context,
+              message: result['message'] ?? 'Failed to Apply Coupon');
+        }
+      } else {
+        showScaffoldError(
+            context: context, message: 'Error Occurred! Try Again');
+      }
+    } else {
+      showScaffoldError(context: context, message: 'Not Authenticated');
+    }
+  }
+
+  double _calculateDiscount(
+      double totalAmount, Map<String, dynamic> couponData) {
+    final discountType = couponData['discount_type'];
+    final discountValue = double.parse(couponData['discount_value'].toString());
+    final discountLimit =
+        double.parse(couponData['discount_coupon_limit_amount'].toString());
+
+    double discountAmount;
+
+    if (discountType == 'percent') {
+      discountAmount = totalAmount * (discountValue / 100);
+      return discountAmount > discountLimit ? discountLimit : discountAmount;
+    } else if (discountType == 'fixed') {
+      discountAmount = discountValue;
+      return discountAmount > discountLimit ? discountLimit : discountAmount;
+    } else {
+      showScaffoldError(context: context, message: 'Unknown discount type');
+      return 0.0; // Default value in case of an error
+    }
   }
 }
 

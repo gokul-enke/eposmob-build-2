@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
-
+  
 import 'package:pos_machine/providers/auth_model.dart';
 
 import 'package:pos_machine/providers/cart_provider.dart';
@@ -14,13 +14,13 @@ import 'package:pos_machine/providers/customer_provider.dart';
 
 import 'package:pos_machine/providers/grid_provider.dart';
 
-
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/location_provider.dart';
 import 'package:pos_machine/providers/report_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 
 import 'package:provider/provider.dart';
+
 
 import 'controllers/sidebar_controller.dart';
 import 'providers/carousel_provider.dart';
