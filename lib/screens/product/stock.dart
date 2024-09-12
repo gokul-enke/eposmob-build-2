@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
+import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
@@ -168,34 +169,13 @@ class _AddStockScreenState extends State<AddStockScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(
+                          buildColumnWidgetForTextFields(
                             height: 45,
-                            width: 120, //size.width * 0.5,
-                            child: TextFormField(
-                              onChanged: (value) {
-                                setState(() {
-                                  // searchAmount = value;
-                                });
-                              },
-                              cursorColor: ColorManager.kPrimaryColor,
-                              cursorHeight: 13,
-                              controller: stockNameController,
-                              style: buildCustomStyle(FontWeightManager.medium,
-                                  FontSize.s10, 0.18, ColorManager.textColor),
-                              decoration: decoration.copyWith(
-                                  hintText: "Stock Name   ",
-                                  hintStyle: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s10,
-                                      0.18,
-                                      ColorManager.textColor),
-                                  // prefixIcon: const Icon(
-                                  //   Icons.search,
-                                  //   color: Colors.black,
-                                  //   size: 35,
-                                  // ),
-                                  prefixIconColor: Colors.black),
-                            ),
+                            width: 120,
+                            onchanged: (value) {},
+                            controller: stockNameController,
+                            size: size,
+                            hintText: 'Stock Name',
                           ),
                         ],
                       ),

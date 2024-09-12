@@ -44,7 +44,7 @@ class BuildBoxShadowContainer extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: ColorManager.boxShadowColor,
-            blurRadius: blurRadius ?? 6,
+            blurRadius: blurRadius ?? 3,
             offset: offsetValue ?? const Offset(0, 1),
           ),
         ],

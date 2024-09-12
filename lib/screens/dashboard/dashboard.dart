@@ -106,519 +106,513 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "Dashboard ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s20, 0.30, ColorManager.textColor),
-                      ),
-                      Row(
-                        children: [
-                          CustomRoundButtonWithIcon(
-                            title: "Download Report",
-                            fct: () {},
-                            fontSize: 10,
-                            height: 50,
-                            width: 150,
-                            size: size,
-                            icon: const Icon(
-                              Icons.download_outlined,
-                              size: 12,
-                              color: Colors.white,
-                            ),
-                          ),
-                          BuildBoxShadowContainer(
-                              padding: const EdgeInsets.all(15),
-                              height: 50,
-                              width: 150,
-                              circleRadius: 4,
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.calendar_month,
-                                    size: 10,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    "6,April,2022",
-                                    style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s10,
-                                        0.10,
-                                        ColorManager.textColor),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  const Icon(
-                                    Icons.keyboard_arrow_down,
-                                    size: 12,
-                                  ),
-                                ],
-                              )),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "Today's Sales ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.23, ColorManager.textColor),
-                      ),
-                      BuildBoxShadowContainer(
-                        padding: const EdgeInsets.only(left: 20),
-                        height: 30,
-                        width: 80,
-                        circleRadius: 4,
-                        child: DropdownButton<String>(
-                          value: value, // Set the initial value
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              value = newValue ?? "today";
-                            });
-                            // Handle the dropdown value change
-                            // Typically, you would setState to update the dropdown value in your stateful widget
-                          },
-                          items: <String>['today', 'week', 'month', 'year']
-                              .map((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value),
-                            );
-                          }).toList(),
-
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s8, 0.10, ColorManager.textColor),
-                          // Hide the underline by setting the underline property to an empty container
-                          underline: Container(),
-                        ),
-
-                        // Row(
-                        //   children: [
-                        //     const SizedBox(width: 6),
-                        //     Text(
-                        //       "Today",
-                        //       style: buildCustomStyle(FontWeightManager.medium,
-                        //           FontSize.s8, 0.10, ColorManager.textColor),
-                        //     ),
-                        //     const SizedBox(width: 6),
-                        //     const Icon(
-                        //       Icons.keyboard_arrow_down,
-                        //       size: 12,
-                        //     ),
-                        //   ],
-                        // ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(
-                    height: 165,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      shrinkWrap: true,
-                      children: [
-                        _buildSalesCard("Count", ColorManager.kPrimaryColor),
-                        _buildSalesCard("Amount", ColorManager.kMagentha),
-                        _buildSalesCard("Customers", ColorManager.kOrange),
-                      ],
-                    ),
-                  ),
+                  _buildHeader(size),
+                  const SizedBox(height: 20),
+                  _buildTodaysSales(),
+                  _buildSalesCards(),
                   const SizedBox(height: 10),
-                  SizedBox(
-                    height: 260,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Sales Overview",
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s15,
-                                    0.23,
-                                    ColorManager.textColor),
-                              ),
-                              BuildBoxShadowContainer(
-                                  margin: const EdgeInsets.all(15),
-                                  padding: const EdgeInsets.all(15),
-                                  height: 200,
-                                  circleRadius: 7,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Row(
-                                      //   mainAxisAlignment:
-                                      //       MainAxisAlignment.end,
-                                      //   children: [
-                                      //     BuildBoxShadowContainer(
-                                      //         padding: const EdgeInsets.only(
-                                      //             left: 10),
-                                      //         height: 30,
-                                      //         width: 80,
-                                      //         circleRadius: 4,
-                                      //         child: Row(
-                                      //           children: [
-                                      //             const SizedBox(width: 6),
-                                      //             Text(
-                                      //               "Today",
-                                      //               style: buildCustomStyle(
-                                      //                   FontWeightManager
-                                      //                       .medium,
-                                      //                   FontSize.s8,
-                                      //                   0.10,
-                                      //                   ColorManager.textColor),
-                                      //             ),
-                                      //             const SizedBox(width: 6),
-                                      //             const Icon(
-                                      //               Icons.keyboard_arrow_down,
-                                      //               size: 12,
-                                      //             ),
-                                      //           ],
-                                      //         )),
-                                      //   ],
-                                      // ),
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(16.0),
-                                          child: LineChart(
-                                            LineChartData(
-                                              gridData: FlGridData(show: false),
-                                              titlesData: FlTitlesData(
-                                                leftTitles: AxisTitles(
-                                                  sideTitles: SideTitles(
-                                                    showTitles: true,
-                                                    getTitlesWidget:
-                                                        (value, meta) {
-                                                      return Text(
-                                                        value
-                                                            .toInt()
-                                                            .toString(),
-                                                        style: const TextStyle(
-                                                          color: Colors.grey,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 10,
-                                                        ),
-                                                      );
-                                                    },
-                                                    reservedSize: 30,
-                                                    interval:
-                                                        5, // Set a fixed interval
-                                                  ),
-                                                ),
-                                                topTitles: AxisTitles(
-                                                    sideTitles: SideTitles(
-                                                        showTitles: false)),
-                                                rightTitles: AxisTitles(
-                                                    sideTitles: SideTitles(
-                                                        showTitles: false)),
-                                                bottomTitles: AxisTitles(
-                                                  sideTitles: SideTitles(
-                                                    showTitles: true,
-                                                    getTitlesWidget:
-                                                        (value, meta) {
-                                                      if (value.toInt() <
-                                                          graphData.length) {
-                                                        return Text(
-                                                          '${graphData[value.toInt()].date.day}/${graphData[value.toInt()].date.month}',
-                                                          style:
-                                                              const TextStyle(
-                                                                  fontSize: 10),
-                                                        );
-                                                      }
-                                                      return const Text('');
-                                                    },
-                                                  ),
-                                                ),
-                                              ),
-                                              borderData:
-                                                  FlBorderData(show: false),
-                                              minY:
-                                                  0, // Set the minimum Y value
-                                              maxY:
-                                                  20, // Set the maximum Y value, adjust based on your data
-                                              lineBarsData: [
-                                                LineChartBarData(
-                                                  spots: graphData
-                                                      .asMap()
-                                                      .entries
-                                                      .map((entry) {
-                                                    return FlSpot(
-                                                        entry.key.toDouble(),
-                                                        entry.value.count
-                                                            .toDouble());
-                                                  }).toList(),
-                                                  isCurved: true,
-                                                  color: Colors.blue,
-                                                  barWidth: 3,
-                                                  isStrokeCapRound: true,
-                                                  dotData:
-                                                      FlDotData(show: true),
-                                                  belowBarData:
-                                                      BarAreaData(show: false),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  )),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Analytics",
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s15,
-                                    0.23,
-                                    ColorManager.textColor),
-                              ),
-                              BuildBoxShadowContainer(
-                                  margin: const EdgeInsets.all(15),
-                                  padding: const EdgeInsets.all(15),
-                                  height: 200,
-                                  // width: 220,
-                                  circleRadius: 7,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Row(
-                                      //   mainAxisAlignment:
-                                      //       MainAxisAlignment.end,
-                                      //   children: [
-                                      //     BuildBoxShadowContainer(
-                                      //         padding: const EdgeInsets.only(
-                                      //             left: 10),
-                                      //         height: 30,
-                                      //         width: 80,
-                                      //         circleRadius: 4,
-                                      //         child: Row(
-                                      //           children: [
-                                      //             const SizedBox(width: 6),
-                                      //             Text(
-                                      //               "Today",
-                                      //               style: buildCustomStyle(
-                                      //                   FontWeightManager
-                                      //                       .medium,
-                                      //                   FontSize.s8,
-                                      //                   0.10,
-                                      //                   ColorManager.textColor),
-                                      //             ),
-                                      //             const SizedBox(width: 6),
-                                      //             const Icon(
-                                      //               Icons.keyboard_arrow_down,
-                                      //               size: 12,
-                                      //             ),
-                                      //           ],
-                                      //         )),
-                                      //   ],
-                                      // ),
-                                      Expanded(
-                                        child: BarChart(
-                                          BarChartData(
-                                            alignment:
-                                                BarChartAlignment.spaceAround,
-                                            maxY: 20,
-                                            barTouchData: BarTouchData(
-                                              enabled: false,
-                                              touchTooltipData:
-                                                  BarTouchTooltipData(
-                                                tooltipPadding: EdgeInsets.zero,
-                                                tooltipMargin: 8,
-                                                getTooltipItem: (group,
-                                                    groupIndex, rod, rodIndex) {
-                                                  return BarTooltipItem(
-                                                    chartData[groupIndex]
-                                                        .count
-                                                        .toString(),
-                                                    const TextStyle(
-                                                      color: ColorManager
-                                                          .kPrimaryColor,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                            titlesData: FlTitlesData(
-                                              show: true,
-                                              bottomTitles: AxisTitles(
-                                                sideTitles: SideTitles(
-                                                  showTitles: true,
-                                                  reservedSize: 30,
-                                                  getTitlesWidget:
-                                                      (double value,
-                                                          TitleMeta meta) {
-                                                    if (value.toInt() >= 0 &&
-                                                        value.toInt() <
-                                                            chartData.length) {
-                                                      return SideTitleWidget(
-                                                        axisSide: meta.axisSide,
-                                                        space: 4,
-                                                        child: Text(
-                                                          DateFormat('dd/MM')
-                                                              .format(chartData[
-                                                                      value
-                                                                          .toInt()]
-                                                                  .date),
-                                                          style: TextStyle(
-                                                            color: ColorManager
-                                                                .textColor,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            fontSize: 10,
-                                                          ),
-                                                        ),
-                                                      );
-                                                    }
-                                                    return SizedBox();
-                                                  },
-                                                ),
-                                              ),
-                                              leftTitles: AxisTitles(
-                                                sideTitles: SideTitles(
-                                                  showTitles: true,
-                                                  getTitlesWidget:
-                                                      (double value,
-                                                          TitleMeta meta) {
-                                                    return Text(
-                                                      value.toInt().toString(),
-                                                      style: TextStyle(
-                                                        color: ColorManager
-                                                            .textColor,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 12,
-                                                      ),
-                                                    );
-                                                  },
-                                                  reservedSize: 40,
-                                                  interval: 5,
-                                                ),
-                                              ),
-                                              topTitles: AxisTitles(
-                                                  sideTitles: SideTitles(
-                                                      showTitles: false)),
-                                              rightTitles: AxisTitles(
-                                                  sideTitles: SideTitles(
-                                                      showTitles: false)),
-                                            ),
-                                            borderData:
-                                                FlBorderData(show: false),
-                                            barGroups: List.generate(
-                                              chartData.length,
-                                              (index) => BarChartGroupData(
-                                                x: index,
-                                                barRods: [
-                                                  BarChartRodData(
-                                                    toY: chartData[index]
-                                                        .count
-                                                        .toDouble(),
-                                                    color: ColorManager
-                                                        .kPrimaryColor,
-                                                    width: 16,
-                                                  )
-                                                ],
-                                                showingTooltipIndicators: [0],
-                                              ),
-                                            ),
-                                            gridData: FlGridData(show: false),
-                                          ),
-                                        ),
-                                      )
-                                    ],
-                                  )),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    "Quick Access ",
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s15, 0.23, ColorManager.textColor),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      QuickAccessCard(
-                        onTap: () {},
-                        title: "Favourites",
-                        gradient: const LinearGradient(
-                          colors: [
-                            ColorManager.kGradientCyan,
-                            ColorManager.kGradientBlue,
-                          ],
-                          begin: Alignment.topRight,
-                          end: Alignment.bottomLeft,
-                        ),
-                        size: size,
-                      ),
-                      QuickAccessCard(
-                        onTap: () {},
-                        title: "Favourites",
-                        gradient: const LinearGradient(
-                          colors: [
-                            ColorManager.kGradientPeach,
-                            ColorManager.kGradientRose,
-                          ],
-                          begin: Alignment.topRight,
-                          end: Alignment.bottomLeft,
-                        ),
-                        size: size,
-                      ),
-                      QuickAccessCard(
-                        onTap: () {},
-                        title: "Favourites",
-                        gradient: const LinearGradient(
-                          colors: [
-                            ColorManager.kGradientIndigo,
-                            ColorManager.kGradientVoilet,
-                          ],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomRight,
-                        ),
-                        size: size,
-                      ),
-                      QuickAccessCard(
-                        onTap: () {},
-                        title: "Favourites",
-                        gradient: const LinearGradient(
-                          colors: [
-                            ColorManager.kGradientGreen,
-                            ColorManager.kGradientGreenLight,
-                          ],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomRight,
-                        ),
-                        size: size,
-                      ),
-                    ],
-                  ),
+                  _buildSalesOverview(),
+                  _buildQuickAccess(),
                 ],
               ),
             ),
           );
+  }
+
+  Widget _buildHeader(Size size) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            "Dashboard",
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s20,
+              0.30,
+              ColorManager.textColor,
+            ),
+          ),
+          Row(
+            children: [
+              CustomRoundButtonWithIcon(
+                title: "Download Report",
+                fct: () {},
+                fontSize: 12, // Increased font size for better readability
+                height: 50,
+                width: 180,
+                size: size,
+                icon: const Icon(
+                  Icons.download_outlined,
+                  size: 16, // Increased icon size for better visibility
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 12), // Added spacing between elements
+              BuildBoxShadowContainer(
+                padding: const EdgeInsets.all(
+                    12), // Adjusted padding for better aesthetics
+                height: 50,
+                width: 150,
+                circleRadius: 8, // Increased radius for a softer look
+                child: Row(
+                  mainAxisAlignment:
+                      MainAxisAlignment.center, // Centered the content
+                  children: [
+                    const Icon(
+                      Icons.calendar_today, // Changed to a more relevant icon
+                      size: 16, // Increased icon size
+                    ),
+                    const SizedBox(width: 8), // Increased spacing
+                    Text(
+                      "6 April 2022", // Removed the comma for a cleaner look
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize
+                            .s12, // Increased font size for better readability
+                        0.10,
+                        ColorManager.textColor,
+                      ),
+                    ),
+                    const SizedBox(width: 8), // Increased spacing
+                    const Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 16, // Increased icon size
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTodaysSales() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          "Today's Sales",
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s15,
+            0.23,
+            ColorManager.textColor,
+          ),
+        ),
+        BuildBoxShadowContainer(
+          margin: const EdgeInsets.only(right: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          height: 36,
+          width: 100,
+          circleRadius: 8,
+          child: DropdownButton<String>(
+            value: value, // Set the initial value
+            onChanged: (String? newValue) {
+              setState(() {
+                value = newValue ?? "today";
+              });
+            },
+            items:
+                <String>['Today', 'Week', 'Month', 'Year'].map((String value) {
+              return DropdownMenuItem<String>(
+                value: value.toLowerCase(), // Use lowercase for consistency
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    value,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s12,
+                      0.10,
+                      ColorManager.textColor,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.10,
+              ColorManager.textColor,
+            ),
+            underline: Container(), // No underline
+            isExpanded: true, // Expand the dropdown to the container width
+            icon: const Icon(
+              Icons.arrow_drop_down,
+              color: ColorManager
+                  .kPrimaryColor, // Custom color for the dropdown icon
+            ),
+            // Optional: Add a dropdown decoration for a polished look
+            selectedItemBuilder: (BuildContext context) {
+              return <String>['Today', 'Week', 'Month', 'Year']
+                  .map<Widget>((String value) {
+                return Container(
+                  alignment: Alignment.center,
+                  child: Text(
+                    value,
+                    style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s12,
+                      0.10,
+                      ColorManager.kPrimaryColor,
+                    ),
+                  ),
+                );
+              }).toList();
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSalesCards() {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          height: 165,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  shrinkWrap: true,
+                  children: [
+                    _buildSalesCard("Count", ColorManager.kPrimaryColor),
+                    _buildSalesCard("Amount", ColorManager.kMagentha),
+                    _buildSalesCard("Customers", ColorManager.kOrange),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          height: 165,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  shrinkWrap: true,
+                  children: [
+                    _buildSalesCard("Products", ColorManager.kBlue),
+                    _buildSalesCard(
+                        "New Customers", ColorManager.kSuccessColor),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSalesOverview() {
+    return SizedBox(
+      height: 300,
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 15, top: 15),
+                  child: Text(
+                    "Sales Overview",
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s15,
+                      0.23,
+                      ColorManager.textColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10), // Added spacing
+                BuildBoxShadowContainer(
+                  margin: const EdgeInsets.all(15),
+                  padding: const EdgeInsets.all(15),
+                  height: 200,
+                  circleRadius: 7,
+                  child: _buildSalesOverviewChart(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10), // Spacing between columns
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 15, top: 15),
+                  child: Text(
+                    "Analytics",
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s15,
+                      0.23,
+                      ColorManager.textColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10), // Added spacing
+                BuildBoxShadowContainer(
+                  margin: const EdgeInsets.all(15),
+                  padding: const EdgeInsets.all(15),
+                  height: 200,
+                  circleRadius: 7,
+                  child: _buildAnalyticsChart(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSalesOverviewChart() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: SizedBox(
+        height: 200, // Set a fixed height for the chart
+        child: LineChart(
+          LineChartData(
+            gridData: const FlGridData(show: false),
+            titlesData: FlTitlesData(
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (value, meta) {
+                    return Text(
+                      value.toInt().toString(),
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    );
+                  },
+                  reservedSize: 30,
+                  interval: 5,
+                ),
+              ),
+              topTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (value, meta) {
+                    if (value.toInt() < graphData.length) {
+                      return Text(
+                        '${graphData[value.toInt()].date.day}/${graphData[value.toInt()].date.month}',
+                        style: const TextStyle(fontSize: 10),
+                      );
+                    }
+                    return const Text('');
+                  },
+                ),
+              ),
+            ),
+            borderData: FlBorderData(show: false),
+            minY: 0,
+            maxY: 20,
+            lineBarsData: [
+              LineChartBarData(
+                spots: graphData.asMap().entries.map((entry) {
+                  return FlSpot(
+                      entry.key.toDouble(), entry.value.count.toDouble());
+                }).toList(),
+                isCurved: true,
+                color: Colors.blue,
+                barWidth: 3,
+                isStrokeCapRound: true,
+                dotData: const FlDotData(show: true),
+                belowBarData: BarAreaData(show: false),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnalyticsChart() {
+    return SizedBox(
+      height: 200, // Set a fixed height for the chart
+      child: BarChart(
+        BarChartData(
+          alignment: BarChartAlignment.spaceAround,
+          maxY: 20,
+          barTouchData: BarTouchData(
+            enabled: false,
+            touchTooltipData: BarTouchTooltipData(
+              tooltipPadding: EdgeInsets.zero,
+              tooltipMargin: 8,
+              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                return BarTooltipItem(
+                  chartData[groupIndex].count.toString(),
+                  const TextStyle(
+                    color: ColorManager.kPrimaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                );
+              },
+            ),
+          ),
+          titlesData: FlTitlesData(
+            show: true,
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 30,
+                getTitlesWidget: (double value, TitleMeta meta) {
+                  if (value.toInt() >= 0 && value.toInt() < chartData.length) {
+                    return SideTitleWidget(
+                      axisSide: meta.axisSide,
+                      space: 4,
+                      child: Text(
+                        DateFormat('dd/MM')
+                            .format(chartData[value.toInt()].date),
+                        style: const TextStyle(
+                          color: ColorManager.textColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox();
+                },
+              ),
+            ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (double value, TitleMeta meta) {
+                  return Text(
+                    value.toInt().toString(),
+                    style: const TextStyle(
+                      color: ColorManager.textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  );
+                },
+                reservedSize: 40,
+                interval: 5,
+              ),
+            ),
+            topTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          ),
+          borderData: FlBorderData(show: false),
+          barGroups: List.generate(
+            chartData.length,
+            (index) => BarChartGroupData(
+              x: index,
+              barRods: [
+                BarChartRodData(
+                  toY: chartData[index].count.toDouble(),
+                  color: ColorManager.kPrimaryColor,
+                  width: 16,
+                )
+              ],
+              showingTooltipIndicators: [0],
+            ),
+          ),
+          gridData: const FlGridData(show: false),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickAccess() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Quick Access ",
+          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s15,
+              0.23, ColorManager.textColor),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            QuickAccessCard(
+              onTap: () {},
+              title: "Favourites",
+              gradient: const LinearGradient(
+                colors: [
+                  ColorManager.kGradientCyan,
+                  ColorManager.kGradientBlue,
+                ],
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+              ),
+              size: MediaQuery.of(context).size,
+            ),
+            QuickAccessCard(
+              onTap: () {},
+              title: "Favourites",
+              gradient: const LinearGradient(
+                colors: [
+                  ColorManager.kGradientPeach,
+                  ColorManager.kGradientRose,
+                ],
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+              ),
+              size: MediaQuery.of(context).size,
+            ),
+            QuickAccessCard(
+              onTap: () {},
+              title: "Favourites",
+              gradient: const LinearGradient(
+                colors: [
+                  ColorManager.kGradientIndigo,
+                  ColorManager.kGradientVoilet,
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomRight,
+              ),
+              size: MediaQuery.of(context).size,
+            ),
+            QuickAccessCard(
+              onTap: () {},
+              title: "Favourites",
+              gradient: const LinearGradient(
+                colors: [
+                  ColorManager.kGradientGreen,
+                  ColorManager.kGradientGreenLight,
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomRight,
+              ),
+              size: MediaQuery.of(context).size,
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildSalesCard(String title, Color color) {
@@ -765,23 +759,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
 class QuickAccessCard extends StatelessWidget {
   final Function onTap;
   final String title;
-
   final Gradient gradient;
   final Size size;
-  const QuickAccessCard(
-      {Key? key,
-      required this.onTap,
-      required this.title,
-      required this.gradient,
-      required this.size})
-      : super(key: key);
+
+  const QuickAccessCard({
+    Key? key,
+    required this.onTap,
+    required this.title,
+    required this.gradient,
+    required this.size,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 120, // size.height * .22, //160,
+      height: 120,
       margin: const EdgeInsets.only(top: 10, left: 10),
-      width: size.width * .18, //170,//200//.45
+      width: size.width * .18,
       decoration: BoxDecoration(
         gradient: gradient,
         color: Colors.white,
@@ -801,11 +795,9 @@ class QuickAccessCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                margin: const EdgeInsets.only(
-                  left: 10,
-                ),
-                height: 60, // size.height * 0.1, //60,
-                width: 80, //size.width * 0.15, //80,
+                margin: const EdgeInsets.only(left: 10),
+                height: 60,
+                width: 80,
                 decoration: const BoxDecoration(
                   boxShadow: [
                     BoxShadow(
@@ -822,8 +814,7 @@ class QuickAccessCard extends StatelessWidget {
                   fit: BoxFit.none,
                 ),
               ),
-              const SizedBox(height: 10 // size.height * 0.01, // 10,
-                  ),
+              const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.only(left: 20),
                 child: Text(
@@ -841,10 +832,9 @@ class QuickAccessCard extends StatelessWidget {
           Positioned(
             bottom: 10,
             left: 100,
-            // alignment: Alignment.topRight,
             child: Container(
-              height: 150, //size.height * 0.21, //150,
-              width: 150, //size.width * 0.4, // 150,
+              height: 150,
+              width: 150,
               decoration: const BoxDecoration(
                 boxShadow: [
                   BoxShadow(
@@ -861,12 +851,9 @@ class QuickAccessCard extends StatelessWidget {
           Positioned(
             top: 70,
             left: 70,
-            // bottom: 0,
-            // alignment: Alignment.bottomRight,
             child: Container(
-              height: 150, //size.height * 0.2, //150,
-              width: 150, //size.width * 0.45, // 150,
-
+              height: 150,
+              width: 150,
               decoration: const BoxDecoration(
                 boxShadow: [
                   BoxShadow(

@@ -181,7 +181,7 @@ class GridSelectionProvider extends ChangeNotifier {
         'filter_category': filterCategory,
       if (filterPrice != null) 'filter_price': filterPrice,
       if (filterCreatedBy != null) 'filter_created_by': filterCreatedBy,
-      if (filterProperties != null) 'filter_properties': filterProperties,
+      // if (filterProperties != null) 'filter_properties': filterProperties,
       if (filterStore != null) 'filter_store': filterStore,
       if (filterSupplier != null) 'filter_supplier': filterSupplier,
       'page': page.toString(),
@@ -677,13 +677,19 @@ class GridSelectionProvider extends ChangeNotifier {
     required String unit,
     required List<Map<String, dynamic>> productProperties,
   }) async {
-    final Map<String, dynamic> error = {
-      'status': "failed",
-      'message': "Something went wrong, Please try Again!"
-    };
-
-    debugPrint("date ${expiryDate.toString()}");
-    debugPrint("productProperties ${jsonEncode(productProperties).toString()}");
+    // Print all parameters
+    debugPrint("Access Token: $accessToken");
+    debugPrint("Product ID: $productId");
+    debugPrint("Store ID: $storeId");
+    debugPrint("Quantity: $quantity");
+    debugPrint("Purchase Rate: $purchaseRate");
+    debugPrint("Retail Price: $retailPrice");
+    debugPrint("Wholesale Price: $wholesalePrice");
+    debugPrint("Wholesale Min Unit: $wholesaleMinUnit");
+    debugPrint("Expiry Date: $expiryDate");
+    debugPrint("Batch Number: $batchNumber");
+    debugPrint("Unit: $unit");
+    debugPrint("Product Properties: ${jsonEncode(productProperties)}");
 
     final Map<String, dynamic> apiBodyData = {
       'product_id': productId,
@@ -699,7 +705,8 @@ class GridSelectionProvider extends ChangeNotifier {
       'product_properties': jsonEncode(productProperties),
       'tax_include': "N"
     };
-    debugPrint(apiBodyData.toString());
+
+    debugPrint("API Body Data: $apiBodyData");
     final url = Uri.parse(APPUrl.addToStock);
     try {
       final response = await http.post(url,
@@ -717,10 +724,14 @@ class GridSelectionProvider extends ChangeNotifier {
         listAllProductsAPI();
         notifyListeners();
         return json.decode(response.body);
-      } else {
-        return error;
       }
-    } finally {}
+    } catch (e) {
+      // Handle any exceptions that occur during the API call
+      return {
+        'status': "failed",
+        'message': e.toString(), // Print the exact error
+      };
+    }
   }
 
   //          *********************** LIST STOCK  API ***************************************************

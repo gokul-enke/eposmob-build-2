@@ -37,6 +37,8 @@ Future<TaxCalculationResult> getCategoryTax({
     'retail_price': retailPrice.toString(),
   };
 
+  debugPrint(queryParameters.toString());
+
   final uri = Uri.parse(APPUrl.getTaxtDetails)
       .replace(queryParameters: queryParameters);
 

@@ -830,7 +830,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
   Widget _buildSaveSalesButton() {
     return Expanded(
       flex: 3,
-      child: GestureDetector(
+      child: GestureDetector( 
         onTap: () {
           Get.to(() => const KioskBillingPage());
         },

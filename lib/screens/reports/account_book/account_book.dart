@@ -1,24 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
-import 'package:pos_machine/components/build_container_border.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
-import 'package:pos_machine/models/list_transaction.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/report_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:provider/provider.dart';
-import 'package:web_date_picker/web_date_picker.dart';
 
 class AccountBookScreen extends StatefulWidget {
   const AccountBookScreen({super.key});
@@ -103,7 +97,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    String? token = Provider.of<AuthModel>(context, listen: false).token;
+    // String? token = Provider.of<AuthModel>(context, listen: false).token;
     ReportsProvider reportsProvider = Provider.of<ReportsProvider>(context);
 
     return SafeArea(
@@ -130,81 +124,107 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                     FontSize.s20, 0.30, ColorManager.textColor),
               ),
               const SizedBox(height: 15),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              "Customer ",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
-                              ),
+              SizedBox(
+                height: 90,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            "Customer ",
+                            style: buildCustomStyle(
+                              FontWeightManager.regular,
+                              FontSize.s14,
+                              0.27,
+                              Colors.black.withOpacity(0.6),
                             ),
                           ),
-                          SizedBox(
-                            height: 45,
-                            width: 120, //size.width * 0.5,
-                            child: TextFormField(
-                              onChanged: (value) {
-                                setState(() {
-                                  // searchAmount = value;
-                                });
-                              },
-                              cursorColor: ColorManager.kPrimaryColor,
-                              cursorHeight: 13,
-                              controller: customerController,
-                              style: buildCustomStyle(FontWeightManager.medium,
-                                  FontSize.s10, 0.18, ColorManager.textColor),
-                              decoration: decoration.copyWith(
-                                  hintText: "Customer    ",
-                                  hintStyle: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s10,
-                                      0.18,
-                                      ColorManager.textColor),
-                                  // prefixIcon: const Icon(
-                                  //   Icons.search,
-                                  //   color: Colors.black,
-                                  //   size: 35,
-                                  // ),
-                                  prefixIconColor: Colors.black),
+                        ),
+                        buildColumnWidgetForTextFields(
+                          height: 45,
+                          width: 120,
+                          onchanged: (value) {},
+                          controller: customerController,
+                          size: size,
+                          hintText: 'Customer Name',
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            "From Date ",
+                            style: buildCustomStyle(
+                              FontWeightManager.regular,
+                              FontSize.s14,
+                              0.27,
+                              Colors.black.withOpacity(0.6),
                             ),
                           ),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              "From Date ",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
-                              ),
+                        ),
+                        BuildBoxShadowContainer(
+                          circleRadius: 7,
+                          margin: const EdgeInsets.only(left: 8),
+                          height: 45,
+                          width: 150, //size.width * 0.5,
+                          child: CalendarPickerTableCell(
+                            onDateSelected: (date) {
+                              debugPrint(date.toString());
+                              fromDateController.text =
+                                  DateFormat('yyyy-MM-dd').format(date);
+                              debugPrint(DateFormat('yyyy-MM-dd')
+                                  .format(date)
+                                  .toString());
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 90,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            "To Date ",
+                            style: buildCustomStyle(
+                              FontWeightManager.regular,
+                              FontSize.s14,
+                              0.27,
+                              Colors.black.withOpacity(0.6),
                             ),
                           ),
-                          BuildBorderContainer(
+                        ),
+                        BuildBoxShadowContainer(
+                          circleRadius: 7,
+                          margin: const EdgeInsets.only(left: 8),
+                          height: 45,
+                          width: 150, //size.width * 0.5,
+                          child: Container(
+                            height: size.height * .06,
+                            width: size.width / 4.3,
                             margin: const EdgeInsets.only(left: 8),
-                            height: 45,
-                            width: 150, //size.width * 0.5,
                             child: CalendarPickerTableCell(
                               onDateSelected: (date) {
                                 debugPrint(date.toString());
-                                fromDateController.text =
+                                toDateController.text =
                                     DateFormat('yyyy-MM-dd').format(date);
                                 debugPrint(DateFormat('yyyy-MM-dd')
                                     .format(date)
@@ -212,15 +232,18 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                               },
                             ),
                           ),
-                        ],
-                      ),
-                      Column(
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 10.0),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              "To Date ",
+                              "Amount ",
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -229,115 +252,59 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                               ),
                             ),
                           ),
-                          BuildBorderContainer(
-                            margin: const EdgeInsets.only(left: 8),
+                          buildColumnWidgetForTextFields(
                             height: 45,
-                            width: 150, //size.width * 0.5,
-                            child: Container(
-                              height: size.height * .06,
-                              width: size.width / 4.3,
-                              margin: const EdgeInsets.only(left: 8),
-                              child: CalendarPickerTableCell(
-                                onDateSelected: (date) {
-                                  debugPrint(date.toString());
-                                  toDateController.text =
-                                      DateFormat('yyyy-MM-dd').format(date);
-                                  debugPrint(DateFormat('yyyy-MM-dd')
-                                      .format(date)
-                                      .toString());
-                                },
-                              ),
-                            ),
+                            width: 120,
+                            onchanged: (value) {},
+                            controller: amountController,
+                            size: size,
+                            hintText: 'Amount',
                           ),
                         ],
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 10.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(
-                                "Amount ",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                            ), 
-                            SizedBox(
-                              height: 45,
-                              width: 120, //size.width * 0.5,
-                              child: TextFormField(
-                                onChanged: (value) {
-                                  setState(() {
-                                    // searchAmount = value;
-                                  });
-                                },
-                                cursorColor: ColorManager.kPrimaryColor,
-                                cursorHeight: 13,
-                                controller: amountController,
-                                style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s10,
-                                    0.18,
-                                    ColorManager.textColor),
-                                decoration: decoration.copyWith(
-                                    hintText: "Amount    ",
-                                    hintStyle: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s10,
-                                        0.18,
-                                        ColorManager.textColor),
-                                    // prefixIcon: const Icon(
-                                    //   Icons.search,
-                                    //   color: Colors.black,
-                                    //   size: 35,
-                                    // ),
-                                    prefixIconColor: Colors.black),
-                              ),
-                            ),
-                          ],
-                        ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 10.0, top: 35),
+                      child: Column(
+                        children: [
+                          CustomRoundButton(
+                            title: "Search",
+                            fct: searchAccountBook,
+                            height: 45,
+                            width: size.width * 0.09,
+                            fontSize: FontSize.s12,
+                          ),
+                        ],
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 10.0, top: 30),
-                        child: CustomRoundButton(
-                          title: "Search",
-                          fct: searchAccountBook,
-                          height: 50,
-                          width: size.width * 0.09,
-                          fontSize: FontSize.s12,
-                        ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 10.0, top: 35),
+                      child: Column(
+                        children: [
+                          CustomRoundButton(
+                            title: "Reset",
+                            boxColor: Colors.white,
+                            textColor: ColorManager.kPrimaryColor,
+                            fct: resetSearch,
+                            height: 45,
+                            width: size.width * 0.09,
+                            fontSize: FontSize.s12,
+                          ),
+                        ],
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 10.0, top: 30),
-                        child: CustomRoundButton(
-                          title: "Reset",
-                          boxColor: Colors.white,
-                          textColor: ColorManager.kPrimaryColor,
-                          fct: resetSearch,
-                          height: 50,
-                          width: size.width * 0.09,
-                          fontSize: FontSize.s12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 18.0),
-                child: Text(
-                  "Customer Account Book",
-                  style: buildCustomStyle(FontWeightManager.semiBold,
-                      FontSize.s20, 0.30, ColorManager.textColor),
+                    ),
+                  ],
                 ),
               ),
-              const Divider(thickness: 0.5),
+              // Padding(
+              //   padding: const EdgeInsets.only(top: 18.0),
+              //   child: Text(
+              //     "Customer Account Book",
+              //     style: buildCustomStyle(FontWeightManager.semiBold,
+              //         FontSize.s20, 0.30, ColorManager.textColor),
+              //   ),
+              // ),
+              // const Divider(thickness: 0.5),
               BuildBoxShadowContainer(
                 margin: const EdgeInsets.only(top: 20),
                 circleRadius: 7,

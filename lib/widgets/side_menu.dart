@@ -174,17 +174,17 @@ class SideMenu extends StatelessWidget {
               selected: sideBarController.index.value == 0,
             ),
           ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.homeIcon,
-              title: 'Home Old',
-              onTap: () {
-                debugPrint(" 'Home Old',${sideBarController.index.value}");
-                sideBarController.index.value = 45;
-              },
-              selected: sideBarController.index.value == 45,
-            ),
-          ),
+          // Obx(
+          //   () => DrawerListTile(
+          //     iconPath: ImageAssets.homeIcon,
+          //     title: 'Home Old',
+          //     onTap: () {
+          //       debugPrint(" 'Home Old',${sideBarController.index.value}");
+          //       sideBarController.index.value = 45;
+          //     },
+          //     selected: sideBarController.index.value == 45,
+          //   ),
+          // ),
           Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.homeIcon,

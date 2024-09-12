@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
+import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:provider/provider.dart';
 
@@ -29,7 +30,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
   List<VoucherDetail>? voucherDetailsList = [];
   final TextEditingController searchTextController = TextEditingController();
   final TextEditingController storeController = TextEditingController();
-  final TextEditingController dateController = TextEditingController();
+  final TextEditingController amountController = TextEditingController();
   DateTime? selectedDate;
   GetStoreModelData? storeSelected;
 
@@ -187,15 +188,8 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                               ),
                             ),
                           ),
-                          Container(
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: ColorManager.grey.withOpacity(0.7),
-                                width: 0.4, // You can adjust the border width
-                              ),
-                              borderRadius: BorderRadius.circular(
-                                  6), // Optional: for rounded corners
-                            ),
+                          BuildBoxShadowContainer(
+                            circleRadius: 7,
                             height: 45,
                             width: 150,
                             child: Center(
@@ -227,35 +221,13 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(
+                          buildColumnWidgetForTextFields(
                             height: 45,
                             width: 120,
-                            child: TextFormField(
-                              onChanged: (value) {
-                                setState(() {
-                                  // Update state if needed
-                                });
-                              },
-                              cursorColor: ColorManager.kPrimaryColor,
-                              cursorHeight: 13,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s10,
-                                0.18,
-                                ColorManager.textColor,
-                              ),
-                              // controller: purchaserNameController,
-                              decoration: decoration.copyWith(
-                                hintText: "Amount",
-                                hintStyle: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s10,
-                                  0.18,
-                                  ColorManager.textColor,
-                                ),
-                                prefixIconColor: Colors.black,
-                              ),
-                            ),
+                            onchanged: (value) {},
+                            controller: amountController,
+                            size: size,
+                            hintText: 'Amount',
                           ),
                         ],
                       ),

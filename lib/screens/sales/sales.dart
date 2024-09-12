@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
+import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/add_to_cart.dart';
@@ -230,35 +231,13 @@ class _SalesScreenState extends State<SalesScreen> {
                                 ),
                               ),
                             ),
-                            SizedBox(
+                            buildColumnWidgetForTextFields(
                               height: 45,
                               width: 120,
-                              child: TextFormField(
-                                onChanged: (value) {
-                                  setState(() {
-                                    // Update state if needed
-                                  });
-                                },
-                                controller: orderNumberController,
-                                cursorColor: ColorManager.kPrimaryColor,
-                                cursorHeight: 13,
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s10,
-                                  0.18,
-                                  ColorManager.textColor,
-                                ),
-                                decoration: decoration.copyWith(
-                                  hintText: "Number",
-                                  hintStyle: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s10,
-                                    0.18,
-                                    ColorManager.textColor,
-                                  ),
-                                  prefixIconColor: Colors.black,
-                                ),
-                              ),
+                              onchanged: (value) {},
+                              controller: orderNumberController,
+                              size: size,
+                              hintText: 'Number',
                             ),
                           ],
                         ),
@@ -282,35 +261,13 @@ class _SalesScreenState extends State<SalesScreen> {
                                 ),
                               ),
                             ),
-                            SizedBox(
+                            buildColumnWidgetForTextFields(
                               height: 45,
                               width: 120,
-                              child: TextFormField(
-                                onChanged: (value) {
-                                  setState(() {
-                                    // Update state if needed
-                                  });
-                                },
-                                cursorColor: ColorManager.kPrimaryColor,
-                                cursorHeight: 13,
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s10,
-                                  0.18,
-                                  ColorManager.textColor,
-                                ),
-                                controller: customerNameController,
-                                decoration: decoration.copyWith(
-                                  hintText: "Customer Name",
-                                  hintStyle: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s10,
-                                    0.18,
-                                    ColorManager.textColor,
-                                  ),
-                                  prefixIconColor: Colors.black,
-                                ),
-                              ),
+                              onchanged: (value) {},
+                              controller: customerNameController,
+                              size: size,
+                              hintText: 'Customer Name',
                             ),
                           ],
                         ),
@@ -334,15 +291,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                 ),
                               ),
                             ),
-                            Container(
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: ColorManager.grey.withOpacity(0.7),
-                                  width: 0.4, // You can adjust the border width
-                                ),
-                                borderRadius: BorderRadius.circular(
-                                    6), // Optional: for rounded corners
-                              ),
+                            BuildBoxShadowContainer(
+                              circleRadius: 7,
                               height: 45,
                               width: 150,
                               child: Center(
@@ -375,35 +325,13 @@ class _SalesScreenState extends State<SalesScreen> {
                                 ),
                               ),
                             ),
-                            SizedBox(
+                            buildColumnWidgetForTextFields(
                               height: 45,
                               width: 120,
-                              child: TextFormField(
-                                onChanged: (value) {
-                                  setState(() {
-                                    // Update state if needed
-                                  });
-                                },
-                                cursorColor: ColorManager.kPrimaryColor,
-                                cursorHeight: 13,
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s10,
-                                  0.18,
-                                  ColorManager.textColor,
-                                ),
-                                controller: amountController,
-                                decoration: decoration.copyWith(
-                                  hintText: "Price",
-                                  hintStyle: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s10,
-                                    0.18,
-                                    ColorManager.textColor,
-                                  ),
-                                  prefixIconColor: Colors.black,
-                                ),
-                              ),
+                              onchanged: (value) {},
+                              controller: amountController,
+                              size: size,
+                              hintText: 'Price',
                             ),
                           ],
                         ),
@@ -435,35 +363,13 @@ class _SalesScreenState extends State<SalesScreen> {
                                 ),
                               ),
                             ),
-                            SizedBox(
+                            buildColumnWidgetForTextFields(
                               height: 45,
                               width: 120,
-                              child: TextFormField(
-                                onChanged: (value) {
-                                  setState(() {
-                                    // Update state if needed
-                                  });
-                                },
-                                cursorColor: ColorManager.kPrimaryColor,
-                                cursorHeight: 13,
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s10,
-                                  0.18,
-                                  ColorManager.textColor,
-                                ),
-                                controller: emailController,
-                                decoration: decoration.copyWith(
-                                  hintText: "Email",
-                                  hintStyle: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s10,
-                                    0.18,
-                                    ColorManager.textColor,
-                                  ),
-                                  prefixIconColor: Colors.black,
-                                ),
-                              ),
+                              onchanged: (value) {},
+                              controller: emailController,
+                              size: size,
+                              hintText: 'Email',
                             ),
                           ],
                         ),
@@ -487,35 +393,13 @@ class _SalesScreenState extends State<SalesScreen> {
                                 ),
                               ),
                             ),
-                            SizedBox(
+                            buildColumnWidgetForTextFields(
                               height: 45,
                               width: 120,
-                              child: TextFormField(
-                                onChanged: (value) {
-                                  setState(() {
-                                    // Update state if needed
-                                  });
-                                },
-                                cursorColor: ColorManager.kPrimaryColor,
-                                cursorHeight: 13,
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s10,
-                                  0.18,
-                                  ColorManager.textColor,
-                                ),
-                                controller: phoneController,
-                                decoration: decoration.copyWith(
-                                  hintText: "Phone",
-                                  hintStyle: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s10,
-                                    0.18,
-                                    ColorManager.textColor,
-                                  ),
-                                  prefixIconColor: Colors.black,
-                                ),
-                              ),
+                              onchanged: (value) {},
+                              controller: phoneController,
+                              size: size,
+                              hintText: 'Phone',
                             ),
                           ],
                         ),
@@ -600,25 +484,35 @@ class _SalesScreenState extends State<SalesScreen> {
                       ),
 
                       Padding(
-                        padding: const EdgeInsets.only(left: 10.0, top: 30),
-                        child: CustomRoundButton(
-                          title: "Search",
-                          fct: searchOrders,
-                          height: 45,
-                          width: size.width * 0.09,
-                          fontSize: FontSize.s12,
+                        padding: const EdgeInsets.only(left: 10.0, top: 35),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            CustomRoundButton(
+                              title: "Search",
+                              fct: searchOrders,
+                              height: 45,
+                              width: size.width * 0.09,
+                              fontSize: FontSize.s12,
+                            ),
+                          ],
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.only(left: 10.0, top: 30),
-                        child: CustomRoundButton(
-                          title: "Reset",
-                          boxColor: Colors.white,
-                          textColor: ColorManager.kPrimaryColor,
-                          fct: resetSearch,
-                          height: 15,
-                          width: size.width * 0.09,
-                          fontSize: FontSize.s12,
+                        padding: const EdgeInsets.only(left: 10.0, top: 35),
+                        child: Column(
+                          children: [
+                            CustomRoundButton(
+                              title: "Reset",
+                              boxColor: Colors.white,
+                              textColor: ColorManager.kPrimaryColor,
+                              fct: resetSearch,
+                              height: 45,
+                              width: size.width * 0.09,
+                              fontSize: FontSize.s12,
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -628,8 +522,6 @@ class _SalesScreenState extends State<SalesScreen> {
                   height: 20,
                 ),
                 BuildBoxShadowContainer(
-                    // height: size.height, //120,
-
                     circleRadius: 7,
                     offsetValue: const Offset(1, 1),
                     child: Consumer<SalesProvider>(
@@ -644,25 +536,26 @@ class _SalesScreenState extends State<SalesScreen> {
                                 0: FlexColumnWidth(2),
                                 1: FlexColumnWidth(4),
                                 2: FlexColumnWidth(4),
-                                3: FlexColumnWidth(2),
+                                3: FlexColumnWidth(4),
                                 4: FlexColumnWidth(5),
-                                5: FlexColumnWidth(4),
-                                6: FlexColumnWidth(4),
-                                7: FlexColumnWidth(9),
+                                5: FlexColumnWidth(5),
+                                6: FlexColumnWidth(5),
+                                7: FlexColumnWidth(10),
                               },
-                              border: TableBorder.symmetric(
-                                  outside: const BorderSide(
+                              border: const TableBorder.symmetric(
+                                  outside: BorderSide(
                                       color: ColorManager.tableBOrderColor,
-                                      width: 0.3),
-                                  inside: const BorderSide(
+                                      width: 0.1),
+                                  inside: BorderSide(
                                       color: ColorManager.tableBOrderColor,
-                                      width: 0.8)),
+                                      width: 0.5)),
                               defaultVerticalAlignment:
                                   TableCellVerticalAlignment.middle,
                               children: [
                                 TableRow(
-                                    decoration: const BoxDecoration(
-                                        color: ColorManager.tableBGColor),
+                                    decoration: BoxDecoration(
+                                        color: ColorManager.tableBGColor
+                                            .withOpacity(0.4)),
                                     children: [
                                       TableCell(
                                           verticalAlignment:
@@ -1156,231 +1049,3 @@ class _SalesScreenState extends State<SalesScreen> {
     );
   }
 }
-
-// Table(
-//   columnWidths: const {
-//     0: FractionColumnWidth(0.01),
-//     1: FractionColumnWidth(0.01),
-//     2: FractionColumnWidth(0.1),
-//     3: FractionColumnWidth(0.06),
-//     4: FractionColumnWidth(0.06),
-//     5: FractionColumnWidth(0.05),
-//   },
-//   border: TableBorder.symmetric(
-//       outside: BorderSide.none,
-//       inside: const BorderSide(
-//           color: ColorManager.tableBOrderColor, width: 0.8)),
-//   defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-//   children: [
-//     TableRow(
-//         decoration: const BoxDecoration(
-//             color: ColorManager.tableBGColor),
-//         children: [
-//           TableCell(
-//               verticalAlignment:
-//                   TableCellVerticalAlignment.middle,
-//               child: Padding(
-//                 padding: const EdgeInsets.all(15.0),
-//                 child: Center(
-//                     child: Text(
-//                   "Order ID",
-//                   style: buildCustomStyle(
-//                     FontWeightManager.medium,
-//                     FontSize.s12,
-//                     0.18,
-//                     ColorManager.kPrimaryColor,
-//                   ),
-//                 )),
-//               )),
-//           TableCell(
-//               verticalAlignment:
-//                   TableCellVerticalAlignment.middle,
-//               child: Padding(
-//                 padding: const EdgeInsets.all(15.0),
-//                 child: Center(
-//                     child: Text(
-//                   "Date",
-//                   style: buildCustomStyle(
-//                     FontWeightManager.medium,
-//                     FontSize.s12,
-//                     0.18,
-//                     ColorManager.kPrimaryColor,
-//                   ),
-//                 )),
-//               )),
-//           TableCell(
-//               verticalAlignment:
-//                   TableCellVerticalAlignment.middle,
-//               child: Padding(
-//                 padding: const EdgeInsets.all(15.0),
-//                 child: Center(
-//                     child: Text(
-//                   "Order Summary",
-//                   style: buildCustomStyle(
-//                     FontWeightManager.medium,
-//                     FontSize.s12,
-//                     0.18,
-//                     ColorManager.kPrimaryColor,
-//                   ),
-//                 )),
-//               )),
-//           TableCell(
-//               verticalAlignment:
-//                   TableCellVerticalAlignment.middle,
-//               child: Padding(
-//                 padding: const EdgeInsets.all(15.0),
-//                 child: Center(
-//                     child: Text(
-//                   "Offers Applied",
-//                   style: buildCustomStyle(
-//                     FontWeightManager.medium,
-//                     FontSize.s12,
-//                     0.18,
-//                     ColorManager.kPrimaryColor,
-//                   ),
-//                 )),
-//               )),
-//           TableCell(
-//               verticalAlignment:
-//                   TableCellVerticalAlignment.middle,
-//               child: Padding(
-//                 padding: const EdgeInsets.all(15.0),
-//                 child: Center(
-//                     child: Text(
-//                   "Payment summary",
-//                   style: buildCustomStyle(
-//                     FontWeightManager.medium,
-//                     FontSize.s12,
-//                     0.18,
-//                     ColorManager.kPrimaryColor,
-//                   ),
-//                 )),
-//               )),
-//           TableCell(
-//               verticalAlignment:
-//                   TableCellVerticalAlignment.middle,
-//               child: Padding(
-//                 padding: const EdgeInsets.all(15.0),
-//                 child: Center(
-//                     child: Text(
-//                   "Customer Details",
-//                   style: buildCustomStyle(
-//                     FontWeightManager.medium,
-//                     FontSize.s12,
-//                     0.18,
-//                     ColorManager.kPrimaryColor,
-//                   ),
-//                 )),
-//               )),
-//         ]),
-//     ...List.generate(
-//       6,
-//       (index) => TableRow(
-//         children: [
-//           TableCell(
-//               verticalAlignment:
-//                   TableCellVerticalAlignment.middle,
-//               child: Padding(
-//                 padding: const EdgeInsets.all(30.0),
-//                 child: Center(
-//                   child: Text(
-//                     "#34566",
-//                     style: buildCustomStyle(
-//                       FontWeightManager.medium,
-//                       FontSize.s9,
-//                       0.13,
-//                       Colors.black,
-//                     ),
-//                   ),
-//                 ),
-//               )),
-//           TableCell(
-//               verticalAlignment:
-//                   TableCellVerticalAlignment.middle,
-//               child: Padding(
-//                 padding: const EdgeInsets.all(20.0),
-//                 child: Center(
-//                   child: Text(
-//                     "25/06/2022",
-//                     style: buildCustomStyle(
-//                       FontWeightManager.medium,
-//                       FontSize.s9,
-//                       0.13,
-//                       Colors.black,
-//                     ),
-//                   ),
-//                 ),
-//               )),
-//           TableCell(
-//               verticalAlignment:
-//                   TableCellVerticalAlignment.middle,
-//               child: Padding(
-//                 padding: const EdgeInsets.all(20.0),
-//                 child: Center(
-//                   child: Text(
-//                     " 1 MIGHTY ZINGER BOX 150 g\n2 MIGHTY ZINGER BOX 150 g\n3 MIGHTY ZINGER BOX 150 g",
-//                     style: buildCustomStyle(
-//                       FontWeightManager.medium,
-//                       FontSize.s9,
-//                       0.13,
-//                       Colors.black,
-//                     ),
-//                   ),
-//                 ),
-//               )),
-//           TableCell(
-//               verticalAlignment:
-//                   TableCellVerticalAlignment.middle,
-//               child: Padding(
-//                 padding: const EdgeInsets.all(20.0),
-//                 child: Center(
-//                   child: Text(
-//                     "20% offer applied\n20% offer applied\n20% offer applied",
-//                     style: buildCustomStyle(
-//                       FontWeightManager.medium,
-//                       FontSize.s9,
-//                       0.13,
-//                       ColorManager.kPrimaryColor,
-//                     ),
-//                   ),
-//                 ),
-//               )),
-//           TableCell(
-//               verticalAlignment:
-//                   TableCellVerticalAlignment.middle,
-//               child: Padding(
-//                 padding: const EdgeInsets.all(20.0),
-//                 child: Center(
-//                   child: Text(
-//                     "\$115.00",
-//                     style: buildCustomStyle(
-//                       FontWeightManager.medium,
-//                       FontSize.s9,
-//                       0.13,
-//                       Colors.black,
-//                     ),
-//                   ),
-//                 ),
-//               )),
-//           TableCell(
-//               verticalAlignment:
-//                   TableCellVerticalAlignment.middle,
-//               child: Padding(
-//                 padding: const EdgeInsets.all(20.0),
-//                 child: Center(
-//                   child: Text(
-//                     "Iris Watson\n +91 6845567860",
-//                     style: buildCustomStyle(
-//                       FontWeightManager.medium,
-//                       FontSize.s9,
-//                       0.13,
-//                       Colors.black,
-//                     ),
-//                   ),
-//                 ),
-//               )),
-//         ],
-//       ),
-//     ),
-//   ],
-// ),

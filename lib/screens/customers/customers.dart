@@ -3,13 +3,13 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/sidebar_controller.dart';
 import '../../models/customer_list.dart';
 import '../../providers/auth_model.dart';
-import '../../resources/asset_manager.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -27,6 +27,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
   final customerNameController = TextEditingController();
   final customerEmailController = TextEditingController();
   final customerPhoneController = TextEditingController();
+  final customerAgeRangeController = TextEditingController();
   bool initLoading = false;
 
   @override
@@ -202,36 +203,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                           ),
                                         ),
                                       ),
-                                      SizedBox(
+                                      buildColumnWidgetForTextFields(
                                         height: 45,
                                         width: 120,
-                                        child: TextFormField(
-                                          onChanged: (value) {
-                                            setState(() {
-                                              // Update state if needed
-                                            });
-                                          },
-                                          cursorColor:
-                                              ColorManager.kPrimaryColor,
-                                          cursorHeight: 13,
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s10,
-                                            0.18,
-                                            ColorManager.textColor,
-                                          ),
-                                          controller: customerNameController,
-                                          decoration: decoration.copyWith(
-                                            hintText: "Name",
-                                            hintStyle: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s10,
-                                              0.18,
-                                              ColorManager.textColor,
-                                            ),
-                                            prefixIconColor: Colors.black,
-                                          ),
-                                        ),
+                                        onchanged: (value) {},
+                                        controller: customerNameController,
+                                        size: size,
+                                        hintText: 'Name',
                                       ),
                                     ],
                                   ),
@@ -254,36 +232,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                           ),
                                         ),
                                       ),
-                                      SizedBox(
+                                      buildColumnWidgetForTextFields(
                                         height: 45,
                                         width: 120,
-                                        child: TextFormField(
-                                          onChanged: (value) {
-                                            setState(() {
-                                              // Update state if needed
-                                            });
-                                          },
-                                          cursorColor:
-                                              ColorManager.kPrimaryColor,
-                                          cursorHeight: 13,
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s10,
-                                            0.18,
-                                            ColorManager.textColor,
-                                          ),
-                                          controller: customerEmailController,
-                                          decoration: decoration.copyWith(
-                                            hintText: "Email",
-                                            hintStyle: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s10,
-                                              0.18,
-                                              ColorManager.textColor,
-                                            ),
-                                            prefixIconColor: Colors.black,
-                                          ),
-                                        ),
+                                        onchanged: (value) {},
+                                        controller: customerEmailController,
+                                        size: size,
+                                        hintText: 'Email',
                                       ),
                                     ],
                                   ),
@@ -306,36 +261,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                           ),
                                         ),
                                       ),
-                                      SizedBox(
+                                      buildColumnWidgetForTextFields(
                                         height: 45,
                                         width: 120,
-                                        child: TextFormField(
-                                          onChanged: (value) {
-                                            setState(() {
-                                              // Update state if needed
-                                            });
-                                          },
-                                          cursorColor:
-                                              ColorManager.kPrimaryColor,
-                                          cursorHeight: 13,
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s10,
-                                            0.18,
-                                            ColorManager.textColor,
-                                          ),
-                                          controller: customerPhoneController,
-                                          decoration: decoration.copyWith(
-                                            hintText: "Phone",
-                                            hintStyle: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s10,
-                                              0.18,
-                                              ColorManager.textColor,
-                                            ),
-                                            prefixIconColor: Colors.black,
-                                          ),
-                                        ),
+                                        onchanged: (value) {},
+                                        controller: customerPhoneController,
+                                        size: size,
+                                        hintText: 'Phone',
                                       ),
                                     ],
                                   ),
@@ -358,37 +290,15 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                           ),
                                         ),
                                       ),
-                                      SizedBox(
+                                      buildColumnWidgetForTextFields(
                                         height: 45,
                                         width: 120,
-                                        child: TextFormField(
-                                          onChanged: (value) {
-                                            setState(() {
-                                              // Update state if needed
-                                            });
-                                          },
-                                          cursorColor:
-                                              ColorManager.kPrimaryColor,
-                                          cursorHeight: 13,
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s10,
-                                            0.18,
-                                            ColorManager.textColor,
-                                          ),
-                                          // controller: purchaserNameController,
-                                          decoration: decoration.copyWith(
-                                            hintText: "Age Range",
-                                            hintStyle: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s10,
-                                              0.18,
-                                              ColorManager.textColor,
-                                            ),
-                                            prefixIconColor: Colors.black,
-                                          ),
-                                        ),
+                                        onchanged: (value) {},
+                                        controller: customerAgeRangeController,
+                                        size: size,
+                                        hintText: 'Age Range',
                                       ),
+                                      
                                     ],
                                   ),
                                 ),

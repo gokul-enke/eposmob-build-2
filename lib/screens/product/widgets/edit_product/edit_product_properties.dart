@@ -263,7 +263,7 @@ class _EditProductPropertiesScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: size.height * 0.8,
+            height: size.height * 0.7, // Adjust height
             width: double.infinity,
             child: BuildBoxShadowContainer(
               circleRadius: 7,
@@ -352,9 +352,9 @@ class _EditProductPropertiesScreenState
                                       ),
                                     ),
                                     SizedBox(
-                                      width: size.width * .15,
+                                      width: size.width * .40,
                                       child: CheckboxListTile(
-                                        title: Text("Stock Applicable"),
+                                        title: const Text("Stock Applicable"),
                                         value: stockApplicableMap[propsCode] ??
                                             false,
                                         onChanged: (bool? value) {
@@ -457,9 +457,9 @@ class _EditProductPropertiesScreenState
                                       ),
                                     ),
                                     SizedBox(
-                                      width: size.width * .15,
+                                      width: size.width * .40,
                                       child: CheckboxListTile(
-                                        title: Text("Stock Applicable"),
+                                        title: const Text("Stock Applicable"),
                                         value: stockApplicableMap[propsCode] ??
                                             false,
                                         onChanged: (bool? value) {

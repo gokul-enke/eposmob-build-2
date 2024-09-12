@@ -87,10 +87,24 @@ class _InvoiceListcreenState extends State<InvoiceListcreen> {
           padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
           child: ListView(
             children: [
-              Text(
-                "Invoice List",
-                style: buildCustomStyle(FontWeightManager.semiBold,
-                    FontSize.s20, 0.30, ColorManager.textColor),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Invoice List",
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s20, 0.30, ColorManager.textColor),
+                  ),
+                  CustomRoundButton(
+                    title: "Create New Invoice",
+                    fct: () {
+                      sideBarController.index.value = 24;
+                    },
+                    fontSize: 12,
+                    height: 45,
+                    width: 200,
+                  ),
+                ],
               ),
               const SizedBox(
                 height: 15,
@@ -174,60 +188,6 @@ class _InvoiceListcreenState extends State<InvoiceListcreen> {
                     ),
                   ],
                 ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  // Text(
-                  //   "Invoice List  ",
-                  //   style: buildCustomStyle(FontWeightManager.semiBold,
-                  //       FontSize.s20, 0.30, ColorManager.textColor),
-                  // ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      // SizedBox(
-                      //   height: 45,
-                      //   width: 180, //size.width * 0.5,
-                      //   child: TextFormField(
-                      //     onChanged: ((value) => setState(() {
-                      //           searchTextController.text = value;
-                      //         })),
-                      //     cursorColor: ColorManager.kPrimaryColor,
-                      //     cursorHeight: 13,
-                      //     controller: searchTextController,
-                      //     style: buildCustomStyle(FontWeightManager.medium,
-                      //         FontSize.s10, 0.18, ColorManager.textColor),
-                      //     decoration: decoration.copyWith(
-                      //         hintText: "Search    ",
-                      //         hintStyle: buildCustomStyle(
-                      //             FontWeightManager.medium,
-                      //             FontSize.s10,
-                      //             0.18,
-                      //             ColorManager.textColor),
-                      //         // prefixIcon: const Icon(
-                      //         //   Icons.search,
-                      //         //   color: Colors.black,
-                      //         //   size: 35,
-                      //         // ),
-                      //         prefixIconColor: Colors.black),
-                      //   ),
-                      // ),
-                      const SizedBox(
-                        width: 10,
-                      ),
-                      CustomRoundButton(
-                        title: "Create New Invoice",
-                        fct: () {
-                          sideBarController.index.value = 24;
-                        },
-                        fontSize: 12,
-                        height: 45,
-                        width: 200,
-                      ),
-                    ],
-                  ),
-                ],
               ),
               BuildBoxShadowContainer(
                   // height: size.height, //120,

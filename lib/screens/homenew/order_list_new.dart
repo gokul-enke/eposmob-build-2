@@ -48,25 +48,16 @@ class _OrderListNewState extends State<OrderListNew> {
   CustomerListModelData? selectedCustomer;
   List<ListCartModelDataCartItem>? cartProductItems = [];
   Map<String, int> taxNames = {};
-
   Map<int, bool> hoverMap = {};
 
   @override
   void initState() {
     super.initState();
-
-    // _paidAmountController = TextEditingController();
-    // _paidAmountController.addListener(_onTextChanged);
-
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     debugPrint("accessToken From AuthModel $accessToken");
     int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
     Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
         customerId: customerId ?? 1, accessToken: accessToken ?? '');
-    // customerId: 1,
-    // accessToken: accessToken ?? '');
-    // _paidAmountController.text =
-
     getCustomersDetails();
   }
 
@@ -102,52 +93,31 @@ class _OrderListNewState extends State<OrderListNew> {
 
   void _getBalanceAmount() {
     debugPrint(_paidAmountController.text);
-    // Retrieve netTotal from the provider
     num netTotal = Provider.of<CartProvider>(context, listen: false)
             .priceSummary!
             .netTotal ??
         0.00;
-
-    // Parse the text from the controller
     double paidAmount = double.tryParse(_paidAmountController.text) ?? 0.00;
-
-    // Calculate the balance amount
     double balanceAmount = paidAmount - netTotal;
-
-    // Return the balance amount formatted to two decimal places
+    if (balanceAmount < 0) {
+      balanceAmount = 0.00;
+    }
     setState(() {
       _balanceAmount = balanceAmount;
     });
   }
 
-  // void _onTextChanged() {
-  //   debugPrint("called");
-  //   _getBalanceAmount();
-  // }
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Set the text of the controller based on the provider's value
-    // final subTotal =
-    //     "${Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal ?? 0.00}";
-    // _paidAmountController.text = "$subTotal";
   }
 
   @override
   void dispose() {
     _transactionNumberController.dispose();
-    // _paidAmountController.removeListener(_onTextChanged);
     _paidAmountController.dispose();
     super.dispose();
   }
-
-  // @override
-  // void dispose() {
-  //   Provider.of<CartProvider>(context, listen: false).dispose();
-
-  //   super.dispose();
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -157,1002 +127,865 @@ class _OrderListNewState extends State<OrderListNew> {
       margin: const EdgeInsets.only(left: 10, top: 10, bottom: 10, right: 10),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(13),
-          boxShadow: const [
+        borderRadius: BorderRadius.circular(13),
+        boxShadow: const [
+          BoxShadow(
+            color: ColorManager.boxShadowColor,
+            blurRadius: 2,
+            offset: Offset(1, 1),
+          ),
+        ],
+        color: Colors.white,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(left: 10.0, right: 10.0),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                const Divider(thickness: 1),
+                const SizedBox(height: 5),
+                _buildMobileNumberInput(size),
+                const SizedBox(height: 10),
+                _buildCartItemsList(size),
+                const SizedBox(height: 5),
+                _buildCouponInput(),
+                const SizedBox(height: 10),
+                _buildPaymentSummary(),
+                const SizedBox(height: 10),
+                _buildPaymentMethodSelection(),
+                const SizedBox(height: 10),
+                _buildActionButtons(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'New Order',
+              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
+                  0.30, ColorManager.textColor),
+            ),
+          ],
+        ),
+        Text(
+          'Order No #00000',
+          style: buildCustomStyle(FontWeightManager.regular, FontSize.s12, 0.18,
+              ColorManager.textColor),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileNumberInput(Size size) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: BuildBoxShadowContainer(
+            circleRadius: 7,
+            alignment: Alignment.centerLeft,
+            margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+            padding: const EdgeInsets.only(left: 15),
+            height: size.height * .07,
+            width: size.width / 3,
+            child: Autocomplete<CustomerListModelData>(
+              optionsBuilder: (mobileNumberTextController) async {
+                debugPrint(mobileNumberTextController.text);
+                if (mobileNumberTextController.text.isEmpty) {
+                  return const Iterable<CustomerListModelData>.empty();
+                }
+                if (mobileNumberTextController.text.length < 3) {
+                  debugPrint("called");
+                  String? accessToken =
+                      Provider.of<AuthModel>(context, listen: false).token;
+                  debugPrint("accessToken From AuthModel $accessToken");
+                  debugPrint(mobileNumberTextController.text);
+
+                  try {
+                    final response = await CustomerProvider()
+                        .findCustomerByPhone(accessToken ?? "",
+                            mobileNumberTextController.text, context);
+
+                    if (response["status"] == "success") {
+                      CustomerListModel customerListModel =
+                          CustomerListModel.fromJson(response);
+                      List<CustomerListModelData>? filterdCustomerList =
+                          customerListModel.data;
+                      return filterdCustomerList!;
+                    } else {
+                      debugPrint('Error in response: ${response["message"]}');
+                    }
+                  } catch (error) {
+                    debugPrint('Exception caught: $error');
+                  }
+                }
+                return customerList!;
+              },
+              displayStringForOption: (CustomerListModelData customer) =>
+                  customer.name ?? '',
+              onSelected: (CustomerListModelData selection) {
+                String? accessToken =
+                    Provider.of<AuthModel>(context, listen: false).token;
+                debugPrint("accessToken From AuthModel $accessToken");
+                Provider.of<CartProvider>(context, listen: false)
+                    .fetchCartDataFromApi(
+                        customerId: selection.id ?? 0,
+                        accessToken: accessToken ?? '');
+                setState(() {
+                  mobileNumberText = selection.phone!;
+                  selectedCustomer = selection;
+                });
+              },
+              fieldViewBuilder: (BuildContext context,
+                  mobileNumberTextController,
+                  FocusNode focusNode,
+                  VoidCallback onFieldSubmitted) {
+                return TextField(
+                  controller: mobileNumberTextController,
+                  focusNode: focusNode,
+                  decoration: InputDecoration(
+                    hintText: 'Enter mobile number',
+                    hintStyle: buildCustomStyle(
+                      FontWeight.w500,
+                      12,
+                      0.27,
+                      Colors.grey.withOpacity(.5),
+                    ),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      mobileNumberText = value;
+                    });
+                  },
+                  style: buildCustomStyle(
+                    FontWeight.w500,
+                    12,
+                    0.27,
+                    Colors.black.withOpacity(.5),
+                  ),
+                );
+              },
+              optionsViewBuilder: (BuildContext context,
+                  AutocompleteOnSelected<CustomerListModelData> onSelected,
+                  Iterable<CustomerListModelData> options) {
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: Material(
+                    elevation: 4,
+                    child: Container(
+                      width: MediaQuery.of(context).size.width / 3,
+                      color: Colors.white,
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(8.0),
+                        shrinkWrap: true,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: options.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final CustomerListModelData option =
+                              options.elementAt(index);
+                          return MouseRegion(
+                            onEnter: (_) {
+                              setState(() {
+                                hoverMap[index] = true;
+                              });
+                            },
+                            onExit: (_) {
+                              setState(() {
+                                hoverMap[index] = false;
+                              });
+                            },
+                            child: GestureDetector(
+                              onTap: () {
+                                onSelected(option);
+                              },
+                              child: Container(
+                                color: hoverMap[index] == true
+                                    ? Colors.grey[200]
+                                    : Colors.white,
+                                child: ListTile(
+                                  title: Text(
+                                    option.name ?? '',
+                                    style: buildCustomStyle(
+                                      FontWeight.w500,
+                                      12,
+                                      0.27,
+                                      Colors.black.withOpacity(.5),
+                                    ),
+                                  ),
+                                  hoverColor: Colors.grey[200],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        BuildBoxShadowContainer(
+          height: size.height * .07,
+          width: 50,
+          circleRadius: 5,
+          child: InkWell(
+            onTap: () => {
+              showAddCustomerModal(context, size,
+                  mobileNumber: mobileNumberText),
+            },
+            child: WebsafeSvg.asset(
+              ImageAssets.userIcon,
+              fit: BoxFit.none,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCartItemsList(Size size) {
+    return SizedBox(
+      height: size.height * 0.22,
+      child: Consumer<CartProvider>(
+        builder: (context, cartProvider, child) {
+          return StreamBuilder<List<ListCartModelData>>(
+            stream: cartProvider.cartStream,
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                debugPrint("Inside Order List Consumer");
+                List<ListCartModelData>? cartItems = snapshot.data;
+                List<ListCartModelDataCartItem>? cartItem = cartProductItems =
+                    cartItems!.isEmpty
+                        ? []
+                        : cartItems.map((e) => e.cartItems).first;
+
+                if (cartItems.isNotEmpty) {
+                  taxNames = cartItems.first.taxAmounts ?? {};
+                }
+
+                return ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: cartItem!.length,
+                  shrinkWrap: true,
+                  itemBuilder: (BuildContext context, int index) {
+                    return BuildBoxShadowContainer(
+                      circleRadius: 7,
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 2, vertical: 3),
+                      child: ExpansionTile(
+                        maintainState: true,
+                        childrenPadding: const EdgeInsets.only(bottom: 10),
+                        // collapsedBackgroundColor: index % 2 == 0
+                        //     ? Colors.grey.withOpacity(0.1)
+                        //     : null,
+                        // backgroundColor: index % 2 == 0
+                        //     ? Colors.grey.withOpacity(0.1)
+                        //     : null,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(3)),
+                        tilePadding: const EdgeInsets.symmetric(horizontal: 10),
+                        key: ValueKey(cartItem[index].id),
+                        trailing: GestureDetector(
+                          onTap: () {
+                            String? accessToken =
+                                Provider.of<AuthModel>(context, listen: false)
+                                    .token;
+                            Provider.of<CartProvider>(context, listen: false)
+                                .removeFromCartAPI(
+                              accessToken: accessToken ?? "",
+                              customerId:
+                                  Provider.of<AuthModel>(context, listen: false)
+                                      .userId!,
+                              productId: cartItem[index].id ?? 1,
+                              remove: "true",
+                            );
+                          },
+                          child: WebsafeSvg.asset(
+                            ImageAssets.oderlistCloseIcon,
+                            fit: BoxFit.none,
+                            width: 10,
+                          ),
+                        ),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        iconColor: ColorManager.textColor,
+                        collapsedIconColor: ColorManager.textColor,
+                        title: LayoutBuilder(
+                          builder: (context, constraints) {
+                            double fontSize =
+                                constraints.maxWidth < 600 ? 12 : 14;
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 5,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${index + 1}. ${cartItem[index].productName}',
+                                            style: buildCustomStyle(
+                                                FontWeightManager.regular,
+                                                fontSize,
+                                                0.21,
+                                                ColorManager.textColor),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                          Text(
+                                            '${cartItem[index].productUnit}',
+                                            style: buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                fontSize - 2,
+                                                0.21,
+                                                ColorManager.textColor),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 3,
+                                      child: Center(
+                                        child: CompactQuantityControl(
+                                          quantity: cartItem[index].quantity!,
+                                          onIncrement: () {
+                                            String? accessToken =
+                                                Provider.of<AuthModel>(context,
+                                                        listen: false)
+                                                    .token;
+                                            Provider.of<CartProvider>(context,
+                                                    listen: false)
+                                                .addToCartAPI(
+                                              accessToken: accessToken ?? "",
+                                              customerId:
+                                                  Provider.of<AuthModel>(
+                                                          context,
+                                                          listen: false)
+                                                      .userId!,
+                                              productId:
+                                                  cartItem[index].productId ??
+                                                      1,
+                                              quantity: 1,
+                                            );
+                                          },
+                                          onDecrement: () {
+                                            String? accessToken =
+                                                Provider.of<AuthModel>(context,
+                                                        listen: false)
+                                                    .token;
+                                            Provider.of<CartProvider>(context,
+                                                    listen: false)
+                                                .removeFromCartAPI(
+                                              accessToken: accessToken ?? "",
+                                              customerId:
+                                                  Provider.of<AuthModel>(
+                                                          context,
+                                                          listen: false)
+                                                      .userId!,
+                                              productId:
+                                                  cartItem[index].id ?? 1,
+                                              remove: '',
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        '${cartItem[index].currency} ${cartItem[index].unitPrice}',
+                                        style: buildCustomStyle(
+                                            FontWeightManager.regular,
+                                            fontSize,
+                                            0.21,
+                                            ColorManager.textColor),
+                                        textAlign: TextAlign.end,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                return Container(
+                                  width: constraints.maxWidth,
+                                  child: Text(
+                                    cartItem[index].productName!,
+                                    textAlign: TextAlign.start,
+                                    maxLines: 4,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: buildCustomStyle(
+                                        FontWeightManager.regular,
+                                        12,
+                                        0.21,
+                                        ColorManager.textColor),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              } else if (snapshot.hasError) {
+                return Text('Error: ${snapshot.error}');
+              } else {
+                return const BuildOrderListDesign();
+              }
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCouponInput() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: BuildBoxShadowContainer(
+            circleRadius: 7,
+            alignment: Alignment.centerLeft,
+            margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+            padding: const EdgeInsets.only(left: 15),
+            height: MediaQuery.of(context).size.height * .07,
+            width: MediaQuery.of(context).size.width / 3,
+            child: TextField(
+              controller: coupenCodeTextController,
+              decoration: InputDecoration(
+                hintText: 'Apply Coupon',
+                hintStyle: buildCustomStyle(
+                  FontWeight.w500,
+                  12,
+                  0.27,
+                  Colors.grey.withOpacity(.5),
+                ),
+                border: InputBorder.none,
+              ),
+              style: buildCustomStyle(
+                FontWeight.w500,
+                12,
+                0.27,
+                Colors.black.withOpacity(.5),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        CustomRoundButton(
+          title: "Apply",
+          fct: _applyCoupon,
+          fontSize: FontSize.s14,
+          height: MediaQuery.of(context).size.height * .07,
+          width: 100,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaymentSummary() {
+    return Column(
+      children: [
+        BuildPaymentRow(
+          amount: AmountHelper.formatAmount(
+              Provider.of<CartProvider>(context, listen: true)
+                      .priceSummary!
+                      .subTotal ??
+                  0.00),
+          title: "Net amount",
+          color: ColorManager.textColor,
+        ),
+        const BuildPaymentRow(
+          amount: "0.00",
+          title: "Shipping",
+          color: ColorManager.textColor,
+        ),
+        BuildPaymentRow(
+          amount: AmountHelper.formatAmount(
+              Provider.of<CartProvider>(context, listen: true)
+                      .priceSummary!
+                      .discount ??
+                  0.00),
+          title: "Discount",
+          color: ColorManager.textColor,
+        ),
+        GestureDetector(
+          child: BuildPaymentRow(
+            amount: AmountHelper.formatAmount(
+              Provider.of<CartProvider>(context, listen: true)
+                      .priceSummary!
+                      .totalTax ??
+                  0.00,
+            ),
+            title: "GST",
+            color: ColorManager.kPrimaryColor,
+          ),
+          onTap: () {
+            debugPrint("Tax Details ${taxNames.toString()}");
+            showDialog(
+              context: context,
+              builder: (context) {
+                return Center(
+                  child: TaxDetailsDialog(
+                    taxAmounts: taxNames,
+                  ),
+                );
+              },
+            );
+          },
+        ),
+        const Divider(thickness: 2),
+        BuildPaymentRow(
+          amount: AmountHelper.formatAmount(
+              Provider.of<CartProvider>(context, listen: true)
+                      .priceSummary!
+                      .netTotal ??
+                  0.00),
+          title: "Total Payable",
+          secondRowTextStyle: buildCustomStyle(
+            FontWeightManager.bold,
+            FontSize.s15,
+            0.23,
+            ColorManager.textColor,
+          ),
+          firstRowTextStyle: buildCustomStyle(
+            FontWeightManager.bold,
+            FontSize.s15,
+            0.23,
+            ColorManager.textColor,
+          ),
+          color: ColorManager.textColor,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaymentMethodSelection() {
+    return Column(
+      children: [
+        BuildPaymentRow(
+          amount: "",
+          title: "Payment Method",
+          firstRowTextStyle: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s14,
+            0.21,
+            ColorManager.kPrimaryColor,
+          ),
+          color: ColorManager.kPrimaryColor,
+        ),
+        Row(
+          children: [
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  iconColor = 1;
+                });
+              },
+              child: BuildBoxShadowContainer(
+                border: iconColor == 1
+                    ? Border.all(color: ColorManager.kPrimaryColor)
+                    : null,
+                margin: const EdgeInsets.only(top: 10),
+                padding: const EdgeInsets.all(8),
+                blurRadius: 4,
+                circleRadius: 5,
+                child: Column(
+                  children: [
+                    WebsafeSvg.asset(
+                      ImageAssets.cashIcon,
+                      color: Colors.black,
+                      fit: BoxFit.none,
+                    ),
+                    Text(
+                      'Cash',
+                      style: buildCustomStyle(FontWeightManager.medium,
+                          FontSize.s8, 0.12, Colors.black),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  iconColor = 2;
+                });
+              },
+              child: BuildBoxShadowContainer(
+                border: iconColor == 2
+                    ? Border.all(color: ColorManager.kPrimaryColor)
+                    : null,
+                margin: const EdgeInsets.only(left: 10, top: 10),
+                padding: const EdgeInsets.only(
+                    left: 12, top: 8, bottom: 8, right: 12),
+                blurRadius: 4,
+                circleRadius: 5,
+                child: Column(
+                  children: [
+                    WebsafeSvg.asset(
+                      ImageAssets.creditCardIcon,
+                      color: Colors.black,
+                      fit: BoxFit.none,
+                    ),
+                    Text(
+                      'Card',
+                      style: buildCustomStyle(FontWeightManager.medium,
+                          FontSize.s8, 0.12, Colors.black),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  iconColor = 3;
+                });
+              },
+              child: BuildBoxShadowContainer(
+                border: iconColor == 3
+                    ? Border.all(color: ColorManager.kPrimaryColor)
+                    : null,
+                margin: const EdgeInsets.only(left: 10, top: 10),
+                padding: const EdgeInsets.only(
+                    left: 12, top: 8, bottom: 8, right: 12),
+                blurRadius: 4,
+                circleRadius: 5,
+                child: Column(
+                  children: [
+                    WebsafeSvg.asset(
+                      ImageAssets.creditCardIcon,
+                      color: Colors.black,
+                      fit: BoxFit.none,
+                    ),
+                    Text(
+                      'Upi',
+                      style: buildCustomStyle(FontWeightManager.medium,
+                          FontSize.s8, 0.12, Colors.black),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (iconColor == 2 || iconColor == 3 || iconColor == 1)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 10),
+                  child: iconColor != 1
+                      ? TextFormField(
+                          controller: _transactionNumberController,
+                          decoration: const InputDecoration(
+                            hintText: 'Transaction Reference No:',
+                          ),
+                        )
+                      : TextFormField(
+                          controller: _paidAmountController,
+                          onChanged: (value) {
+                            _getBalanceAmount();
+                          },
+                          decoration: const InputDecoration(
+                            hintText: 'Enter Paid Amount Here:',
+                          ),
+                        ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (iconColor == 1)
+          BuildPaymentRow(
+            amount: _balanceAmount.toStringAsFixed(2),
+            title: "Balance amount",
+            secondRowTextStyle: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s15,
+              0.18,
+              ColorManager.textColorRed,
+            ),
+            firstRowTextStyle: buildCustomStyle(
+              FontWeightManager.bold,
+              FontSize.s15,
+              0.23,
+              ColorManager.textColorRed,
+            ),
+            color: ColorManager.textColorRed,
+          ),
+        if (iconColor == 1) const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        decoration: const BoxDecoration(
+          borderRadius: BorderRadius.only(
+            topRight: Radius.circular(13.0),
+            bottomRight: Radius.circular(13.0),
+            topLeft: Radius.circular(13.0),
+            bottomLeft: Radius.circular(13.0),
+          ),
+          boxShadow: [
             BoxShadow(
               color: ColorManager.boxShadowColor,
               blurRadius: 6,
               offset: Offset(1, 1),
             ),
           ],
-          color: Colors.white),
-      child: Padding(
-        padding: const EdgeInsets.only(left: 15.0, right: 15),
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'New Order',
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s20, 0.30, ColorManager.textColor),
-                  ),
-                  // Row(
-                  //   children: [
-                  //     BuildBoxShadowContainer(
-                  //       height: 29,
-                  //       width: 30,
-                  //       circleRadius: 7,
-                  //       child: WebsafeSvg.asset(
-                  //         ImageAssets.deleteIcon,
-                  //         fit: BoxFit.none,
-                  //       ),
-                  //     ),
-                  //     const SizedBox(width: 15),
-                  //     WebsafeSvg.asset(
-                  //       ImageAssets.verticalDotsIcon,
-                  //       fit: BoxFit.none,
-                  //     ),
-                  //   ],
-                  // ),
-                ],
-              ),
-              Text(
-                'Order No #00000',
-                style: buildCustomStyle(FontWeightManager.regular, FontSize.s12,
-                    0.18, ColorManager.textColor),
-              ),
-              const Divider(thickness: 1),
-              // Text(
-              //   'Enter mobile number',
-              //   style: buildCustomStyle(FontWeightManager.regular,
-              //       FontSize.s10, 0.16, ColorManager.textColor),
-              // ),
-              const SizedBox(height: 5),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      children: [
-                        // BuildBoxShadowContainer(
-                        //   padding: const EdgeInsets.all(10),
-                        //   height: 30,
-                        //   circleRadius: 5,
-                        //   alignment: Alignment.center,
-                        //   child: TextField(
-                        //     textAlign: TextAlign.start,
-                        //     style: buildCustomStyle(
-                        //         FontWeight.normal, 8, 0.16, Colors.black),
-                        //     controller: mobileNumberTextController,
-                        //     cursorHeight: 10,
-                        //     cursorWidth: 1,
-                        //     cursorColor: Colors.blue,
-                        //     decoration: const InputDecoration(
-                        //         border: InputBorder.none),
-                        //   ),
-                        // ),
-                        // const SizedBox(height: 20),
-                        // customerList!.isNotEmpty
-                        //     ?
-                        BuildBoxShadowContainer(
-                          circleRadius: 7,
-                          alignment: Alignment.centerLeft,
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 0, vertical: 0),
-                          padding: const EdgeInsets.only(left: 15),
-                          height: MediaQuery.of(context).size.height * .07,
-                          width: MediaQuery.of(context).size.width / 3,
-                          child: Autocomplete<CustomerListModelData>(
-                            optionsBuilder: (mobileNumberTextController) async {
-                              debugPrint(mobileNumberTextController.text);
-                              if (mobileNumberTextController.text.isEmpty) {
-                                return const Iterable<
-                                    CustomerListModelData>.empty();
-                              }
-                              if (mobileNumberTextController.text.length < 3) {
-                                debugPrint("called");
-                                String? accessToken = Provider.of<AuthModel>(
-                                        context,
-                                        listen: false)
-                                    .token;
-                                debugPrint(
-                                    "accessToken From AuthModel $accessToken");
+          color: ColorManager.greyWithOpacity60,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            Expanded(
+              flex: 3,
+              child: GestureDetector(
+                onTap: () async {
+                  String? accessToken =
+                      Provider.of<AuthModel>(context, listen: false).token;
+                  debugPrint("accessToken From AuthModel $accessToken");
+                  final provider =
+                      Provider.of<CartProvider>(context, listen: false);
+                  int cartId = provider.getCartIDForOrder;
+                  debugPrint("$cartId");
 
-                                debugPrint(mobileNumberTextController.text);
-
-                                try {
-                                  final response = await CustomerProvider()
-                                      .findCustomerByPhone(
-                                          accessToken ?? "",
-                                          mobileNumberTextController.text,
-                                          context);
-
-                                  if (response["status"] == "success") {
-                                    CustomerListModel customerListModel =
-                                        CustomerListModel.fromJson(response);
-
-                                    List<CustomerListModelData>?
-                                        filterdCustomerList =
-                                        customerListModel.data;
-
-                                    return filterdCustomerList!;
-                                    // setState(() {
-                                    // });
-                                  } else {
-                                    // Handle error
-                                    debugPrint(
-                                        'Error in response: ${response["message"]}');
-                                  }
-                                } catch (error) {
-                                  // Handle network or parsing error
-                                  debugPrint('Exception caught: $error');
-                                }
-                              }
-                              return customerList!;
-                              // !.where(
-                              //     (CustomerListModelData customer) {
-                              //   return customer.name!
-                              //       .toLowerCase()
-                              //       .contains(textEditingValue.text
-                              //           .toLowerCase());
-                              // });
-                            },
-                            displayStringForOption:
-                                (CustomerListModelData customer) =>
-                                    customer.name ?? '',
-                            onSelected: (CustomerListModelData selection) {
-                              String? accessToken =
-                                  Provider.of<AuthModel>(context, listen: false)
-                                      .token;
-                              debugPrint(
-                                  "accessToken From AuthModel $accessToken");
-                              Provider.of<CartProvider>(context, listen: false)
-                                  .fetchCartDataFromApi(
-                                      customerId: selection.id ?? 0,
-                                      accessToken: accessToken ?? '');
-                              setState(() {
-                                // mobileNumberTextController.text =
-                                //     selection.phone!;
-                                mobileNumberText = selection.phone!;
-                                selectedCustomer = selection;
-                              });
-                            },
-                            fieldViewBuilder: (BuildContext context,
-                                mobileNumberTextController,
-                                FocusNode focusNode,
-                                VoidCallback onFieldSubmitted) {
-                              return TextField(
-                                controller: mobileNumberTextController,
-                                focusNode: focusNode,
-                                decoration: InputDecoration(
-                                  hintText: 'Enter mobile number',
-                                  hintStyle: buildCustomStyle(
-                                    FontWeight.w500,
-                                    12,
-                                    0.27,
-                                    Colors.grey.withOpacity(.5),
-                                  ),
-                                  border: InputBorder.none,
-                                ),
-                                onChanged: (value) {
-                                  setState(() {
-                                    mobileNumberText = value;
-                                  });
-                                },
-                                style: buildCustomStyle(
-                                  FontWeight.w500,
-                                  12,
-                                  0.27,
-                                  Colors.black.withOpacity(.5),
-                                ),
-                              );
-                            },
-                            optionsViewBuilder: (BuildContext context,
-                                AutocompleteOnSelected<CustomerListModelData>
-                                    onSelected,
-                                Iterable<CustomerListModelData> options) {
-                              return Align(
-                                alignment: Alignment.topLeft,
-                                child: Material(
-                                  elevation: 4,
-                                  child: Container(
-                                    width:
-                                        MediaQuery.of(context).size.width / 3,
-                                    color: Colors.white,
-                                    constraints: const BoxConstraints(
-                                      maxHeight: 200, // Set the height limit
-                                    ),
-                                    child: ListView.builder(
-                                      padding: const EdgeInsets.all(8.0),
-                                      shrinkWrap: true,
-                                      physics: const BouncingScrollPhysics(),
-                                      itemCount: options.length,
-                                      itemBuilder:
-                                          (BuildContext context, int index) {
-                                        final CustomerListModelData option =
-                                            options.elementAt(index);
-                                        return MouseRegion(
-                                          onEnter: (_) {
-                                            setState(() {
-                                              hoverMap[index] = true;
-                                            });
-                                          },
-                                          onExit: (_) {
-                                            setState(() {
-                                              hoverMap[index] = false;
-                                            });
-                                          },
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              onSelected(option);
-                                            },
-                                            child: Container(
-                                              color: hoverMap[index] == true
-                                                  ? Colors.grey[200]
-                                                  : Colors.white,
-                                              child: ListTile(
-                                                title: Text(
-                                                  option.name ?? '',
-                                                  style: buildCustomStyle(
-                                                    FontWeight.w500,
-                                                    12,
-                                                    0.27,
-                                                    Colors.black
-                                                        .withOpacity(.5),
-                                                  ),
-                                                ),
-                                                hoverColor: Colors
-                                                    .grey[200], // Hover effect
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        )
-                        // : Container(),
-                      ],
+                  try {
+                    await Provider.of<CartProvider>(context, listen: false)
+                        .addToOrderAPI(
+                      cartIds: cartId,
+                      accessToken: accessToken ?? "",
+                      transactionId: _transactionNumberController.text,
+                      totalPrice:
+                          Provider.of<CartProvider>(context, listen: false)
+                              .priceSummary!
+                              .netTotal
+                              .toString(),
+                      customerId: Provider.of<AuthModel>(context, listen: false)
+                          .userId!,
+                    )
+                        .then((response) {
+                      AddToOrderModel addToOrderModel =
+                          AddToOrderModel.fromJson(response);
+                      debugPrint(
+                          "$response  Provider.of<CartProvider>(context,listen: false).addToOrderAPI(); ");
+                      if (response["status"] == "success") {
+                        showScaffold(
+                          context: context,
+                          message: "${addToOrderModel.message}",
+                        );
+                      } else {
+                        showScaffoldError(
+                          context: context,
+                          message: "${addToOrderModel.message}",
+                        );
+                      }
+                    });
+                  } catch (error) {
+                    debugPrint(error.toString());
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(13),
+                  decoration: const BoxDecoration(
+                    borderRadius: BorderRadius.only(
+                      topRight: Radius.circular(0.0),
+                      bottomLeft: Radius.circular(13.0),
+                      topLeft: Radius.circular(13.0),
+                      bottomRight: Radius.circular(0.0),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: ColorManager.boxShadowColor,
+                        blurRadius: 6,
+                        offset: Offset(1, 1),
+                      ),
+                    ],
+                    color: ColorManager.kPrimaryColor,
                   ),
-                  const SizedBox(width: 15),
-                  BuildBoxShadowContainer(
-                    height: MediaQuery.of(context).size.height * .07,
-                    width: 50,
-                    circleRadius: 5,
-                    child: InkWell(
-                      onTap: () => {
-                        showAddCustomerModal(context, size,
-                            mobileNumber: mobileNumberText),
-                      },
-                      child: WebsafeSvg.asset(
-                        ImageAssets.userIcon,
-                        fit: BoxFit.none,
+                  child: Text(
+                    'Save Sales ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal)}',
+                    style: buildCustomStyle(FontWeightManager.medium,
+                        FontSize.s16, 0.27, Colors.white),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  String formattedTotal = AmountHelper.formatAmount(
+                      Provider.of<CartProvider>(context, listen: false)
+                          .priceSummary!
+                          .netTotal);
+                  debugPrint(cartProductItems!.length.toString());
+                  debugPrint(formattedTotal.toString());
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PrintPage(
+                        cartItems: cartProductItems!,
+                        formattedTotal: formattedTotal,
+                        orderDate: DateHelper.formatDate(DateTime.now()),
+                        orderNumber: "#000000",
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: size.height * 0.22, // 150,
-
-                child: Consumer<CartProvider>(
-                    builder: (context, cartProvider, child) {
-                  return StreamBuilder<List<ListCartModelData>>(
-                      stream: cartProvider.cartStream,
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData) {
-                          debugPrint("Inside Order List Consumer");
-                          List<ListCartModelData>? cartItems = snapshot.data;
-                          // List<ListCartModelDataCartItem>? cart =
-                          //     cartItems.;
-                          List<ListCartModelDataCartItem>? cartItem =
-                              cartProductItems = cartItems!.isEmpty
-                                  ? []
-                                  : cartItems.map((e) => e.cartItems).first;
-
-                          debugPrint("Tax ${cartItems.first.toString()}");
-
-                          if (cartItems.isNotEmpty) {
-                            taxNames = cartItems.first.taxAmounts ?? {};
-                          }
-
-                          return ListView.builder(
-                              // physics: NeverScrollableScrollPhysics(),
-                              padding: EdgeInsets.zero,
-                              itemCount: cartItem!.length, //3,
-                              shrinkWrap: true,
-                              itemBuilder: (BuildContext context, int index) {
-                                return Theme(
-                                    data: ThemeData(
-                                        dividerColor: Colors.transparent),
-                                    child: ExpansionTile(
-                                      maintainState: true,
-                                      childrenPadding:
-                                          const EdgeInsets.only(bottom: 10),
-                                      collapsedBackgroundColor: index % 2 == 0
-                                          ? Colors.grey.withOpacity(0.1)
-                                          : null,
-                                      backgroundColor: index % 2 == 0
-                                          ? Colors.grey.withOpacity(0.1)
-                                          : null,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(3)),
-                                      tilePadding: const EdgeInsets.symmetric(
-                                          horizontal: 10),
-                                      key: ValueKey(cartItem[index].id),
-                                      trailing: GestureDetector(
-                                        onTap: () {
-                                          String? accessToken =
-                                              Provider.of<AuthModel>(context,
-                                                      listen: false)
-                                                  .token;
-                                          Provider.of<CartProvider>(context,
-                                                  listen: false)
-                                              .removeFromCartAPI(
-                                            accessToken: accessToken ?? "",
-                                            customerId: Provider.of<AuthModel>(
-                                                    context,
-                                                    listen: false)
-                                                .userId!,
-                                            productId: cartItem[index].id ?? 1,
-                                            remove: "true",
-                                          );
-                                        },
-                                        child: WebsafeSvg.asset(
-                                          ImageAssets.oderlistCloseIcon,
-                                          fit: BoxFit.none,
-                                          width: 10, // Adjust icon size
-                                        ),
-                                      ),
-                                      controlAffinity:
-                                          ListTileControlAffinity.leading,
-                                      iconColor: ColorManager.textColor,
-                                      collapsedIconColor:
-                                          ColorManager.textColor,
-                                      title: LayoutBuilder(
-                                        builder: (context, constraints) {
-                                          // Calculate responsive sizes
-                                          double fontSize =
-                                              constraints.maxWidth < 600
-                                                  ? 12
-                                                  : 14;
-                                          // double iconSize =
-                                          //     constraints.maxWidth < 600
-                                          //         ? 20
-                                          //         : 24;
-
-                                          return Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Expanded(
-                                                    flex: 2,
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Text(
-                                                          '${index + 1}. ${cartItem[index].productName}',
-                                                          style: buildCustomStyle(
-                                                              FontWeightManager
-                                                                  .regular,
-                                                              fontSize,
-                                                              0.21,
-                                                              ColorManager
-                                                                  .textColor),
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                          maxLines: 1,
-                                                        ),
-                                                        Text(
-                                                          '${cartItem[index].productUnit}',
-                                                          style: buildCustomStyle(
-                                                              FontWeightManager
-                                                                  .medium,
-                                                              fontSize - 2,
-                                                              0.21,
-                                                              ColorManager
-                                                                  .textColor),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  Expanded(
-                                                    flex: 2,
-                                                    child: Center(
-                                                      child:
-                                                          CompactQuantityControl(
-                                                        quantity:
-                                                            cartItem[index]
-                                                                .quantity!,
-                                                        onIncrement: () {
-                                                          String? accessToken =
-                                                              Provider.of<AuthModel>(
-                                                                      context,
-                                                                      listen:
-                                                                          false)
-                                                                  .token;
-                                                          Provider.of<CartProvider>(
-                                                                  context,
-                                                                  listen: false)
-                                                              .addToCartAPI(
-                                                            accessToken:
-                                                                accessToken ??
-                                                                    "",
-                                                            customerId: Provider.of<
-                                                                        AuthModel>(
-                                                                    context,
-                                                                    listen:
-                                                                        false)
-                                                                .userId!,
-                                                            productId: cartItem[
-                                                                        index]
-                                                                    .productId ??
-                                                                1,
-                                                            quantity: 1,
-                                                          );
-                                                        },
-                                                        onDecrement: () {
-                                                          String? accessToken =
-                                                              Provider.of<AuthModel>(
-                                                                      context,
-                                                                      listen:
-                                                                          false)
-                                                                  .token;
-                                                          Provider.of<CartProvider>(
-                                                                  context,
-                                                                  listen: false)
-                                                              .removeFromCartAPI(
-                                                            accessToken:
-                                                                accessToken ??
-                                                                    "",
-                                                            customerId: Provider.of<
-                                                                        AuthModel>(
-                                                                    context,
-                                                                    listen:
-                                                                        false)
-                                                                .userId!,
-                                                            productId:
-                                                                cartItem[index]
-                                                                        .id ??
-                                                                    1,
-                                                            remove: '',
-                                                          );
-                                                        },
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  Expanded(
-                                                    flex: 2,
-                                                    child: Text(
-                                                      '${cartItem[index].currency} ${cartItem[index].unitPrice}',
-                                                      style: buildCustomStyle(
-                                                          FontWeightManager
-                                                              .regular,
-                                                          fontSize,
-                                                          0.21,
-                                                          ColorManager
-                                                              .textColor),
-                                                      textAlign: TextAlign.end,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      ),
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: LayoutBuilder(
-                                            builder: (context, constraints) {
-                                              return Container(
-                                                width: constraints.maxWidth,
-                                                child: Text(
-                                                  cartItem[index].productName!,
-                                                  textAlign: TextAlign.start,
-                                                  maxLines: 4,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.regular,
-                                                    12,
-                                                    0.21,
-                                                    ColorManager.textColor,
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    ));
-                              });
-                        } else if (snapshot.hasError) {
-                          return Text('Error: ${snapshot.error}');
-                        } else {
-                          // cartProvider.fetchCartData(customerId: 1);
-                          return const BuildOrderListDesign();
-
-                          // const Center(
-                          //   child: SizedBox(
-                          //     height: 50,
-                          //     width: 50,
-                          //     child: CircularProgressIndicator(
-                          //       color: ColorManager.kPrimaryColor,
-                          //     ),
-                          //   ),
-                          // );
-                        }
-                      });
-                }),
-              ),
-
-              const SizedBox(height: 5),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      children: [
-                        BuildBoxShadowContainer(
-                          circleRadius: 7,
-                          alignment: Alignment.centerLeft,
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 0, vertical: 0),
-                          padding: const EdgeInsets.only(left: 15),
-                          height: MediaQuery.of(context).size.height * .07,
-                          width: MediaQuery.of(context).size.width / 3,
-                          child: TextField(
-                            controller: coupenCodeTextController,
-                            decoration: InputDecoration(
-                              hintText: 'Apply Coupon',
-                              hintStyle: buildCustomStyle(
-                                FontWeight.w500,
-                                12,
-                                0.27,
-                                Colors.grey.withOpacity(.5),
-                              ),
-                              border: InputBorder.none,
-                            ),
-                            style: buildCustomStyle(
-                              FontWeight.w500,
-                              12,
-                              0.27,
-                              Colors.black.withOpacity(.5),
-                            ),
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  CustomRoundButton(
-                    title: "Apply",
-                    fct: _applyCoupon,
-                    fontSize: FontSize.s14,
-                    height: MediaQuery.of(context).size.height * .07,
-                    width: 100,
-                  ),
-                  // BuildBoxShadowContainer(
-                  //   height: MediaQuery.of(context).size.height * .07,
-                  //   width: 50,
-                  //   circleRadius: 5,
-                  //   child: InkWell(
-                  //     onTap: () => {
-                  //       showAddCustomerModal(context, size,
-                  //           mobileNumber: mobileNumberText),
-                  //     },
-                  //     child: WebsafeSvg.asset(
-                  //       ImageAssets.userIcon,
-                  //       fit: BoxFit.none,
-                  //     ),
-                  //   ),
-                  // ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              BuildPaymentRow(
-                amount: AmountHelper.formatAmount(
-                    Provider.of<CartProvider>(context, listen: true)
-                            .priceSummary!
-                            .subTotal ??
-                        0.00),
-                title: "Net amount",
-                color: ColorManager.textColor,
-              ),
-              const BuildPaymentRow(
-                amount: "0.00",
-                title: "Shipping",
-                color: ColorManager.textColor,
-              ),
-              BuildPaymentRow(
-                amount: AmountHelper.formatAmount(
-                    Provider.of<CartProvider>(context, listen: true)
-                            .priceSummary!
-                            .discount ??
-                        0.00),
-                title: "Discount",
-                color: ColorManager.textColor,
-              ),
-              GestureDetector(
-                child: BuildPaymentRow(
-                  amount: AmountHelper.formatAmount(
-                    Provider.of<CartProvider>(context, listen: true)
-                            .priceSummary!
-                            .totalTax ??
-                        0.00,
-                  ),
-                  title: "GST",
-                  color: ColorManager.kPrimaryColor,
-                ),
-                onTap: () {
-                  debugPrint("Tax Details ${taxNames.toString()}");
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      return Center(
-                        child: TaxDetailsDialog(
-                          taxAmounts: taxNames,
-                        ),
-                      );
-                    },
                   );
                 },
-              ),
-              const Divider(thickness: 2),
-              BuildPaymentRow(
-                amount: AmountHelper.formatAmount(
-                    Provider.of<CartProvider>(context, listen: true)
-                            .priceSummary!
-                            .netTotal ??
-                        0.00),
-                title: "Total Payable",
-                secondRowTextStyle: buildCustomStyle(
-                  FontWeightManager.bold,
-                  FontSize.s15,
-                  0.23,
-                  ColorManager.textColor,
-                ),
-                firstRowTextStyle: buildCustomStyle(
-                  FontWeightManager.bold,
-                  FontSize.s15,
-                  0.23,
-                  ColorManager.textColor,
-                ),
-                color: ColorManager.textColor,
-              ),
-              const SizedBox(height: 5),
-              BuildPaymentRow(
-                amount: "",
-                title: "Payment Method",
-                firstRowTextStyle: buildCustomStyle(
-                  FontWeightManager.semiBold,
-                  FontSize.s14,
-                  0.21,
-                  ColorManager.kPrimaryColor,
-                ),
-                color: ColorManager.kPrimaryColor,
-              ),
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      // _getBalanceAmount();
-                      setState(() {
-                        iconColor = 1;
-                      });
-                    },
-                    child: BuildBoxShadowContainer(
-                      border: iconColor == 1
-                          ? Border.all(color: ColorManager.kPrimaryColor)
-                          : null,
-                      margin: const EdgeInsets.only(top: 10),
-                      padding: const EdgeInsets.all(8),
-                      blurRadius: 4,
-                      circleRadius: 5,
-                      child: Column(
-                        children: [
-                          WebsafeSvg.asset(
-                            ImageAssets.cashIcon,
-                            color: Colors.black,
-                            fit: BoxFit.none,
-                          ),
-                          Text(
-                            'Cash',
-                            style: buildCustomStyle(FontWeightManager.medium,
-                                FontSize.s8, 0.12, Colors.black),
-                          ),
-                        ],
-                      ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    WebsafeSvg.asset(
+                      ImageAssets.printIcon,
+                      color: Colors.white,
+                      fit: BoxFit.none,
                     ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        iconColor = 2;
-                      });
-                    },
-                    child: BuildBoxShadowContainer(
-                      border: iconColor == 2
-                          ? Border.all(color: ColorManager.kPrimaryColor)
-                          : null,
-                      margin: const EdgeInsets.only(left: 10, top: 10),
-                      padding: const EdgeInsets.only(
-                          left: 12, top: 8, bottom: 8, right: 12),
-                      blurRadius: 4,
-                      circleRadius: 5,
-                      child: Column(
-                        children: [
-                          WebsafeSvg.asset(
-                            ImageAssets.creditCardIcon,
-                            color: Colors.black,
-                            fit: BoxFit.none,
-                          ),
-                          Text(
-                            'Card',
-                            style: buildCustomStyle(FontWeightManager.medium,
-                                FontSize.s8, 0.12, Colors.black),
-                          ),
-                        ],
-                      ),
+                    Text(
+                      'Print',
+                      style: buildCustomStyle(FontWeightManager.medium,
+                          FontSize.s10, 0.16, Colors.white),
                     ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        iconColor = 3;
-                      });
-                    },
-                    child: BuildBoxShadowContainer(
-                      border: iconColor == 3
-                          ? Border.all(color: ColorManager.kPrimaryColor)
-                          : null,
-                      margin: const EdgeInsets.only(left: 10, top: 10),
-                      padding: const EdgeInsets.only(
-                          left: 12, top: 8, bottom: 8, right: 12),
-                      blurRadius: 4,
-                      circleRadius: 5,
-                      child: Column(
-                        children: [
-                          WebsafeSvg.asset(
-                            ImageAssets.creditCardIcon,
-                            color: Colors.black,
-                            fit: BoxFit.none,
-                          ),
-                          Text(
-                            'Upi',
-                            style: buildCustomStyle(FontWeightManager.medium,
-                                FontSize.s8, 0.12, Colors.black),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // TextFormField for transaction number
-                  if (iconColor == 2 ||
-                      iconColor == 3 ||
-                      iconColor == 1) // Assuming 1 is for Cash and 3 is for UPI
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 10),
-                        child: iconColor != 1
-                            ? TextFormField(
-                                controller: _transactionNumberController,
-                                decoration: const InputDecoration(
-                                  hintText: 'Transaction Reference No:',
-                                ),
-                              )
-                            : TextFormField(
-                                controller: _paidAmountController,
-                                onChanged: (value) {
-                                  _getBalanceAmount();
-                                },
-                                decoration: const InputDecoration(
-                                  hintText: 'Enter Paid Amount Here:',
-                                ),
-                              ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              if (iconColor == 1)
-                BuildPaymentRow(
-                  amount: _balanceAmount.toStringAsFixed(2),
-                  title: "Balance amount",
-                  secondRowTextStyle: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s15,
-                    0.18,
-                    ColorManager.textColorRed,
-                  ),
-                  firstRowTextStyle: buildCustomStyle(
-                    FontWeightManager.bold,
-                    FontSize.s15,
-                    0.23,
-                    ColorManager.textColorRed,
-                  ),
-                  color: ColorManager.textColorRed,
-                ),
-              if (iconColor == 1) const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  // height: 55,
-                  // margin: const EdgeInsets.only(
-                  //     left: 10, top: 10, right: 10),
-                  //  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                      borderRadius: BorderRadius.only(
-                          topRight: Radius.circular(13.0),
-                          bottomRight: Radius.circular(13.0),
-                          topLeft: Radius.circular(13.0),
-                          bottomLeft: Radius.circular(13.0)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: ColorManager.boxShadowColor,
-                          blurRadius: 6,
-                          offset: Offset(1, 1),
-                        ),
-                      ],
-                      color: ColorManager.greyWithOpacity60),
-                  child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: GestureDetector(
-                            onTap: () async {
-                              String? accessToken =
-                                  Provider.of<AuthModel>(context, listen: false)
-                                      .token;
-                              debugPrint(
-                                  "accessToken From AuthModel $accessToken");
-                              final provider = Provider.of<CartProvider>(
-                                  context,
-                                  listen: false);
-                              int cartId = provider.getCartIDForOrder;
-                              debugPrint("$cartId");
-                           
-
-                              try {
-                                await Provider.of<CartProvider>(context,
-                                        listen: false)
-                                    .addToOrderAPI(
-                                  cartIds: cartId,
-                                  accessToken: accessToken ?? "",
-                                  transactionId:
-                                      _transactionNumberController.text,
-                                  totalPrice: Provider.of<CartProvider>(context,
-                                          listen: false)
-                                      .priceSummary!
-                                      .netTotal
-                                      .toString(),
-                                  customerId: Provider.of<AuthModel>(context,
-                                          listen: false)
-                                      .userId!,
-                                )
-                                    .then((response) {
-                                  AddToOrderModel addToOrderModel =
-                                      AddToOrderModel.fromJson(response);
-                                  debugPrint(
-                                      "$response  Provider.of<CartProvider>(context,listen: false).addToOrderAPI(); ");
-                                  if (response["status"] == "success") {
-                                    showScaffold(
-                                      context: context,
-                                      message:
-                                          "${addToOrderModel.message}", //  'Order Placed Successfully',
-                                    );
-                                  } else {
-                                    showScaffoldError(
-                                      context: context,
-                                      message:
-                                          "${addToOrderModel.message}", //   'Error Occured! Try Again ',
-                                    );
-                                  }
-                                });
-                              } catch (error) {
-                                debugPrint(error.toString());
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(13),
-                              decoration: const BoxDecoration(
-                                borderRadius: BorderRadius.only(
-                                    topRight: Radius.circular(0.0),
-                                    bottomLeft: Radius.circular(13.0),
-                                    topLeft: Radius.circular(13.0),
-                                    bottomRight: Radius.circular(0.0)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: ColorManager.boxShadowColor,
-                                    blurRadius: 6,
-                                    offset: Offset(1, 1),
-                                  ),
-                                ],
-                                color: ColorManager.kPrimaryColor,
-                              ),
-                              child: Text(
-                                'Save Sales ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal)}',
-                                style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s16,
-                                    0.27,
-                                    Colors.white),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              String formattedTotal = AmountHelper.formatAmount(
-                                  Provider.of<CartProvider>(context,
-                                          listen: false)
-                                      .priceSummary!
-                                      .netTotal);
-                              debugPrint(cartProductItems!.length.toString());
-                              debugPrint(formattedTotal.toString());
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => PrintPage(
-                                    cartItems: cartProductItems!,
-                                    formattedTotal: formattedTotal,
-                                    orderDate:
-                                        DateHelper.formatDate(DateTime.now()),
-                                    orderNumber: "#000000",
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                WebsafeSvg.asset(
-                                  ImageAssets.printIcon,
-                                  color: Colors.white,
-                                  fit: BoxFit.none,
-                                ),
-                                Text(
-                                  'Print',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s10,
-                                      0.16,
-                                      Colors.white),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      ]),
+                  ],
                 ),
               ),
-              // ],
-              // ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1163,7 +996,6 @@ class _OrderListNewState extends State<OrderListNew> {
     double? totalAmount = Provider.of<CartProvider>(context, listen: false)
         .priceSummary!
         .netTotal;
-
     String couponCode = coupenCodeTextController.text;
 
     if (accessToken != null) {
@@ -1181,19 +1013,25 @@ class _OrderListNewState extends State<OrderListNew> {
           double discountedTotal = totalAmount - discountAmount;
 
           Provider.of<CartProvider>(context, listen: false).updatePriceSummary(
-              discountAmount: discountAmount, discountedTotal: discountedTotal);
+            discountAmount: discountAmount,
+            discountedTotal: discountedTotal,
+          );
 
           showScaffold(
-              context: context,
-              message: result['message'] ?? 'Coupon Applied Successfully');
+            context: context,
+            message: result['message'] ?? 'Coupon Applied Successfully',
+          );
         } else {
           showScaffoldError(
-              context: context,
-              message: result['message'] ?? 'Failed to Apply Coupon');
+            context: context,
+            message: result['message'] ?? 'Failed to Apply Coupon',
+          );
         }
       } else {
         showScaffoldError(
-            context: context, message: 'Error Occurred! Try Again');
+          context: context,
+          message: 'Error Occurred! Try Again',
+        );
       }
     } else {
       showScaffoldError(context: context, message: 'Not Authenticated');
@@ -1237,18 +1075,23 @@ class CompactQuantityControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: ColorManager.kPrimaryColor),
-        borderRadius: BorderRadius.circular(4),
-      ),
+      // decoration: BoxDecoration(
+      //   border: Border.all(color: ColorManager.kPrimaryColor),
+      //   borderRadius: BorderRadius.circular(4),
+      // ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           InkWell(
             onTap: onDecrement,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: Icon(Icons.remove,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: ColorManager.kPrimaryColor
+                    .withOpacity(0.1), // Optional: background color
+              ),
+              padding: const EdgeInsets.all(8), // Adjust padding as needed
+              child: const Icon(Icons.remove,
                   size: 16, color: ColorManager.kPrimaryColor),
             ),
           ),
@@ -1263,10 +1106,15 @@ class CompactQuantityControl extends StatelessWidget {
           ),
           InkWell(
             onTap: onIncrement,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child:
-                  Icon(Icons.add, size: 16, color: ColorManager.kPrimaryColor),
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: ColorManager.kPrimaryColor
+                    .withOpacity(1), // Optional: background color
+              ),
+              padding: const EdgeInsets.all(8), // Adjust padding as needed
+              child: const Icon(Icons.add,
+                  size: 16, color: ColorManager.kSecondaryColor),
             ),
           ),
         ],

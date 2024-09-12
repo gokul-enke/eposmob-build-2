@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
-import 'package:pos_machine/components/build_title.dart';
+import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/get_suppliers.dart';
@@ -243,35 +243,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(
+                          buildColumnWidgetForTextFields(
                             height: 45,
                             width: 120,
-                            child: TextFormField(
-                              onChanged: (value) {
-                                setState(() {
-                                  // Update state if needed
-                                });
-                              },
-                              controller: productNameController,
-                              cursorColor: ColorManager.kPrimaryColor,
-                              cursorHeight: 13,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s10,
-                                0.18,
-                                ColorManager.textColor,
-                              ),
-                              decoration: decoration.copyWith(
-                                hintText: "Product Name",
-                                hintStyle: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s10,
-                                  0.18,
-                                  ColorManager.textColor,
-                                ),
-                                prefixIconColor: Colors.black,
-                              ),
-                            ),
+                            onchanged: (value) {},
+                            controller: productNameController,
+                            size: size,
+                            hintText: 'Product Name',
                           ),
                         ],
                       ),
@@ -388,35 +366,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(
+                          buildColumnWidgetForTextFields(
                             height: 45,
                             width: 120,
-                            child: TextFormField(
-                              onChanged: (value) {
-                                setState(() {
-                                  // Update state if needed
-                                });
-                              },
-                              cursorColor: ColorManager.kPrimaryColor,
-                              cursorHeight: 13,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s10,
-                                0.18,
-                                ColorManager.textColor,
-                              ),
-                              controller: amountController,
-                              decoration: decoration.copyWith(
-                                hintText: "Price",
-                                hintStyle: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s10,
-                                  0.18,
-                                  ColorManager.textColor,
-                                ),
-                                prefixIconColor: Colors.black,
-                              ),
-                            ),
+                            onchanged: (value) {},
+                            controller: amountController,
+                            size: size,
+                            hintText: 'Price',
                           ),
                         ],
                       ),
@@ -646,15 +602,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                   debugPrint(
                                       "Supplier Id: ${suppliersModelData!.id}");
 
-                                  if (suppliersModelData != null) {
-                                    debugPrint(
-                                        "Supplier Id: ${suppliersModelData.id}");
-                                    setState(() {
-                                      supplier = suppliersModelData;
-                                      supplierIdController.text =
-                                          "${suppliersModelData.id ?? 1}";
-                                    });
-                                  }
+                                  debugPrint(
+                                      "Supplier Id: ${suppliersModelData.id}");
+                                  setState(() {
+                                    supplier = suppliersModelData;
+                                    supplierIdController.text =
+                                        "${suppliersModelData.id ?? 1}";
+                                  });
                                 },
                               ),
                             ),
@@ -663,28 +617,36 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(left: 10.0, top: 30),
-                      child: SizedBox(
-                        height: 45,
-                        child: CustomRoundButton(
-                          title: "Search",
-                          fct: () => {searchProducts(1)},
-                          height: 45,
-                          width: size.width * 0.09,
-                          fontSize: FontSize.s12,
-                        ),
+                      padding: const EdgeInsets.only(left: 10.0, top: 35),
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            height: 45,
+                            child: CustomRoundButton(
+                              title: "Search",
+                              fct: () => {searchProducts(1)},
+                              height: 45,
+                              width: size.width * 0.09,
+                              fontSize: FontSize.s12,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(left: 10.0, top: 30),
-                      child: CustomRoundButton(
-                        title: "Reset",
-                        boxColor: Colors.white,
-                        textColor: ColorManager.kPrimaryColor,
-                        fct: resetSearch,
-                        height: 45,
-                        width: size.width * 0.09,
-                        fontSize: FontSize.s12,
+                      padding: const EdgeInsets.only(left: 10.0, top: 35),
+                      child: Column(
+                        children: [
+                          CustomRoundButton(
+                            title: "Reset",
+                            boxColor: Colors.white,
+                            textColor: ColorManager.kPrimaryColor,
+                            fct: resetSearch,
+                            height: 45,
+                            width: size.width * 0.09,
+                            fontSize: FontSize.s12,
+                          ),
+                        ],
                       ),
                     ),
                   ],

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/components/build_container_box.dart';
 
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';

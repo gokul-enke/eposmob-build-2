@@ -45,9 +45,9 @@ class ListStockModelData {
   final int? userId;
   final int? quantity;
   final String? unit;
-  final int? purchaseRate;
-  final int? retailPrice;
-  final int? wholesalePrice;
+  final double? purchaseRate;
+  final double? retailPrice;
+  final double? wholesalePrice;
   final int? wholesaleMinUnit;
   final String? expiryDate;
   final String? batchNumber;
@@ -94,9 +94,15 @@ class ListStockModelData {
         userId: json["user_id"],
         quantity: json["quantity"],
         unit: json["unit"],
-        purchaseRate: json["purchase_rate"],
-        retailPrice: json["retail_price"],
-        wholesalePrice: json["wholesale_price"],
+        purchaseRate: (json["purchase_rate"] is int)
+            ? (json["purchase_rate"] as int).toDouble()
+            : json["purchase_rate"],
+        retailPrice: (json["retail_price"] is int)
+            ? (json["retail_price"] as int).toDouble()
+            : json["retail_price"],
+        wholesalePrice: (json["wholesale_price"] is int)
+            ? (json["wholesale_price"] as int).toDouble()
+            : json["wholesale_price"],
         wholesaleMinUnit: json["wholesale_min_unit"],
         expiryDate: json["expiry_date"],
         //  == null

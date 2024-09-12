@@ -6,6 +6,7 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_product_dummy.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/add_to_cart.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -19,7 +20,6 @@ import 'package:pos_machine/responsive.dart';
 import 'package:pos_machine/widgets/category_list_item_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import 'package:websafe_svg/websafe_svg.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -71,32 +71,43 @@ class CategoryListItemNew extends StatelessWidget {
             const SizedBox(
               height: 10,
             ),
-            TextField(
-              cursorWidth: 1,
-              //  controller: searchTextController,
-              cursorColor: ColorManager.kPrimaryColor,
-              onChanged: (query) {
+            // TextField(
+            //   cursorWidth: 1,
+            //   //  controller: searchTextController,
+            //   cursorColor: ColorManager.kPrimaryColor,
+            //   onChanged: (query) {
+            //     debugPrint(query);
+            //     final filteredCategories =
+            //         categoryProvider.searchCategories(query);
+
+            //     categoryProvider.updateFilteredCategories(filteredCategories);
+            //   },
+            //   decoration: decoration.copyWith(
+            //     prefixIcon: WebsafeSvg.asset(
+            //       ImageAssets.categorySearchIcon,
+            //       fit: BoxFit.none,
+            //     ),
+            //     // suffixIcon: WebsafeSvg.asset(
+            //     //   ImageAssets.barcodeIcon,
+            //     //   fit: BoxFit.none,
+            //     // ),
+            //     labelStyle: buildCustomStyle(FontWeightManager.regular,
+            //         FontSize.s10, 0.10, ColorManager.textColor),
+            //     hintText: 'Search category',
+            //     hintStyle: buildCustomStyle(FontWeightManager.regular,
+            //         FontSize.s10, 0.13, ColorManager.textColor1),
+            //   ),
+            // ),
+            buildColumnWidgetForTextFields(
+              onchanged: (query) {
                 debugPrint(query);
                 final filteredCategories =
-                    categoryProvider.searchCategories(query);
-        
+                    categoryProvider.searchCategories(query!);
+
                 categoryProvider.updateFilteredCategories(filteredCategories);
               },
-              decoration: decoration.copyWith(
-                prefixIcon: WebsafeSvg.asset(
-                  ImageAssets.categorySearchIcon,
-                  fit: BoxFit.none,
-                ),
-                // suffixIcon: WebsafeSvg.asset(
-                //   ImageAssets.barcodeIcon,
-                //   fit: BoxFit.none,
-                // ),
-                labelStyle: buildCustomStyle(FontWeightManager.regular,
-                    FontSize.s10, 0.10, ColorManager.textColor),
-                hintText: 'Search category',
-                hintStyle: buildCustomStyle(FontWeightManager.regular,
-                    FontSize.s10, 0.13, ColorManager.textColor1),
-              ),
+              size: size,
+              hintText: 'Search category',
             ),
             const SizedBox(
               height: 10,
@@ -110,7 +121,7 @@ class CategoryListItemNew extends StatelessWidget {
                       : provider.categoryList;
                   if (provider.category!.isEmpty) {
                     provider.listAllCategory();
-        
+
                     return ListView.builder(
                         shrinkWrap: true,
                         scrollDirection: Axis.horizontal,
@@ -133,7 +144,7 @@ class CategoryListItemNew extends StatelessWidget {
                           //         listen: true);
                           final isSelected =
                               index == provider.selectedCategoryIndex;
-        
+
                           // debugPrint(
                           //     "Inside category ListItem Widgetcategorys.categorySlug");
                           // debugPrint("categorys.categoryImage");
@@ -146,11 +157,12 @@ class CategoryListItemNew extends StatelessWidget {
                                   provider.category![index].categoryName ?? "",
                                   index == 0
                                       ? productProvider.productList!.length
-                                      : provider.category![index].productsCount ??
+                                      : provider
+                                              .category![index].productsCount ??
                                           0);
                               productProvider.updateCategory(
                                   provider.category![index].categoryId ?? 0);
-        
+
                               // productProvider.selectedProductsUpOnCategory;
                               // productProvider.selectedProducts(index == 0
                               //     ? 0
@@ -175,7 +187,8 @@ class CategoryListItemNew extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(
                                           40), // Half of the height/width to make it a circle
                                       child: Image.network(
-                                        provider.category![index].categoryIcon ??
+                                        provider.category![index]
+                                                .categoryIcon ??
                                             'https://epos-bucket.s3.ap-southeast-1.amazonaws.com/images/Owtpjeb18CalthcsGsfnWlBIZxb137QI5TIneBdd.jpg',
                                         fit: BoxFit.cover,
                                         height: 80,
@@ -210,31 +223,41 @@ class CategoryListItemNew extends StatelessWidget {
             const SizedBox(
               height: 10,
             ),
-            TextField(
-              cursorWidth: 1,
-              //  controller: searchTextController,
-              cursorColor: ColorManager.kPrimaryColor,
-              onChanged: (query) {
+            // TextField(
+            //   cursorWidth: 1,
+            //   //  controller: searchTextController,
+            //   cursorColor: ColorManager.kPrimaryColor,
+            //   onChanged: (query) {
+            //     debugPrint(query);
+            //     final filteredProducts = productProvider.searchProducts(query);
+
+            //     productProvider.updateFilteredProducts(filteredProducts);
+            //   },
+            //   decoration: decoration.copyWith(
+            //     prefixIcon: WebsafeSvg.asset(
+            //       ImageAssets.categorySearchIcon,
+            //       fit: BoxFit.none,
+            //     ),
+            //     // suffixIcon: WebsafeSvg.asset(
+            //     //   ImageAssets.barcodeIcon,
+            //     //   fit: BoxFit.none,
+            //     // ),
+            //     labelStyle: buildCustomStyle(FontWeightManager.regular,
+            //         FontSize.s10, 0.10, ColorManager.textColor),
+            //     hintText: 'Search Product',
+            //     hintStyle: buildCustomStyle(FontWeightManager.regular,
+            //         FontSize.s10, 0.13, ColorManager.textColor1),
+            //   ),
+            // ),
+            buildColumnWidgetForTextFields(
+              onchanged: (query) {
                 debugPrint(query);
-                final filteredProducts = productProvider.searchProducts(query);
-        
+                final filteredProducts = productProvider.searchProducts(query!);
+
                 productProvider.updateFilteredProducts(filteredProducts);
               },
-              decoration: decoration.copyWith(
-                prefixIcon: WebsafeSvg.asset(
-                  ImageAssets.categorySearchIcon,
-                  fit: BoxFit.none,
-                ),
-                // suffixIcon: WebsafeSvg.asset(
-                //   ImageAssets.barcodeIcon,
-                //   fit: BoxFit.none,
-                // ),
-                labelStyle: buildCustomStyle(FontWeightManager.regular,
-                    FontSize.s10, 0.10, ColorManager.textColor),
-                hintText: 'Search Product',
-                hintStyle: buildCustomStyle(FontWeightManager.regular,
-                    FontSize.s10, 0.13, ColorManager.textColor1),
-              ),
+              size: size,
+              hintText: 'Search Product',
             ),
             const SizedBox(
               height: 10,
@@ -277,7 +300,7 @@ class CategoryListItemNew extends StatelessWidget {
                         selectionProvider.selectedProductList.contains(product);
                     // final isSelected =
                     //     selectionProvider.selectedIndices.contains(index);
-        
+
                     debugPrint("selectionProvider.getProducts!.length");
                     debugPrint("${selectionProvider.productList!.length}");
                     // if (selectionProvider.isLoading ||
@@ -289,7 +312,7 @@ class CategoryListItemNew extends StatelessWidget {
                       debugPrint("file-$index$file");
                       for (var v in product.attachment ?? []) {
                         debugPrint(v.filePath);
-        
+
                         if (v.isPrimary == 1) {
                           debugPrint("file$file");
                           file = v.filePath;
@@ -297,7 +320,7 @@ class CategoryListItemNew extends StatelessWidget {
                           debugPrint("fileShanidha$file");
                         }
                       }
-        
+
                       return isSelected
                           ? Padding(
                               padding: const EdgeInsets.all(8.0),
@@ -305,7 +328,7 @@ class CategoryListItemNew extends StatelessWidget {
                                 onTap: () {
                                   selectionProvider.toggleSelectionProduct(
                                       index, product);
-        
+
                                   // await cartProvider.addToCartAPI(
                                   //     customerId: 1,
                                   //     productId: p[index].productId ?? 1,
@@ -340,11 +363,11 @@ class CategoryListItemNew extends StatelessWidget {
                                       index, product);
                                   debugPrint("selected");
                                   // selectionProvider.setSelection(true);
-        
+
                                   showDialogFunctionForProductDetailsAnimated(
                                       context,
-                                      selectionProvider
-                                              .productList![index].productName ??
+                                      selectionProvider.productList![index]
+                                              .productName ??
                                           '',
                                       "${selectionProvider.productList![index].price!.price}",
                                       selectionProvider

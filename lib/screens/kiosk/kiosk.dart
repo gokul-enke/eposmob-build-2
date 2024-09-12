@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/main_screen.dart';
@@ -47,7 +48,7 @@ class _KioskScreenState extends State<KioskScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Get.to(() => MainScreen());
+            Get.to(() => const MainScreen());
           },
         ),
         centerTitle: true,
@@ -72,9 +73,21 @@ class _KioskScreenState extends State<KioskScreen> {
           children: [
             _buildCategoryList(),
             Expanded(
-              child: _isListView ? _buildListView() : _buildGridView(),
+              child: BuildBoxShadowContainer(
+                circleRadius: 13,
+                color: Colors.white,
+                margin: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: _isListView ? _buildListView() : _buildGridView(),
+                    ),
+                    _buildCheckoutButton(),
+                  ],
+                ),
+              ),
             ),
-            _buildCheckoutButton(),
           ],
         ),
       ),
@@ -355,7 +368,8 @@ class _KioskScreenState extends State<KioskScreen> {
           child: CustomRoundButton(
             fontSize: FontSize.s14,
             height: MediaQuery.of(context).size.height * .07,
-            width: MediaQuery.of(context).size.width * .8,
+            width: MediaQuery.of(context).size.width,
+            radius: 13,
             fct: () {
               Get.to(() => const KioskOrderPage());
             },

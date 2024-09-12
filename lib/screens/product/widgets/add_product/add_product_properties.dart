@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_title.dart';
-import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import '../../../../components/build_container_box.dart';
 import '../../../../components/build_round_button.dart';
-import '../../../../components/build_text_fields.dart';
 import '../../../../providers/grid_provider.dart';
 import '../../../../resources/color_manager.dart';
 import '../../../../resources/font_manager.dart';
@@ -65,7 +63,7 @@ class _AddProductPropertiesScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: size.height * 0.8,
+            height: size.height * 0.6,
             width: double.infinity,
             child: BuildBoxShadowContainer(
               circleRadius: 7,
@@ -147,9 +145,9 @@ class _AddProductPropertiesScreenState
                                       ),
                                     ),
                                     SizedBox(
-                                      width: size.width * .15,
+                                      width: size.width * .40,
                                       child: CheckboxListTile(
-                                        title: Text("Stock Applicable"),
+                                        title: const Text("Stock Applicable"),
                                         value: stockApplicableMap[propsCode] ??
                                             false,
                                         onChanged: (bool? value) {
@@ -248,9 +246,9 @@ class _AddProductPropertiesScreenState
                                       ),
                                     ),
                                     SizedBox(
-                                      width: size.width * .15,
+                                      width: size.width * .40,
                                       child: CheckboxListTile(
-                                        title: Text("Stock Applicable"),
+                                        title: const Text("Stock Applicable"),
                                         value: stockApplicableMap[propsCode] ??
                                             false,
                                         onChanged: (bool? value) {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/resources/font_manager.dart';
 
 class CalendarPickerTableCell extends StatefulWidget {
   final Function(DateTime) onDateSelected;
@@ -35,7 +37,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
     return InkWell(
       onTap: () => _selectDate(context),
       child: InputDecorator(
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           border: InputBorder.none,
         ),
@@ -46,9 +48,13 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
               selectedDate != null
                   ? DateFormat('yyyy-MM-dd').format(selectedDate!)
                   : 'Select Date',
-              style: TextStyle(fontSize: 14),
+              style: TextStyle(
+                fontWeight: FontWeightManager.medium,
+                fontSize: FontSize.s12,
+                color: ColorManager.textColor.withOpacity(.5),
+              ),
             ),
-            Icon(Icons.calendar_today, size: 18),
+            const Icon(Icons.calendar_today, size: 18),
           ],
         ),
       ),

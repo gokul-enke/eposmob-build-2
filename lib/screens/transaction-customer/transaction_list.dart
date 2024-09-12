@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_calendar_selection.dart';
+import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:provider/provider.dart';
 import 'package:web_date_picker/web_date_picker.dart';
 
@@ -33,6 +35,7 @@ class _CustomerTransactionListScreenState
   bool initLoading = false;
   List<ListTransaction>? listTransaction = [];
   String searchAmount = '';
+  DateTime? selectedDate;
   String searchDate = '';
   @override
   void initState() {
@@ -94,10 +97,15 @@ class _CustomerTransactionListScreenState
           padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
           child: ListView(
             children: [
-              Text(
-                "Transaction Management  ",
-                style: buildCustomStyle(FontWeightManager.semiBold,
-                    FontSize.s20, 0.30, ColorManager.textColor),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Transaction Management",
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s20, 0.30, ColorManager.textColor),
+                  ),
+                ],
               ),
               const SizedBox(
                 height: 15,
@@ -123,109 +131,105 @@ class _CustomerTransactionListScreenState
                               ),
                             ),
                           ),
-                          SizedBox(
+                          buildColumnWidgetForTextFields(
                             height: 45,
-                            width: 180, //size.width * 0.5,
-                            child: TextFormField(
-                              onChanged: (value) {
-                                setState(() {
-                                  searchAmount = value;
-                                });
-                              },
-                              cursorColor: ColorManager.kPrimaryColor,
-                              cursorHeight: 13,
-                              controller: amountRefController,
-                              style: buildCustomStyle(FontWeightManager.medium,
-                                  FontSize.s10, 0.18, ColorManager.textColor),
-                              decoration: decoration.copyWith(
-                                  hintText: "Amount    ",
-                                  hintStyle: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s10,
-                                      0.18,
-                                      ColorManager.textColor),
-                                  // prefixIcon: const Icon(
-                                  //   Icons.search,
-                                  //   color: Colors.black,
-                                  //   size: 35,
-                                  // ),
-                                  prefixIconColor: Colors.black),
-                            ),
+                            width: 120,
+                            onchanged: (value) {
+                              setState(() {
+                                searchAmount = value!;
+                              });
+                            },
+                            controller: amountRefController,
+                            size: size,
+                            hintText: 'Amount',
                           ),
                         ],
                       ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              "Date ",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
+                      // Date
+                      Padding(
+                        padding: const EdgeInsets.only(left: 10.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(
+                                "Date",
+                                style: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  FontSize.s14,
+                                  0.27,
+                                  Colors.black.withOpacity(0.6),
+                                ),
                               ),
                             ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 10.0),
-                            child: WebDatePicker(
-                              dateformat: "dd/MM/yyyy",
-                              height: size.height * .06,
-                              width: size.width / 4.3,
-                              initialDate: DateTime.now(),
-                              firstDate: DateTime(1900),
-                              lastDate: DateTime(2100),
-                              onChange: (value) {},
+                            BuildBoxShadowContainer(
+                              circleRadius: 7,
+                              height: 45,
+                              width: 150,
+                              child: Center(
+                                child: CalendarPickerTableCell(
+                                  onDateSelected: (DateTime date) {
+                                    selectedDate = date;
+                                  },
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+
                       Padding(
-                        padding: const EdgeInsets.only(left: 10.0, top: 30),
-                        child: CustomRoundButton(
-                          title: "Search",
-                          fct: () async {},
-                          height: 50,
-                          width: size.width * 0.09,
-                          fontSize: FontSize.s12,
+                        padding: const EdgeInsets.only(left: 10.0, top: 35),
+                        child: Column(
+                          children: [
+                            CustomRoundButton(
+                              title: "Search",
+                              fct: () async {},
+                              height: 50,
+                              width: size.width * 0.09,
+                              fontSize: FontSize.s12,
+                            ),
+                          ],
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.only(left: 10.0, top: 30),
-                        child: CustomRoundButton(
-                          title: "Reset",
-                          boxColor: Colors.white,
-                          textColor: ColorManager.kPrimaryColor,
-                          fct: () async {
-                            amountRefController.clear();
-                            setState(() {
-                              searchAmount = '';
-                            });
-                            // sideBarController.index.value = 22;
-                          },
-                          height: 50,
-                          width: size.width * 0.09,
-                          fontSize: FontSize.s12,
+                        padding: const EdgeInsets.only(left: 10.0, top: 35),
+                        child: Column(
+                          children: [
+                            CustomRoundButton(
+                              title: "Reset",
+                              boxColor: Colors.white,
+                              textColor: ColorManager.kPrimaryColor,
+                              fct: () async {
+                                amountRefController.clear();
+                                setState(() {
+                                  searchAmount = '';
+                                });
+                                // sideBarController.index.value = 22;
+                              },
+                              height: 50,
+                              width: size.width * 0.09,
+                              fontSize: FontSize.s12,
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ],
               ),
-              Padding(
-                padding: const EdgeInsets.only(top: 18.0),
-                child: Text(
-                  "Transaction   ",
-                  style: buildCustomStyle(FontWeightManager.semiBold,
-                      FontSize.s20, 0.30, ColorManager.textColor),
-                ),
-              ),
-              const Divider(
-                thickness: 0.5,
-              ),
+              // Padding(
+              //   padding: const EdgeInsets.only(top: 18.0),
+              //   child: Text(
+              //     "Transaction   ",
+              //     style: buildCustomStyle(FontWeightManager.semiBold,
+              //         FontSize.s20, 0.30, ColorManager.textColor),
+              //   ),
+              // ),
+              // const Divider(
+              //   thickness: 0.5,
+              // ),
               BuildBoxShadowContainer(
                   // height: size.height, //120,
                   margin: const EdgeInsets.only(top: 20),

@@ -93,7 +93,7 @@ class _EditProductImageOrVideoScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: size.height * 0.8,
+            height: size.height * 0.6,
             width: double.infinity,
             child: BuildBoxShadowContainer(
               circleRadius: 7,

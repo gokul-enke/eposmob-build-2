@@ -11,7 +11,6 @@ import 'package:multi_select_flutter/util/multi_select_item.dart';
 import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
-import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/tax.dart';
 
 import 'package:provider/provider.dart';
@@ -97,6 +96,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   Map<String, int> productPropIds = {};
   Map<String, bool> stockApplicableMap = {};
   String? selectedProperty;
+  String? _selectedTaxOption;
 
   void _getCategoryProperty(categoryId) {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
@@ -128,17 +128,15 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
       debugPrint(result.toString());
       taxRateController.text =
-          result.taxRate.toString(); // Example value for including tax
-      taxAmountController.text = AmountHelper.formatAmount(result.taxAmount)
-          .toString(); // Example value for including tax
-      retailPriceWithOutTaxController.text =
-          AmountHelper.formatAmount(result.retailPrice)
-              .toString(); // Example value for including tax
+          result.taxRate.toStringAsFixed(2); // Example value for including tax
+      taxAmountController.text = result.taxAmount
+          .toStringAsFixed(2); // Example value for including tax
+      retailPriceWithOutTaxController.text = result.retailPrice
+          .toStringAsFixed(2); // Example value for including tax
       // retailPriceController.text = result.retailPrice.toString();
       double wholesalePrice = double.parse(wholeSalePriceController.text);
       wholesalePriceWithOutTaxController.text =
-          AmountHelper.formatAmount((wholesalePrice - result.taxAmount))
-              .toString();
+          (wholesalePrice - result.taxAmount).toStringAsFixed(2);
       // wholeSalePriceController.text =
       //     AmountHelper.formatAmount((wholesalePrice - result.taxAmount))
       // .toString();
@@ -153,21 +151,166 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
       debugPrint(result.toString());
       taxRateController.text =
-          result.taxRate.toString(); // Example value for including tax
-      taxAmountController.text = AmountHelper.formatAmount(result.taxAmount)
-          .toString(); // Example value for including tax
-      retailPriceWithOutTaxController.text =
-          AmountHelper.formatAmount(result.retailPrice)
-              .toString(); // Example value for including tax
-      retailPriceController.text = result.retailPrice.toString();
+          result.taxRate.toStringAsFixed(2); // Example value for including tax
+      taxAmountController.text = result.taxAmount
+          .toStringAsFixed(2); // Example value for including tax
+      retailPriceWithOutTaxController.text = result.retailPrice
+          .toStringAsFixed(2); // Example value for including tax
+      retailPriceController.text = result.retailPrice.toStringAsFixed(2);
       double wholesalePrice = double.parse(wholeSalePriceController.text);
       wholesalePriceWithOutTaxController.text =
-          AmountHelper.formatAmount((wholesalePrice + result.taxAmount))
-              .toString();
+          (wholesalePrice + result.taxAmount).toStringAsFixed(2);
       wholeSalePriceController.text =
-          AmountHelper.formatAmount((wholesalePrice + result.taxAmount))
-              .toString();
+          (wholesalePrice + result.taxAmount).toStringAsFixed(2);
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchAllStockInfo() async {
+    final String apiUrl =
+        'https://epos.enke.in/api/product/stock-info?product_id=$productId';
+    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+
+    try {
+      final response = await http.get(Uri.parse(apiUrl), headers: {
+        'Authorization': 'Bearer $accessToken',
+      });
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        if (jsonResponse['status'] == 'success') {
+          return List<Map<String, dynamic>>.from(jsonResponse['data']);
+        } else {
+          throw Exception('Failed to load stock data');
+        }
+      } else {
+        throw Exception('Failed to load stock info');
+      }
+    } catch (e) {
+      print('Error fetching stock info: $e');
+      return []; // Return an empty list in case of an error
+    }
+  }
+
+  Future<void> _showStockSelectionModal(BuildContext context) async {
+    // Fetch stock info asynchronously
+    final List<Map<String, dynamic>> stockList = await _fetchAllStockInfo();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Select Stock"),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                SingleChildScrollView(
+                  scrollDirection:
+                      Axis.horizontal, // Allow horizontal scrolling
+                  child: DataTable(
+                    columns: const [
+                      DataColumn(label: Text('SI')),
+                      DataColumn(label: Text('Name')),
+                      DataColumn(label: Text('Unit')),
+                      DataColumn(label: Text('Qty')),
+                      DataColumn(label: Text('Store')),
+                      DataColumn(label: Text('Purchase Price')),
+                      DataColumn(label: Text('Retail Price')),
+                      DataColumn(label: Text('Wholesale Price')),
+                      DataColumn(label: Text('Action')),
+                    ],
+                    rows: stockList.map((stock) {
+                      return DataRow(cells: [
+                        DataCell(Text(stock['id'].toString())),
+                        DataCell(Text(stock['product']['name'])),
+                        DataCell(Text(stock['unit'])),
+                        DataCell(Text(stock['quantity'].toString())),
+                        DataCell(Text(stock['store']['name'])),
+                        DataCell(Text(stock['purchase_rate'].toString())),
+                        DataCell(Text(stock['retail_price'].toString())),
+                        DataCell(Text(stock['wholesale_price'].toString())),
+                        DataCell(Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle, // Makes the border round
+                              border: Border.all(
+                                color: Colors.blue, // Set the border color
+                                width: 1.0, // Set the border width
+                              ),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.check,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                // Prefill text fields with selected stock data
+                                debugPrint(
+                                    "stock['unit'] ${stock['purchase_rate']} ${stock['unit'].toString()}");
+                                quantityController.text =
+                                    stock['quantity'].toString();
+                                // unitController.text = stock['unit'];
+                                purchaseController.text =
+                                    stock['purchase_rate'].toString();
+                                retailPriceController.text =
+                                    stock['retail_price'].toString();
+                                wholeSalePriceController.text =
+                                    stock['wholesale_price'].toString();
+                                // DateFormat('yyyy-MM-dd').format(stock['expiry_date']);
+                                // expirydateUnitController.text =
+                                //     stock['expiry_date'] ?? ""; // Expiry date
+                                unitBatchController.text =
+                                    stock['batch_number'] ?? ""; // Batch number
+                                wholeSalePriceMinUnitController.text =
+                                    stock['wholesale_min_unit']
+                                        .toString(); // Wholesale Minimum Unit
+
+                                // Tax rate and amount
+                                taxRateController.text =
+                                    stock['tax_rate'].toString(); // Tax rate
+                                taxAmountController.text = stock['tax_amount']
+                                    .toString(); // Tax amount
+
+                                // Set the tax option based on API response
+                                _selectedTaxOption = "_selectedTaxOption";
+                                //  stock['tax_include'] == "Y"
+                                //     ? 'includingTax'
+                                //     : 'excludingTax';
+
+                                // Store details
+                                storeSelected = GetStoreModelData.fromJson(stock[
+                                    'store']); // Use your model to initialize
+                                storeController.text = storeSelected!.id
+                                    .toString(); // Store ID as text
+
+                                // Update tax fields according to the selected tax option
+                                _updateTaxFields(
+                                    taxOption: _selectedTaxOption!);
+
+                                // Close the dialog
+                                Navigator.pop(context);
+                              },
+                            ),
+                          ),
+                        )),
+                      ]);
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> fetchStockInfo(BuildContext context, String productId) async {
@@ -177,34 +320,30 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
     try {
       final response = await http.get(Uri.parse(apiUrl), headers: {
-        // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
 
       if (response.statusCode == 200) {
-        // If the server returns a 200 OK response, parse the JSON
-        final Map<String, dynamic> data = json.decode(response.body);
-
-        // Print the fetched data
-        print('Stock Info:');
-        print(json.encode(data)); // This will print the entire JSON response
-
-        // ScaffoldMessenger.of(context).showSnackBar(
-        //   SnackBar(content: Text('Stock info fetched successfully')),
-        // );
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        if (jsonResponse['status'] == 'success' &&
+            jsonResponse['data'].isNotEmpty) {
+          // Show the stock selection modal with the data
+          await _showStockSelectionModal(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No stock information found')),
+          );
+        }
       } else {
-        // If the server did not return a 200 OK response, throw an exception
         throw Exception('Failed to load stock info');
       }
     } catch (e) {
       print('Error fetching stock info: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching stock info')),
+        const SnackBar(content: Text('Error fetching stock info')),
       );
     }
   }
-
-  String? _selectedTaxOption;
 
   @override
   Widget build(BuildContext context) {
@@ -1080,88 +1219,76 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                     thickness: 0.5,
                                   ),
                                   if (selectedValue != null)
-                                    SizedBox(
-                                      height: size.height * 0.18,
-                                      child: ListView.builder(
-                                        itemCount:
-                                            selectedValue!.productProps!.length,
-                                        itemBuilder: (context, index) {
-                                          final property = selectedValue!
-                                              .productProps![index];
-                                          final masterValue =
-                                              property.masterValue!;
-                                          final propType = property.type!;
-                                          final propsCode = property.propsCode!;
-                                          final propsLabel = property.label!;
-                                          final propsStock =
-                                              property.stockApplicable;
-                                          if (propsStock == "Y") {
-                                            if (propType == "TXT") {
-                                              productPropData[propsCode] = [
-                                                masterValue
-                                              ];
-                                              return Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  BuildTextTile(
-                                                    title: propsLabel,
-                                                    isStarRed: true,
-                                                    isTextField: true,
-                                                    textStyle: buildCustomStyle(
-                                                      FontWeightManager.regular,
-                                                      FontSize.s14,
-                                                      0.27,
-                                                      Colors.black
-                                                          .withOpacity(0.6),
-                                                    ),
+                                    ListView.builder(
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      shrinkWrap: true,
+                                      itemCount:
+                                          selectedValue!.productProps!.length,
+                                      itemBuilder: (context, index) {
+                                        final property =
+                                            selectedValue!.productProps![index];
+                                        final masterValue =
+                                            property.masterValue!;
+                                        final propType = property.type!;
+                                        final propsCode = property.propsCode!;
+                                        final propsLabel = property.label!;
+                                        final propsStock =
+                                            property.stockApplicable;
+                                        if (propsStock == "Y") {
+                                          if (propType == "TXT") {
+                                            productPropData[propsCode] = [
+                                              masterValue
+                                            ];
+                                            return Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                BuildTextTile(
+                                                  title: propsLabel,
+                                                  isStarRed: true,
+                                                  isTextField: true,
+                                                  textStyle: buildCustomStyle(
+                                                    FontWeightManager.regular,
+                                                    FontSize.s14,
+                                                    0.27,
+                                                    Colors.black
+                                                        .withOpacity(0.6),
                                                   ),
-                                                  BuildBoxShadowContainer(
-                                                    circleRadius: 7,
-                                                    alignment:
-                                                        Alignment.centerLeft,
-                                                    margin:
-                                                        const EdgeInsets.only(
-                                                            left: 2),
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                            left: 15),
-                                                    height: size.height * .07,
-                                                    width: size.width / 3,
-                                                    child: TextFormField(
-                                                      initialValue: masterValue,
-                                                      onChanged: (value) {
-                                                        setState(() {
-                                                          apiBodyData[
-                                                                  propsCode] =
-                                                              value;
-                                                          productPropData[
-                                                              propsCode] = [
-                                                            value
-                                                          ];
-                                                        });
-                                                      },
-                                                      keyboardType:
-                                                          TextInputType.text,
-                                                      cursorColor: ColorManager
-                                                          .kPrimaryColor,
-                                                      decoration:
-                                                          InputDecoration(
-                                                        border:
-                                                            InputBorder.none,
-                                                        hintText:
-                                                            'Enter $propsLabel',
-                                                        hintStyle:
-                                                            buildCustomStyle(
-                                                          FontWeightManager
-                                                              .medium,
-                                                          FontSize.s12,
-                                                          0.27,
-                                                          ColorManager.textColor
-                                                              .withOpacity(.5),
-                                                        ),
-                                                      ),
-                                                      style: buildCustomStyle(
+                                                ),
+                                                BuildBoxShadowContainer(
+                                                  circleRadius: 7,
+                                                  alignment:
+                                                      Alignment.centerLeft,
+                                                  margin: const EdgeInsets.only(
+                                                      left: 2),
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          left: 15),
+                                                  height: size.height * .1,
+                                                  width: size.width / 3,
+                                                  child: TextFormField(
+                                                    initialValue: masterValue,
+                                                    onChanged: (value) {
+                                                      setState(() {
+                                                        apiBodyData[propsCode] =
+                                                            value;
+                                                        productPropData[
+                                                            propsCode] = [
+                                                          value
+                                                        ];
+                                                      });
+                                                    },
+                                                    keyboardType:
+                                                        TextInputType.text,
+                                                    cursorColor: ColorManager
+                                                        .kPrimaryColor,
+                                                    decoration: InputDecoration(
+                                                      border: InputBorder.none,
+                                                      hintText:
+                                                          'Enter $propsLabel',
+                                                      hintStyle:
+                                                          buildCustomStyle(
                                                         FontWeightManager
                                                             .medium,
                                                         FontSize.s12,
@@ -1170,124 +1297,126 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                             .withOpacity(.5),
                                                       ),
                                                     ),
-                                                  ),
-                                                ],
-                                              );
-                                            } else {
-                                              final items = List<String>.from(
-                                                  masterValue.split(','));
-                                              return Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceAround,
-                                                children: [
-                                                  BuildTextTile(
-                                                    title: propsLabel,
-                                                    isStarRed: true,
-                                                    isTextField: true,
-                                                    textStyle: buildCustomStyle(
-                                                      FontWeightManager.regular,
-                                                      FontSize.s14,
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s12,
                                                       0.27,
-                                                      Colors.black
-                                                          .withOpacity(0.6),
+                                                      ColorManager.textColor
+                                                          .withOpacity(.5),
                                                     ),
                                                   ),
-                                                  BuildBoxShadowContainer(
-                                                    circleRadius: 7,
-                                                    alignment:
-                                                        Alignment.centerLeft,
-                                                    margin: const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 5,
-                                                        vertical: 0),
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                            left: 15),
-                                                    width: size.width / 3,
-                                                    child:
-                                                        MultiSelectDialogField(
-                                                      items: items
-                                                          .map((item) =>
-                                                              MultiSelectItem<
-                                                                      String>(
-                                                                  item, item))
-                                                          .toList(),
-                                                      title: Text(
-                                                          "Choose $propsLabel"),
-                                                      selectedColor:
-                                                          ColorManager
-                                                              .kPrimaryColor,
-                                                      decoration: BoxDecoration(
-                                                        borderRadius:
-                                                            const BorderRadius
-                                                                .all(
-                                                                Radius.circular(
-                                                                    10)),
-                                                        border: Border.all(
-                                                          color: Colors
-                                                              .transparent, // Transparent border
-                                                        ),
+                                                ),
+                                              ],
+                                            );
+                                          } else {
+                                            final items = List<String>.from(
+                                                masterValue.split(','));
+                                            return Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceAround,
+                                              children: [
+                                                BuildTextTile(
+                                                  title: propsLabel,
+                                                  isStarRed: true,
+                                                  isTextField: true,
+                                                  textStyle: buildCustomStyle(
+                                                    FontWeightManager.regular,
+                                                    FontSize.s14,
+                                                    0.27,
+                                                    Colors.black
+                                                        .withOpacity(0.6),
+                                                  ),
+                                                ),
+                                                BuildBoxShadowContainer(
+                                                  circleRadius: 7,
+                                                  alignment:
+                                                      Alignment.centerLeft,
+                                                  margin: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 5,
+                                                      vertical: 0),
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          left: 15),
+                                                  width: size.width / 3,
+                                                  child: MultiSelectDialogField(
+                                                    items: items
+                                                        .map((item) =>
+                                                            MultiSelectItem<
+                                                                    String>(
+                                                                item, item))
+                                                        .toList(),
+                                                    title: Text(
+                                                        "Choose $propsLabel"),
+                                                    selectedColor: ColorManager
+                                                        .kPrimaryColor,
+                                                    decoration: BoxDecoration(
+                                                      borderRadius:
+                                                          const BorderRadius
+                                                              .all(
+                                                              Radius.circular(
+                                                                  10)),
+                                                      border: Border.all(
+                                                        color: Colors
+                                                            .transparent, // Transparent border
                                                       ),
-                                                      buttonIcon: const Icon(
-                                                        Icons.arrow_drop_down,
-                                                        color: Colors.grey,
+                                                    ),
+                                                    buttonIcon: const Icon(
+                                                      Icons.arrow_drop_down,
+                                                      color: Colors.grey,
+                                                    ),
+                                                    buttonText: Text(
+                                                      "Choose $propsLabel",
+                                                      // "",
+                                                      style: TextStyle(
+                                                        color: Colors.grey[700],
+                                                        fontSize: 16,
                                                       ),
-                                                      buttonText: Text(
-                                                        "Choose $propsLabel",
-                                                        // "",
-                                                        style: TextStyle(
-                                                          color:
-                                                              Colors.grey[700],
-                                                          fontSize: 16,
-                                                        ),
-                                                      ),
-                                                      onConfirm: (results) {
+                                                    ),
+                                                    onConfirm: (results) {
+                                                      setState(() {
+                                                        selectedProperty =
+                                                            results.join(', ');
+                                                        apiBodyData[propsCode] =
+                                                            results;
+                                                        productPropData[
+                                                                propsCode] =
+                                                            List<String>.from(
+                                                                results);
+                                                      });
+                                                    },
+                                                    chipDisplay:
+                                                        MultiSelectChipDisplay(
+                                                      onTap: (value) {
                                                         setState(() {
-                                                          selectedProperty =
-                                                              results
-                                                                  .join(', ');
                                                           apiBodyData[
-                                                                  propsCode] =
-                                                              results;
+                                                                  '$propsCode']
+                                                              .remove(value);
                                                           productPropData[
-                                                                  propsCode] =
-                                                              List<String>.from(
-                                                                  results);
+                                                                  propsCode]
+                                                              ?.remove(value);
+                                                          if (apiBodyData[
+                                                                  '$propsCode']
+                                                              .isEmpty) {
+                                                            apiBodyData.remove(
+                                                                '$propsCode');
+                                                            productPropData
+                                                                .remove(
+                                                                    propsCode);
+                                                          }
                                                         });
                                                       },
-                                                      chipDisplay:
-                                                          MultiSelectChipDisplay(
-                                                        onTap: (value) {
-                                                          setState(() {
-                                                            apiBodyData[
-                                                                    '$propsCode']
-                                                                .remove(value);
-                                                            productPropData[
-                                                                    propsCode]
-                                                                ?.remove(value);
-                                                            if (apiBodyData[
-                                                                    '$propsCode']
-                                                                .isEmpty) {
-                                                              apiBodyData.remove(
-                                                                  '$propsCode');
-                                                              productPropData
-                                                                  .remove(
-                                                                      propsCode);
-                                                            }
-                                                          });
-                                                        },
-                                                      ),
                                                     ),
                                                   ),
-                                                ],
-                                              );
-                                            }
+                                                ),
+                                              ],
+                                            );
                                           }
-                                        },
-                                      ),
+                                        }
+                                        return null;
+                                      },
                                     ),
                                   const SizedBox(height: 25),
                                   Row(
@@ -1369,6 +1498,56 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                         .token;
                                                 debugPrint(
                                                     "accessToken From AuthModel $accessToken");
+
+                                                String unit =
+                                                    selectedUnit ?? '';
+                                                String storeId =
+                                                    storeController.text;
+                                                String quantity =
+                                                    quantityController.text;
+                                                String retailPrice =
+                                                    retailPriceController.text;
+                                                String expiryDate =
+                                                    expirydateUnitController
+                                                        .text;
+                                                String batchNumber =
+                                                    unitBatchController.text;
+                                                String purchaseRate =
+                                                    purchaseController.text;
+                                                String wholesaleMinUnit =
+                                                    wholeSalePriceMinUnitController
+                                                        .text;
+                                                String wholesalePrice =
+                                                    wholeSalePriceController
+                                                        .text;
+                                                String token =
+                                                    accessToken ?? "";
+                                                String productId =
+                                                    "${selectedValue!.productId ?? ""}";
+                                                // String productProperties =
+                                                //     formatProductProperties()
+                                                //         as String;
+
+// Print each parameter for debugging
+                                                print('Unit: $unit');
+                                                print('Store ID: $storeId');
+                                                print('Quantity: $quantity');
+                                                print(
+                                                    'Retail Price: $retailPrice');
+                                                print(
+                                                    'Expiry Date: $expiryDate');
+                                                print(
+                                                    'Batch Number: $batchNumber');
+                                                print(
+                                                    'Purchase Rate: $purchaseRate');
+                                                print(
+                                                    'Wholesale Min Unit: $wholesaleMinUnit');
+                                                print(
+                                                    'Wholesale Price: $wholesalePrice');
+                                                print('Access Token: $token');
+                                                print('Product ID: $productId');
+                                                // print(
+                                                //     'Product Properties: $productProperties');
 
                                                 gridSelectionProvider
                                                     .addProductStockAPI(

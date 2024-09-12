@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_title.dart';
-import 'package:web_date_picker/web_date_picker.dart';
 
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
@@ -555,15 +554,15 @@ class BuildDropDownStatic extends StatelessWidget {
 }
 
 Widget buildColumnWidgetForTextFields({
-  required TextEditingController controller,
+  TextEditingController? controller,
   required Size size,
   double? width,
   double? height,
   bool isStarRed = false,
   EdgeInsetsGeometry? margin,
-  required bool isLeft,
-  required bool readOnly,
-  required String title,
+  bool isLeft = false,
+  bool readOnly = false,
+  String? title,
   required void Function(String?) onchanged,
   required String hintText,
   String? Function(String?)? validator, // Add validator parameter
@@ -571,16 +570,17 @@ Widget buildColumnWidgetForTextFields({
     Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BuildTextTile(
-          title: title,
-          isStarRed: isStarRed,
-          textStyle: buildCustomStyle(
-            FontWeightManager.regular,
-            FontSize.s14,
-            0.27,
-            Colors.black.withOpacity(0.6),
+        if (title != null)
+          BuildTextTile(
+            title: title,
+            isStarRed: isStarRed,
+            textStyle: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.27,
+              Colors.black.withOpacity(0.6),
+            ),
           ),
-        ),
         BuildBoxShadowContainer(
           circleRadius: 7,
           alignment: Alignment.centerLeft,
@@ -600,7 +600,7 @@ Widget buildColumnWidgetForTextFields({
                 hintText: hintText,
                 hintStyle: buildCustomStyle(
                   FontWeightManager.medium,
-                  FontSize.s13,
+                  FontSize.s11,
                   0.27,
                   ColorManager.textColor.withOpacity(.5),
                 ),

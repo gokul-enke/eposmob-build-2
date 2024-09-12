@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
+import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:provider/provider.dart';
 import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
@@ -155,34 +156,13 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(
+                          buildColumnWidgetForTextFields(
                             height: 45,
-                            width: 120, //size.width * 0.5,
-                            child: TextFormField(
-                              onChanged: (value) {
-                                setState(() {
-                                  // searchAmount = value;
-                                });
-                              },
-                              cursorColor: ColorManager.kPrimaryColor,
-                              cursorHeight: 13,
-                              controller: categoryNameController,
-                              style: buildCustomStyle(FontWeightManager.medium,
-                                  FontSize.s10, 0.18, ColorManager.textColor),
-                              decoration: decoration.copyWith(
-                                  hintText: "Category Name    ",
-                                  hintStyle: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s10,
-                                      0.18,
-                                      ColorManager.textColor),
-                                  // prefixIcon: const Icon(
-                                  //   Icons.search,
-                                  //   color: Colors.black,
-                                  //   size: 35,
-                                  // ),
-                                  prefixIconColor: Colors.black),
-                            ),
+                            width: 120,
+                            onchanged: (value) {},
+                            controller: categoryNameController,
+                            size: size,
+                            hintText: 'Category Name',
                           ),
                         ],
                       ),
@@ -204,87 +184,17 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(
+                          buildColumnWidgetForTextFields(
                             height: 45,
-                            width: 120, //size.width * 0.5,
-                            child: TextFormField(
-                              onChanged: (value) {
-                                setState(() {
-                                  // searchAmount = value;
-                                });
-                              },
-                              cursorColor: ColorManager.kPrimaryColor,
-                              cursorHeight: 13,
-                              controller: parentCategoryController,
-                              style: buildCustomStyle(FontWeightManager.medium,
-                                  FontSize.s10, 0.18, ColorManager.textColor),
-                              decoration: decoration.copyWith(
-                                  hintText: "Parent Category    ",
-                                  hintStyle: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s10,
-                                      0.18,
-                                      ColorManager.textColor),
-                                  // prefixIcon: const Icon(
-                                  //   Icons.search,
-                                  //   color: Colors.black,
-                                  //   size: 35,
-                                  // ),
-                                  prefixIconColor: Colors.black),
-                            ),
+                            width: 120,
+                            onchanged: (value) {},
+                            controller: parentCategoryController,
+                            size: size,
+                            hintText: 'Parent Category',
                           ),
                         ],
                       ),
                     ),
-                    // Padding(
-                    //   padding: const EdgeInsets.only(left: 10.0),
-                    //   child: Column(
-                    //     crossAxisAlignment: CrossAxisAlignment.start,
-                    //     children: [
-                    //       Padding(
-                    //         padding: const EdgeInsets.all(8.0),
-                    //         child: Text(
-                    //           "Created By ",
-                    //           style: buildCustomStyle(
-                    //             FontWeightManager.regular,
-                    //             FontSize.s14,
-                    //             0.27,
-                    //             Colors.black.withOpacity(0.6),
-                    //           ),
-                    //         ),
-                    //       ),
-                    //       SizedBox(
-                    //         height: 45,
-                    //         width: 120, //size.width * 0.5,
-                    //         child: TextFormField(
-                    //           onChanged: (value) {
-                    //             setState(() {
-                    //               // searchAmount = value;
-                    //             });
-                    //           },
-                    //           cursorColor: ColorManager.kPrimaryColor,
-                    //           cursorHeight: 13,
-                    //           controller: createdByController,
-                    //           style: buildCustomStyle(FontWeightManager.medium,
-                    //               FontSize.s10, 0.18, ColorManager.textColor),
-                    //           decoration: decoration.copyWith(
-                    //               hintText: "Created By   ",
-                    //               hintStyle: buildCustomStyle(
-                    //                   FontWeightManager.medium,
-                    //                   FontSize.s10,
-                    //                   0.18,
-                    //                   ColorManager.textColor),
-                    //               // prefixIcon: const Icon(
-                    //               //   Icons.search,
-                    //               //   color: Colors.black,
-                    //               //   size: 35,
-                    //               // ),
-                    //               prefixIconColor: Colors.black),
-                    //         ),
-                    //       ),
-                    //     ],
-                    //   ),
-                    // ),
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0, top: 30),
                       child: CustomRoundButton(
@@ -398,10 +308,10 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
         Expanded(
           child: SingleChildScrollView(
             child: Table(
-              border: TableBorder.symmetric(
-                outside: const BorderSide(
+              border: const TableBorder.symmetric(
+                outside: BorderSide(
                     color: ColorManager.tableBOrderColor, width: 0.3),
-                inside: const BorderSide(
+                inside: BorderSide(
                     color: ColorManager.tableBOrderColor, width: 0.8),
               ),
               defaultVerticalAlignment: TableCellVerticalAlignment.middle,
@@ -435,7 +345,8 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
 
   TableRow _buildTableHeader() {
     return TableRow(
-      decoration: const BoxDecoration(color: ColorManager.tableBGColor),
+      decoration:
+          BoxDecoration(color: ColorManager.tableBGColor.withOpacity(0.4)),
       children: ["No", "Category Name", "Slug", "Action"]
           .map((title) => TableCell(
                 verticalAlignment: TableCellVerticalAlignment.middle,
