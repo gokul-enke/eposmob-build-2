@@ -349,8 +349,7 @@ class BuildTextFieldColumn3 extends StatelessWidget {
                             controller.text =
                                 DateFormat('yyyy-MM-dd').format(date);
                             debugPrint(DateFormat('yyyy-MM-dd')
-                                .format(date)
-                                .toString());
+                                .format(date));
                           },
                         ),
                       ),

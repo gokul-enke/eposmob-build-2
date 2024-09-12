@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:multi_select_flutter/chip_display/multi_select_chip_display.dart';
 import 'package:multi_select_flutter/dialog/multi_select_dialog_field.dart';
 import 'package:multi_select_flutter/util/multi_select_item.dart';
 import 'package:pos_machine/components/build_back_button.dart';
+import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/tax.dart';
@@ -97,6 +99,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   Map<String, bool> stockApplicableMap = {};
   String? selectedProperty;
   String? _selectedTaxOption;
+  DateTime selectedDate = DateTime.now();
 
   void _getCategoryProperty(categoryId) {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
@@ -218,9 +221,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       DataColumn(label: Text('Wholesale Price')),
                       DataColumn(label: Text('Action')),
                     ],
-                    rows: stockList.map((stock) {
+                    rows: stockList.asMap().entries.map((entry) {
+                      int index = entry.key; // Get the index
+                      var stock = entry.value; // Get the stock item
                       return DataRow(cells: [
-                        DataCell(Text(stock['id'].toString())),
+                        DataCell(Text("${index + 1}")),
                         DataCell(Text(stock['product']['name'])),
                         DataCell(Text(stock['unit'])),
                         DataCell(Text(stock['quantity'].toString())),
@@ -256,9 +261,6 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                     stock['retail_price'].toString();
                                 wholeSalePriceController.text =
                                     stock['wholesale_price'].toString();
-                                // DateFormat('yyyy-MM-dd').format(stock['expiry_date']);
-                                // expirydateUnitController.text =
-                                //     stock['expiry_date'] ?? ""; // Expiry date
                                 unitBatchController.text =
                                     stock['batch_number'] ?? ""; // Batch number
                                 wholeSalePriceMinUnitController.text =
@@ -272,16 +274,24 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                     .toString(); // Tax amount
 
                                 // Set the tax option based on API response
-                                _selectedTaxOption = "_selectedTaxOption";
-                                //  stock['tax_include'] == "Y"
-                                //     ? 'includingTax'
-                                //     : 'excludingTax';
+                                setState(() {
+                                  selectedUnit = stock[
+                                      'unit']; // Prefill the Unit dropdown with the selected stock's unit
 
-                                // Store details
-                                storeSelected = GetStoreModelData.fromJson(stock[
-                                    'store']); // Use your model to initialize
-                                storeController.text = storeSelected!.id
-                                    .toString(); // Store ID as text
+                                  storeSelected = GetStoreModelData.fromJson(stock[
+                                      'store']); // Deserialize the selected store
+                                  storeController.text =
+                                      storeSelected?.id.toString() ??
+                                          ""; // Prefill the Store field
+
+                                  _selectedTaxOption =
+                                      stock['tax_include'] == "Y"
+                                          ? 'includingTax'
+                                          : 'excludingTax';
+
+                                  selectedDate =
+                                      parseDate(stock['expiry_date']);
+                                });
 
                                 // Update tax fields according to the selected tax option
                                 _updateTaxFields(
@@ -883,7 +893,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                 border: InputBorder
                                                     .none, // Remove the underline
                                               ),
-                                              value: storeSelected,
+                                              value:
+                                                  storeSelected, // This should now correctly match an item in your list
                                               hint: Text(
                                                 'Select Store',
                                                 style: buildCustomStyle(
@@ -897,29 +908,39 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                               items: storeList!.map(
                                                   (GetStoreModelData store) {
                                                 return DropdownMenuItem<
-                                                        GetStoreModelData>(
-                                                    value: store,
-                                                    child: Text(
-                                                      store.name ?? '',
-                                                      style: buildCustomStyle(
-                                                        FontWeightManager
-                                                            .medium,
-                                                        FontSize.s12,
-                                                        0.27,
-                                                        ColorManager.textColor
-                                                            .withOpacity(.5),
-                                                      ),
-                                                    ));
+                                                    GetStoreModelData>(
+                                                  value: store,
+                                                  child: Text(
+                                                    store.name ?? '',
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s12,
+                                                      0.27,
+                                                      ColorManager.textColor
+                                                          .withOpacity(.5),
+                                                    ),
+                                                  ),
+                                                );
                                               }).toList(),
                                               onChanged: (GetStoreModelData?
                                                   storeModelData) {
                                                 if (storeModelData != null) {
-                                                  // Update the selected category in the provider
                                                   setState(() {
-                                                    storeSelected =
-                                                        storeModelData;
+                                                    // storeSelected =
+                                                    //     GetStoreModelData
+                                                    //         .fromJson(stock[
+                                                    //             'store']); // Deserialize the selected store
+
                                                     storeController.text =
-                                                        "${storeModelData.id ?? 1}";
+                                                        storeModelData.id
+                                                            .toString(); // Set controller value
+                                                    storeSelected =
+                                                        storeModelData; // Use the selected store
+                                                    // storeController
+                                                    //     .text = storeSelected
+                                                    //         ?.id
+                                                    //         .toString() ??
+                                                    //     ""; // Prefill the Store field
                                                   });
                                                 }
                                               },
@@ -1077,26 +1098,54 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                           controller:
                                               wholeSalePriceMinUnitController,
                                           title: "Wholesale Min Unit"),
-                                      BuildTextFieldColumn3(
-                                          isDatePicker: true,
-                                          isLeft: true,
-                                          isStarRed: true,
-                                          isTextField: true,
-                                          size: size,
-                                          isRead: true,
-                                          hintText: 'Expiry Date',
-                                          controller: expirydateUnitController,
-                                          title: "Expiry Date"),
-                                      BuildTextFieldColumn3(
-                                          isLeft: true,
-                                          isStarRed: false,
-                                          isTextField: true,
-                                          size: size,
-                                          isRead: false,
-                                          textInputType: TextInputType.number,
-                                          hintText: 'Batch Number',
-                                          controller: unitBatchController,
-                                          title: "Batch Number"),
+                                      // BuildTextFieldColumn3(
+                                      //     isDatePicker: true,
+                                      //     isLeft: true,
+                                      //     isStarRed: true,
+                                      //     isTextField: true,
+                                      //     size: size,
+                                      //     isRead: true,
+                                      //     hintText: 'Expiry Date',
+                                      //     controller: expirydateUnitController,
+                                      //     title: "Expiry Date"),
+                                      SizedBox(
+                                        width: size.width / 4,
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            BuildTextTile(
+                                              isStarRed: true,
+                                              isTextField: true,
+                                              title: "Expiry Date",
+                                              textStyle: buildCustomStyle(
+                                                FontWeightManager.regular,
+                                                FontSize.s14,
+                                                0.27,
+                                                Colors.black.withOpacity(0.6),
+                                              ),
+                                            ),
+                                            BuildBoxShadowContainer(
+                                              circleRadius: 7,
+                                              alignment: Alignment.centerLeft,
+                                              height: size.height * .07,
+                                              margin: const EdgeInsets.only(
+                                                  left: 20),
+                                              child: Center(
+                                                child: CalendarPickerTableCell(
+                                                  initialDate: selectedDate,
+                                                  onDateSelected:
+                                                      (DateTime date) {
+                                                    selectedDate = date;
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ],
                                   ),
                                   BuildTextTile(
@@ -1452,7 +1501,6 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                   productSlugController
                                                       .text.isEmpty ||
                                                   selectedUnit == null ||
-                                                  storeSelected == null ||
                                                   productSlugController
                                                       .text.isEmpty ||
                                                   storeController
@@ -1559,8 +1607,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                       retailPriceController
                                                           .text,
                                                   expiryDate:
-                                                      expirydateUnitController
-                                                          .text,
+                                                      DateFormat('yyyy-MM-dd')
+                                                          .format(selectedDate),
                                                   batchNumber:
                                                       unitBatchController.text,
                                                   purchaseRate:

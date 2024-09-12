@@ -5,8 +5,10 @@ import 'package:pos_machine/resources/font_manager.dart';
 
 class CalendarPickerTableCell extends StatefulWidget {
   final Function(DateTime) onDateSelected;
+  final DateTime? initialDate;
 
-  const CalendarPickerTableCell({Key? key, required this.onDateSelected})
+  const CalendarPickerTableCell(
+      {Key? key, required this.onDateSelected, this.initialDate})
       : super(key: key);
 
   @override
@@ -20,7 +22,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: selectedDate ?? DateTime.now(),
+      initialDate: widget.initialDate ?? selectedDate ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
@@ -47,7 +49,9 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
             Text(
               selectedDate != null
                   ? DateFormat('yyyy-MM-dd').format(selectedDate!)
-                  : 'Select Date',
+                  : widget.initialDate != null
+                      ? DateFormat('yyyy-MM-dd').format(widget.initialDate!)
+                      : 'Select Date',
               style: TextStyle(
                 fontWeight: FontWeightManager.medium,
                 fontSize: FontSize.s12,
