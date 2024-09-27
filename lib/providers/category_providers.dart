@@ -10,6 +10,7 @@ import '../resources/app_url.dart';
 class CategoryProvider extends ChangeNotifier {
   bool isLoading = false;
   List<Category>? categoryList = [];
+  List<Category>? searchCategoryList = [];
   List<Category>? filteredcategoryList = [];
   List<Category>? categoryListWithoutQuery = [];
   String categoryText = '';
@@ -17,11 +18,13 @@ class CategoryProvider extends ChangeNotifier {
   String parentCategory = '0';
   int editCategoryId = 0;
   int propCategory = 0;
-  // Meta? paginationMeta;
-  //bool _isLoading = false;
+  int currentPage = 1;
+  int totalPages = 1;
+
   CategoryProvider() {
     listAllCategory();
   }
+
   ViewCategory? get getViewCategory => viewCategory;
   String get getCategoryText => categoryText;
   int categoryCount = 0;
@@ -31,9 +34,6 @@ class CategoryProvider extends ChangeNotifier {
   int get getCount => categoryCount;
   List<dynamic>? propValues;
   List? get categoryProperties => propValues;
-
-  int currentPage = 1;
-  int totalPages = 1;
 
   setCategoryItemCount(int value) {
     categoryCount = value;
@@ -66,6 +66,7 @@ class CategoryProvider extends ChangeNotifier {
   int get selectedCategoryIndex => _selectedCategoryIndex;
 
   List<Category>? get category => categoryList;
+  List<Category>? get searchCategory => searchCategoryList;
   List<Category>? get filteredcategory => filteredcategoryList!
       .where((category) => category.categoryId != 0)
       .toList();
@@ -91,7 +92,6 @@ class CategoryProvider extends ChangeNotifier {
   Future<void> listAllCategory({
     String? filterName,
     String? filterParent,
-    String? filterCreatedBy,
     int? page,
   }) async {
     final queryParameters = <String, String>{
@@ -103,9 +103,6 @@ class CategoryProvider extends ChangeNotifier {
     }
     if (filterParent != null && filterParent.isNotEmpty) {
       queryParameters['filter_parent'] = filterParent;
-    }
-    if (filterCreatedBy != null && filterCreatedBy.isNotEmpty) {
-      queryParameters['filter_created_by'] = filterCreatedBy;
     }
 
     final uri = Uri.parse(APPUrl.categoryListUrl)
@@ -126,8 +123,6 @@ class CategoryProvider extends ChangeNotifier {
         categoryList!.insert(0, categoryDemo);
 
         categoryList = categoryListModel.category;
-        // currentPage = categoryListModel.meta?.currentPage ?? 1;
-        // totalPages = categoryListModel.meta?.lastPage ?? 1;
 
         notifyListeners();
       } else {
@@ -139,15 +134,53 @@ class CategoryProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> nextPage() async {
-    if (currentPage < totalPages) {
-      await listAllCategory(page: currentPage + 1);
-    }
-  }
+  Future<void> searchAllCategory({
+    String? filterName,
+    String? filterParent,
+    int? page,
+  }) async {
+    final queryParameters = <String, String>{
+      'page': page.toString(),
+    };
 
-  Future<void> previousPage() async {
-    if (currentPage > 1) {
-      await listAllCategory(page: currentPage - 1);
+    if (filterName != null && filterName.isNotEmpty) {
+      queryParameters['filter_name'] = filterName;
+    }
+    if (filterParent != null && filterParent.isNotEmpty) {
+      queryParameters['filter_parent'] = filterParent;
+    }
+
+    final uri = Uri.parse(APPUrl.categoryListUrl)
+        .replace(queryParameters: queryParameters);
+
+    try {
+      final response = await http.get(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        CategoryListModel categoryListModel =
+            CategoryListModel.fromJson(jsonData);
+
+        searchCategoryList = categoryListModel.category;
+        searchCategoryList!.insert(0, categoryDemo);
+        searchCategoryList = categoryListModel.category;
+
+        debugPrint("categoryListModel.pagination?.toString()");
+        debugPrint(categoryListModel.pagination?.toString());
+
+        currentPage = categoryListModel.pagination?.currentPage ?? 1;
+        totalPages = categoryListModel.pagination?.lastPage ?? 1;
+
+        notifyListeners();
+      } else {
+        throw Exception('Failed to load categories');
+      }
+    } catch (error) {
+      debugPrint('Error fetching categories: $error');
+      rethrow;
     }
   }
 

@@ -127,7 +127,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
   Widget build(BuildContext context) {
     //  Size size = MediaQuery.of(context).size;
     SideBarController sideBarController = Get.put(SideBarController());
-    CategoryProvider categoryProvider = Provider.of<CategoryProvider>(context);
+    CategoryProvider categoryProvider =
+        Provider.of<CategoryProvider>(context, listen: false);
     GridSelectionProvider gridSelectionProvider =
         Provider.of<GridSelectionProvider>(context);
 
@@ -934,10 +935,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     },
                   )),
               PaginationControl(
-                currentPage: 1,
-                totalPages: 1,
+                currentPage:
+                    Provider.of<GridSelectionProvider>(context, listen: true)
+                        .currentPage,
+                totalPages:
+                    Provider.of<GridSelectionProvider>(context, listen: true)
+                        .totalPages,
                 onPageChanged: (int page) {
-                  // searchCategory(page);
+                  searchProducts(page);
                 },
               )
             ],

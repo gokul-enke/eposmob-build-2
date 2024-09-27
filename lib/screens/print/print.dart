@@ -1,10 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:pos_machine/helpers/amount_helper.dart';
-import 'package:pos_machine/models/list_cart.dart';
+import 'package:http/http.dart' as http;
 
 class PrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
@@ -31,10 +31,13 @@ class _PrintPageState extends State<PrintPage> {
   StreamSubscription<PrinterDevice>? _subscription;
   BluetoothPrinter? selectedPrinter;
   bool _isScanning = false;
+  String customerCareNumber = "Number";
+  String customerCareEmail = "Email";
 
   @override
   void initState() {
     super.initState();
+    fetchCustomerCareInfo();
     _checkPermissions();
   }
 
@@ -42,6 +45,23 @@ class _PrintPageState extends State<PrintPage> {
   void dispose() {
     _subscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> fetchCustomerCareInfo() async {
+    final response = await http.get(Uri.parse(
+        "https://epos.enke.in/api/company/get-company-props?cart_id=1"));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      setState(() {
+        customerCareNumber = data['customer_care']
+            ['number']; // Adjust these keys as per API response
+        customerCareEmail = data['customer_care']
+            ['email']; // Adjust these keys as per API response
+      });
+    } else {
+      throw Exception('Failed to load customer care information');
+    }
   }
 
   Future<void> _checkPermissions() async {
@@ -220,11 +240,19 @@ class _PrintPageState extends State<PrintPage> {
       bytes += generator.text('Note: This is a computer generated invoice',
           styles: const PosStyles(align: PosAlign.center));
 
-      // Customer Care
-      bytes += generator.text('Customer Care: +91 9496410199',
-          styles: const PosStyles(align: PosAlign.center));
-      bytes += generator.text('Email: customercare@eposenke.in',
-          styles: const PosStyles(align: PosAlign.center));
+      // Customer Care Details from API
+      if (customerCareNumber != null && customerCareEmail != null) {
+        bytes += generator.text('Customer Care: $customerCareNumber',
+            styles: const PosStyles(align: PosAlign.center));
+        bytes += generator.text('Email: $customerCareEmail',
+            styles: const PosStyles(align: PosAlign.center));
+      }
+
+      // // Customer Care
+      // bytes += generator.text('Customer Care: +91 9496410199',
+      //     styles: const PosStyles(align: PosAlign.center));
+      // bytes += generator.text('Email: customercare@eposenke.in',
+      //     styles: const PosStyles(align: PosAlign.center));
 
       bytes += generator.feed(2);
       bytes += generator.cut();
@@ -280,10 +308,10 @@ class _PrintPageState extends State<PrintPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _isScanning ? null : _checkPermissions,
+        tooltip: 'Scan for printers',
         child: _isScanning
             ? const CircularProgressIndicator()
             : const Icon(Icons.refresh),
-        tooltip: 'Scan for printers',
       ),
     );
   }

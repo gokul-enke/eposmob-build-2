@@ -16,6 +16,7 @@ import 'package:pos_machine/providers/grid_provider.dart';
 
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/location_provider.dart';
+
 import 'package:pos_machine/providers/report_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 
@@ -31,16 +32,7 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
   Get.put(SideBarController());
-  // SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight])
-  //     .then((_) {
-  //   runApp(const MyApp());
-  // });
-  // SystemChrome.setPreferredOrientations(
-  //     [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
-  // SystemChrome.setPreferredOrientations([
-  //   DeviceOrientation.portraitUp,
-  //   DeviceOrientation.portraitDown,
-  // ]);
+
   if (!kIsWeb) {
     if (Platform.isMacOS) {
       debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
@@ -54,7 +46,6 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -76,7 +67,7 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'Flutter POS Machine',
         theme: ThemeData(),
-        home: const SignInScreen(), //const SignInScreen(),YourBag(),
+        home: const SignInScreen(),
       ),
     );
   }

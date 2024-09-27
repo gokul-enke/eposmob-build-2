@@ -4,6 +4,8 @@
 
 import 'dart:convert';
 
+import 'package:pos_machine/models/pagination.dart';
+
 GetProductModel getProductModelFromJson(String str) =>
     GetProductModel.fromJson(json.decode(str));
 
@@ -14,13 +16,13 @@ class GetProductModel {
   final List<GetProduct>? product;
   final String? status;
   final Links? links;
-  final Meta? meta;
+  final Pagination? pagination;
 
   GetProductModel({
     this.product,
     this.status,
     this.links,
-    this.meta,
+    this.pagination,
   });
 
   factory GetProductModel.fromJson(Map<String, dynamic> json) =>
@@ -29,18 +31,16 @@ class GetProductModel {
             ? []
             : List<GetProduct>.from(
                 json["product"]!.map((x) => GetProduct.fromJson(x))),
-        // status: json["status"],
-        // links: json["links"] == null ? null : Links.fromJson(json["links"]),
-        // meta: json["meta"] == null ? null : Meta.fromJson(json["meta"]),
+        pagination: json["pagination"] == null
+            ? null
+            : Pagination.fromJson(json["pagination"]),
       );
 
   Map<String, dynamic> toJson() => {
         "product": product == null
             ? []
             : List<dynamic>.from(product!.map((x) => x.toJson())),
-        // "status": status,
-        // "links": links?.toJson(),
-        // "meta": meta?.toJson(),
+        "pagination": pagination?.toJson(),
       };
 }
 

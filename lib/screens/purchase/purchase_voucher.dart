@@ -3,14 +3,14 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/get_store.dart';
+import 'package:pos_machine/models/list_purchase_voucher.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
-
-import '../../models/list_purchase.dart';
 import '../../providers/auth_model.dart';
 
 import '../../providers/purchase_provider.dart';
@@ -27,7 +27,7 @@ class PurchaseVoucherScreen extends StatefulWidget {
 
 class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
   bool initLoading = false;
-  List<VoucherDetail>? voucherDetailsList = [];
+  List<VoucherModelData>? voucherModelListData = [];
   final TextEditingController searchTextController = TextEditingController();
   final TextEditingController storeController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
@@ -48,11 +48,55 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
     PurchaseProvider purchaseProvider =
         Provider.of<PurchaseProvider>(context, listen: false);
     await purchaseProvider
-        .listPurchase(accessToken: accessToken ?? "", page: 1)
+        .listPurchaseVoucher(accessToken: accessToken ?? "", page: 1)
         .then((value) async {});
-    voucherDetailsList = purchaseProvider.getVoucherDetailsList;
+    voucherModelListData = purchaseProvider.getVoucherModelDataList;
     setState(() {
       initLoading = false;
+    });
+  }
+
+  // Search purchases
+  Future<void> searchPurchaseVoucher(int page) async {
+    debugPrint("Purchase Voucher Search Called");
+    setState(() {
+      initLoading = true;
+    });
+
+    try {
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      PurchaseProvider purchaseProvider =
+          Provider.of<PurchaseProvider>(context, listen: false);
+
+      await purchaseProvider.listPurchaseVoucher(
+        accessToken: accessToken ?? "",
+        filterAmount: amountController.text,
+        filterStore: storeController.text,
+        // filterDate: DateHelper.formatDate(selectedDate!),
+        page: page,
+      );
+
+      debugPrint(purchaseProvider.getVoucherDetailsList!.length.toString());
+      setState(() {
+        voucherModelListData = purchaseProvider.getVoucherModelDataList;
+      });
+    } catch (error) {
+      debugPrint(error.toString());
+    } finally {
+      setState(() {
+        initLoading = false;
+      });
+    }
+  }
+
+  // Reset search inputs
+  void resetSearch() {
+    getData();
+    setState(() {
+      storeController.clear();
+      selectedDate = null;
+      amountController.clear();
     });
   }
 
@@ -237,7 +281,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                       child: CustomRoundButton(
                         title: "Search",
                         fct: () {
-                          // searchPurchase(1);
+                          searchPurchaseVoucher(1);
                         },
                         height: 45,
                         width: size.width * 0.09,
@@ -251,7 +295,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                         boxColor: Colors.white,
                         textColor: ColorManager.kPrimaryColor,
                         fct: () {
-                          // resetSearch();
+                          resetSearch();
                         },
                         height: 45,
                         width: size.width * 0.09,
@@ -277,11 +321,11 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                             5: FractionColumnWidth(0.06),
                             6: FractionColumnWidth(0.05),
                           },
-                          border: TableBorder.symmetric(
-                              outside: const BorderSide(
+                          border: const TableBorder.symmetric(
+                              outside: BorderSide(
                                   color: ColorManager.tableBOrderColor,
                                   width: 0.3),
-                              inside: const BorderSide(
+                              inside: BorderSide(
                                   color: ColorManager.tableBOrderColor,
                                   width: 0.8)),
                           defaultVerticalAlignment:
@@ -389,149 +433,33 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                       )),
                                 ]),
                           ])
-                      : Table(
-                          columnWidths: const {
-                            0: FractionColumnWidth(0.01),
-                            1: FractionColumnWidth(0.06),
-                            2: FractionColumnWidth(0.06),
-                            3: FractionColumnWidth(0.06),
-                            4: FractionColumnWidth(0.06),
-                            5: FractionColumnWidth(0.06),
-                            6: FractionColumnWidth(0.05),
-                          },
-                          border: TableBorder.symmetric(
-                              outside: const BorderSide(
-                                  color: ColorManager.tableBOrderColor,
-                                  width: 0.3),
-                              inside: const BorderSide(
-                                  color: ColorManager.tableBOrderColor,
-                                  width: 0.8)),
-                          defaultVerticalAlignment:
-                              TableCellVerticalAlignment.middle,
-                          children: [
-                            TableRow(
-                                decoration: const BoxDecoration(
-                                    color: ColorManager.tableBGColor),
-                                children: [
-                                  TableCell(
-                                      verticalAlignment:
-                                          TableCellVerticalAlignment.middle,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(15.0),
-                                        child: Center(
-                                            child: Text(
-                                          "No",
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s12,
-                                            0.18,
-                                            ColorManager.kPrimaryColor,
-                                          ),
-                                        )),
-                                      )),
-                                  TableCell(
-                                      verticalAlignment:
-                                          TableCellVerticalAlignment.middle,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(15.0),
-                                        child: Center(
-                                            child: Text(
-                                          "Purchase Date",
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s12,
-                                            0.18,
-                                            ColorManager.kPrimaryColor,
-                                          ),
-                                        )),
-                                      )),
-                                  TableCell(
-                                      verticalAlignment:
-                                          TableCellVerticalAlignment.middle,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(15.0),
-                                        child: Center(
-                                            child: Text(
-                                          "Store",
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s12,
-                                            0.18,
-                                            ColorManager.kPrimaryColor,
-                                          ),
-                                        )),
-                                      )),
-                                  TableCell(
-                                      verticalAlignment:
-                                          TableCellVerticalAlignment.middle,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(15.0),
-                                        child: Center(
-                                            child: Text(
-                                          "SUpplier",
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s12,
-                                            0.18,
-                                            ColorManager.kPrimaryColor,
-                                          ),
-                                        )),
-                                      )),
-                                  TableCell(
-                                      verticalAlignment:
-                                          TableCellVerticalAlignment.middle,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(15.0),
-                                        child: Center(
-                                            child: Text(
-                                          "Amount",
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s12,
-                                            0.18,
-                                            ColorManager.kPrimaryColor,
-                                          ),
-                                        )),
-                                      )),
-                                  TableCell(
-                                      verticalAlignment:
-                                          TableCellVerticalAlignment.middle,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(15.0),
-                                        child: Center(
-                                            child: Text(
-                                          "Action",
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s12,
-                                            0.18,
-                                            ColorManager.kPrimaryColor,
-                                          ),
-                                        )),
-                                      )),
-                                ]),
-                            ...voucherDetailsList!
-                                .where((transaction) {
-                                  return transaction.purchaseDate!.contains(
-                                          searchTextController.text) ||
-                                      transaction.amountTotal
-                                          .toString()
-                                          .contains(searchTextController.text);
-                                })
-                                .toList()
-                                .asMap()
-                                .entries
-                                .map((entry) {
-                                  int index = entry.key;
-                                  var voucher = entry.value;
-                                  String store = purchaseProvider
-                                          .storeName(voucher.storeId ?? 1) ??
-                                      '';
-                                  String supplier =
-                                      purchaseProvider.supplierName(
-                                              voucher.supplierId ?? 1) ??
-                                          '';
-                                  return TableRow(
+                      : SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: SizedBox(
+                            width: size.width * 1,
+                            child: Table(
+                              columnWidths: const {
+                                0: FractionColumnWidth(0.01),
+                                1: FractionColumnWidth(0.06),
+                                2: FractionColumnWidth(0.06),
+                                3: FractionColumnWidth(0.06),
+                                4: FractionColumnWidth(0.06),
+                                5: FractionColumnWidth(0.06),
+                                6: FractionColumnWidth(0.05),
+                              },
+                              border: const TableBorder.symmetric(
+                                  outside: BorderSide(
+                                      color: ColorManager.tableBOrderColor,
+                                      width: 0.3),
+                                  inside: BorderSide(
+                                      color: ColorManager.tableBOrderColor,
+                                      width: 0.8)),
+                              defaultVerticalAlignment:
+                                  TableCellVerticalAlignment.middle,
+                              children: [
+                                TableRow(
+                                    decoration: const BoxDecoration(
+                                        color: ColorManager.tableBGColor),
                                     children: [
                                       TableCell(
                                           verticalAlignment:
@@ -539,16 +467,15 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                           child: Padding(
                                             padding: const EdgeInsets.all(15.0),
                                             child: Center(
-                                              child: Text(
-                                                (index + 1).toString(),
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s9,
-                                                  0.13,
-                                                  Colors.black,
-                                                ),
+                                                child: Text(
+                                              "No",
+                                              style: buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.18,
+                                                ColorManager.kPrimaryColor,
                                               ),
-                                            ),
+                                            )),
                                           )),
                                       TableCell(
                                           verticalAlignment:
@@ -556,16 +483,15 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                           child: Padding(
                                             padding: const EdgeInsets.all(15.0),
                                             child: Center(
-                                              child: Text(
-                                                voucher.purchaseDate ?? "",
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s9,
-                                                  0.13,
-                                                  Colors.black,
-                                                ),
+                                                child: Text(
+                                              "Purchase Date",
+                                              style: buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.18,
+                                                ColorManager.kPrimaryColor,
                                               ),
-                                            ),
+                                            )),
                                           )),
                                       TableCell(
                                           verticalAlignment:
@@ -573,16 +499,15 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                           child: Padding(
                                             padding: const EdgeInsets.all(15.0),
                                             child: Center(
-                                              child: Text(
-                                                store,
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s9,
-                                                  0.13,
-                                                  Colors.black,
-                                                ),
+                                                child: Text(
+                                              "Store",
+                                              style: buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.18,
+                                                ColorManager.kPrimaryColor,
                                               ),
-                                            ),
+                                            )),
                                           )),
                                       TableCell(
                                           verticalAlignment:
@@ -590,16 +515,15 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                           child: Padding(
                                             padding: const EdgeInsets.all(15.0),
                                             child: Center(
-                                              child: Text(
-                                                supplier,
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s9,
-                                                  0.13,
-                                                  Colors.black,
-                                                ),
+                                                child: Text(
+                                              "SUpplier",
+                                              style: buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.18,
+                                                ColorManager.kPrimaryColor,
                                               ),
-                                            ),
+                                            )),
                                           )),
                                       TableCell(
                                           verticalAlignment:
@@ -607,16 +531,15 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                           child: Padding(
                                             padding: const EdgeInsets.all(15.0),
                                             child: Center(
-                                              child: Text(
-                                                "${voucher.amountTotal}",
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s9,
-                                                  0.13,
-                                                  Colors.black,
-                                                ),
+                                                child: Text(
+                                              "Amount",
+                                              style: buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.18,
+                                                ColorManager.kPrimaryColor,
                                               ),
-                                            ),
+                                            )),
                                           )),
                                       TableCell(
                                           verticalAlignment:
@@ -624,78 +547,227 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                           child: Padding(
                                             padding: const EdgeInsets.all(15.0),
                                             child: Center(
-                                              child: Row(
-                                                children: [
-                                                  BuildBoxShadowContainer(
-                                                      margin:
-                                                          const EdgeInsets.only(
-                                                              left: 5,
-                                                              right: 5),
-                                                      circleRadius: 5,
-                                                      child: IconButton(
-                                                        icon: Icon(
-                                                          Icons.visibility,
-                                                          size: 18,
+                                                child: Text(
+                                              "Action",
+                                              style: buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.18,
+                                                ColorManager.kPrimaryColor,
+                                              ),
+                                            )),
+                                          )),
+                                    ]),
+                                ...voucherModelListData!
+                                    .where((transaction) {
+                                      return transaction.purchaseDate!.contains(
+                                              searchTextController.text) ||
+                                          transaction.amountTotal
+                                              .toString()
+                                              .contains(
+                                                  searchTextController.text);
+                                    })
+                                    .toList()
+                                    .asMap()
+                                    .entries
+                                    .map((entry) {
+                                      int index = entry.key;
+                                      var voucher = entry.value;
+                                      String store = purchaseProvider.storeName(
+                                              voucher.storeId ?? 1) ??
+                                          '';
+                                      String supplier =
+                                          purchaseProvider.supplierName(
+                                                  voucher.supplierId ?? 1) ??
+                                              '';
+                                      return TableRow(
+                                        children: [
+                                          TableCell(
+                                              verticalAlignment:
+                                                  TableCellVerticalAlignment
+                                                      .middle,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(15.0),
+                                                child: Center(
+                                                  child: Text(
+                                                    (index + 1).toString(),
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s9,
+                                                      0.13,
+                                                      Colors.black,
+                                                    ),
+                                                  ),
+                                                ),
+                                              )),
+                                          TableCell(
+                                              verticalAlignment:
+                                                  TableCellVerticalAlignment
+                                                      .middle,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(15.0),
+                                                child: Center(
+                                                  child: Text(
+                                                    voucher.purchaseDate ?? "",
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s9,
+                                                      0.13,
+                                                      Colors.black,
+                                                    ),
+                                                  ),
+                                                ),
+                                              )),
+                                          TableCell(
+                                              verticalAlignment:
+                                                  TableCellVerticalAlignment
+                                                      .middle,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(15.0),
+                                                child: Center(
+                                                  child: Text(
+                                                    store,
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s9,
+                                                      0.13,
+                                                      Colors.black,
+                                                    ),
+                                                  ),
+                                                ),
+                                              )),
+                                          TableCell(
+                                              verticalAlignment:
+                                                  TableCellVerticalAlignment
+                                                      .middle,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(15.0),
+                                                child: Center(
+                                                  child: Text(
+                                                    supplier,
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s9,
+                                                      0.13,
+                                                      Colors.black,
+                                                    ),
+                                                  ),
+                                                ),
+                                              )),
+                                          TableCell(
+                                              verticalAlignment:
+                                                  TableCellVerticalAlignment
+                                                      .middle,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(15.0),
+                                                child: Center(
+                                                  child: Text(
+                                                    "${voucher.amountTotal}",
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s9,
+                                                      0.13,
+                                                      Colors.black,
+                                                    ),
+                                                  ),
+                                                ),
+                                              )),
+                                          TableCell(
+                                              verticalAlignment:
+                                                  TableCellVerticalAlignment
+                                                      .middle,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(15.0),
+                                                child: Center(
+                                                  child: Row(
+                                                    children: [
+                                                      BuildBoxShadowContainer(
+                                                          margin:
+                                                              const EdgeInsets
+                                                                  .only(
+                                                                  left: 5,
+                                                                  right: 5),
+                                                          circleRadius: 5,
+                                                          child: IconButton(
+                                                            icon: Icon(
+                                                              Icons.visibility,
+                                                              size: 18,
+                                                              color: ColorManager
+                                                                  .kPrimaryColor
+                                                                  .withOpacity(
+                                                                      0.9),
+                                                            ),
+                                                            onPressed: () {
+                                                              purchaseProvider
+                                                                  .callVoucherDetails(
+                                                                      voucherId:
+                                                                          voucher.id ??
+                                                                              0,
+                                                                      purchaseId:
+                                                                          voucher.purchaseId ??
+                                                                              0);
+                                                              sideBarController
+                                                                  .index
+                                                                  .value = 29;
+                                                            },
+                                                          )),
+                                                      BuildBoxShadowContainer(
+                                                          margin:
+                                                              const EdgeInsets
+                                                                  .only(
+                                                                  left: 5,
+                                                                  right: 5),
                                                           color: ColorManager
                                                               .kPrimaryColor
                                                               .withOpacity(0.9),
-                                                        ),
-                                                        onPressed: () {
-                                                          purchaseProvider
-                                                              .callVoucherDetails(
-                                                                  voucherId:
-                                                                      voucher.id ??
-                                                                          0,
-                                                                  purchaseId:
-                                                                      voucher.purchaseId ??
-                                                                          0);
-                                                          sideBarController
-                                                              .index.value = 29;
-                                                        },
-                                                      )),
-                                                  BuildBoxShadowContainer(
-                                                      margin:
-                                                          const EdgeInsets.only(
-                                                              left: 5,
-                                                              right: 5),
-                                                      color: ColorManager
-                                                          .kPrimaryColor
-                                                          .withOpacity(0.9),
-                                                      circleRadius: 5,
-                                                      child: IconButton(
-                                                        icon: const Icon(
-                                                          Icons.add,
-                                                          size: 18,
-                                                          color: Colors.white,
-                                                        ),
-                                                        onPressed: () {
-                                                          purchaseProvider
-                                                              .callVoucherDetails(
-                                                                  voucherId:
-                                                                      voucher.id ??
-                                                                          0,
-                                                                  purchaseId:
-                                                                      voucher.purchaseId ??
-                                                                          0);
-                                                          sideBarController
-                                                              .index.value = 37;
-                                                        },
-                                                      )),
-                                                ],
-                                              ),
-                                            ),
-                                          )),
-                                    ],
-                                  );
-                                })
-                                .toList(),
-                          ],
+                                                          circleRadius: 5,
+                                                          child: IconButton(
+                                                            icon: const Icon(
+                                                              Icons.add,
+                                                              size: 18,
+                                                              color:
+                                                                  Colors.white,
+                                                            ),
+                                                            onPressed: () {
+                                                              purchaseProvider
+                                                                  .callVoucherDetails(
+                                                                      voucherId:
+                                                                          voucher.id ??
+                                                                              0,
+                                                                      purchaseId:
+                                                                          voucher.purchaseId ??
+                                                                              0);
+                                                              sideBarController
+                                                                  .index
+                                                                  .value = 37;
+                                                            },
+                                                          )),
+                                                    ],
+                                                  ),
+                                                ),
+                                              )),
+                                        ],
+                                      );
+                                    })
+                                    .toList(),
+                              ],
+                            ),
+                          ),
                         )),
               PaginationControl(
-                currentPage: 1,
-                totalPages: 1,
+                currentPage:
+                    Provider.of<PurchaseProvider>(context, listen: true)
+                        .purchaseVoucherCurrentPage,
+                totalPages: Provider.of<PurchaseProvider>(context, listen: true)
+                    .purchaseVoucherTotalPages,
                 onPageChanged: (int page) {
-                  // searchCategory(page);
+                  searchPurchaseVoucher(page);
                 },
               )
             ],

@@ -371,7 +371,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
                   //     : 'https://via.placeholder.com/150',
                   title: product.productName.toString(),
                   currency: product.currency ?? "",
-                  price: product.unitPrice ?? 0,
+                  price: product.unitPrice ?? 0.0,
                   count: product.quantity ?? 0,
                   productId: product.productId ?? 0,
                   totalPrice: product.totalPrice ?? "",
@@ -830,7 +830,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
   Widget _buildSaveSalesButton() {
     return Expanded(
       flex: 3,
-      child: GestureDetector( 
+      child: GestureDetector(
         onTap: () {
           Get.to(() => const KioskBillingPage());
         },

@@ -348,8 +348,7 @@ class BuildTextFieldColumn3 extends StatelessWidget {
                             debugPrint(date.toString());
                             controller.text =
                                 DateFormat('yyyy-MM-dd').format(date);
-                            debugPrint(DateFormat('yyyy-MM-dd')
-                                .format(date));
+                            debugPrint(DateFormat('yyyy-MM-dd').format(date));
                           },
                         ),
                       ),
@@ -453,7 +452,7 @@ DateTime parseDate(String date) {
   try {
     return DateFormat("dd/MM/yyyy").parse(date);
   } catch (e) {
-    print("Error parsing date: $e");
+    debugPrint("Error parsing date: $e");
     return DateTime.now();
   }
 }
@@ -562,7 +561,7 @@ Widget buildColumnWidgetForTextFields({
   bool isLeft = false,
   bool readOnly = false,
   String? title,
-  required void Function(String?) onchanged,
+  void Function(String?)? onchanged,
   required String hintText,
   String? Function(String?)? validator, // Add validator parameter
 }) =>

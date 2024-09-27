@@ -10,7 +10,10 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/screens/kiosk/faq.dart';
 import 'package:pos_machine/screens/kiosk/kiosk_order_page.dart';
+import 'package:pos_machine/screens/kiosk/privacy_policy.dart';
+import 'package:pos_machine/screens/kiosk/terms_and_condition.dart';
 import 'package:pos_machine/widgets/product_card_list_kiosk.dart';
 import 'package:pos_machine/widgets/product_card_square_kiosk.dart';
 import 'package:pos_machine/widgets/showEmptyMessege.dart';
@@ -57,6 +60,24 @@ class _KioskScreenState extends State<KioskScreen> {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: FontSize.s16),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: () {
+              Get.to(() => const FaqPage());
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.privacy_tip),
+            onPressed: () {
+              Get.to(() => const PrivacyPage());
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.article),
+            onPressed: () {
+              Get.to(() => const TermsPage());
+            },
+          ),
           IconButton(
             icon: Icon(_isListView ? Icons.grid_view : Icons.list),
             onPressed: () {
@@ -276,7 +297,7 @@ class _KioskScreenState extends State<KioskScreen> {
   }
 
   Widget _menuItem(String title, String description, String imageLink,
-      int price, int productId, String currency) {
+      num price, int productId, String currency) {
     return Consumer<CartProvider>(
       builder: (context, cartProvider, child) {
         int count =
@@ -285,7 +306,7 @@ class _KioskScreenState extends State<KioskScreen> {
           imageLink: imageLink,
           title: title,
           currency: currency,
-          price: price,
+          price: price.toDouble(),
           count: count,
           productId: productId,
           removeFromCart: () => _removeFromCart(context, productId),

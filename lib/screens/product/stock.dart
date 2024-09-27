@@ -70,6 +70,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
       await stockProvider.listSTockAPI(
         accessToken: accessToken ?? "",
         filterName: stockNameController.text,
+        page: page,
       );
     } catch (error) {
       debugPrint(error.toString());
@@ -620,10 +621,14 @@ class _AddStockScreenState extends State<AddStockScreen> {
                       },
                     ),
               PaginationControl(
-                currentPage: 1,
-                totalPages: 1,
+                currentPage:
+                    Provider.of<GridSelectionProvider>(context, listen: true)
+                        .stockCurrentPage,
+                totalPages:
+                    Provider.of<GridSelectionProvider>(context, listen: true)
+                        .stockTotalPages,
                 onPageChanged: (int page) {
-                  // searchCategory(page);
+                  searchStocks(page);
                 },
               )
             ],

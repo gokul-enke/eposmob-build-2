@@ -146,8 +146,6 @@ class CartProvider with ChangeNotifier {
         debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         ListCartModel listCartModel = ListCartModel.fromJson(jsonData);
-        // List<ListCartModelData> cartData = await fetchCartData(customerId: 1);
-        //   _cartStreamController.add(cartData);
 
         PriceSummary? priceSummary = listCartModel.data!.isEmpty
             ? PriceSummary(

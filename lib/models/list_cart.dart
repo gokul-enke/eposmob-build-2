@@ -107,7 +107,7 @@ class ListCartModelDataCartItem {
   final int? categoryId;
   final int? quantity;
   final String? productUnit;
-  final int? unitPrice;
+  final double? unitPrice;
   final String? totalPrice;
   final int? taxRate;
   final int? taxAmount;
@@ -145,7 +145,7 @@ class ListCartModelDataCartItem {
         categoryId: json["category_id"],
         quantity: json["quantity"],
         productUnit: json["product_unit"],
-        unitPrice: json["unit_price"],
+        unitPrice: (json["unit_price"] as num?)?.toDouble(),
         totalPrice: json["total_price"],
         taxRate: json["tax_rate"],
         taxAmount: json["tax_amount"],

@@ -61,6 +61,8 @@ class APPUrl {
   //     '$baseURL/api/purchases/list-purchase-order';
   static const String listPurchases =
       '$baseURL/api/purchases/purchase-searchbar';
+  static const String listPurchaseVoucher =
+      '$baseURL/api/purchases/voucher-searchbar';
   static const String addToPurchaseItem =
       '$baseURL/api/purchases/add-purchase-item';
   static const String addToPurchase = '$baseURL/api/purchases/add-to-purchase';
@@ -103,4 +105,5 @@ class APPUrl {
   static const String supplierSalesReport =
       '$baseURL/api/reports/supplier-sales-report';
   static const String applyCoupon = '$baseURL/api/discount/apply-coupon';
+  static const String listFaqs = '$baseURL/api/faq/faqs/company/1';
 }

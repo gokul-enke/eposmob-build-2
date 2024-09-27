@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/get_suppliers.dart';
+import 'package:pos_machine/models/pagination.dart';
 
 ListPurchaseModel listPurchaseModelFromJson(String str) =>
     ListPurchaseModel.fromJson(json.decode(str));
@@ -17,11 +18,13 @@ class ListPurchaseModel {
   final String? status;
   final String? message;
   final List<ListPurchaseModelData>? data;
+  final Pagination? pagination;
 
   ListPurchaseModel({
     this.status,
     this.message,
     this.data,
+    this.pagination,
   });
 
   factory ListPurchaseModel.fromJson(Map<String, dynamic> json) =>
@@ -30,11 +33,11 @@ class ListPurchaseModel {
         message: json["message"],
         data: json["data"] == null
             ? []
-            : List<ListPurchaseModelData>.from(json["data"]["data"]!
-                .map((x) => ListPurchaseModelData.fromJson(x))),
-        //  json["data"] == null
-        //     ? null
-        //     : ListPurchaseModelData.fromJson(json["data"]),
+            : List<ListPurchaseModelData>.from(
+                (json["data"]["data"]! as List<dynamic>)
+                    .map((x) => ListPurchaseModelData.fromJson(x))),
+        pagination:
+            json["data"] == null ? null : Pagination.fromJson(json["data"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -42,8 +45,8 @@ class ListPurchaseModel {
         "message": message,
         "data": data == null
             ? []
-            : List<dynamic>.from(
-                data!.map((x) => x.toJson())), //data?.toJson(),
+            : List<dynamic>.from(data!.map((x) => x.toJson())),
+        "pagination": pagination?.toJson(),
       };
 }
 
@@ -439,125 +442,3 @@ class VoucherDetails {
         "supplier": supplier?.toJson(),
       };
 }
-// import 'dart:convert';
-
-// ListPurchaseModel listPurchaseModelFromJson(String str) =>
-//     ListPurchaseModel.fromJson(json.decode(str));
-
-// String listPurchaseModelToJson(ListPurchaseModel data) =>
-//     json.encode(data.toJson());
-
-// class ListPurchaseModel {
-//   final String? status;
-//   final ListPurchaseModelData? data;
-
-//   ListPurchaseModel({
-//     this.status,
-//     this.data,
-//   });
-
-//   factory ListPurchaseModel.fromJson(Map<String, dynamic> json) =>
-//       ListPurchaseModel(
-//         status: json["status"],
-//         data: json["data"] == null
-//             ? null
-//             : ListPurchaseModelData.fromJson(json["data"]),
-//       );
-
-//   Map<String, dynamic> toJson() => {
-//         "status": status,
-//         "data": data?.toJson(),
-//       };
-// }
-
-// class ListPurchaseModelData {
-//   final VoucherDetails? voucherDetails;
-//   final List<PurchaseItem>? purchaseItems;
-
-//   ListPurchaseModelData({
-//     this.voucherDetails,
-//     this.purchaseItems,
-//   });
-
-//   factory ListPurchaseModelData.fromJson(Map<String, dynamic> json) =>
-//       ListPurchaseModelData(
-//         voucherDetails: json["voucher_details"] == null
-//             ? null
-//             : VoucherDetails.fromJson(json["voucher_details"]),
-//         purchaseItems: json["purchase_items"] == null
-//             ? []
-//             : List<PurchaseItem>.from(
-//                 json["purchase_items"]!.map((x) => PurchaseItem.fromJson(x))),
-//       );
-
-//   Map<String, dynamic> toJson() => {
-//         "voucher_details": voucherDetails?.toJson(),
-//         "purchase_items": purchaseItems == null
-//             ? []
-//             : List<dynamic>.from(purchaseItems!.map((x) => x.toJson())),
-//       };
-// }
-// class PurchaseItem {
-//   final int? id;
-//   final int? purchaseId;
-//   final int? voucherId;
-//   final int? productId;
-//   final int? quantity;
-//   final int? unitPrice;
-//   final String? unit;
-//   final String? batchNumber;
-//   final dynamic barCode;
-//   final String? status;
-//   final DateTime? createdAt;
-//   final DateTime? updatedAt;
-  
-
-//   PurchaseItem({
-//     this.id,
-//     this.purchaseId,
-//     this.voucherId,
-//     this.productId,
-//     this.quantity,
-//     this.unitPrice,
-//     this.unit,
-//     this.batchNumber,
-//     this.barCode,
-//     this.status,
-//     this.createdAt,
-//     this.updatedAt,
-//   });
-
-//   factory PurchaseItem.fromJson(Map<String, dynamic> json) => PurchaseItem(
-//         id: json["id"],
-//         purchaseId: json["purchase_id"],
-//         voucherId: json["voucher_id"],
-//         productId: json["product_id"],
-//         quantity: json["quantity"],
-//         unitPrice: json["unit_price"],
-//         unit: json["unit"],
-//         batchNumber: json["batch_number"],
-//         barCode: json["bar_code"],
-//         status: json["status"],
-//         createdAt: json["created_at"] == null
-//             ? null
-//             : DateTime.parse(json["created_at"]),
-//         updatedAt: json["updated_at"] == null
-//             ? null
-//             : DateTime.parse(json["updated_at"]),
-//       );
-
-//   Map<String, dynamic> toJson() => {
-//         "id": id,
-//         "purchase_id": purchaseId,
-//         "voucher_id": voucherId,
-//         "product_id": productId,
-//         "quantity": quantity,
-//         "unit_price": unitPrice,
-//         "unit": unit,
-//         "batch_number": batchNumber,
-//         "bar_code": barCode,
-//         "status": status,
-//         "created_at": createdAt?.toIso8601String(),
-//         "updated_at": updatedAt?.toIso8601String(),
-//       };
-// }

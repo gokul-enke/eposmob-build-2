@@ -82,7 +82,7 @@ class _SalesScreenState extends State<SalesScreen> {
     }
   }
 
-  void searchOrders() async {
+  void searchOrders(page) async {
     try {
       setState(() {
         initLoading = true;
@@ -104,6 +104,7 @@ class _SalesScreenState extends State<SalesScreen> {
             ? DateFormat('yyyy-MM-dd').format(selectedDate!)
             : '',
         filterStore: storeController.text,
+        page: page,
       );
     } catch (error) {
       debugPrint(error.toString());
@@ -1037,10 +1038,10 @@ class _SalesScreenState extends State<SalesScreen> {
                       },
                     )),
                 PaginationControl(
-                  currentPage: 1,
-                  totalPages: 1,
+                  currentPage: Provider.of<SalesProvider>(context, listen: true).currentPage,
+                  totalPages:  Provider.of<SalesProvider>(context, listen: true).totalPages,
                   onPageChanged: (int page) {
-                    // searchCategory(page);
+                    searchOrders(page);
                   },
                 )
               ],

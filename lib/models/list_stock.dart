@@ -4,6 +4,8 @@
 
 import 'dart:convert';
 
+import 'package:pos_machine/models/pagination.dart';
+
 ListStockModel listStockModelFromJson(String str) =>
     ListStockModel.fromJson(json.decode(str));
 
@@ -13,11 +15,13 @@ class ListStockModel {
   final String? status;
   final String? message;
   final List<ListStockModelData>? data;
+  final Pagination? pagination;
 
   ListStockModel({
     this.status,
     this.message,
     this.data,
+    this.pagination,
   });
 
   factory ListStockModel.fromJson(Map<String, dynamic> json) => ListStockModel(
@@ -27,6 +31,8 @@ class ListStockModel {
             ? []
             : List<ListStockModelData>.from(json["data"]["data"]!
                 .map((x) => ListStockModelData.fromJson(x))),
+        pagination:
+            json["data"] == null ? null : Pagination.fromJson(json["data"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -35,6 +41,7 @@ class ListStockModel {
         "data": data == null
             ? []
             : List<dynamic>.from(data!.map((x) => x.toJson())),
+        "pagination": pagination?.toJson(),
       };
 }
 

@@ -32,6 +32,10 @@ class GridSelectionProvider extends ChangeNotifier {
   List<ListStockModelData>? get getListStockModelDataList =>
       filteredStockList ?? listStockModelDataList;
   ListStockModelData? viewStockModelData;
+  int currentPage = 1;
+  int totalPages = 1;
+  int stockCurrentPage = 1;
+  int stockTotalPages = 1;
 
   ListStockModelData? get getViewStockModelData => viewStockModelData;
   String productNameFromProductId(int value) {
@@ -211,6 +215,12 @@ class GridSelectionProvider extends ChangeNotifier {
         filteredProductList = getProductModel.product;
         mainProductList = getProductModel.product;
         categoryProductList = getProductModel.product;
+
+        debugPrint("categoryListModel.pagination?.toString()");
+        debugPrint(getProductModel.pagination?.toString());
+
+        currentPage = getProductModel.pagination?.currentPage ?? 1;
+        totalPages = getProductModel.pagination?.lastPage ?? 1;
         // selectedCategoryId =
         //     productList!.isEmpty ? 0 : productList![0].categoryId ?? 0;
         notifyListeners();
@@ -706,7 +716,7 @@ class GridSelectionProvider extends ChangeNotifier {
       'tax_include': "N"
     };
 
-    debugPrint("API Body Data: $apiBodyData");
+    debugPrint("API Body Data: ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.addToStock);
     try {
       final response = await http.post(url,
@@ -774,6 +784,11 @@ class GridSelectionProvider extends ChangeNotifier {
             listStockModelDataList = listStockModel.data;
             filteredStockList =
                 List<ListStockModelData>.from(listStockModelDataList!);
+            debugPrint("categoryListModel.pagination?.toString()");
+            debugPrint(listStockModel.pagination?.toString());
+
+            stockCurrentPage = listStockModel.pagination?.currentPage ?? 1;
+            stockTotalPages = listStockModel.pagination?.lastPage ?? 1;
             notifyListeners();
           } catch (e) {
             debugPrint('Error parsing JSON data: $e');

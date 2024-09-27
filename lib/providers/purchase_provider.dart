@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
+import 'package:pos_machine/models/list_purchase_voucher.dart';
 import 'package:pos_machine/models/list_unit.dart';
 
 import '../models/get_store.dart';
@@ -20,9 +21,14 @@ class PurchaseProvider extends ChangeNotifier {
   List<PurchaseItem>? listPurchaseItemView = [];
   List<GetStoreModelData>? get getStoreList => storeList;
   List<VoucherDetail>? voucherDetailsList = [];
+  List<VoucherModelData>? voucherDetailsListData = [];
   VoucherDetail? voucherDetails;
   List<PurchaseItem>? get getlistPurchaseItemView => listPurchaseItemView;
   VoucherDetail? get getVoucherDetails => voucherDetails;
+  int currentPage = 1;
+  int totalPages = 1;
+  int purchaseVoucherCurrentPage = 1;
+  int purchaseVoucherTotalPages = 1;
 
   ListPurchaseModelData? ListPurchaseModelDataDetails;
   // List<PurchaseItem>? get getlistPurchaseItemView => listPurchaseItemView;
@@ -33,6 +39,8 @@ class PurchaseProvider extends ChangeNotifier {
   Map<String, String>? unitList;
   Map<String, String>? get getUnitList => unitList;
   List<VoucherDetail>? get getVoucherDetailsList => voucherDetailsList;
+  List<PurchaseItem>? get getPurchaseDetailsList => purchaseItemListAllPurchase;
+  List<VoucherModelData>? get getVoucherModelDataList => voucherDetailsListData;
   List<GetSuppliersModelData>? get getSupplierList => supplierList;
   GetStoreModelData storeDemo = GetStoreModelData(
     id: 0,
@@ -207,6 +215,8 @@ class PurchaseProvider extends ChangeNotifier {
       queryParameters['created_by'] = createdBy;
     }
 
+    debugPrint("queryParameters $queryParameters");
+
     final url = Uri.parse(APPUrl.listPurchases)
         .replace(queryParameters: queryParameters);
 
@@ -217,42 +227,104 @@ class PurchaseProvider extends ChangeNotifier {
       });
       debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint(response.body.toString());
         final jsonData = json.decode(response.body);
-        debugPrint(jsonData["data"].toString());
-
+        debugPrint(jsonData.toString());
+        if (jsonData["status"] == "failed") {
+          purchaseItemListAllPurchase = [];
+          notifyListeners();
+        }
         ListPurchaseModel listPurchaseModel =
             ListPurchaseModel.fromJson(jsonData);
+        debugPrint(listPurchaseModel.pagination?.toString());
+
+        currentPage = listPurchaseModel.pagination?.currentPage ??
+            1; // Set the current page
+        totalPages =
+            listPurchaseModel.pagination?.lastPage ?? 1; // Set the total pages
         List<ListPurchaseModelData>? data = listPurchaseModel.data;
         List<PurchaseItem> purchaseItems = data!
             .map((e) => e.purchaseItems ?? []) // Extract purchase item lists
             .expand((items) => items)
             .toList();
-        List<VoucherDetail> voucherDetails = data
-            .map((e) => e.voucherDetails ?? []) // Extract voucher detail lists
-            .expand((details) => details)
-            .toList();
-// List<VoucherDetail>? voucherDetails = data!.expand((e) => e.voucherDetails ?? []).toList();
-//         List<VoucherDetail>? voucherDetails = data!.map((e) => e.voucherDetails).toList();
-
-        if (data.isNotEmpty) {
-          ListPurchaseModelDataDetails =
-              data.first; // Set the first purchase detail
-          voucherDetailsList = voucherDetails;
-          List<PurchaseItem>? listPurchaseitem = purchaseItems;
+        debugPrint("purchase items api call log");
+        debugPrint(purchaseItems.toString());
+        ListPurchaseModelDataDetails = data.first;
+        List<PurchaseItem>? listPurchaseitem = purchaseItems;
+        if (jsonData["data"] == []) {
+          debugPrint("purchaseItemListAllPurchase is empty");
+          purchaseItemListAllPurchase = [];
+        } else {
           purchaseItemListAllPurchase = listPurchaseitem;
-          notifyListeners();
         }
-        if (data.isEmpty) {
-          debugPrint("data.toString() ${data.toString()}");
-          voucherDetailsList = [];
-          List<PurchaseItem>? listPurchaseitem = [];
-          purchaseItemListAllPurchase = listPurchaseitem;
-          notifyListeners();
-        }
+        notifyListeners();
       } else {}
     } finally {}
   }
+
+  //          *********************** LIST VOUCHER API ***************************************************
+
+  Future<void> listPurchaseVoucher({
+    required String accessToken,
+    String? filterAmount,
+    String? filterStore,
+    String? filterDate,
+    int? page,
+  }) async {
+    debugPrint("LIST ALL Purchase");
+
+    final queryParameters = <String, String>{
+      'page': page.toString(),
+    };
+    if (filterStore != null && filterStore.isNotEmpty) {
+      queryParameters['filter_store'] = filterStore;
+    }
+    if (filterAmount != null && filterAmount.isNotEmpty) {
+      queryParameters['filter_amount_total'] = filterAmount;
+    }
+    if (filterDate != null && filterDate.isNotEmpty) {
+      queryParameters['filter_date'] = filterDate;
+    }
+
+    final url = Uri.parse(APPUrl.listPurchaseVoucher)
+        .replace(queryParameters: queryParameters);
+    try {
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      });
+      debugPrint('inside ${response.statusCode}');
+      if (response.statusCode == 200) {
+        debugPrint('Response body: ${response.body}');
+        final jsonData = json.decode(response.body);
+
+        // Use the new ListVoucherModel
+        ListVoucherModel listVoucherModel = ListVoucherModel.fromJson(jsonData);
+        List<VoucherModelData>? vouchersData = listVoucherModel.data;
+        debugPrint("categoryListModel.pagination?.toString()");
+        debugPrint(listVoucherModel.pagination?.toString());
+        purchaseVoucherCurrentPage = listVoucherModel.pagination?.currentPage ??
+            1; // Set the current page
+        purchaseVoucherTotalPages =
+            listVoucherModel.pagination?.lastPage ?? 1; // Set the total pages
+
+        // Here you can handle the vouchers data as needed
+        if (vouchersData != null && vouchersData.isNotEmpty) {
+          debugPrint("Vouchers found: ${vouchersData.length}");
+          debugPrint(vouchersData.toString());
+          voucherDetailsListData = vouchersData;
+
+          notifyListeners();
+        } else {
+          debugPrint("No vouchers found.");
+        }
+      } else {
+        debugPrint("Error: ${response.reasonPhrase}");
+      }
+    } catch (e) {
+      debugPrint("Exception occurred: $e");
+    }
+  }
+
   //          *********************** LIST ALL PURCHASE ITEMS API ***************************************************
 
   Future<dynamic> listAllPurchaseItems(

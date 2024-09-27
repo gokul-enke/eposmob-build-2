@@ -363,9 +363,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     Map<String, String>? unitList = purchaseProvider.getUnitList;
     List<GetStoreModelData>? storeList = purchaseProvider.getStoreList;
     // Access the CategoryProvider
-    CategoryProvider categoryProvider = Provider.of<CategoryProvider>(
-      context,
-    );
+    CategoryProvider categoryProvider =
+        Provider.of<CategoryProvider>(context, listen: false);
     // Access the CategoryProvider
     GridSelectionProvider gridSelectionProvider =
         Provider.of<GridSelectionProvider>(

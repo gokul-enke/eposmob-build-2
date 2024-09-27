@@ -10,7 +10,8 @@ import '../resources/app_url.dart';
 
 class SalesProvider with ChangeNotifier {
   List<ListOrderModelData> _orders = [];
-
+  int currentPage = 1;
+  int totalPages = 1;
   List<ListOrderModelData> get orders => _orders;
   String _orderId = "";
   String get getOrderId {
@@ -84,6 +85,11 @@ class SalesProvider with ChangeNotifier {
             ListSalesOrderModel listSalesOrderModel =
                 ListSalesOrderModel.fromJson(jsonData);
             _orders = listSalesOrderModel.data ?? [];
+            debugPrint("listSalesOrderModel.pagination?.toString()");
+            debugPrint(listSalesOrderModel.pagination?.toString());
+            debugPrint(listSalesOrderModel.pagination?.lastPage.toString());
+            currentPage = listSalesOrderModel.pagination?.currentPage ?? 1;
+            totalPages = listSalesOrderModel.pagination?.lastPage ?? 1;
             notifyListeners();
           } catch (e) {
             debugPrint('Error parsing JSON data: $e');
