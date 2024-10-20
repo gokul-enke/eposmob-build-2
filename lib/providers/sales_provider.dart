@@ -87,9 +87,11 @@ class SalesProvider with ChangeNotifier {
             _orders = listSalesOrderModel.data ?? [];
             debugPrint("listSalesOrderModel.pagination?.toString()");
             debugPrint(listSalesOrderModel.pagination?.toString());
-            debugPrint(listSalesOrderModel.pagination?.lastPage.toString());
-            currentPage = listSalesOrderModel.pagination?.currentPage ?? 1;
-            totalPages = listSalesOrderModel.pagination?.lastPage ?? 1;
+            debugPrint(
+                listSalesOrderModel.pagination!.meta?.lastPage.toString());
+            currentPage =
+                listSalesOrderModel.pagination?.meta?.currentPage ?? 1;
+            totalPages = listSalesOrderModel.pagination!.meta?.lastPage ?? 1;
             notifyListeners();
           } catch (e) {
             debugPrint('Error parsing JSON data: $e');

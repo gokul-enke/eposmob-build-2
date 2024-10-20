@@ -121,7 +121,7 @@ class TotalSales {
   final PeriodStats? month;
   final PeriodStats? year;
   final int? count;
-  final int? total;
+  final double? total;
 
   TotalSales({
     this.today,
@@ -140,7 +140,7 @@ class TotalSales {
             json["month"] == null ? null : PeriodStats.fromJson(json["month"]),
         year: json["year"] == null ? null : PeriodStats.fromJson(json["year"]),
         count: json["count"],
-        total: json["total"],
+        total: json["total"].toDouble(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -154,9 +154,9 @@ class TotalSales {
 }
 
 class PeriodStats {
-  final int? totalSales;
+  final double? totalSales;
   final int? totalCustomers;
-  final int? totalAmount;
+  final double? totalAmount;
 
   PeriodStats({
     this.totalSales,
@@ -165,14 +165,19 @@ class PeriodStats {
   });
 
   factory PeriodStats.fromJson(Map<String, dynamic> json) => PeriodStats(
-        totalSales: json["total_sales"],
+        totalSales: _formatDouble(json["total_sales"]),
         totalCustomers: json["total_customers"],
-        totalAmount: json["total_amount"],
+        totalAmount: _formatDouble(json["total_amount"]),
       );
 
   Map<String, dynamic> toJson() => {
-        "total_sales": totalSales,
+        "total_sales": totalSales?.toStringAsFixed(2),
         "total_customers": totalCustomers,
-        "total_amount": totalAmount,
+        "total_amount": totalAmount?.toStringAsFixed(2),
       };
+
+  static double? _formatDouble(dynamic value) {
+    if (value == null) return null;
+    return double.parse(double.parse(value.toString()).toStringAsFixed(2));
+  }
 }

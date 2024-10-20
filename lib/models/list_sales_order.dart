@@ -4,7 +4,7 @@
 
 import 'dart:convert';
 
-import 'package:pos_machine/models/pagination.dart';
+// import 'package:pos_machine/models/pagination.dart';
 
 import 'add_to_cart.dart';
 
@@ -31,13 +31,13 @@ class ListSalesOrderModel {
       ListSalesOrderModel(
         status: json["status"],
         message: json["message"],
-        data: json["data"] == null
+        data: json["data"]?["data"] == null
             ? []
-            : List<ListOrderModelData>.from(
-                json["data"]!.map((x) => ListOrderModelData.fromJson(x))),
-        pagination: json["pagination"] == null
+            : List<ListOrderModelData>.from(json["data"]["data"]
+                .map((x) => ListOrderModelData.fromJson(x))),
+        pagination: json["data"]?["pagination"] == null
             ? null
-            : Pagination.fromJson(json["pagination"]),
+            : Pagination.fromJson(json["data"]["pagination"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -228,3 +228,36 @@ class PaymentDetails {
 //         "net_payable": netPayable,
 //     };
 //}
+class Pagination {
+  final Meta? meta; // Contains pagination metadata
+
+  Pagination({this.meta});
+
+  factory Pagination.fromJson(Map<String, dynamic> json) => Pagination(
+        meta: json["meta"] == null ? null : Meta.fromJson(json["meta"]),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "meta": meta?.toJson(),
+      };
+}
+
+class Meta {
+  final int? currentPage;
+  final int? lastPage;
+
+  Meta({
+    this.currentPage,
+    this.lastPage,
+  });
+
+  factory Meta.fromJson(Map<String, dynamic> json) => Meta(
+        currentPage: json["current_page"],
+        lastPage: json["last_page"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "current_page": currentPage,
+        "last_page": lastPage,
+      };
+}

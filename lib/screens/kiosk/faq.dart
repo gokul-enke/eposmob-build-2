@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/get_faq.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -103,8 +104,20 @@ class FaqPageState extends State<FaqPage> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: Text(faq.answer,
-                          style: const TextStyle(fontSize: 14)),
+                      child: SizedBox(
+                        height: 200,
+                        width: size.width * 0.7,
+                        child: SingleChildScrollView(
+                          child: Html(
+                            data: faq.answer,
+                            style: {
+                              "body": Style(
+                                fontSize: FontSize(14),
+                              ),
+                            },
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),

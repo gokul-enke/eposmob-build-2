@@ -492,7 +492,9 @@ class _SalesScreenState extends State<SalesScreen> {
                           children: [
                             CustomRoundButton(
                               title: "Search",
-                              fct: searchOrders,
+                              fct: () {
+                                searchOrders(1);
+                              },
                               height: 45,
                               width: size.width * 0.09,
                               fontSize: FontSize.s12,
@@ -1038,8 +1040,10 @@ class _SalesScreenState extends State<SalesScreen> {
                       },
                     )),
                 PaginationControl(
-                  currentPage: Provider.of<SalesProvider>(context, listen: true).currentPage,
-                  totalPages:  Provider.of<SalesProvider>(context, listen: true).totalPages,
+                  currentPage: Provider.of<SalesProvider>(context, listen: true)
+                      .currentPage,
+                  totalPages: Provider.of<SalesProvider>(context, listen: true)
+                      .totalPages,
                   onPageChanged: (int page) {
                     searchOrders(page);
                   },

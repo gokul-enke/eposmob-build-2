@@ -217,10 +217,10 @@ class GridSelectionProvider extends ChangeNotifier {
         categoryProductList = getProductModel.product;
 
         debugPrint("categoryListModel.pagination?.toString()");
-        debugPrint(getProductModel.pagination?.toString());
+        debugPrint(getProductModel.meta?.toString());
 
-        currentPage = getProductModel.pagination?.currentPage ?? 1;
-        totalPages = getProductModel.pagination?.lastPage ?? 1;
+        currentPage = getProductModel.meta?.currentPage ?? 1;
+        totalPages = getProductModel.meta?.lastPage ?? 1;
         // selectedCategoryId =
         //     productList!.isEmpty ? 0 : productList![0].categoryId ?? 0;
         notifyListeners();

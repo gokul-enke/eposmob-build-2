@@ -1,10 +1,4 @@
-// To parse this JSON data, do
-//
-//     final getProductModel = getProductModelFromJson(jsonString);
-
 import 'dart:convert';
-
-import 'package:pos_machine/models/pagination.dart';
 
 GetProductModel getProductModelFromJson(String str) =>
     GetProductModel.fromJson(json.decode(str));
@@ -14,15 +8,15 @@ String getProductModelToJson(GetProductModel data) =>
 
 class GetProductModel {
   final List<GetProduct>? product;
-  final String? status;
-  final Links? links;
-  final Pagination? pagination;
+  final String? status; // this field seems to be missing in your JSON
+  final Links? links; // links field is currently unused
+  final Meta? meta; // Rename pagination to meta
 
   GetProductModel({
     this.product,
     this.status,
     this.links,
-    this.pagination,
+    this.meta, // Update constructor accordingly
   });
 
   factory GetProductModel.fromJson(Map<String, dynamic> json) =>
@@ -30,17 +24,21 @@ class GetProductModel {
         product: json["product"] == null
             ? []
             : List<GetProduct>.from(
-                json["product"]!.map((x) => GetProduct.fromJson(x))),
-        pagination: json["pagination"] == null
+                json["product"].map((x) => GetProduct.fromJson(x))),
+        status: json["status"], // Assuming there should be a status field
+        links: json["links"] == null
             ? null
-            : Pagination.fromJson(json["pagination"]),
+            : Links.fromJson(json["links"]), // Assuming this exists in your API
+        meta: json["meta"] == null ? null : Meta.fromJson(json["meta"]),
       );
 
   Map<String, dynamic> toJson() => {
         "product": product == null
             ? []
             : List<dynamic>.from(product!.map((x) => x.toJson())),
-        "pagination": pagination?.toJson(),
+        "status": status, // Don't forget to serialize status back
+        "links": links?.toJson(), // Serialize links if necessary
+        "meta": meta?.toJson(), // Update for meta
       };
 }
 
@@ -330,68 +328,24 @@ class Links {
 
 class Meta {
   final int? currentPage;
-  final int? from;
   final int? lastPage;
-  final List<Link>? links;
-  final String? path;
-  final int? perPage;
-  final int? to;
   final int? total;
 
   Meta({
     this.currentPage,
-    this.from,
     this.lastPage,
-    this.links,
-    this.path,
-    this.perPage,
-    this.to,
     this.total,
   });
 
   factory Meta.fromJson(Map<String, dynamic> json) => Meta(
-        currentPage: json["current_page"],
-        from: json["from"],
-        lastPage: json["last_page"],
-        links: json["links"] == null
-            ? []
-            : List<Link>.from(json["links"]!.map((x) => Link.fromJson(x))),
-        path: json["path"],
-        perPage: json["per_page"],
-        to: json["to"],
-        total: json["total"],
-      );
+    currentPage: json["current_page"],
+    lastPage: json["last_page"],
+    total: json["total"],
+  );
 
   Map<String, dynamic> toJson() => {
-        "current_page": currentPage,
-        "from": from,
-        "last_page": lastPage,
-        "links": links == null
-            ? []
-            : List<dynamic>.from(links!.map((x) => x.toJson())),
-        "path": path,
-        "per_page": perPage,
-        "to": to,
-        "total": total,
-      };
-}
-
-class Link {
-  final String? url;
-  final String? label;
-  final bool? active;
-
-  Link({this.url, this.label, this.active});
-
-  factory Link.fromJson(Map<String, dynamic> json) => Link(
-        url: json["url"],
-        label: json["label"],
-        active: json["active"],
-      );
-
-  Map<String, dynamic> toJson() => {
-        "url": url,
-        "label": label,
-        "active": active,
-      };
+    "current_page": currentPage,
+    "last_page": lastPage,
+    "total": total,
+  };
 }
