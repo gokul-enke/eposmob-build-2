@@ -119,10 +119,9 @@ class CategoryProvider extends ChangeNotifier {
         CategoryListModel categoryListModel =
             CategoryListModel.fromJson(jsonData);
 
-        categoryList = categoryListWithoutQuery = categoryListModel.category;
-        categoryList!.insert(0, categoryDemo);
-
         categoryList = categoryListModel.category;
+        // Assuming categoryDemo is still relevant
+        categoryList!.insert(0, categoryDemo);
 
         notifyListeners();
       } else {
@@ -233,9 +232,10 @@ class CategoryProvider extends ChangeNotifier {
       'category_lang_name[en]': categoryNameEnglish,
       'category_lang_name[hi]': categoryNameHindi,
       'category_lang_name[ar]': categoryNameArabic,
-      'category_image': imagePath,
-      'category_icon': iconPath
+      'image': imagePath,
+      'icon': iconPath
     };
+
     debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.addCategoryUrl);
     try {

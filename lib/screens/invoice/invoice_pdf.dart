@@ -204,10 +204,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
   }
 
   pw.Widget _buildItemsTable() {
-    final cartItems = _orderDetails?.data?.cart
-            ?.expand((cart) => cart.cartItems ?? [])
-            .toList() ??
-        [];
+    final cartItems = _orderDetails?.data?.cart?.cartItems;
 
     return pw.Table.fromTextArray(
       border: pw.TableBorder.all(),
@@ -225,7 +222,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       ),
       cellStyle: const pw.TextStyle(),
       headers: ['Item Name', 'Unit Price', 'Quantity', 'Total Price'],
-      data: cartItems
+      data: cartItems!
           .map((item) => [
                 item.productName ?? 'N/A',
                 '${item.unitPrice ?? 0}',

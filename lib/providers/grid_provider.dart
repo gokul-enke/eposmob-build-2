@@ -180,9 +180,9 @@ class GridSelectionProvider extends ChangeNotifier {
 
     // Build query parameters
     final queryParams = <String, String>{
-      if (filterName != null) 'filter_name': filterName,
+      if (filterName != null) 'name': filterName,
       if (filterCategory != null && filterCategory != "0")
-        'filter_category': filterCategory,
+        'category_id': filterCategory,
       if (filterPrice != null) 'filter_price': filterPrice,
       if (filterCreatedBy != null) 'filter_created_by': filterCreatedBy,
       // if (filterProperties != null) 'filter_properties': filterProperties,
@@ -199,7 +199,7 @@ class GridSelectionProvider extends ChangeNotifier {
     notifyListeners();
     productList = [];
     final url =
-        Uri.parse(APPUrl.getProcductUrl).replace(queryParameters: queryParams);
+        Uri.parse(APPUrl.getProductUrl).replace(queryParameters: queryParams);
     try {
       final response = await http.get(url);
 
@@ -245,7 +245,7 @@ class GridSelectionProvider extends ChangeNotifier {
     // selectedCategoryId = categoryId;
     notifyListeners();
     selectedProductListAPI = [];
-    final url = Uri.parse(APPUrl.getProcductUrl);
+    final url = Uri.parse(APPUrl.getProductUrl);
     try {
       final response = await http.post(url,
           body: json.encode(apiBodyData),
@@ -282,7 +282,7 @@ class GridSelectionProvider extends ChangeNotifier {
     selectedCategoryId = categoryId;
     notifyListeners();
     productList = [];
-    final url = Uri.parse(APPUrl.getProcductUrl);
+    final url = Uri.parse(APPUrl.getProductUrl);
     try {
       final response = await http.post(url,
           body: json.encode(apiBodyData),

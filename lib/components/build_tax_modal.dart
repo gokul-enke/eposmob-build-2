@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 
 class TaxDetailsDialog extends StatelessWidget {
-  final Map<String, int> taxAmounts;
+  final Map<String, num> taxAmounts;
 
   const TaxDetailsDialog({
     super.key,
@@ -28,7 +28,7 @@ class TaxDetailsDialog extends StatelessWidget {
             const SizedBox(height: 16),
             ...taxAmounts.entries.map((entry) {
               String taxName = entry.key;
-              int amount = entry.value;
+              num amount = entry.value;
 
               return Text("$taxName: ${AmountHelper.formatAmount(amount)}");
             }).toList(),

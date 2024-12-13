@@ -7,7 +7,6 @@ import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
-import 'package:pos_machine/models/add_to_cart.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
@@ -47,7 +46,6 @@ class _SalesScreenState extends State<SalesScreen> {
   bool isInitLoading = false;
   String orderNumber = "";
   OrderDetailsModelData? orderDetailsModelData;
-  List<OrderDetailsModelDataCart>? cart = [];
   List<OrderDetailsModelDataCartItem>? cartItems = [];
 
   bool initLoading = false;
@@ -129,50 +127,9 @@ class _SalesScreenState extends State<SalesScreen> {
     loadInitData();
   }
 
-  getOrderDetails(String ordersId) async {
-    try {
-      setState(() {
-        isInitLoading = true;
-      });
-
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      // String ordersId =
-      //     Provider.of<SalesProvider>(context, listen: false).getOrderId;
-      debugPrint("ordersid ${ordersId}");
-      await SalesProvider()
-          .listOrderDetails(context, ordersId, accessToken ?? "")
-          .then((resposne) {
-        if (resposne["status"] == "success") {
-          OrderDetailsModel orderDetails = OrderDetailsModel.fromJson(resposne);
-          orderDetailsModelData = orderDetails.data;
-          setState(() {
-            cart = orderDetailsModelData!.cart;
-            cartItems = cart!.map((e) => e.cartItems).single;
-          });
-          return cartItems;
-        } else {
-          orderNumber = "Order Details Not found";
-        }
-      });
-    } catch (error) {
-      debugPrint(error.toString());
-    } finally {
-      setState(() {
-        isInitLoading = false;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     SideBarController sideBarController = Get.put(SideBarController());
-    // final searchTextController = TextEditingController();
-    // DateTime now = DateTime.now();
-    // String formattedDate = DateFormat('d,MMMM,y').format(now);
-    // final dateController =
-    //     TextEditingController(text: formattedDate); //"6,April,2023");
-    // final dateFormatController = TextEditingController();
     Size size = MediaQuery.of(context).size;
     PurchaseProvider purchaseProvider =
         Provider.of<PurchaseProvider>(context, listen: false);
@@ -538,9 +495,9 @@ class _SalesScreenState extends State<SalesScreen> {
                               columnWidths: const {
                                 0: FlexColumnWidth(2),
                                 1: FlexColumnWidth(4),
-                                2: FlexColumnWidth(4),
-                                3: FlexColumnWidth(4),
-                                4: FlexColumnWidth(5),
+                                2: FlexColumnWidth(3),
+                                3: FlexColumnWidth(3),
+                                4: FlexColumnWidth(4),
                                 5: FlexColumnWidth(5),
                                 6: FlexColumnWidth(5),
                                 7: FlexColumnWidth(10),
@@ -641,22 +598,22 @@ class _SalesScreenState extends State<SalesScreen> {
                                       //         ),
                                       //       )),
                                       //     )),
-                                      TableCell(
-                                          verticalAlignment:
-                                              TableCellVerticalAlignment.middle,
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(15.0),
-                                            child: Center(
-                                                child: Text(
-                                              "Store Name",
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.18,
-                                                ColorManager.kPrimaryColor,
-                                              ),
-                                            )),
-                                          )),
+                                      // TableCell(
+                                      //     verticalAlignment:
+                                      //         TableCellVerticalAlignment.middle,
+                                      //     child: Padding(
+                                      //       padding: const EdgeInsets.all(15.0),
+                                      //       child: Center(
+                                      //           child: Text(
+                                      //         "Store Name",
+                                      //         style: buildCustomStyle(
+                                      //           FontWeightManager.medium,
+                                      //           FontSize.s12,
+                                      //           0.18,
+                                      //           ColorManager.kPrimaryColor,
+                                      //         ),
+                                      //       )),
+                                      //     )),
                                       TableCell(
                                           verticalAlignment:
                                               TableCellVerticalAlignment.middle,
@@ -745,9 +702,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                       .index.value = 11;
 
                                                   orderProvider.setOrderId(
-                                                      "${order.ordersId ?? "0"}");
-                                                  // debugPrint(
-                                                  //     " inside onTap order Details${orderProvider.orderId}");
+                                                      order.orderNumber ?? "0");
                                                 },
                                                 child: Text(
                                                   "#${order.orderNumber}",
@@ -787,8 +742,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                             padding: const EdgeInsets.all(20.0),
                                             child: Center(
                                               child: Text(
-                                                "${order.totalItems}",
-                                                //  " 1 MIGHTY ZINGER BOX 150 g\n2 MIGHTY ZINGER BOX 150 g\n3 MIGHTY ZINGER BOX 150 g",
+                                                "${order.cartItems!.length}",
                                                 style: buildCustomStyle(
                                                   FontWeightManager.medium,
                                                   FontSize.s9,
@@ -816,6 +770,28 @@ class _SalesScreenState extends State<SalesScreen> {
                                       //         ),
                                       //       ),
                                       //     )),
+                                      // TableCell(
+                                      //     verticalAlignment:
+                                      //         TableCellVerticalAlignment.middle,
+                                      //     child: Padding(
+                                      //       padding: const EdgeInsets.all(20.0),
+                                      //       child: Center(
+
+                                      //           // child: Text(
+                                      //           //   Provider.of<PurchaseProvider>(
+                                      //           //           context,
+                                      //           //           listen: false)
+                                      //           //       .getStoreNameFromId(
+                                      //           //           order.storeId ?? 0),
+                                      //           //   style: buildCustomStyle(
+                                      //           //     FontWeightManager.medium,
+                                      //           //     FontSize.s9,
+                                      //           //     0.13,
+                                      //           //     ColorManager.kPrimaryColor,
+                                      //           //   ),
+                                      //           // ),
+                                      //           ),
+                                      //     )),
                                       TableCell(
                                           verticalAlignment:
                                               TableCellVerticalAlignment.middle,
@@ -823,28 +799,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                             padding: const EdgeInsets.all(20.0),
                                             child: Center(
                                               child: Text(
-                                                Provider.of<PurchaseProvider>(
-                                                        context,
-                                                        listen: false)
-                                                    .getStoreNameFromId(
-                                                        order.storeId ?? 0),
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s9,
-                                                  0.13,
-                                                  ColorManager.kPrimaryColor,
-                                                ),
-                                              ),
-                                            ),
-                                          )),
-                                      TableCell(
-                                          verticalAlignment:
-                                              TableCellVerticalAlignment.middle,
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(20.0),
-                                            child: Center(
-                                              child: Text(
-                                                "Rs ${AmountHelper.formatAmount(priceSummary.netPayable ?? 0.0)}",
+                                                "Rs ${AmountHelper.formatAmount(priceSummary.grandTotal ?? 0.0)}",
                                                 style: buildCustomStyle(
                                                   FontWeightManager.medium,
                                                   FontSize.s9,
@@ -895,31 +850,29 @@ class _SalesScreenState extends State<SalesScreen> {
                                                         ),
                                                         onPressed: () async {
                                                           orderProvider.setOrderId(
-                                                              "${order.ordersId ?? "0"}");
-                                                          await getOrderDetails(
-                                                              order.ordersId
-                                                                  .toString());
+                                                              order.orderNumber ??
+                                                                  "0");
                                                           sideBarController
                                                               .index.value = 11;
                                                         },
                                                       )),
-                                                  BuildBoxShadowContainer(
-                                                      margin:
-                                                          const EdgeInsets.only(
-                                                              left: 5,
-                                                              right: 5),
-                                                      color: ColorManager
-                                                          .kPrimaryColor
-                                                          .withOpacity(0.9),
-                                                      circleRadius: 5,
-                                                      child: IconButton(
-                                                        icon: const Icon(
-                                                          Icons.edit,
-                                                          size: 18,
-                                                          color: Colors.white,
-                                                        ),
-                                                        onPressed: () async {},
-                                                      )),
+                                                  // BuildBoxShadowContainer(
+                                                  //     margin:
+                                                  //         const EdgeInsets.only(
+                                                  //             left: 5,
+                                                  //             right: 5),
+                                                  //     color: ColorManager
+                                                  //         .kPrimaryColor
+                                                  //         .withOpacity(0.9),
+                                                  //     circleRadius: 5,
+                                                  //     child: IconButton(
+                                                  //       icon: const Icon(
+                                                  //         Icons.edit,
+                                                  //         size: 18,
+                                                  //         color: Colors.white,
+                                                  //       ),
+                                                  //       onPressed: () async {},
+                                                  //     )),
                                                   BuildBoxShadowContainer(
                                                       margin:
                                                           const EdgeInsets.only(
@@ -936,10 +889,6 @@ class _SalesScreenState extends State<SalesScreen> {
                                                           color: Colors.white,
                                                         ),
                                                         onPressed: () async {
-                                                          await getOrderDetails(
-                                                              order.ordersId
-                                                                  .toString());
-
                                                           String
                                                               formattedTotal =
                                                               AmountHelper.formatAmount(Provider.of<
@@ -982,7 +931,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                         listen:
                                                                             false)
                                                                     .getStoreNameFromId(
-                                                                        order.storeId ??
+                                                                        order.id ??
                                                                             0),
                                                                 cartItems:
                                                                     cartItems!,
@@ -993,7 +942,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                         DateTime
                                                                             .now()),
                                                                 orderNumber: order
-                                                                    .ordersId
+                                                                    .id
                                                                     .toString(),
                                                               ),
                                                             ),
@@ -1017,10 +966,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                         ),
                                                         onPressed: () async {
                                                           orderProvider.setOrderId(
-                                                              "${order.ordersId ?? "0"}");
-                                                          await getOrderDetails(
-                                                              order.ordersId
-                                                                  .toString());
+                                                              "${order.id ?? "0"}");
                                                           Get.to(
                                                             const InvoiceScreen(),
                                                           );

@@ -38,7 +38,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
   String orderNumber = "";
   OrderDetailsModelData? orderDetailsModelData;
   OrderDetailsModelDataCustomerDetails? customerDetails;
-  List<OrderDetailsModelDataCart>? cart = [];
+  OrderDetailsModelDataCart? cart;
   OrderDetailsModelDataCartItem? cartItem;
   List<OrderDetailsModelDataCartItem>? cartItems = [];
   OrderDetailsModelDataPriceSummary? priceSummary;
@@ -71,7 +71,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
             priceSummary = orderDetailsModelData!.priceSummary;
             cart = orderDetailsModelData!.cart;
             customerDetails = orderDetailsModelData!.customerDetails;
-            cartItems = cart!.map((e) => e.cartItems).single;
+            cartItems = cart!.cartItems;
             orderNumber = orderDetailsModelData!.orderNumber ?? "";
           });
         } else {
@@ -220,7 +220,6 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                               OrderDetailWidget(
                                 orderDetailsModelData: orderDetailsModelData,
                                 priceSummary: priceSummary,
-                                cart: cart,
                                 cartItem: cartItems,
                                 customerDetails: customerDetails,
                               ),

@@ -13,6 +13,7 @@ import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -38,7 +39,8 @@ class _OrderListNewState extends State<OrderListNew> {
       TextEditingController();
   final TextEditingController _paidAmountController = TextEditingController();
 
-  String mobileNumberText = "";
+  String? mobileNumberText = "";
+  int? selectedCustomerID;
   CartProvider cartProvider = CartProvider();
   int iconColor = 0;
   double _balanceAmount = 0;
@@ -47,7 +49,7 @@ class _OrderListNewState extends State<OrderListNew> {
   List<CustomerListModelData>? customerList = [];
   CustomerListModelData? selectedCustomer;
   List<ListCartModelDataCartItem>? cartProductItems = [];
-  Map<String, int> taxNames = {};
+  Map<String, num> taxNames = {};
   Map<int, bool> hoverMap = {};
 
   @override
@@ -211,35 +213,38 @@ class _OrderListNewState extends State<OrderListNew> {
                 if (mobileNumberTextController.text.isEmpty) {
                   return const Iterable<CustomerListModelData>.empty();
                 }
-                if (mobileNumberTextController.text.length < 3) {
-                  debugPrint("called");
-                  String? accessToken =
-                      Provider.of<AuthModel>(context, listen: false).token;
-                  debugPrint("accessToken From AuthModel $accessToken");
-                  debugPrint(mobileNumberTextController.text);
 
-                  try {
-                    final response = await CustomerProvider()
-                        .findCustomerByPhone(accessToken ?? "",
-                            mobileNumberTextController.text, context);
+                String? accessToken =
+                    Provider.of<AuthModel>(context, listen: false).token;
+                debugPrint("accessToken From AuthModel $accessToken");
+                debugPrint(mobileNumberTextController.text);
 
-                    if (response["status"] == "success") {
-                      CustomerListModel customerListModel =
-                          CustomerListModel.fromJson(response);
-                      List<CustomerListModelData>? filterdCustomerList =
-                          customerListModel.data;
-                      return filterdCustomerList!;
-                    } else {
-                      debugPrint('Error in response: ${response["message"]}');
-                    }
-                  } catch (error) {
-                    debugPrint('Exception caught: $error');
+                try {
+                  final response = await CustomerProvider().findCustomerByPhone(
+                      accessToken ?? "",
+                      mobileNumberTextController.text,
+                      context);
+
+                  if (response["status"] == "success") {
+                    CustomerListModel customerListModel =
+                        CustomerListModel.fromJson(response);
+                    List<CustomerListModelData>? filteredCustomerList =
+                        customerListModel.data;
+                    return filteredCustomerList!.isNotEmpty
+                        ? filteredCustomerList
+                        : const Iterable<CustomerListModelData>.empty();
+                  } else {
+                    debugPrint('Error in response: ${response["message"]}');
                   }
+                } catch (error) {
+                  debugPrint('Exception caught: $error');
                 }
-                return customerList!;
+
+                return const Iterable<
+                    CustomerListModelData>.empty(); // Return empty if no customers found
               },
               displayStringForOption: (CustomerListModelData customer) =>
-                  customer.name ?? '',
+                  "${customer.name} ${customer.phone}",
               onSelected: (CustomerListModelData selection) {
                 String? accessToken =
                     Provider.of<AuthModel>(context, listen: false).token;
@@ -249,16 +254,18 @@ class _OrderListNewState extends State<OrderListNew> {
                         customerId: selection.id ?? 0,
                         accessToken: accessToken ?? '');
                 setState(() {
-                  mobileNumberText = selection.phone!;
+                  mobileNumberText = "";
+                  selectedCustomerID = selection.id!;
                   selectedCustomer = selection;
                 });
               },
               fieldViewBuilder: (BuildContext context,
-                  mobileNumberTextController,
+                  TextEditingController mobileNumberTextController,
                   FocusNode focusNode,
                   VoidCallback onFieldSubmitted) {
                 return TextField(
-                  controller: mobileNumberTextController,
+                  controller:
+                      mobileNumberTextController, // Ensure this is correctly set
                   focusNode: focusNode,
                   decoration: InputDecoration(
                     hintText: 'Enter mobile number',
@@ -272,7 +279,8 @@ class _OrderListNewState extends State<OrderListNew> {
                   ),
                   onChanged: (value) {
                     setState(() {
-                      mobileNumberText = value;
+                      mobileNumberText =
+                          value; // Update the state variable as well
                     });
                   },
                   style: buildCustomStyle(
@@ -323,7 +331,7 @@ class _OrderListNewState extends State<OrderListNew> {
                                     : Colors.white,
                                 child: ListTile(
                                   title: Text(
-                                    option.name ?? '',
+                                    "${option.name} ${option.phone}",
                                     style: buildCustomStyle(
                                       FontWeight.w500,
                                       12,
@@ -366,6 +374,8 @@ class _OrderListNewState extends State<OrderListNew> {
   }
 
   Widget _buildCartItemsList(Size size) {
+    final generalSettingsprovider =
+        Provider.of<GeneralSettingsProvider>(context);
     return SizedBox(
       height: size.height * 0.22,
       child: Consumer<CartProvider>(
@@ -376,10 +386,9 @@ class _OrderListNewState extends State<OrderListNew> {
               if (snapshot.hasData) {
                 debugPrint("Inside Order List Consumer");
                 List<ListCartModelData>? cartItems = snapshot.data;
-                List<ListCartModelDataCartItem>? cartItem = cartProductItems =
-                    cartItems!.isEmpty
-                        ? []
-                        : cartItems.map((e) => e.cartItems).first;
+                List<ListCartModelDataCartItem>? cartItem = cartItems!.isEmpty
+                    ? []
+                    : cartItems.map((e) => e.cartItems).first;
 
                 if (cartItems.isNotEmpty) {
                   taxNames = cartItems.first.taxAmounts ?? {};
@@ -397,12 +406,6 @@ class _OrderListNewState extends State<OrderListNew> {
                       child: ExpansionTile(
                         maintainState: true,
                         childrenPadding: const EdgeInsets.only(bottom: 10),
-                        // collapsedBackgroundColor: index % 2 == 0
-                        //     ? Colors.grey.withOpacity(0.1)
-                        //     : null,
-                        // backgroundColor: index % 2 == 0
-                        //     ? Colors.grey.withOpacity(0.1)
-                        //     : null,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(3)),
                         tilePadding: const EdgeInsets.symmetric(horizontal: 10),
@@ -431,107 +434,123 @@ class _OrderListNewState extends State<OrderListNew> {
                         controlAffinity: ListTileControlAffinity.leading,
                         iconColor: ColorManager.textColor,
                         collapsedIconColor: ColorManager.textColor,
-                        title: LayoutBuilder(
-                          builder: (context, constraints) {
-                            double fontSize =
-                                constraints.maxWidth < 600 ? 12 : 14;
+                        title: GestureDetector(
+                          onTap: () {
+                            debugPrint(
+                                "stockEnabled ${generalSettingsprovider.generalSettings!.stockEnabled}");
+                            if (!generalSettingsprovider
+                                .generalSettings!.stockEnabled) {
+                              _showCartItemDetailsDialog(
+                                  context, cartItem[index]);
+                            }
+                          },
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              double fontSize =
+                                  constraints.maxWidth < 600 ? 12 : 14;
 
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      flex: 5,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '${index + 1}. ${cartItem[index].productName}',
-                                            style: buildCustomStyle(
-                                                FontWeightManager.regular,
-                                                fontSize,
-                                                0.21,
-                                                ColorManager.textColor),
-                                            overflow: TextOverflow.ellipsis,
-                                            maxLines: 1,
-                                          ),
-                                          Text(
-                                            '${cartItem[index].productUnit}',
-                                            style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                fontSize - 2,
-                                                0.21,
-                                                ColorManager.textColor),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 3,
-                                      child: Center(
-                                        child: CompactQuantityControl(
-                                          quantity: cartItem[index].quantity!,
-                                          onIncrement: () {
-                                            String? accessToken =
-                                                Provider.of<AuthModel>(context,
-                                                        listen: false)
-                                                    .token;
-                                            Provider.of<CartProvider>(context,
-                                                    listen: false)
-                                                .addToCartAPI(
-                                              accessToken: accessToken ?? "",
-                                              customerId:
-                                                  Provider.of<AuthModel>(
-                                                          context,
-                                                          listen: false)
-                                                      .userId!,
-                                              productId:
-                                                  cartItem[index].productId ??
-                                                      1,
-                                              quantity: 1,
-                                            );
-                                          },
-                                          onDecrement: () {
-                                            String? accessToken =
-                                                Provider.of<AuthModel>(context,
-                                                        listen: false)
-                                                    .token;
-                                            Provider.of<CartProvider>(context,
-                                                    listen: false)
-                                                .removeFromCartAPI(
-                                              accessToken: accessToken ?? "",
-                                              customerId:
-                                                  Provider.of<AuthModel>(
-                                                          context,
-                                                          listen: false)
-                                                      .userId!,
-                                              productId:
-                                                  cartItem[index].id ?? 1,
-                                              remove: '',
-                                            );
-                                          },
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 4,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${index + 1}. ${cartItem[index].productName}',
+                                              style: buildCustomStyle(
+                                                  FontWeightManager.regular,
+                                                  fontSize,
+                                                  0.21,
+                                                  ColorManager.textColor),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
+                                            Text(
+                                              '${cartItem[index].productUnit}',
+                                              style: buildCustomStyle(
+                                                  FontWeightManager.medium,
+                                                  fontSize - 2,
+                                                  0.21,
+                                                  ColorManager.textColor),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        '${cartItem[index].currency} ${cartItem[index].unitPrice}',
-                                        style: buildCustomStyle(
-                                            FontWeightManager.regular,
-                                            fontSize,
-                                            0.21,
-                                            ColorManager.textColor),
-                                        textAlign: TextAlign.end,
+                                      Expanded(
+                                        flex: 3,
+                                        child: Center(
+                                          child: CompactQuantityControl(
+                                            quantity: cartItem[index].quantity!,
+                                            onIncrement: () {
+                                              String? accessToken =
+                                                  Provider.of<AuthModel>(
+                                                          context,
+                                                          listen: false)
+                                                      .token;
+                                              Provider.of<CartProvider>(context,
+                                                      listen: false)
+                                                  .addToCartAPI(
+                                                accessToken: accessToken ?? "",
+                                                customerId:
+                                                    Provider.of<AuthModel>(
+                                                            context,
+                                                            listen: false)
+                                                        .userId!,
+                                                productId:
+                                                    cartItem[index].productId ??
+                                                        1,
+                                                quantity: 1,
+                                              );
+                                            },
+                                            onDecrement: () {
+                                              String? accessToken =
+                                                  Provider.of<AuthModel>(
+                                                          context,
+                                                          listen: false)
+                                                      .token;
+                                              Provider.of<CartProvider>(context,
+                                                      listen: false)
+                                                  .decrementCartItemQuantityAPI(
+                                                accessToken: accessToken ?? "",
+                                                customerId:
+                                                    Provider.of<AuthModel>(
+                                                            context,
+                                                            listen: false)
+                                                        .userId!,
+                                                productId:
+                                                    cartItem[index].id ?? 1,
+                                                remove: '',
+                                                quantity:
+                                                    cartItem[index].quantity! -
+                                                        1,
+                                              );
+                                            },
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            );
-                          },
+                                      Expanded(
+                                        flex: 3,
+                                        child: Text(
+                                          '${cartItem[index].currency} ${cartItem[index].unitPrice}',
+                                          style: buildCustomStyle(
+                                              FontWeightManager.regular,
+                                              fontSize,
+                                              0.21,
+                                              ColorManager.textColor),
+                                          textAlign: TextAlign.end,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
                         ),
                         children: [
                           Padding(
@@ -569,6 +588,109 @@ class _OrderListNewState extends State<OrderListNew> {
           );
         },
       ),
+    );
+  }
+
+  void _showCartItemDetailsDialog(
+      BuildContext context, ListCartModelDataCartItem cartItem) {
+    final TextEditingController amountController =
+        TextEditingController(text: cartItem.unitPrice.toString());
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Text(
+            cartItem.productName ?? '',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Row(
+                  //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  //   children: [
+                  //     const Text(
+                  //       'Unit Price:',
+                  //       style: TextStyle(
+                  //           fontSize: 16, fontWeight: FontWeight.bold),
+                  //     ),
+                  //     Text(
+                  //       '${cartItem.unitPrice} ${cartItem.currency}',
+                  //       style: const TextStyle(
+                  //           fontSize: 16, fontWeight: FontWeight.bold),
+                  //     ),
+                  //   ],
+                  // ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Enter New Price',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Colors.grey),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Colors.blueAccent),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text('Close'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (amountController.text.isEmpty) {
+                  showScaffoldError(
+                    context: context,
+                    message: 'Please enter a valid price',
+                  );
+                  return;
+                } else {
+                  String newPrice = amountController.text;
+
+                  String? accessToken =
+                      Provider.of<AuthModel>(context, listen: false).token;
+
+                  Provider.of<CartProvider>(context, listen: false)
+                      .updateCartItemPrice(
+                    accessToken: accessToken ?? "",
+                    cartItemId: cartItem.id ?? 0,
+                    unitPrice: newPrice,
+                    customerId: 1,
+                  );
+                  showScaffold(
+                    context: context,
+                    message: 'Price Updated Successfully',
+                  );
+                  Navigator.of(context).pop(); // Close the dialog
+                }
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -878,47 +1000,78 @@ class _OrderListNewState extends State<OrderListNew> {
               flex: 3,
               child: GestureDetector(
                 onTap: () async {
-                  String? accessToken =
-                      Provider.of<AuthModel>(context, listen: false).token;
-                  debugPrint("accessToken From AuthModel $accessToken");
-                  final provider =
-                      Provider.of<CartProvider>(context, listen: false);
-                  int cartId = provider.getCartIDForOrder;
-                  debugPrint("$cartId");
+                  if (selectedCustomerID == null && mobileNumberText == "") {
+                    showScaffoldError(
+                      context: context,
+                      message: "Please select a customer",
+                    );
+                  } else if (iconColor != 1 &&
+                      iconColor != 2 &&
+                      iconColor != 3) {
+                    showScaffoldError(
+                      context: context,
+                      message: "Please chose a Payment Method",
+                    );
+                  } else {
+                    String? accessToken =
+                        Provider.of<AuthModel>(context, listen: false).token;
+                    debugPrint("accessToken From AuthModel $accessToken");
+                    final provider =
+                        Provider.of<CartProvider>(context, listen: false);
+                    int cartId = provider.getCartIDForOrder;
+                    debugPrint("$cartId");
 
-                  try {
-                    await Provider.of<CartProvider>(context, listen: false)
-                        .addToOrderAPI(
-                      cartIds: cartId,
-                      accessToken: accessToken ?? "",
-                      transactionId: _transactionNumberController.text,
-                      totalPrice:
-                          Provider.of<CartProvider>(context, listen: false)
-                              .priceSummary!
-                              .netTotal
-                              .toString(),
-                      customerId: Provider.of<AuthModel>(context, listen: false)
-                          .userId!,
-                    )
-                        .then((response) {
-                      AddToOrderModel addToOrderModel =
-                          AddToOrderModel.fromJson(response);
-                      debugPrint(
-                          "$response  Provider.of<CartProvider>(context,listen: false).addToOrderAPI(); ");
-                      if (response["status"] == "success") {
-                        showScaffold(
-                          context: context,
-                          message: "${addToOrderModel.message}",
-                        );
-                      } else {
-                        showScaffoldError(
-                          context: context,
-                          message: "${addToOrderModel.message}",
-                        );
-                      }
-                    });
-                  } catch (error) {
-                    debugPrint(error.toString());
+                    String paymentMethod = "";
+
+                    if (iconColor == 1) {
+                      paymentMethod = "CASH";
+                    } else if (iconColor == 2 || iconColor == 3) {
+                      paymentMethod = "ONLINE";
+                    }
+
+                    try {
+                      await Provider.of<CartProvider>(context, listen: false)
+                          .addToOrderAPI(
+                        cartIds: cartId,
+                        accessToken: accessToken ?? "",
+                        transactionId: _transactionNumberController.text,
+                        totalPrice:
+                            Provider.of<CartProvider>(context, listen: false)
+                                .priceSummary!
+                                .netTotal
+                                .toString(),
+                        customerId: selectedCustomerID,
+                        phone: mobileNumberText,
+                        paymentMethod: paymentMethod,
+                      )
+                          .then((response) {
+                        AddToOrderModel addToOrderModel =
+                            AddToOrderModel.fromJson(response);
+                        debugPrint("$response");
+                        if (response["status"] == "success") {
+                          showScaffold(
+                            context: context,
+                            message: "${addToOrderModel.message}",
+                          );
+
+                          // Clear the mobile number after successful save
+                          setState(() {
+                            mobileNumberText = ""; // Clear the variable
+                            selectedCustomerID = null;
+                            iconColor = 0;
+                            mobileNumberTextController
+                                .clear(); // Clear the text field
+                          });
+                        } else {
+                          showScaffoldError(
+                            context: context,
+                            message: "${addToOrderModel.message}",
+                          );
+                        }
+                      });
+                    } catch (error) {
+                      debugPrint(error.toString());
+                    }
                   }
                 },
                 child: Container(

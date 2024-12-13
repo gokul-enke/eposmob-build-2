@@ -408,8 +408,7 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
                                   debugPrint("Add New Customer");
                                   debugPrint(phoneNumberController.text
                                       .replaceAll("-", ""));
-                                  if (firstNameTextController.text.isEmpty ||
-                                      phoneNumberController.text.isEmpty) {
+                                  if (phoneNumberController.text.isEmpty) {
                                     showScaffold(
                                       context: context,
                                       message:

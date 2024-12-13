@@ -48,7 +48,7 @@ class GetProduct {
   final String? productName;
   final String? productSlug;
   final String? barcode;
-  final List<ProductCategory>? category;
+  final ProductCategory? category;
   final String? numberOfProductsAvailble;
   final String? rating;
   final String? unit;
@@ -88,9 +88,8 @@ class GetProduct {
         productSlug: json["product_slug"],
         barcode: json["barcode"],
         category: json["category"] == null
-            ? []
-            : List<ProductCategory>.from(
-                json["category"]!.map((x) => ProductCategory.fromJson(x))),
+            ? null
+            : ProductCategory.fromJson(json["category"]),
         numberOfProductsAvailble: json["number_of_products_availble"],
         rating: json["rating"],
         unit: json["unit"],
@@ -115,9 +114,7 @@ class GetProduct {
         "product_name": productName,
         "product_slug": productSlug,
         "barcode": barcode,
-        "category": category == null
-            ? []
-            : List<dynamic>.from(category!.map((x) => x.toJson())),
+        "category": category?.toJson(),
         "number_of_products_availble": numberOfProductsAvailble,
         "rating": rating,
         "price": price?.toJson(),
@@ -338,14 +335,14 @@ class Meta {
   });
 
   factory Meta.fromJson(Map<String, dynamic> json) => Meta(
-    currentPage: json["current_page"],
-    lastPage: json["last_page"],
-    total: json["total"],
-  );
+        currentPage: json["current_page"],
+        lastPage: json["last_page"],
+        total: json["total"],
+      );
 
   Map<String, dynamic> toJson() => {
-    "current_page": currentPage,
-    "last_page": lastPage,
-    "total": total,
-  };
+        "current_page": currentPage,
+        "last_page": lastPage,
+        "total": total,
+      };
 }

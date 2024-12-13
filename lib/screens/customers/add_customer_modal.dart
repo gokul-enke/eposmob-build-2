@@ -27,6 +27,7 @@ void showAddCustomerModal(BuildContext context, Size size,
 
   String? selectedStateId;
   String? selectedDistrictId;
+  bool statesLoaded = false;
 
   showDialog(
     context: context,
@@ -35,9 +36,12 @@ void showAddCustomerModal(BuildContext context, Size size,
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
 
-      // Fetch states when the modal is opened
+// In your showDialog method
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        locationProvider.listAllStates(accessToken!);
+        if (!statesLoaded) {
+          locationProvider.listAllStates(accessToken!);
+          statesLoaded = true; // Set flag to true after loading
+        }
       });
       return StatefulBuilder(builder: (context, setState) {
         return Scaffold(
@@ -343,11 +347,10 @@ void showAddCustomerModal(BuildContext context, Size size,
                           child: CustomRoundButton(
                             title: "Submit",
                             fct: () async {
-                              if (firstNameTextController.text.isEmpty ||
-                                  phoneNumberController.text.isEmpty) {
-                                showScaffold(
+                              if (phoneNumberController.text.isEmpty) {
+                                showScaffoldError(
                                   context: context,
-                                  message: 'Please Fill the Required Fields',
+                                  message: 'Please Fill Phone Number',
                                 );
                               } else {
                                 showDialog(
@@ -361,10 +364,13 @@ void showAddCustomerModal(BuildContext context, Size size,
                                   },
                                 );
 
+                                debugPrint(phoneNumberController.text);
+
                                 String? accessToken = Provider.of<AuthModel>(
                                         context,
                                         listen: false)
                                     .token;
+
                                 await CustomerProvider()
                                     .addCustomer(
                                   accessToken ?? "",

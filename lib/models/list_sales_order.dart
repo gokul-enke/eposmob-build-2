@@ -1,29 +1,15 @@
-// To parse this JSON data, do
-//
-//     final listOrderModel = listOrderModelFromJson(jsonString);
-
 import 'dart:convert';
-
-// import 'package:pos_machine/models/pagination.dart';
-
-import 'add_to_cart.dart';
-
-ListSalesOrderModel listOrderModelFromJson(String str) =>
-    ListSalesOrderModel.fromJson(json.decode(str));
-
-String listOrderModelToJson(ListSalesOrderModel data) =>
-    json.encode(data.toJson());
 
 class ListSalesOrderModel {
   final String? status;
   final String? message;
   final List<ListOrderModelData>? data;
-  final Pagination? pagination;
+  final PaginationInfo? pagination;
 
   ListSalesOrderModel({
     this.status,
-    this.data,
     this.message,
+    this.data,
     this.pagination,
   });
 
@@ -35,13 +21,13 @@ class ListSalesOrderModel {
             ? []
             : List<ListOrderModelData>.from(json["data"]["data"]
                 .map((x) => ListOrderModelData.fromJson(x))),
-        pagination: json["data"]?["pagination"] == null
-            ? null
-            : Pagination.fromJson(json["data"]["pagination"]),
+        pagination:
+            json["data"] != null ? PaginationInfo.fromJson(json["data"]) : null,
       );
 
   Map<String, dynamic> toJson() => {
         "status": status,
+        "message": message,
         "data": data == null
             ? []
             : List<dynamic>.from(data!.map((x) => x.toJson())),
@@ -50,81 +36,120 @@ class ListSalesOrderModel {
 }
 
 class ListOrderModelData {
-  final int? ordersId;
-  final int? storeId;
-  final DateTime? orderDate;
+  final int? id;
   final int? cartId;
+  final DateTime? orderDate;
   final String? orderNumber;
-  final String? orderStatus;
+  final String? grantTotal;
+  final String? paymentStatus;
+  final String? status;
   final CustomerDetails? customerDetails;
   final PriceSummary? priceSummary;
-  final int? totalItems;
-  final dynamic paymentStatus;
-  final dynamic deliveryStatus;
-  final PaymentDetails? paymentDetails;
   final List<OrderProp>? orderProps;
+  final List<CartItem>? cartItems;
 
   ListOrderModelData({
-    this.ordersId,
-    this.storeId,
-    this.orderDate,
+    this.id,
     this.cartId,
+    this.orderDate,
     this.orderNumber,
-    this.orderStatus,
+    this.grantTotal,
+    this.paymentStatus,
+    this.status,
     this.customerDetails,
     this.priceSummary,
-    this.totalItems,
-    this.paymentStatus,
-    this.deliveryStatus,
-    this.paymentDetails,
     this.orderProps,
+    this.cartItems,
   });
 
   factory ListOrderModelData.fromJson(Map<String, dynamic> json) =>
       ListOrderModelData(
-        ordersId: json["orders_id"],
-        storeId: json["store_id"],
+        id: json["id"],
+        cartId: json["cart_id"],
         orderDate: json["order_date"] == null
             ? null
-            : DateTime.parse(json["order_date"]),
-        //   orderDate: json["order_date"],
-        cartId: json["cart_id"],
+            : DateTime.tryParse(json["order_date"]),
         orderNumber: json["order_number"],
-        orderStatus: json["order_status"],
-        customerDetails: json["customer_details"] == null
-            ? null
-            : CustomerDetails.fromJson(json["customer_details"]),
-        priceSummary: json["price_summary"] == null
-            ? null
-            : PriceSummary.fromJson(json["price_summary"]),
-        totalItems: json["total_items"],
+        grantTotal: json["grant_total"],
         paymentStatus: json["payment_status"],
-        deliveryStatus: json["delivery_status"],
-        paymentDetails: json["payment_details"] == null
-            ? null
-            : PaymentDetails.fromJson(json["payment_details"]),
+        status: json["status"],
+        customerDetails:
+            json["orderProps"] != null ? CustomerDetails.fromJson(json) : null,
+        priceSummary: json["cart_items"]?["price_summary"] != null
+            ? PriceSummary.fromJson(json["cart_items"]["price_summary"])
+            : null,
         orderProps: json["order_props"] == null
             ? []
             : List<OrderProp>.from(
-                json["order_props"]!.map((x) => OrderProp.fromJson(x))),
+                json["order_props"].map((x) => OrderProp.fromJson(x))),
+        cartItems: json["cart_items"]?["cart_items"] == null
+            ? []
+            : List<CartItem>.from(json["cart_items"]["cart_items"]
+                .map((x) => CartItem.fromJson(x))),
       );
 
   Map<String, dynamic> toJson() => {
-        "orders_id": ordersId,
-        "store_id": storeId,
-        "order_date": orderDate,
+        "id": id,
         "cart_id": cartId,
+        "order_date": orderDate?.toIso8601String(),
         "order_number": orderNumber,
-        "order_status": orderStatus,
-        "customer_details": customerDetails?.toJson(),
-        "price_summary": priceSummary?.toJson(),
-        "total_items": totalItems,
+        "grant_total": grantTotal,
         "payment_status": paymentStatus,
-        "delivery_status": deliveryStatus,
-        "payment_details": paymentDetails?.toJson(),
+        "status": status,
+        "orderProps": customerDetails?.toJson(),
+        "cart_items": {
+          "cart_items": cartItems == null
+              ? []
+              : List<dynamic>.from(cartItems!.map((x) => x.toJson())),
+          "price_summary": priceSummary?.toJson(),
+        },
         "order_props": orderProps == null
             ? []
             : List<dynamic>.from(orderProps!.map((x) => x.toJson())),
+      };
+}
+
+class CartItem {
+  final int? id;
+  final int? cartId;
+  final int? customerId;
+  final int? storeId;
+  final int? productId;
+  final String? productName;
+  final int? quantity;
+  final double? totalPrice;
+
+  CartItem({
+    this.id,
+    this.cartId,
+    this.customerId,
+    this.storeId,
+    this.productId,
+    this.productName,
+    this.quantity,
+    this.totalPrice,
+  });
+
+  factory CartItem.fromJson(Map<String, dynamic> json) => CartItem(
+        id: json["id"],
+        cartId: json["cart_id"],
+        customerId: json["customer_id"],
+        storeId: json["store_id"],
+        productId: json["product_id"],
+        productName: json["product_name"],
+        quantity: json["quantity"],
+        totalPrice: json["total_price"]?.toDouble(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "cart_id": cartId,
+        "customer_id": customerId,
+        "store_id": storeId,
+        "product_id": productId,
+        "product_name": productName,
+        "quantity": quantity,
+        "total_price": totalPrice,
       };
 }
 
@@ -132,28 +157,45 @@ class CustomerDetails {
   final String? name;
   final String? email;
   final String? phone;
-  final int? customerId;
 
   CustomerDetails({
     this.name,
     this.email,
     this.phone,
-    this.customerId,
   });
 
-  factory CustomerDetails.fromJson(Map<String, dynamic> json) =>
-      CustomerDetails(
-        name: json["name"],
-        email: json["email"],
-        phone: json["phone"],
-        customerId: json["customer_id"],
-      );
+  factory CustomerDetails.fromJson(Map<String, dynamic> json) {
+    String? email;
+    String? phone;
+    String? name = "no name";
+
+    // Iterate over the order_props list to extract needed information
+    if (json["order_props"] != null) {
+      for (var prop in json["order_props"]) {
+        if (prop["code"] == "CUSTOMER_EMAIL") {
+          email = jsonDecode(prop["value"]); // Assuming it's a JSON string
+        } else if (prop["code"] == "CUSTOMER_PHONE") {
+          phone = jsonDecode(prop["value"]); // Assuming it's a JSON string
+        } else if (prop["code"] == "DELIVERY_ADDRESS") {
+          var address = jsonDecode(prop["value"]);
+          if (address is Map<String, dynamic>) {
+            name = address["name"] ?? "no name";
+          }
+        }
+      }
+    }
+
+    return CustomerDetails(
+      name: name,
+      email: email,
+      phone: phone,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         "name": name,
-        "email": email,
-        "phone": phone,
-        "customer_id": customerId,
+        "CUSTOMER_EMAIL": email,
+        "CUSTOMER_PHONE": phone,
       };
 }
 
@@ -167,8 +209,8 @@ class OrderProp {
   });
 
   factory OrderProp.fromJson(Map<String, dynamic> json) => OrderProp(
-        propsId: json["props_id"],
-        propsValue: json["props_value"],
+        propsId: json["code"],
+        propsValue: json["value"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -177,87 +219,59 @@ class OrderProp {
       };
 }
 
-class PaymentDetails {
-  final int? paymentId;
-  final String? paymentStatus;
+class PriceSummary {
+  final String? grandTotal;
+  final String? taxTotal;
 
-  PaymentDetails({
-    this.paymentId,
-    this.paymentStatus,
-  });
+  PriceSummary({this.grandTotal, this.taxTotal});
 
-  factory PaymentDetails.fromJson(Map<String, dynamic> json) => PaymentDetails(
-        paymentId: json["payment_id"],
-        paymentStatus: json["payment_status"],
+  factory PriceSummary.fromJson(Map<String, dynamic> json) => PriceSummary(
+        grandTotal: json["grand_total"].toString(),
+        taxTotal: json["tax_total"].toString(),
       );
 
   Map<String, dynamic> toJson() => {
-        "payment_id": paymentId,
-        "payment_status": paymentStatus,
+        "grand_total": grandTotal,
+        "tax_total": taxTotal,
       };
 }
 
-// class PriceSummary {
-//     final int? subTotal;
-//     final int? totalTax;
-//     final int? netTotal;
-//     final int? discount;
-//     final int? netPayable;
-
-//     PriceSummary({
-//         this.subTotal,
-//         this.totalTax,
-//         this.netTotal,
-//         this.discount,
-//         this.netPayable,
-//     });
-
-//     factory PriceSummary.fromJson(Map<String, dynamic> json) => PriceSummary(
-//         subTotal: json["sub_total"],
-//         totalTax: json["total_tax"],
-//         netTotal: json["net_total"],
-//         discount: json["discount"],
-//         netPayable: json["net_payable"],
-//     );
-
-//     Map<String, dynamic> toJson() => {
-//         "sub_total": subTotal,
-//         "total_tax": totalTax,
-//         "net_total": netTotal,
-//         "discount": discount,
-//         "net_payable": netPayable,
-//     };
-//}
-class Pagination {
-  final Meta? meta; // Contains pagination metadata
-
-  Pagination({this.meta});
-
-  factory Pagination.fromJson(Map<String, dynamic> json) => Pagination(
-        meta: json["meta"] == null ? null : Meta.fromJson(json["meta"]),
-      );
-
-  Map<String, dynamic> toJson() => {
-        "meta": meta?.toJson(),
-      };
-}
-
-class Meta {
+class PaginationInfo {
   final int? currentPage;
-  final int? lastPage;
+  final int? from;
+  final int? to;
+  final int? totalPages;
+  final String? firstPageUrl;
+  final String? nextPageUrl;
+  final String? prevPageUrl;
 
-  Meta({
+  PaginationInfo({
     this.currentPage,
-    this.lastPage,
+    this.from,
+    this.to,
+    this.totalPages,
+    this.firstPageUrl,
+    this.nextPageUrl,
+    this.prevPageUrl,
   });
 
-  factory Meta.fromJson(Map<String, dynamic> json) => Meta(
+  factory PaginationInfo.fromJson(Map<String, dynamic> json) => PaginationInfo(
         currentPage: json["current_page"],
-        lastPage: json["last_page"],
+        from: json["from"],
+        to: json["to"],
+        totalPages: (json["last_page"] != null) ? json["last_page"] : null,
+        firstPageUrl: json["first_page_url"],
+        nextPageUrl: json["next_page_url"],
+        prevPageUrl: json["prev_page_url"],
       );
 
   Map<String, dynamic> toJson() => {
         "current_page": currentPage,
-        "last_page": lastPage,
+        "from": from,
+        "to": to,
+        "total_pages": totalPages,
+        "first_page_url": firstPageUrl,
+        "next_page_url": nextPageUrl,
+        "prev_page_url": prevPageUrl,
       };
 }

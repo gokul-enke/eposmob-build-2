@@ -23,12 +23,14 @@ class AddToCartModel {
   factory AddToCartModel.fromJson(Map<String, dynamic> json) => AddToCartModel(
         status: json["status"],
         message: json["message"],
-        cart: json["cart"] == null ? null : AddToCart.fromJson(json["cart"]),
+        cart: json["data"] is Map<String, dynamic>
+            ? AddToCart.fromJson(json["data"])
+            : null, // Handle case where data is an array
       );
 
   Map<String, dynamic> toJson() => {
         "status": status,
-        "cart": cart?.toJson(),
+        "data": cart?.toJson(),
       };
 }
 

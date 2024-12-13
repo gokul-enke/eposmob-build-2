@@ -413,7 +413,7 @@ class CategoryListItem extends StatelessWidget {
                                           '',
                                       customerId ?? 1,
                                       selectionProvider.productList![index]
-                                              .category![0].name ??
+                                              .category!.name ??
                                           "",
                                       selectionProvider
                                               .productList![index].productId ??

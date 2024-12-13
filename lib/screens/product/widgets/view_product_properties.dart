@@ -28,7 +28,7 @@ class ViewProductPropertiesScreen extends StatelessWidget {
 
       return productProps.map((prop) {
         return ListTile(
-          title: Text("${prop.label}"),
+          title: Text("${prop.propsCode}"),
           subtitle: Text(prop.masterValue.toString()),
           trailing: Text("Stock Applicable: ${prop.stockApplicable}"),
         );

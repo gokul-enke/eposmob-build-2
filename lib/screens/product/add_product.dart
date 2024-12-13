@@ -665,17 +665,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
                       return Table(
                         columnWidths: const {
-                          0: FractionColumnWidth(0.01),
-                          1: FractionColumnWidth(0.03),
-                          2: FractionColumnWidth(0.03),
-                          3: FractionColumnWidth(0.03),
-                          4: FractionColumnWidth(0.03),
+                          0: FractionColumnWidth(0.1),
+                          1: FractionColumnWidth(0.25),
+                          2: FractionColumnWidth(0.2),
+                          3: FractionColumnWidth(0.25),
+                          4: FractionColumnWidth(0.2),
                         },
-                        border: TableBorder.symmetric(
-                            outside: const BorderSide(
+                        border: const TableBorder.symmetric(
+                            outside: BorderSide(
                                 color: ColorManager.tableBOrderColor,
                                 width: 0.3),
-                            inside: const BorderSide(
+                            inside: BorderSide(
                                 color: ColorManager.tableBOrderColor,
                                 width: 0.8)),
                         defaultVerticalAlignment:
@@ -772,10 +772,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             int index = entry.key; // This is the index
                             var products = entry.value; // This is the product
                             // Assuming each product has a list of categories and you want the name of the first category
-                            String categoryName = products.category != null &&
-                                    products.category!.isNotEmpty
-                                ? products.category!.first.name ?? 'Unknown'
+                            String categoryName = products.category != null
+                                ? products.category!.name ??
+                                    'Unknown' // Directly access the name property
                                 : 'No Category';
+
                             return TableRow(
                               children: [
                                 TableCell(

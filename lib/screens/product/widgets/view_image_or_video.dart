@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import 'package:provider/provider.dart';
 
 import '../../../components/build_container_box.dart';
@@ -24,6 +23,7 @@ class ViewImageOrVideoScreen extends StatelessWidget {
     Size size = MediaQuery.of(context).size;
     SideBarController sideBarController = Get.put(SideBarController());
     GetProduct? getProduct = gridSelectionProvider.getProductDetails;
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -33,7 +33,6 @@ class ViewImageOrVideoScreen extends StatelessWidget {
             width: double.infinity,
             child: BuildBoxShadowContainer(
               circleRadius: 7,
-              // margin: const EdgeInsets.only(bottom: 10),
               blurRadius: 6,
               padding: const EdgeInsets.only(
                   left: 10.0, right: 20, top: 30, bottom: 10),
@@ -41,87 +40,90 @@ class ViewImageOrVideoScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  getProduct != null &&
-                          getProduct.attachment != null &&
-                          getProduct.attachment!.isNotEmpty
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: getProduct.attachment!.map((attach) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12.0),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      bottom: 8.0,
-                                      left: 8.0,
-                                      top: 10,
-                                    ),
-                                    child: Text.rich(
+                  if (getProduct != null &&
+                      getProduct.attachment != null &&
+                      getProduct.attachment!.isNotEmpty)
+                    ...getProduct.attachment!.map((attach) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Flexible(
+                              flex: 2,
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: 8.0,
+                                  left: 8.0,
+                                  top: 10,
+                                ),
+                                child: Text.rich(
+                                  TextSpan(
+                                    text: 'Title : ',
+                                    style: buildCustomStyle(
+                                        FontWeightManager.semiBold,
+                                        FontSize.s15,
+                                        0.30,
+                                        ColorManager.textColor),
+                                    children: <TextSpan>[
                                       TextSpan(
-                                        text: 'Title : ',
+                                        text: "${attach.title}",
                                         style: buildCustomStyle(
-                                            FontWeightManager.semiBold,
+                                            FontWeightManager.medium,
                                             FontSize.s15,
                                             0.30,
                                             ColorManager.textColor),
-                                        children: <TextSpan>[
-                                          TextSpan(
-                                            text: "${attach.title}",
-                                            style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s15,
-                                                0.30,
-                                                ColorManager.textColor),
-                                          ),
-                                        ],
                                       ),
-                                    ),
+                                    ],
                                   ),
-                                  BuildBoxShadowContainer(
-                                      margin: const EdgeInsets.only(
-                                          left: 5, right: 5),
-                                      circleRadius: 5,
-                                      height: 100,
-                                      width: 150,
-                                      child: Image.network(
-                                        attach.filePath ?? "",
-                                        fit: BoxFit.cover,
-                                      )),
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                        bottom: 8.0,
-                                        left: 8.0,
-                                        top: 10,
-                                        right: 20),
-                                    child: Text.rich(
-                                      TextSpan(
-                                        text: 'Alt : ',
-                                        style: buildCustomStyle(
-                                            FontWeightManager.semiBold,
-                                            FontSize.s15,
-                                            0.30,
-                                            ColorManager.textColor),
-                                        children: <TextSpan>[
-                                          TextSpan(
-                                            text: "${attach.alt}",
-                                            style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s15,
-                                                0.30,
-                                                ColorManager.textColor),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
-                            );
-                          }).toList())
-                      : const SizedBox.shrink(),
+                            ),
+                            Flexible(
+                              flex: 3,
+                              child: BuildBoxShadowContainer(
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 5),
+                                circleRadius: 5,
+                                height: 100,
+                                width: size.width * 0.2, // Responsive width
+                                child: Image.network(
+                                  attach.filePath ?? "",
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            Flexible(
+                              flex: 2,
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    bottom: 8.0, left: 8.0, top: 10, right: 20),
+                                child: Text.rich(
+                                  TextSpan(
+                                    text: 'Alt : ',
+                                    style: buildCustomStyle(
+                                        FontWeightManager.semiBold,
+                                        FontSize.s15,
+                                        0.30,
+                                        ColorManager.textColor),
+                                    children: <TextSpan>[
+                                      TextSpan(
+                                        text: "${attach.alt}",
+                                        style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s15,
+                                            0.30,
+                                            ColorManager.textColor),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
                   const SizedBox(height: 50),
                   Row(
                     children: [
@@ -135,7 +137,8 @@ class ViewImageOrVideoScreen extends StatelessWidget {
                             sideBarController.index.value = 14;
                           },
                           height: 50,
-                          width: size.width * 0.19,
+                          width: size.width *
+                              0.25, // Adjusted width for responsiveness
                           fontSize: FontSize.s12,
                         ),
                       ),

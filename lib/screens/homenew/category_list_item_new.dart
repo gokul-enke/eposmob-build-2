@@ -100,11 +100,7 @@ class CategoryListItemNew extends StatelessWidget {
             // ),
             buildColumnWidgetForTextFields(
               onchanged: (query) {
-                debugPrint(query);
-                final filteredCategories =
-                    categoryProvider.searchCategories(query!);
-
-                categoryProvider.updateFilteredCategories(filteredCategories);
+                categoryProvider.listAllCategory(filterName: query);
               },
               size: size,
               hintText: 'Search category',
@@ -152,16 +148,16 @@ class CategoryListItemNew extends StatelessWidget {
                           // debugPrint("${provider.category!.length}");
                           return GestureDetector(
                             onTap: () {
-                              provider.selectCategory(
-                                  index,
-                                  provider.category![index].categoryName ?? "",
-                                  index == 0
-                                      ? productProvider.productList!.length
-                                      : provider
-                                              .category![index].productsCount ??
-                                          0);
-                              productProvider.updateCategory(
-                                  provider.category![index].categoryId ?? 0);
+                              // provider.selectCategory(
+                              //     index,
+                              //     provider.category![index].categoryName ?? "",
+                              //     index == 0
+                              //         ? productProvider.productList!.length
+                              //         : provider
+                              //                 .category![index].productsCount ??
+                              //             0);
+                              // productProvider.updateCategory(
+                              //     provider.category![index].categoryId ?? 0);
 
                               // productProvider.selectedProductsUpOnCategory;
                               // productProvider.selectedProducts(index == 0
@@ -251,10 +247,7 @@ class CategoryListItemNew extends StatelessWidget {
             // ),
             buildColumnWidgetForTextFields(
               onchanged: (query) {
-                debugPrint(query);
-                final filteredProducts = productProvider.searchProducts(query!);
-
-                productProvider.updateFilteredProducts(filteredProducts);
+                productProvider.listAllProducts(filterName: query);
               },
               size: size,
               hintText: 'Search Product',
@@ -378,7 +371,7 @@ class CategoryListItemNew extends StatelessWidget {
                                           '',
                                       customerId ?? 1,
                                       selectionProvider.productList![index]
-                                              .category![0].name ??
+                                              .category!.name ??
                                           "",
                                       selectionProvider
                                               .productList![index].productId ??
@@ -545,19 +538,16 @@ showDialogFunctionForProductDetails(
                                 quantity: 1,
                                 accessToken: accessToken ?? "")
                             .then((value) {
-                          AddToCartModel addToCartModel =
-                              AddToCartModel.fromJson(value);
                           if (value["status"] == "success") {
                             showScaffold(
                               context: context,
-                              message:
-                                  addToCartModel.message ?? "Added To Cart",
-                            ); //  'Order Placed Successfully',
+                              message: value.message ??
+                                  "Added To Cart", //  'Added To Cart',
+                            );
                           } else {
                             showScaffoldError(
                               context: context,
-                              message: addToCartModel.message ??
-                                  "Error Occured !Try Again !", //  'Added To Cart',
+                              message: value.message,
                             );
                           }
                         });

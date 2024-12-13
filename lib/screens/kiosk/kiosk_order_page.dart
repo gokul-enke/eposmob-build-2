@@ -51,7 +51,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
   List<CustomerListModelData>? customerList = [];
   CustomerListModelData? selectedCustomer;
   List<ListCartModelDataCartItem>? cartProductItems = [];
-  Map<String, int> taxNames = {};
+  Map<String, num> taxNames = {};
   Map<int, bool> hoverMap = {};
 
   @override

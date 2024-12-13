@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 
 import '../models/list_sales_order.dart';
 import '../resources/app_url.dart';
@@ -48,7 +47,6 @@ class SalesProvider with ChangeNotifier {
       'store_id': storeId.toString(),
     };
 
-    // Add filters to query parameters if they are not null
     if (orderNumber != null) queryParameters['filter_number'] = orderNumber;
     if (filterName != null) queryParameters['filter_name'] = filterName;
     if (date != null) queryParameters['filter_date'] = date;
@@ -84,23 +82,15 @@ class SalesProvider with ChangeNotifier {
           try {
             ListSalesOrderModel listSalesOrderModel =
                 ListSalesOrderModel.fromJson(jsonData);
+            currentPage = listSalesOrderModel.pagination?.currentPage ?? 1;
+            totalPages = listSalesOrderModel.pagination?.totalPages ?? 1;
+            debugPrint(listSalesOrderModel.pagination!.currentPage.toString());
+            debugPrint(listSalesOrderModel.pagination!.totalPages.toString());
             _orders = listSalesOrderModel.data ?? [];
-            debugPrint("listSalesOrderModel.pagination?.toString()");
-            debugPrint(listSalesOrderModel.pagination?.toString());
-            debugPrint(
-                listSalesOrderModel.pagination!.meta?.lastPage.toString());
-            currentPage =
-                listSalesOrderModel.pagination?.meta?.currentPage ?? 1;
-            totalPages = listSalesOrderModel.pagination!.meta?.lastPage ?? 1;
             notifyListeners();
           } catch (e) {
             debugPrint('Error parsing JSON data: $e');
             debugPrint('JSON structure: ${jsonData.runtimeType}');
-            if (jsonData is Map) {
-              jsonData.forEach((key, value) {
-                debugPrint('Key: $key, Value type: ${value.runtimeType}');
-              });
-            }
             throw Exception('Failed to parse order list data: $e');
           }
         } else {
@@ -121,9 +111,9 @@ class SalesProvider with ChangeNotifier {
 
   //          *********************** LIST ORDER DETAILS API ***************************************************
   Future<dynamic> listOrderDetails(
-      BuildContext context, String id, String accessToken) async {
-    debugPrint(" API listOrderDetails $_orderId   passed one$id");
-    final url = Uri.parse("${APPUrl.getListOrderDetails}?order_id=$id");
+      BuildContext context, String orderNumber, String accessToken) async {
+    debugPrint(" API listOrderDetails $_orderId   passed one$orderNumber");
+    final url = Uri.parse("${APPUrl.getListOrderDetails}/$orderNumber");
 
     try {
       final response = await http.get(url, headers: {
@@ -136,7 +126,7 @@ class SalesProvider with ChangeNotifier {
         debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
 
-        debugPrint("status${jsonData["status"]}");
+        debugPrint("status ${jsonData["status"]}");
 
         return json.decode(response.body);
       } else if (response.statusCode > 400) {

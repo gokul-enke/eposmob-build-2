@@ -298,7 +298,6 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                         size: size,
                                         hintText: 'Age Range',
                                       ),
-                                      
                                     ],
                                   ),
                                 ),
@@ -478,280 +477,288 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                     margin: const EdgeInsets.only(top: 20),
                                     circleRadius: 7,
                                     offsetValue: const Offset(1, 1),
-                                    child: Table(
-                                      columnWidths: const {
-                                        0: FractionColumnWidth(0.03),
-                                        1: FractionColumnWidth(0.06),
-                                        2: FractionColumnWidth(0.06),
-                                        3: FractionColumnWidth(0.06),
-                                        4: FractionColumnWidth(0.06),
-                                      },
-                                      border: TableBorder.symmetric(
-                                          outside: const BorderSide(
-                                              color:
-                                                  ColorManager.tableBOrderColor,
-                                              width: 0.3),
-                                          inside: const BorderSide(
-                                              color:
-                                                  ColorManager.tableBOrderColor,
-                                              width: 0.8)),
-                                      defaultVerticalAlignment:
-                                          TableCellVerticalAlignment.middle,
-                                      children: [
-                                        TableRow(
-                                            decoration: const BoxDecoration(
-                                                color:
-                                                    ColorManager.tableBGColor),
-                                            children: [
-                                              TableCell(
-                                                  verticalAlignment:
-                                                      TableCellVerticalAlignment
-                                                          .middle,
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            15.0),
-                                                    child: Center(
-                                                        child: Text(
-                                                      "No",
-                                                      style: buildCustomStyle(
-                                                        FontWeightManager
-                                                            .medium,
-                                                        FontSize.s12,
-                                                        0.18,
-                                                        ColorManager
-                                                            .kPrimaryColor,
-                                                      ),
+                                    child: Center(
+                                      child: Table(
+                                        columnWidths: const {
+                                          0: FractionColumnWidth(0.10),
+                                          1: FractionColumnWidth(0.25),
+                                          2: FractionColumnWidth(0.25),
+                                          3: FractionColumnWidth(0.25),
+                                          4: FractionColumnWidth(0.15),
+                                        },
+                                        border: const TableBorder.symmetric(
+                                            outside: BorderSide(
+                                                color: ColorManager
+                                                    .tableBOrderColor,
+                                                width: 0.3),
+                                            inside: BorderSide(
+                                                color: ColorManager
+                                                    .tableBOrderColor,
+                                                width: 0.8)),
+                                        defaultVerticalAlignment:
+                                            TableCellVerticalAlignment.middle,
+                                        children: [
+                                          TableRow(
+                                              decoration: const BoxDecoration(
+                                                  color: ColorManager
+                                                      .tableBGColor),
+                                              children: [
+                                                TableCell(
+                                                    verticalAlignment:
+                                                        TableCellVerticalAlignment
+                                                            .middle,
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              15.0),
+                                                      child: Center(
+                                                          child: Text(
+                                                        "No",
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager
+                                                              .medium,
+                                                          FontSize.s12,
+                                                          0.18,
+                                                          ColorManager
+                                                              .kPrimaryColor,
+                                                        ),
+                                                      )),
                                                     )),
-                                                  )),
-                                              TableCell(
-                                                  verticalAlignment:
-                                                      TableCellVerticalAlignment
-                                                          .middle,
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            15.0),
-                                                    child: Center(
-                                                        child: Text(
-                                                      "Name",
-                                                      style: buildCustomStyle(
-                                                        FontWeightManager
-                                                            .medium,
-                                                        FontSize.s12,
-                                                        0.18,
-                                                        ColorManager
-                                                            .kPrimaryColor,
-                                                      ),
+                                                TableCell(
+                                                    verticalAlignment:
+                                                        TableCellVerticalAlignment
+                                                            .middle,
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              15.0),
+                                                      child: Center(
+                                                          child: Text(
+                                                        "Name",
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager
+                                                              .medium,
+                                                          FontSize.s12,
+                                                          0.18,
+                                                          ColorManager
+                                                              .kPrimaryColor,
+                                                        ),
+                                                      )),
                                                     )),
-                                                  )),
-                                              TableCell(
-                                                  verticalAlignment:
-                                                      TableCellVerticalAlignment
-                                                          .middle,
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            15.0),
-                                                    child: Center(
-                                                        child: Text(
-                                                      "Email",
-                                                      style: buildCustomStyle(
-                                                        FontWeightManager
-                                                            .medium,
-                                                        FontSize.s12,
-                                                        0.18,
-                                                        ColorManager
-                                                            .kPrimaryColor,
-                                                      ),
+                                                TableCell(
+                                                    verticalAlignment:
+                                                        TableCellVerticalAlignment
+                                                            .middle,
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              15.0),
+                                                      child: Center(
+                                                          child: Text(
+                                                        "Email",
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager
+                                                              .medium,
+                                                          FontSize.s12,
+                                                          0.18,
+                                                          ColorManager
+                                                              .kPrimaryColor,
+                                                        ),
+                                                      )),
                                                     )),
-                                                  )),
-                                              TableCell(
-                                                  verticalAlignment:
-                                                      TableCellVerticalAlignment
-                                                          .middle,
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            15.0),
-                                                    child: Center(
-                                                        child: Text(
-                                                      "Phone No.",
-                                                      style: buildCustomStyle(
-                                                        FontWeightManager
-                                                            .medium,
-                                                        FontSize.s12,
-                                                        0.18,
-                                                        ColorManager
-                                                            .kPrimaryColor,
-                                                      ),
+                                                TableCell(
+                                                    verticalAlignment:
+                                                        TableCellVerticalAlignment
+                                                            .middle,
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              15.0),
+                                                      child: Center(
+                                                          child: Text(
+                                                        "Phone No.",
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager
+                                                              .medium,
+                                                          FontSize.s12,
+                                                          0.18,
+                                                          ColorManager
+                                                              .kPrimaryColor,
+                                                        ),
+                                                      )),
                                                     )),
-                                                  )),
-                                              TableCell(
-                                                  verticalAlignment:
-                                                      TableCellVerticalAlignment
-                                                          .middle,
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            15.0),
-                                                    child: Center(
-                                                        child: Text(
-                                                      "Action",
-                                                      style: buildCustomStyle(
-                                                        FontWeightManager
-                                                            .medium,
-                                                        FontSize.s12,
-                                                        0.18,
-                                                        ColorManager
-                                                            .kPrimaryColor,
-                                                      ),
+                                                TableCell(
+                                                    verticalAlignment:
+                                                        TableCellVerticalAlignment
+                                                            .middle,
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              15.0),
+                                                      child: Center(
+                                                          child: Text(
+                                                        "Action",
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager
+                                                              .medium,
+                                                          FontSize.s12,
+                                                          0.18,
+                                                          ColorManager
+                                                              .kPrimaryColor,
+                                                        ),
+                                                      )),
                                                     )),
-                                                  )),
-                                            ]),
+                                              ]),
 
-                                        // Map your order data to table rows here
-                                        ...customerList!
-                                            .toList()
-                                            .asMap()
-                                            .entries
-                                            .map((entry) {
-                                          CustomerListModelData customer =
-                                              entry.value;
-                                          final int index = entry.key;
+                                          // Map your order data to table rows here
+                                          ...customerList!
+                                              .toList()
+                                              .asMap()
+                                              .entries
+                                              .map((entry) {
+                                            CustomerListModelData customer =
+                                                entry.value;
+                                            final int index = entry.key;
 
-                                          return TableRow(
-                                            children: [
-                                              TableCell(
-                                                  verticalAlignment:
-                                                      TableCellVerticalAlignment
-                                                          .middle,
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            15.0),
-                                                    child: Center(
-                                                      child: Text(
-                                                        "${index + 1}",
-                                                        style: buildCustomStyle(
-                                                          FontWeightManager
-                                                              .medium,
-                                                          FontSize.s9,
-                                                          0.13,
-                                                          Colors.black,
+                                            return TableRow(
+                                              children: [
+                                                TableCell(
+                                                    verticalAlignment:
+                                                        TableCellVerticalAlignment
+                                                            .middle,
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              15.0),
+                                                      child: Center(
+                                                        child: Text(
+                                                          "${index + 1}",
+                                                          style:
+                                                              buildCustomStyle(
+                                                            FontWeightManager
+                                                                .medium,
+                                                            FontSize.s9,
+                                                            0.13,
+                                                            Colors.black,
+                                                          ),
                                                         ),
                                                       ),
-                                                    ),
-                                                  )),
-                                              TableCell(
-                                                  verticalAlignment:
-                                                      TableCellVerticalAlignment
-                                                          .middle,
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            15.0),
-                                                    child: Center(
-                                                      child: Text(
-                                                        customer.name ?? "",
-                                                        style: buildCustomStyle(
-                                                          FontWeightManager
-                                                              .medium,
-                                                          FontSize.s9,
-                                                          0.13,
-                                                          Colors.black,
+                                                    )),
+                                                TableCell(
+                                                    verticalAlignment:
+                                                        TableCellVerticalAlignment
+                                                            .middle,
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              15.0),
+                                                      child: Center(
+                                                        child: Text(
+                                                          customer.name ?? "",
+                                                          style:
+                                                              buildCustomStyle(
+                                                            FontWeightManager
+                                                                .medium,
+                                                            FontSize.s9,
+                                                            0.13,
+                                                            Colors.black,
+                                                          ),
                                                         ),
                                                       ),
-                                                    ),
-                                                  )),
-                                              TableCell(
-                                                  verticalAlignment:
-                                                      TableCellVerticalAlignment
-                                                          .middle,
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            15.0),
-                                                    child: Center(
-                                                      child: Text(
-                                                        customer.email ?? "",
-                                                        style: buildCustomStyle(
-                                                          FontWeightManager
-                                                              .medium,
-                                                          FontSize.s9,
-                                                          0.13,
-                                                          Colors.black,
+                                                    )),
+                                                TableCell(
+                                                    verticalAlignment:
+                                                        TableCellVerticalAlignment
+                                                            .middle,
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              15.0),
+                                                      child: Center(
+                                                        child: Text(
+                                                          customer.email ?? "",
+                                                          style:
+                                                              buildCustomStyle(
+                                                            FontWeightManager
+                                                                .medium,
+                                                            FontSize.s9,
+                                                            0.13,
+                                                            Colors.black,
+                                                          ),
                                                         ),
                                                       ),
-                                                    ),
-                                                  )),
-                                              TableCell(
-                                                  verticalAlignment:
-                                                      TableCellVerticalAlignment
-                                                          .middle,
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            15.0),
-                                                    child: Center(
-                                                      child: Text(
-                                                        customer.phone ?? "",
-                                                        style: buildCustomStyle(
-                                                          FontWeightManager
-                                                              .medium,
-                                                          FontSize.s9,
-                                                          0.13,
-                                                          Colors.black,
+                                                    )),
+                                                TableCell(
+                                                    verticalAlignment:
+                                                        TableCellVerticalAlignment
+                                                            .middle,
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              15.0),
+                                                      child: Center(
+                                                        child: Text(
+                                                          customer.phone ?? "",
+                                                          style:
+                                                              buildCustomStyle(
+                                                            FontWeightManager
+                                                                .medium,
+                                                            FontSize.s9,
+                                                            0.13,
+                                                            Colors.black,
+                                                          ),
                                                         ),
                                                       ),
-                                                    ),
-                                                  )),
-                                              TableCell(
-                                                  verticalAlignment:
-                                                      TableCellVerticalAlignment
-                                                          .middle,
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            15.0),
-                                                    child: Center(
-                                                      child: Row(
-                                                        children: [
-                                                          BuildBoxShadowContainer(
-                                                              margin:
-                                                                  const EdgeInsets
-                                                                      .only(
-                                                                      left: 5,
-                                                                      right: 5),
-                                                              circleRadius: 5,
-                                                              child: IconButton(
-                                                                icon: Icon(
-                                                                  Icons
-                                                                      .visibility,
-                                                                  size: 18,
-                                                                  color: ColorManager
-                                                                      .kPrimaryColor
-                                                                      .withOpacity(
-                                                                          0.9),
-                                                                ),
-                                                                onPressed: () {
-                                                                  customerProvider
-                                                                      .selectCustomer(
-                                                                          customerList![
-                                                                              index]);
-                                                                  sideBarController
-                                                                      .index
-                                                                      .value = 38;
-                                                                },
-                                                              )),
-                                                        ],
+                                                    )),
+                                                TableCell(
+                                                    verticalAlignment:
+                                                        TableCellVerticalAlignment
+                                                            .middle,
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              15.0),
+                                                      child: Center(
+                                                        child: Row(
+                                                          children: [
+                                                            BuildBoxShadowContainer(
+                                                                margin:
+                                                                    const EdgeInsets
+                                                                        .only(
+                                                                        left: 5,
+                                                                        right:
+                                                                            5),
+                                                                circleRadius: 5,
+                                                                child:
+                                                                    IconButton(
+                                                                  icon: Icon(
+                                                                    Icons
+                                                                        .visibility,
+                                                                    size: 18,
+                                                                    color: ColorManager
+                                                                        .kPrimaryColor
+                                                                        .withOpacity(
+                                                                            0.9),
+                                                                  ),
+                                                                  onPressed:
+                                                                      () {
+                                                                    customerProvider
+                                                                        .selectCustomer(
+                                                                            customerList![index]);
+                                                                    sideBarController
+                                                                        .index
+                                                                        .value = 38;
+                                                                  },
+                                                                )),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
-                                                  )),
-                                            ],
-                                          );
-                                        }).toList(),
-                                      ],
+                                                    )),
+                                              ],
+                                            );
+                                          }).toList(),
+                                        ],
+                                      ),
                                     )),
                                 PaginationControl(
                                   currentPage: 1,
