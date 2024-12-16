@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:pos_machine/screens/billing/billing_page.dart';
 import 'package:pos_machine/screens/category/add_category.dart';
 import 'package:pos_machine/screens/category/add_category_properties.dart';
 import 'package:pos_machine/screens/category/add_category_screen.dart';
@@ -101,5 +102,6 @@ class SideBarController extends GetxController {
     LocationManagementScreen(), //43
     LocationManagementScreen(), //44
     CategoryList(), //45 Home Old
+    BillingPage(), //46 Billing Page
   ];
 }

@@ -23,6 +23,8 @@ import 'package:pos_machine/screens/print/print.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
+import '../../widgets/compact_quantity_control.dart';
+
 class OrderListNew extends StatefulWidget {
   const OrderListNew({super.key});
 
@@ -399,6 +401,10 @@ class _OrderListNewState extends State<OrderListNew> {
                   itemCount: cartItem!.length,
                   shrinkWrap: true,
                   itemBuilder: (BuildContext context, int index) {
+                    String price = cartItem[index].unitPrice.toString();
+                    TextEditingController priceController =
+                        TextEditingController(text: price);
+
                     return BuildBoxShadowContainer(
                       circleRadius: 7,
                       margin: const EdgeInsets.symmetric(
@@ -440,8 +446,7 @@ class _OrderListNewState extends State<OrderListNew> {
                                 "stockEnabled ${generalSettingsprovider.generalSettings!.stockEnabled}");
                             if (!generalSettingsprovider
                                 .generalSettings!.stockEnabled) {
-                              _showCartItemDetailsDialog(
-                                  context, cartItem[index]);
+                              // Handle stock enabled condition
                             }
                           },
                           child: LayoutBuilder(
@@ -455,7 +460,7 @@ class _OrderListNewState extends State<OrderListNew> {
                                   Row(
                                     children: [
                                       Expanded(
-                                        flex: 4,
+                                        flex: 6,
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -482,67 +487,125 @@ class _OrderListNewState extends State<OrderListNew> {
                                         ),
                                       ),
                                       Expanded(
-                                        flex: 3,
+                                        flex: 4,
                                         child: Center(
                                           child: CompactQuantityControl(
                                             quantity: cartItem[index].quantity!,
-                                            onIncrement: () {
+                                            onQuantityChanged: (newQuantity) {
                                               String? accessToken =
                                                   Provider.of<AuthModel>(
                                                           context,
                                                           listen: false)
                                                       .token;
-                                              Provider.of<CartProvider>(context,
-                                                      listen: false)
-                                                  .addToCartAPI(
-                                                accessToken: accessToken ?? "",
-                                                customerId:
-                                                    Provider.of<AuthModel>(
-                                                            context,
-                                                            listen: false)
-                                                        .userId!,
-                                                productId:
-                                                    cartItem[index].productId ??
-                                                        1,
-                                                quantity: 1,
-                                              );
-                                            },
-                                            onDecrement: () {
-                                              String? accessToken =
-                                                  Provider.of<AuthModel>(
-                                                          context,
-                                                          listen: false)
-                                                      .token;
-                                              Provider.of<CartProvider>(context,
-                                                      listen: false)
-                                                  .decrementCartItemQuantityAPI(
-                                                accessToken: accessToken ?? "",
-                                                customerId:
-                                                    Provider.of<AuthModel>(
-                                                            context,
-                                                            listen: false)
-                                                        .userId!,
-                                                productId:
-                                                    cartItem[index].id ?? 1,
-                                                remove: '',
-                                                quantity:
-                                                    cartItem[index].quantity! -
-                                                        1,
-                                              );
+                                              if (newQuantity >
+                                                  cartItem[index].quantity!) {
+                                                // Increment the quantity
+                                                Provider.of<CartProvider>(
+                                                        context,
+                                                        listen: false)
+                                                    .addToCartAPI(
+                                                  accessToken:
+                                                      accessToken ?? "",
+                                                  customerId:
+                                                      Provider.of<AuthModel>(
+                                                              context,
+                                                              listen: false)
+                                                          .userId!,
+                                                  productId: cartItem[index]
+                                                          .productId ??
+                                                      1,
+                                                  quantity: newQuantity -
+                                                      cartItem[index]
+                                                          .quantity!, // calculate increment
+                                                );
+                                              } else if (newQuantity <
+                                                  cartItem[index].quantity!) {
+                                                // Decrement the quantity
+                                                Provider.of<CartProvider>(
+                                                        context,
+                                                        listen: false)
+                                                    .decrementCartItemQuantityAPI(
+                                                  accessToken:
+                                                      accessToken ?? "",
+                                                  customerId:
+                                                      Provider.of<AuthModel>(
+                                                              context,
+                                                              listen: false)
+                                                          .userId!,
+                                                  productId:
+                                                      cartItem[index].id ?? 1,
+                                                  remove: '',
+                                                  quantity:
+                                                      newQuantity, // set to new quantity
+                                                );
+                                              }
                                             },
                                           ),
                                         ),
                                       ),
                                       Expanded(
                                         flex: 3,
-                                        child: Text(
-                                          '${cartItem[index].currency} ${cartItem[index].unitPrice}',
-                                          style: buildCustomStyle(
-                                              FontWeightManager.regular,
-                                              fontSize,
-                                              0.21,
-                                              ColorManager.textColor),
+                                        child: TextField(
+                                          controller: priceController,
+                                          keyboardType: TextInputType.number,
                                           textAlign: TextAlign.end,
+                                          decoration: const InputDecoration(
+                                            border: InputBorder.none,
+                                            hintText: 'Price',
+                                            hintStyle: TextStyle(
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          // onChanged: (newPrice) {
+                                          //   if (newPrice.isNotEmpty) {
+                                          //     String? accessToken =
+                                          //         Provider.of<AuthModel>(
+                                          //                 context,
+                                          //                 listen: false)
+                                          //             .token;
+
+                                          //     Provider.of<CartProvider>(context,
+                                          //             listen: false)
+                                          //         .updateCartItemPrice(
+                                          //       accessToken: accessToken ?? "",
+                                          //       cartItemId:
+                                          //           cartItem[index].id ?? 0,
+                                          //       unitPrice: newPrice,
+                                          //       customerId:
+                                          //           1, // Adjust this as necessary
+                                          //     );
+                                          //     showScaffold(
+                                          //       context: context,
+                                          //       message:
+                                          //           'Price Updated Successfully',
+                                          //     );
+                                          //   }
+                                          // },
+                                          onSubmitted: (newPrice) {
+                                            if (newPrice.isNotEmpty) {
+                                              String? accessToken =
+                                                  Provider.of<AuthModel>(
+                                                          context,
+                                                          listen: false)
+                                                      .token;
+
+                                              Provider.of<CartProvider>(context,
+                                                      listen: false)
+                                                  .updateCartItemPrice(
+                                                accessToken: accessToken ?? "",
+                                                cartItemId:
+                                                    cartItem[index].id ?? 0,
+                                                unitPrice: newPrice,
+                                                customerId:
+                                                    1, // Adjust this as necessary
+                                              );
+                                              showScaffold(
+                                                context: context,
+                                                message:
+                                                    'Price Updated Successfully',
+                                              );
+                                            }
+                                          },
                                         ),
                                       ),
                                     ],
@@ -557,7 +620,7 @@ class _OrderListNewState extends State<OrderListNew> {
                             padding: const EdgeInsets.all(8.0),
                             child: LayoutBuilder(
                               builder: (context, constraints) {
-                                return Container(
+                                return SizedBox(
                                   width: constraints.maxWidth,
                                   child: Text(
                                     cartItem[index].productName!,
@@ -744,36 +807,30 @@ class _OrderListNewState extends State<OrderListNew> {
     return Column(
       children: [
         BuildPaymentRow(
-          amount: AmountHelper.formatAmount(
-              Provider.of<CartProvider>(context, listen: true)
-                      .priceSummary!
-                      .subTotal ??
-                  0.00),
+          amount:
+              "INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.subTotal ?? 0.00)}",
           title: "Net amount",
           color: ColorManager.textColor,
         ),
         const BuildPaymentRow(
-          amount: "0.00",
+          amount: "INR 0.00",
           title: "Shipping",
           color: ColorManager.textColor,
         ),
         BuildPaymentRow(
-          amount: AmountHelper.formatAmount(
-              Provider.of<CartProvider>(context, listen: true)
-                      .priceSummary!
-                      .discount ??
-                  0.00),
+          amount:
+              "INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.discount ?? 0.00)}",
           title: "Discount",
           color: ColorManager.textColor,
         ),
         GestureDetector(
           child: BuildPaymentRow(
-            amount: AmountHelper.formatAmount(
+            amount: "INR ${AmountHelper.formatAmount(
               Provider.of<CartProvider>(context, listen: true)
                       .priceSummary!
                       .totalTax ??
                   0.00,
-            ),
+            )}",
             title: "GST",
             color: ColorManager.kPrimaryColor,
           ),
@@ -793,11 +850,8 @@ class _OrderListNewState extends State<OrderListNew> {
         ),
         const Divider(thickness: 2),
         BuildPaymentRow(
-          amount: AmountHelper.formatAmount(
-              Provider.of<CartProvider>(context, listen: true)
-                      .priceSummary!
-                      .netTotal ??
-                  0.00),
+          amount:
+              "INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal ?? 0.00)}",
           title: "Total Payable",
           secondRowTextStyle: buildCustomStyle(
             FontWeightManager.bold,
@@ -952,7 +1006,7 @@ class _OrderListNewState extends State<OrderListNew> {
         const SizedBox(height: 10),
         if (iconColor == 1)
           BuildPaymentRow(
-            amount: _balanceAmount.toStringAsFixed(2),
+            amount: "INR ${_balanceAmount.toStringAsFixed(2)}",
             title: "Balance amount",
             secondRowTextStyle: buildCustomStyle(
               FontWeightManager.medium,
@@ -1210,68 +1264,5 @@ class _OrderListNewState extends State<OrderListNew> {
       showScaffoldError(context: context, message: 'Unknown discount type');
       return 0.0; // Default value in case of an error
     }
-  }
-}
-
-class CompactQuantityControl extends StatelessWidget {
-  final int quantity;
-  final Function() onIncrement;
-  final Function() onDecrement;
-
-  const CompactQuantityControl({
-    Key? key,
-    required this.quantity,
-    required this.onIncrement,
-    required this.onDecrement,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      // decoration: BoxDecoration(
-      //   border: Border.all(color: ColorManager.kPrimaryColor),
-      //   borderRadius: BorderRadius.circular(4),
-      // ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          InkWell(
-            onTap: onDecrement,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: ColorManager.kPrimaryColor
-                    .withOpacity(0.1), // Optional: background color
-              ),
-              padding: const EdgeInsets.all(8), // Adjust padding as needed
-              child: const Icon(Icons.remove,
-                  size: 16, color: ColorManager.kPrimaryColor),
-            ),
-          ),
-          Container(
-            constraints: const BoxConstraints(minWidth: 24),
-            alignment: Alignment.center,
-            child: Text(
-              quantity.toString(),
-              style: buildCustomStyle(
-                  FontWeightManager.regular, 12, 0.10, ColorManager.textColor),
-            ),
-          ),
-          InkWell(
-            onTap: onIncrement,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: ColorManager.kPrimaryColor
-                    .withOpacity(1), // Optional: background color
-              ),
-              padding: const EdgeInsets.all(8), // Adjust padding as needed
-              child: const Icon(Icons.add,
-                  size: 16, color: ColorManager.kSecondaryColor),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

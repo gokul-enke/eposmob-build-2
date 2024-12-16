@@ -187,14 +187,26 @@ class SideMenu extends StatelessWidget {
           // ),
           Obx(
             () => DrawerListTile(
+              iconPath: ImageAssets.barcodeIcon,
+              title: 'Billing',
+              onTap: () {
+                debugPrint(" Billing, ${sideBarController.index.value}");
+                sideBarController.index.value = 46;
+              },
+              selected: sideBarController.index.value == 46,
+            ),
+          ),
+          Obx(
+            () => DrawerListTile(
               iconPath: ImageAssets.homeIcon,
               title: 'Kiosk',
               onTap: () {
-                Get.to(() => KioskScreen());
+                Get.to(() => const KioskScreen());
               },
               selected: sideBarController.index.value == 900,
             ),
           ),
+
           Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.dashBoardIcon,
