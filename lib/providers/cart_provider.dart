@@ -320,6 +320,61 @@ class CartProvider with ChangeNotifier {
     } finally {}
   }
 
+  //          *********************** REMOVE FROM CART API ***************************************************
+
+  Future<dynamic> clearCartAPI({
+    required int customerId,
+    required int productId,
+    String remove = "false",
+    required String accessToken,
+  }) async {
+    debugPrint("********************REMOVE FROM CART API******************** ");
+    debugPrint("product id is ${productId.toString()}");
+    final Map<String, dynamic> apiBodyData = {
+      'cart_item_id': productId,
+      // 'remove': remove,
+      // 'action': "update_quantity",
+      // 'quantity': 1,
+      // 'action': "remove_item",
+      'action': "clear_cart",
+      'customer_id': 1
+    };
+    debugPrint("productId $productId");
+    final url = Uri.parse(APPUrl
+        .removeFromCartUrl); // Update this to the correct endpoint for removing items
+    try {
+      final response =
+          await http.post(url, body: json.encode(apiBodyData), headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      });
+      debugPrint('inside ${response.statusCode}');
+      if (response.statusCode == 200) {
+        debugPrint('inside');
+
+        debugPrint(json.decode(response.body).toString());
+        final jsonData = json.decode(response.body);
+        AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
+        await fetchCartDataFromApi(
+            customerId: customerId, accessToken: accessToken);
+        // customerId: customerId, accessToken: accessToken);
+        debugPrint(addToCartModel.status);
+        if (addToCartModel.status == 'success') {
+          debugPrint("  if (addToCartModel.status == 'success') {");
+          // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
+
+          // setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
+        }
+
+        debugPrint("Cart cleared successfully");
+
+        return jsonData; // Return response data or success status
+      } else {
+        return false;
+      }
+    } finally {}
+  }
+
   //          *********************** Decrement Cart Item Quantity API ***************************************************
 
   Future<dynamic> decrementCartItemQuantityAPI({
@@ -435,6 +490,8 @@ class CartProvider with ChangeNotifier {
     required String transactionId,
     required String totalPrice,
     String? paymentMethod,
+    String? paidAmount,
+    String? balanceAmount,
   }) async {
     debugPrint("********************ADD TO ORDER API******************** ");
     DateTime now = DateTime.now();
@@ -452,18 +509,90 @@ class CartProvider with ChangeNotifier {
         "customer_id": customerId,
         "transaction_number": transactionId,
         "payment_method": paymentMethod,
+        "paid_amount": paidAmount,
+        "balance": balanceAmount,
       };
     } else {
       apiBodyData = {
         "phone": phone,
         "transaction_number": transactionId,
         "payment_method": paymentMethod,
+        "paid_amount": paidAmount,
+        "balance": balanceAmount,
       };
     }
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");
 
     final url = Uri.parse(APPUrl.addToOrderUrl);
+
+    try {
+      final response =
+          await http.post(url, body: json.encode(apiBodyData), headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      });
+      debugPrint('inside ${response.statusCode}');
+      if (response.statusCode == 200) {
+        debugPrint('inside 200');
+
+        // debugPrint(json.decode(response.body).toString());
+        final jsonData = json.decode(response.body);
+        // AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(jsonData);
+
+        // debugPrint(jsonData);
+        // debugPrint(addToOrderModel.status);
+        getData();
+        return jsonData; //addToOrderModel.status == 'success' ? true : false;
+      } else {
+        return false;
+      }
+    } finally {}
+  }
+
+  Future<dynamic> addToOrderConfirmAPI({
+    required int cartIds,
+    required String accessToken,
+    int? customerId,
+    String? phone,
+    required String transactionId,
+    required String totalPrice,
+    String? paymentMethod,
+    String? paidAmount,
+    String? balanceAmount,
+  }) async {
+    debugPrint("********************ADD TO ORDER API******************** ");
+    DateTime now = DateTime.now();
+
+    String formattedDate = DateFormat('yyyy-MM-dd').format(now);
+    debugPrint("$cartIds CadtId Inside ADD TO CART API $formattedDate");
+
+    debugPrint("Customer ID $customerId");
+    debugPrint("Phone $phone");
+
+    Map<String, dynamic> apiBodyData = {};
+
+    if (phone == "") {
+      apiBodyData = {
+        "customer_id": customerId,
+        "transaction_number": transactionId,
+        "payment_method": paymentMethod,
+        "paid_amount": paidAmount,
+        "balance": balanceAmount,
+      };
+    } else {
+      apiBodyData = {
+        "phone": phone,
+        "transaction_number": transactionId,
+        "payment_method": paymentMethod,
+        "paid_amount": paidAmount,
+        "balance": balanceAmount,
+      };
+    }
+
+    debugPrint("apiBodyData ${apiBodyData.toString()}");
+
+    final url = Uri.parse(APPUrl.addToOrderConfirmUrl);
 
     try {
       final response =

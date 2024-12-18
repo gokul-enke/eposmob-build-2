@@ -8,28 +8,13 @@ class BuildCartListDesign extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       padding: EdgeInsets.zero,
-      itemCount: 3,
+      itemCount: 2,
       shrinkWrap: true,
       itemBuilder: (BuildContext context, int index) {
         return Theme(
           data: ThemeData(dividerColor: Colors.transparent),
-          child: ExpansionTile(
-            maintainState: true,
-            childrenPadding: const EdgeInsets.only(
-              bottom: 10,
-            ),
-            collapsedBackgroundColor:
-                index % 2 == 0 ? Colors.grey.withOpacity(0.1) : null,
-            backgroundColor:
-                index % 2 == 0 ? Colors.grey.withOpacity(0.1) : null,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
-            tilePadding: const EdgeInsets.only(right: 10, left: 5),
-            controlAffinity: ListTileControlAffinity.leading,
-            iconColor: ColorManager.textColor,
-            collapsedIconColor: ColorManager.textColor,
+          child: ListTile(
             title: _buildSkeleton(),
-            children: const <Widget>[],
           ),
         );
       },
@@ -38,10 +23,24 @@ class BuildCartListDesign extends StatelessWidget {
 
   Widget _buildSkeleton() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          height: 10,
+          height: 15,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: ColorManager.colorPlaceholder,
+            borderRadius: BorderRadius.circular(5),
+          ),
           width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 5),
+        ),
+        const SizedBox(
+          height: 10,
+        ),
+        Container(
+          height: 10,
+          width: 100,
           color: ColorManager.colorPlaceholder,
           margin: const EdgeInsets.only(bottom: 5),
         ),

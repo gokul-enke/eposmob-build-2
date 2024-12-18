@@ -164,8 +164,8 @@ class OrderDetailsModelDataCartItem {
   final String? categoryName; // Added category name
   final int? quantity;
   final String? productUnit;
-  final int? unitPrice;
-  final int? totalPrice; // Changed to int
+  final String? unitPrice;
+  final String? totalPrice; // Changed to int
   final String? currency;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -285,11 +285,11 @@ class OrderDetailsModelDataProductAttachment {
 }
 
 class OrderDetailsModelDataPriceSummary {
-  final int? subTotal;
-  final int? totalTax;
-  final int? netTotal;
-  final int? discount;
-  final int? netPayable;
+  final num? subTotal;
+  final num? totalTax;
+  final num? netTotal;
+  final num? discount;
+  final num? netPayable;
 
   OrderDetailsModelDataPriceSummary({
     this.subTotal,

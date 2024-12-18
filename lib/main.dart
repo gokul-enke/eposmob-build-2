@@ -52,7 +52,7 @@ void main() {
 //       ..badCertificateCallback =
 //           (X509Certificate cert, String host, int port) => true;
 //   }
-// }
+// }.
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

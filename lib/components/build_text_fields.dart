@@ -563,7 +563,8 @@ Widget buildColumnWidgetForTextFields({
   String? title,
   void Function(String?)? onchanged,
   required String hintText,
-  String? Function(String?)? validator, // Add validator parameter
+  String? Function(String?)? validator,
+  FocusNode? focusNode,
 }) =>
     Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -590,6 +591,7 @@ Widget buildColumnWidgetForTextFields({
           width: width ?? size.width / 3, //3.05,
           child: TextFormField(
             onChanged: onchanged,
+            focusNode: focusNode,
             readOnly: readOnly,
             keyboardType: TextInputType.text,
             cursorColor: ColorManager.kPrimaryColor,

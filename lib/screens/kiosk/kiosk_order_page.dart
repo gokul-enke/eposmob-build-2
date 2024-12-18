@@ -371,7 +371,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
                   //     : 'https://via.placeholder.com/150',
                   title: product.productName.toString(),
                   currency: product.currency ?? "",
-                  price: product.unitPrice ?? 0.0,
+                  price: product.unitPrice ?? "0.0",
                   count: product.quantity ?? 0,
                   productId: product.productId ?? 0,
                   totalPrice: product.totalPrice ?? "",

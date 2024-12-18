@@ -44,17 +44,17 @@ class SalesProvider with ChangeNotifier {
     int? page,
   }) async {
     final queryParameters = <String, String>{
-      'store_id': storeId.toString(),
+      // 'store_id': storeId.toString(),
     };
 
-    if (orderNumber != null) queryParameters['filter_number'] = orderNumber;
-    if (filterName != null) queryParameters['filter_name'] = filterName;
-    if (date != null) queryParameters['filter_date'] = date;
-    if (filterStatus != null) queryParameters['filter_status'] = filterStatus;
-    if (filterPrice != null) queryParameters['filter_price'] = filterPrice;
-    if (filterEmail != null) queryParameters['filter_email'] = filterEmail;
-    if (filterPhone != null) queryParameters['filter_phone'] = filterPhone;
-    if (filterStore != null) queryParameters['filter_store'] = filterStore;
+    // if (orderNumber != null) queryParameters['filter_number'] = orderNumber;
+    // if (filterName != null) queryParameters['filter_name'] = filterName;
+    // if (date != null) queryParameters['filter_date'] = date;
+    // if (filterStatus != null) queryParameters['filter_status'] = filterStatus;
+    // if (filterPrice != null) queryParameters['filter_price'] = filterPrice;
+    // if (filterEmail != null) queryParameters['filter_email'] = filterEmail;
+    // if (filterPhone != null) queryParameters['filter_phone'] = filterPhone;
+    // if (filterStore != null) queryParameters['filter_store'] = filterStore;
     if (filterCreatedBy != null) {
       queryParameters['filter_created_by'] = filterCreatedBy;
     }
@@ -77,8 +77,7 @@ class SalesProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         if (response.body.isNotEmpty) {
           final jsonData = json.decode(response.body);
-          debugPrint('Received JSON data: ${jsonData.toString()}');
-
+          // debugPrint('Received JSON data: ${jsonData.toString()}');
           try {
             ListSalesOrderModel listSalesOrderModel =
                 ListSalesOrderModel.fromJson(jsonData);

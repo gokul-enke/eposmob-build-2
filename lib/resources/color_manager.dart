@@ -14,6 +14,9 @@ class ColorManager {
   static const Color kListTiletextColor = Color(0XFFCFCDCD);
   static const Color kTextFieldColor25 = Color(0X4DCDCDCD);
   static const Color kButtonGreen = Color.fromARGB(255, 8, 202, 47);
+  static const Color kButtonRed = Color.fromARGB(255, 245, 49, 73);
+  static const Color kButtonBlue = Color.fromARGB(255, 91, 142, 233);
+  static const Color kButtonYellow = Color.fromARGB(255, 255, 184, 0);
 
   static const Color kRedBox = Color(0XFFF33030);
   static const Color kGreenBox = Color(0XFF54CA93);

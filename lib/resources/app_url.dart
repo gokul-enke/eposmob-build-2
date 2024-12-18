@@ -23,6 +23,8 @@ class APPUrl {
   static const String updateCartItemPriceUrl =
       '$baseURL/api/v1/cart/change-cart-item-price';
   static const String addToOrderUrl = '$baseURL/api/v1/order/add-to-order';
+  static const String addToOrderConfirmUrl =
+      '$baseURL/api/v1/order/confirm-order';
   // static const String getListOrder = '$baseURL/api/v1/order/list-orders';
   static const String getListOrder =
       '$baseURL/api/v1/order/executive/list-orders';

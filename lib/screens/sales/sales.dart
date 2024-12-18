@@ -92,7 +92,7 @@ class _SalesScreenState extends State<SalesScreen> {
 
       await orderProvider.fetchOrders(
         accessToken: accessToken ?? '',
-        storeId: 1,
+        // storeId: 1,
         orderNumber: orderNumberController.text,
         filterName: customerNameController.text,
         filterPrice: amountController.text,

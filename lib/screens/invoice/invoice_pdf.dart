@@ -249,7 +249,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     );
   }
 
-  pw.Widget _buildTotalRow(String label, int? amount, {bool isBold = false}) {
+  pw.Widget _buildTotalRow(String label, num? amount, {bool isBold = false}) {
     final style = isBold ? pw.TextStyle(fontWeight: pw.FontWeight.bold) : null;
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,

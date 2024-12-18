@@ -24,10 +24,22 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 
-class CategoryListItemNew extends StatelessWidget {
+class CategoryListItemNew extends StatefulWidget {
   const CategoryListItemNew({
     super.key,
   });
+
+  @override
+  State<CategoryListItemNew> createState() => _CategoryListItemNewState();
+}
+
+class _CategoryListItemNewState extends State<CategoryListItemNew> {
+  @override
+  void initState() {
+    super.initState();
+    Provider.of<GridSelectionProvider>(context, listen: false)
+        .listAllProducts();
+  }
 
   @override
   Widget build(BuildContext context) {

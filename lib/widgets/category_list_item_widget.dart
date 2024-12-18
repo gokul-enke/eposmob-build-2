@@ -27,7 +27,7 @@ class CategoryListItemWidget extends StatelessWidget {
 
   const CategoryListItemWidget(
       {super.key,
-       this.imageUrlPath,
+      this.imageUrlPath,
       required this.price,
       required this.title,
       required this.weight,

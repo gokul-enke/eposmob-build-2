@@ -297,7 +297,7 @@ class _KioskScreenState extends State<KioskScreen> {
   }
 
   Widget _menuItem(String title, String description, String imageLink,
-      num price, int productId, String currency) {
+      String price, int productId, String currency) {
     return Consumer<CartProvider>(
       builder: (context, cartProvider, child) {
         int count =
@@ -306,7 +306,7 @@ class _KioskScreenState extends State<KioskScreen> {
           imageLink: imageLink,
           title: title,
           currency: currency,
-          price: price.toDouble(),
+          price: price.toString(),
           count: count,
           productId: productId,
           removeFromCart: () => _removeFromCart(context, productId),

@@ -12,7 +12,7 @@ class CompactQuantityControl extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _CompactQuantityControlState createState() => _CompactQuantityControlState();
+  State<CompactQuantityControl> createState() => _CompactQuantityControlState();
 }
 
 class _CompactQuantityControlState extends State<CompactQuantityControl> {
@@ -30,6 +30,18 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(CompactQuantityControl oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Check if the quantity has changed
+    if (oldWidget.quantity != widget.quantity) {
+      setState(() {
+        _currentQuantity = widget.quantity;
+        _controller.text = _currentQuantity.toString();
+      });
+    }
   }
 
   void _updateQuantity(int newQuantity) {
@@ -71,7 +83,7 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
             ),
           ),
           SizedBox(
-            width: 40, // Fixed width for the text field
+            width: 40,
             child: TextField(
               controller: _controller,
               keyboardType: TextInputType.number,
@@ -82,15 +94,8 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
               ),
               onSubmitted: (value) {
                 int? newQuantity = int.tryParse(value);
-                _updateQuantity(newQuantity ??
-                    _currentQuantity); // Fallback to current quantity
+                _updateQuantity(newQuantity ?? _currentQuantity);
               },
-              // onChanged: (value) {
-              //   int? newQuantity = int.tryParse(value);
-              //   if (newQuantity != null) {
-              //     _updateQuantity(newQuantity);
-              //   }
-              // },
             ),
           ),
           InkWell(

@@ -117,7 +117,7 @@ class CartItem {
   final int? productId;
   final String? productName;
   final int? quantity;
-  final double? totalPrice;
+  final String? totalPrice;
 
   CartItem({
     this.id,
@@ -138,7 +138,7 @@ class CartItem {
         productId: json["product_id"],
         productName: json["product_name"],
         quantity: json["quantity"],
-        totalPrice: json["total_price"]?.toDouble(),
+        totalPrice: json["total_price"],
       );
 
   Map<String, dynamic> toJson() => {

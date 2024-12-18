@@ -7,7 +7,7 @@ class ProductCardList extends StatelessWidget {
   final double? height;
   final String title;
   final String currency;
-  final double price;
+  final String price;
   final String? totalPrice;
   final int count;
   final int productId;
@@ -64,7 +64,7 @@ class ProductCardList extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '$currency ${price.toStringAsFixed(2)}',
+                      '$currency ${price}',
                       style: const TextStyle(
                         fontWeight: FontWeight.w400,
                         fontSize: 14, // Medium priority
