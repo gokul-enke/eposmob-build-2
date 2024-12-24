@@ -414,7 +414,7 @@ class InvoiceProvider extends ChangeNotifier {
         final jsonData = json.decode(response.body);
         debugPrint(jsonData.toString());
         ReceiptDetails receiptDetailsData = ReceiptDetails.fromJson(
-            jsonData["data"]); // Update to use ReceiptDetails model
+            jsonData); // Update to use ReceiptDetails model
         receiptDetails = receiptDetailsData;
         notifyListeners();
       } else {

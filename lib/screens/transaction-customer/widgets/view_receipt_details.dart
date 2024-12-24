@@ -25,6 +25,8 @@ class ViewReceiptDetailsWidget extends StatelessWidget {
     ReceiptDetails? receiptDetails = invoiceProvider.getReceiptDetails;
     ReceiptData? receiptData = receiptDetails?.data;
 
+    debugPrint("receiptData : ${receiptData.toString()}");
+
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
@@ -100,8 +102,8 @@ class ViewReceiptDetailsWidget extends StatelessWidget {
                     BuildDetailRow(
                       title1: "Receipt Number",
                       content1: receiptData?.receiptNumber ?? "",
-                      title2: "Transaction Type",
-                      content2: receiptData?.receiptStatus ?? "",
+                      title2: "Company",
+                      content2: receiptData?.company.name ?? "",
                     ),
                     BuildDetailRow(
                       title1: "Customer Name",
