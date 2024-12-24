@@ -99,7 +99,7 @@ class OrderDetailWidget extends StatelessWidget {
                               children: <TextSpan>[
                                 TextSpan(
                                   text:
-                                      '${cartItem![index].quantity} * ${cartItem![index].productUnit}',
+                                      '${cartItem![index].quantity} * ${cartItem![index].unitPrice}',
                                   style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s9,

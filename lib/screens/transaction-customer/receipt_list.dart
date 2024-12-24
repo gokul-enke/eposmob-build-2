@@ -1,76 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
-import 'package:pos_machine/models/list_invoice.dart';
-import 'package:pos_machine/providers/invoice_provider.dart';
+import 'package:pos_machine/models/list_receipt.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
+import '../../components/build_dialog_box.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../providers/auth_model.dart';
+import '../../providers/invoice_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 
-class InvoiceListScreen extends StatefulWidget {
-  const InvoiceListScreen({super.key});
+class ReceiptListScreen extends StatefulWidget {
+  const ReceiptListScreen({super.key});
 
   @override
-  State<InvoiceListScreen> createState() => _InvoiceListScreenState();
+  State<ReceiptListScreen> createState() => _ReceiptListScreenState();
 }
 
-class _InvoiceListScreenState extends State<InvoiceListScreen> {
+class _ReceiptListScreenState extends State<ReceiptListScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
-  bool initLoading = false;
   final TextEditingController searchTextController = TextEditingController();
-  List<Invoice>? invoiceListDetails = [];
-  ListInvoiceModel? invoiceData;
+  bool initLoading = false;
+  List<Receipt>? receiptList = [];
+  ReceiptData? receiptData;
 
   @override
   void initState() {
-    super.initState();
     loadInitData();
+    super.initState();
   }
 
-  Future<void> loadInitData() async {
-    setState(() {
-      initLoading = true;
-    });
-
+  void loadInitData() async {
     try {
+      setState(() {
+        initLoading = true;
+      });
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-
-      // Check if accessToken is null
-      if (accessToken == null) {
-        throw Exception("Access token is null");
-      }
-
       InvoiceProvider invoiceProvider =
           Provider.of<InvoiceProvider>(context, listen: false);
 
-      final response =
-          await invoiceProvider.listAllInvoices(accessToken: accessToken);
-
-      // Check if response is null or has unexpected format
-      if (response == null) {
-        throw Exception("Response is null");
-      }
-
-      if (response['status'] == 'success') {
-        ListInvoiceModel listInvoiceModel = ListInvoiceModel.fromJson(response);
-        setState(() {
-          invoiceData = listInvoiceModel;
-          invoiceListDetails = listInvoiceModel.data.invoices;
-        });
-      } else {
-        showScaffold(context: context, message: "Data Not Found");
-      }
-    } catch (error, stackTrace) {
-      debugPrint("Error loading invoices: $error");
-      debugPrint("Stack Trace: $stackTrace");
+      await invoiceProvider
+          .listAllReceipts(accessToken: accessToken ?? "")
+          .then((value) {
+        if (value['status'] == 'success') {
+          ReceiptResponse receiptResponse = ReceiptResponse.fromJson(value);
+          receiptData = receiptResponse.data;
+          receiptList =
+              receiptResponse.data.data; // Update to point to receipts data
+        } else {
+          showScaffold(context: context, message: "Data Not Found");
+        }
+      });
+    } catch (error) {
+      debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -78,42 +65,29 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     }
   }
 
-  Future<void> searchInvoices(int page) async {
-    setState(() {
-      initLoading = true;
-    });
-
+  Future<void> searchReceipts(int page) async {
     try {
+      setState(() {
+        initLoading = true;
+      });
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-
-      // Check if accessToken is null
-      if (accessToken == null) {
-        throw Exception("Access token is null");
-      }
-
       InvoiceProvider invoiceProvider =
           Provider.of<InvoiceProvider>(context, listen: false);
 
-      final response =
-          await invoiceProvider.listAllInvoices(accessToken: accessToken);
-
-      // Check if response is null or has unexpected format
-      if (response == null) {
-        throw Exception("Response is null");
-      }
-
-      if (response['status'] == 'success') {
-        ListInvoiceModel listInvoiceModel = ListInvoiceModel.fromJson(response);
-        setState(() {
-          invoiceListDetails = listInvoiceModel.data.invoices;
-        });
-      } else {
-        showScaffold(context: context, message: "Data Not Found");
-      }
-    } catch (error, stackTrace) {
-      debugPrint("Error loading invoices: $error");
-      debugPrint("Stack Trace: $stackTrace");
+      await invoiceProvider
+          .listAllReceipts(accessToken: accessToken ?? "")
+          .then((value) {
+        if (value['status'] == 'success') {
+          ReceiptResponse receiptResponse = ReceiptResponse.fromJson(value);
+          receiptList =
+              receiptResponse.data.data; // Update to point to receipts data
+        } else {
+          showScaffold(context: context, message: "Data Not Found");
+        }
+      });
+    } catch (error) {
+      debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -140,7 +114,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       child: RefreshIndicator(
         onRefresh: refreshData,
         child: Container(
-          margin: const EdgeInsets.all(10),
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
@@ -158,11 +132,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
             child: ListView(
               children: [
-                _buildHeader(size),
+                _buildHeader(),
                 const SizedBox(height: 15),
                 _buildSearchBar(size),
-                _buildInvoiceTable(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 15),
+                _buildReceiptTable(),
+                const SizedBox(height: 15),
                 _buildPaginationControls(),
               ],
             ),
@@ -172,19 +147,20 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-  Widget _buildHeader(Size size) {
+  Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Invoice List",
+          "Receipt List",
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
         CustomRoundButton(
-          title: "Create New Invoice",
+          title: "Create New Receipt",
           fct: () {
-            sideBarController.index.value = 24;
+            sideBarController.index.value =
+                25; // Navigate to create receipt screen
           },
           fontSize: 12,
           height: 45,
@@ -272,21 +248,20 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-  Widget _buildInvoiceTable() {
+  Widget _buildReceiptTable() {
     return BuildBoxShadowContainer(
       margin: const EdgeInsets.only(top: 20),
       circleRadius: 7,
       offsetValue: const Offset(1, 1),
       child: Table(
         columnWidths: const {
-          0: FractionColumnWidth(0.06),
-          1: FractionColumnWidth(0.06),
-          2: FractionColumnWidth(0.06),
-          3: FractionColumnWidth(0.06),
-          4: FractionColumnWidth(0.06),
-          5: FractionColumnWidth(0.05),
-          6: FractionColumnWidth(0.05),
-          7: FractionColumnWidth(0.05),
+          0: FractionColumnWidth(0.2),
+          1: FractionColumnWidth(0.1),
+          2: FractionColumnWidth(0.15),
+          3: FractionColumnWidth(0.2),
+          4: FractionColumnWidth(0.15),
+          5: FractionColumnWidth(0.1),
+          6: FractionColumnWidth(0.1),
         },
         border: const TableBorder.symmetric(
           outside: BorderSide(color: ColorManager.tableBOrderColor, width: 0.3),
@@ -305,13 +280,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     return TableRow(
       decoration: const BoxDecoration(color: ColorManager.tableBGColor),
       children: [
-        _buildTableCell("Name"),
-        _buildTableCell("Invoice Number"),
-        _buildTableCell("Type"),
-        _buildTableCell("Invoice Date"),
-        _buildTableCell("Due Date"),
+        _buildTableCell("Customer Name"),
+        _buildTableCell("Receipt Number"),
         _buildTableCell("Amount"),
+        _buildTableCell("Payment Reference"),
         _buildTableCell("Status"),
+        _buildTableCell("Payment Method"),
         _buildTableCell("Action"),
       ],
     );
@@ -338,24 +312,22 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }
 
   List<TableRow> _buildTableRows() {
-    return invoiceListDetails?.map((invoice) {
-          return TableRow(
-            children: [
-              _buildInvoiceCell(invoice.customer.user.name.toString()),
-              _buildInvoiceCell(invoice.invoiceNumber),
-              _buildInvoiceCell(invoice.type),
-              _buildInvoiceCell(invoice.invoiceDate),
-              _buildInvoiceCell(invoice.dueDate),
-              _buildInvoiceCell(invoice.amount.toString()),
-              _buildInvoiceCell(invoice.status),
-              _buildActionCell(invoice.id),
-            ],
-          );
-        }).toList() ??
-        [];
+    return receiptList!.map((receipt) {
+      return TableRow(
+        children: [
+          _buildReceiptCell(receipt.customer.user.name.toString()),
+          _buildReceiptCell(receipt.receiptNumber),
+          _buildReceiptCell(receipt.amount),
+          _buildReceiptCell(receipt.paymentReference),
+          _buildReceiptCell(receipt.receiptStatus),
+          _buildReceiptCell(receipt.paymentMethod),
+          _buildActionCell(receipt),
+        ],
+      );
+    }).toList();
   }
 
-  TableCell _buildInvoiceCell(String content) {
+  TableCell _buildReceiptCell(String content) {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: Padding(
@@ -375,36 +347,20 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-  TableCell _buildActionCell(int transactionId) {
+  TableCell _buildActionCell(Receipt receipt) {
     return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Center(
-          child: Row(
-            children: [
-              BuildBoxShadowContainer(
-                margin: const EdgeInsets.only(left: 5, right: 5),
-                circleRadius: 5,
-                child: IconButton(
-                  icon: Icon(
-                    Icons.visibility,
-                    size: 18,
-                    color: ColorManager.kPrimaryColor.withOpacity(0.9),
-                  ),
-                  onPressed: () {
-                    String? token =
-                        Provider.of<AuthModel>(context, listen: false).token;
-                    InvoiceProvider invoiceProvider =
-                        Provider.of<InvoiceProvider>(context, listen: false);
-                    invoiceProvider.callDetailsOfInvoice(
-                        id: transactionId, accessToken: token ?? "");
-                    sideBarController.index.value = 31;
-                  },
-                ),
-              ),
-            ],
-          ),
+      child: Center(
+        child: IconButton(
+          icon: const Icon(Icons.visibility, color: ColorManager.kPrimaryColor),
+          onPressed: () {
+            String? token =
+                Provider.of<AuthModel>(context, listen: false).token;
+            InvoiceProvider invoiceProvider =
+                Provider.of<InvoiceProvider>(context, listen: false);
+            invoiceProvider.callDetailsOfReceipt(
+                id: receipt.id, accessToken: token ?? "");
+            sideBarController.index.value = 48;
+          },
         ),
       ),
     );
@@ -412,10 +368,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 
   Widget _buildPaginationControls() {
     return PaginationControl(
-      currentPage: invoiceData?.data.currentPage ?? 1,
-      totalPages: invoiceData?.data.lastPage ?? 1,
+      currentPage: receiptData?.currentPage ?? 1,
+      totalPages: receiptData?.lastPage ?? 1,
       onPageChanged: (int page) {
-        searchInvoices(page);
+        searchReceipts(page);
       },
     );
   }

@@ -33,12 +33,14 @@ import 'package:pos_machine/screens/sales/sales.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
 import 'package:pos_machine/screens/support/support.dart';
 import 'package:pos_machine/screens/transaction-customer/invoice_list.dart';
+import 'package:pos_machine/screens/transaction-customer/receipt_list.dart';
 import 'package:pos_machine/screens/transaction-customer/receipt_voucher.dart';
 import 'package:pos_machine/screens/transaction-customer/transaction_list.dart';
 import 'package:pos_machine/screens/transaction-customer/widgets/add_voucher_details.dart';
 import 'package:pos_machine/screens/transaction-customer/widgets/create_new_invoice.dart';
 import 'package:pos_machine/screens/transaction-customer/widgets/create_new_voucher.dart';
 import 'package:pos_machine/screens/transaction-customer/widgets/view_invoice.dart';
+import 'package:pos_machine/screens/transaction-customer/widgets/view_receipt_details.dart';
 import 'package:pos_machine/screens/transaction-customer/widgets/view_transaction_details.dart';
 import 'package:pos_machine/screens/transaction-customer/widgets/view_voucher_details.dart';
 import 'package:pos_machine/screens/transaction/transaction.dart';
@@ -77,7 +79,7 @@ class SideBarController extends GetxController {
     AddProductStockScreen(), //18
     PurchaseScreen(), //19
     AddPurchaseScreen(), //20
-    InvoiceListcreen(), //21
+    InvoiceListScreen(), //21
     VoucherListScreen(), //22
     CustomerTransactionListScreen(), //23
     CreateNewInvoiceScreen(), //24
@@ -103,5 +105,7 @@ class SideBarController extends GetxController {
     LocationManagementScreen(), //44
     CategoryList(), //45 Home Old
     BillingPage(), //46 Billing Page
+    ReceiptListScreen(), //47 Receipt List
+    ViewReceiptDetailsWidget(), //48 Voucher Details
   ];
 }

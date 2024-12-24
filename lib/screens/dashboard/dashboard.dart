@@ -34,7 +34,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     getDashBoardDetails();
-    fetchGraphData();
+    fetchGraphData(); // Fetch initial graph data
   }
 
   Future<void> fetchGraphData() async {
@@ -43,7 +43,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
 
     try {
-      final String? accessToken =
+      String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       if (accessToken != null) {
         final data = await DashboardProvider().fetchGraphData(accessToken);
@@ -98,7 +98,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return isInitLoading
         ? SizedBox(
             height: size.height,
-            child: const CircularProgressIndicator.adaptive())
+            child: const Center(child: CircularProgressIndicator.adaptive()))
         : Padding(
             padding:
                 const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
@@ -139,46 +139,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
               CustomRoundButtonWithIcon(
                 title: "Download Report",
                 fct: () {},
-                fontSize: 12, // Increased font size for better readability
+                fontSize: 12,
                 height: 50,
                 width: 180,
                 size: size,
                 icon: const Icon(
                   Icons.download_outlined,
-                  size: 16, // Increased icon size for better visibility
+                  size: 16,
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 12), // Added spacing between elements
+              const SizedBox(width: 12),
               BuildBoxShadowContainer(
-                padding: const EdgeInsets.all(
-                    12), // Adjusted padding for better aesthetics
+                padding: const EdgeInsets.all(12),
                 height: 50,
-                width: 150,
-                circleRadius: 8, // Increased radius for a softer look
+                circleRadius: 8,
                 child: Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment.center, // Centered the content
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(
-                      Icons.calendar_today, // Changed to a more relevant icon
-                      size: 16, // Increased icon size
+                      Icons.calendar_today,
+                      size: 16,
                     ),
-                    const SizedBox(width: 8), // Increased spacing
+                    const SizedBox(width: 8),
                     Text(
-                      "6 April 2022", // Removed the comma for a cleaner look
+                      DateFormat('d MMMM y').format(
+                          DateTime.now()), // Updated to show current date
                       style: buildCustomStyle(
                         FontWeightManager.medium,
-                        FontSize
-                            .s12, // Increased font size for better readability
+                        FontSize.s12,
                         0.10,
                         ColorManager.textColor,
                       ),
                     ),
-                    const SizedBox(width: 8), // Increased spacing
+                    const SizedBox(width: 8),
                     const Icon(
                       Icons.keyboard_arrow_down,
-                      size: 16, // Increased icon size
+                      size: 16,
                     ),
                   ],
                 ),
@@ -213,7 +210,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             value: value, // Set the initial value
             onChanged: (String? newValue) {
               setState(() {
-                value = newValue ?? "today";
+                value =
+                    newValue?.toLowerCase() ?? "today"; // Update selected value
               });
             },
             items:
@@ -244,10 +242,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             isExpanded: true, // Expand the dropdown to the container width
             icon: const Icon(
               Icons.arrow_drop_down,
-              color: ColorManager
-                  .kPrimaryColor, // Custom color for the dropdown icon
+              color: ColorManager.kPrimaryColor,
             ),
-            // Optional: Add a dropdown decoration for a polished look
             selectedItemBuilder: (BuildContext context) {
               return <String>['Today', 'Week', 'Month', 'Year']
                   .map<Widget>((String value) {
@@ -340,7 +336,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10), // Added spacing
+                const SizedBox(height: 10),
                 BuildBoxShadowContainer(
                   margin: const EdgeInsets.all(15),
                   padding: const EdgeInsets.all(15),
@@ -351,7 +347,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 10), // Spacing between columns
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,7 +364,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10), // Added spacing
+                const SizedBox(height: 10),
                 BuildBoxShadowContainer(
                   margin: const EdgeInsets.all(15),
                   padding: const EdgeInsets.all(15),
@@ -388,7 +384,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: SizedBox(
-        height: 200, // Set a fixed height for the chart
+        height: 200,
         child: LineChart(
           LineChartData(
             gridData: const FlGridData(show: false),
@@ -454,7 +450,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildAnalyticsChart() {
     return SizedBox(
-      height: 200, // Set a fixed height for the chart
+      height: 200,
       child: BarChart(
         BarChartData(
           alignment: BarChartAlignment.spaceAround,
@@ -549,7 +545,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Quick Access ",
+          "Quick Access",
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s15,
               0.23, ColorManager.textColor),
         ),
@@ -572,7 +568,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             QuickAccessCard(
               onTap: () {},
-              title: "Favourites",
+              title: "Orders",
               gradient: const LinearGradient(
                 colors: [
                   ColorManager.kGradientPeach,
@@ -585,7 +581,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             QuickAccessCard(
               onTap: () {},
-              title: "Favourites",
+              title: "Reports",
               gradient: const LinearGradient(
                 colors: [
                   ColorManager.kGradientIndigo,
@@ -598,7 +594,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             QuickAccessCard(
               onTap: () {},
-              title: "Favourites",
+              title: "Settings",
               gradient: const LinearGradient(
                 colors: [
                   ColorManager.kGradientGreen,
@@ -713,46 +709,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case "Count":
         return periodStats.totalSales?.toString() ?? "0";
       case "Amount":
-        return periodStats.totalAmount?.toString() ?? "0";
+        return periodStats.totalAmount?.toStringAsFixed(2) ?? "0";
       case "Customers":
         return periodStats.totalCustomers?.toString() ?? "0";
       default:
         return "0";
     }
-  }
-
-  Widget getTitles(double value, TitleMeta meta) {
-    const style = TextStyle(
-      color: Colors.grey,
-      fontWeight: FontWeight.bold,
-      fontSize: 8,
-    );
-    Widget text;
-    switch (value.toInt()) {
-      case 0:
-        text = const Text('M', style: style);
-        break;
-      case 1:
-        text = const Text('T', style: style);
-        break;
-      case 2:
-        text = const Text('W', style: style);
-        break;
-      case 3:
-        text = const Text('T', style: style);
-        break;
-      case 4:
-        text = const Text('F', style: style);
-        break;
-      default:
-        text = const Text('', style: style);
-        break;
-    }
-    return SideTitleWidget(
-      axisSide: meta.axisSide,
-      space: 4.0,
-      child: text,
-    );
   }
 }
 

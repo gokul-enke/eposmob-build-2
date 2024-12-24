@@ -5,6 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/get_invoice_account_type.dart';
 import 'package:pos_machine/models/get_voucher_account_type.dart';
+import 'package:pos_machine/models/invoice_details.dart';
+import 'package:pos_machine/models/list_invoice.dart';
+import 'package:pos_machine/models/list_receipt.dart';
+import 'package:pos_machine/models/receipt_details.dart';
 
 import '../models/get_payment_method.dart';
 
@@ -16,18 +20,31 @@ import '../resources/app_url.dart';
 class InvoiceProvider extends ChangeNotifier {
   bool isLoading = false;
   ListTransaction? listTransaction;
+  Invoice? listInvoice;
+  InvoiceDetails? invoiceDetails;
+  List<Receipt>? receiptListDetails;
+  ReceiptDetails? receiptDetails;
   List<ListTransaction>? transactionListDetails;
+  List<Invoice>? invoiceListDetails;
   Map<String, String>? paymentList;
   Map<String, String>? getVoucherAccountTypesModelData = {};
   Map<String, String>? getInvoiceAccountTypesModelData = {};
   List<GetUsersModelData>? getUsersList = [];
   ListTransaction? get getListTransaction => listTransaction;
+  Invoice? get getListInvoice => listInvoice;
+  List<Receipt>? get getListReceipt => receiptListDetails;
+  InvoiceDetails? get getInvoiceDetails => invoiceDetails;
+  ReceiptDetails? get getReceiptDetails => receiptDetails;
   List<GetUsersModelData>? get getUsersListAPI => getUsersList;
   Map<String, String>? get getVoucherAccountTypes =>
       getVoucherAccountTypesModelData;
   Map<String, String>? get getInvoiceAccountTypes =>
       getInvoiceAccountTypesModelData;
   Map<String, String>? get getPaymentType => paymentList;
+  int get currentPage => _currentPage;
+  int get totalPages => _totalPages;
+  int _currentPage = 1;
+  int _totalPages = 1;
 
   String? getUserUpOnId(int value) {
     var user = getUsersList!.firstWhere((e) => e.id == value,
@@ -223,10 +240,11 @@ class InvoiceProvider extends ChangeNotifier {
       // notifyListeners();
     }
   }
-  //          *********************** LIST ALL TRANSACTION ALL/ INVOICE/ VOUCHER  API ***************************************************
+
+  //          *********************** LIST ALL TRANSACTION API ***************************************************
 
   Future<dynamic> listAllTransaction({
-    required String? type,
+    String? type,
     required String accessToken,
   }) async {
     final Map<String, dynamic> apiBodyData = {
@@ -250,7 +268,7 @@ class InvoiceProvider extends ChangeNotifier {
         ListTransactionModel listTransactionModel =
             ListTransactionModel.fromJson(jsonData);
 
-        transactionListDetails = listTransactionModel.data;
+        transactionListDetails = listTransactionModel.data?.transactions;
         notifyListeners();
         return json.decode(response.body);
       } else {}
@@ -266,7 +284,7 @@ class InvoiceProvider extends ChangeNotifier {
     required String accessToken,
   }) async {
     debugPrint("CALL DETAILS OF TRANSACTION / INVOICE/ VOUCHER  API");
-    final url = Uri.parse("${APPUrl.detailsOfTransaction}?id=$id");
+    final url = Uri.parse("${APPUrl.detailsOfTransaction}/$id");
 
     try {
       final response = await http.get(url, headers: {
@@ -284,5 +302,128 @@ class InvoiceProvider extends ChangeNotifier {
         notifyListeners();
       } else {}
     } finally {}
+  }
+
+  //          *********************** LIST ALL INVOICE API ***************************************************
+
+  Future<dynamic> listAllInvoices({
+    required String accessToken,
+  }) async {
+    final url = Uri.parse(APPUrl.listAllInvoices);
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+      debugPrint('inside ${response.statusCode}');
+      if (response.statusCode == 200) {
+        debugPrint(json.decode(response.body).toString());
+        final jsonData = json.decode(response.body);
+        ListInvoiceModel listInvoiceModel = ListInvoiceModel.fromJson(jsonData);
+
+        invoiceListDetails = listInvoiceModel.data.invoices;
+        notifyListeners();
+        return json.decode(response.body);
+      } else {}
+    } finally {}
+  }
+
+  //          *********************** CALL DETAILS OF INVOICE API ***************************************************
+
+  Future<void> callDetailsOfInvoice({
+    required int id,
+    required String accessToken,
+  }) async {
+    debugPrint("CALL DETAILS OF INVOICE API");
+    final url = Uri.parse("${APPUrl.detailsOfInvoice}/$id");
+
+    try {
+      final response = await http.get(url, headers: {
+        'Authorization': 'Bearer $accessToken',
+      });
+      debugPrint('Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        InvoiceDetails invoiceDetailsData =
+            InvoiceDetails.fromJson(jsonData["data"]);
+        invoiceDetails = invoiceDetailsData;
+        notifyListeners();
+      } else {
+        debugPrint("Error fetching invoice details: ${response.reasonPhrase}");
+        // Handle error responses accordingly
+      }
+    } catch (e) {
+      debugPrint("Exception occurred: $e");
+      // Handle exceptions accordingly
+    }
+  }
+
+  //          *********************** LIST ALL RECEIPT API ***************************************************
+  Future<dynamic> listAllReceipts({
+    required String accessToken,
+  }) async {
+    final url = Uri.parse(
+        APPUrl.listAllReceipts); // Update the URL to point to receipts
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+      debugPrint('inside ${response.statusCode}');
+      if (response.statusCode == 200) {
+        debugPrint(json.decode(response.body).toString());
+        final jsonData = json.decode(response.body);
+        ReceiptResponse receiptResponse = ReceiptResponse.fromJson(jsonData);
+
+        receiptListDetails = receiptResponse
+            .data.data; // Update this to point to the receipts data
+        notifyListeners();
+        return json.decode(response.body);
+      } else {
+        debugPrint("Error fetching receipts: ${response.reasonPhrase}");
+        // Handle error responses accordingly
+      }
+    } catch (e) {
+      debugPrint("Exception occurred: $e");
+      // Handle exceptions accordingly
+    }
+  }
+
+  //          *********************** CALL DETAILS OF RECEIPT API ***************************************************
+
+  Future<void> callDetailsOfReceipt({
+    required int id,
+    required String accessToken,
+  }) async {
+    debugPrint("CALL DETAILS OF RECEIPT API");
+    final url = Uri.parse(
+        "${APPUrl.detailsOfReceipt}/$id"); // Update the URL to point to receipt details
+
+    try {
+      final response = await http.get(url, headers: {
+        'Authorization': 'Bearer $accessToken',
+      });
+      debugPrint('Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        debugPrint(jsonData.toString());
+        ReceiptDetails receiptDetailsData = ReceiptDetails.fromJson(
+            jsonData["data"]); // Update to use ReceiptDetails model
+        receiptDetails = receiptDetailsData;
+        notifyListeners();
+      } else {
+        debugPrint("Error fetching receipt details: ${response.reasonPhrase}");
+        // Handle error responses accordingly
+      }
+    } catch (e) {
+      debugPrint("Exception occurred: $e");
+      // Handle exceptions accordingly
+    }
   }
 }

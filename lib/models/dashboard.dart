@@ -45,7 +45,7 @@ class DashBoardModelData {
         profileDetails: json["profile_details"] == null
             ? []
             : List<ProfileDetail>.from(
-                json["profile_details"]!.map((x) => ProfileDetail.fromJson(x))),
+                json["profile_details"].map((x) => ProfileDetail.fromJson(x))),
         totalSales: json["total_sales"] == null
             ? null
             : TotalSales.fromJson(json["total_sales"]),
@@ -64,24 +64,12 @@ class ProfileDetail {
   final String? name;
   final String? email;
   final String? phone;
-  final String? phoneVerified;
-  final dynamic emailVerifiedAt;
-  final String? defaultPassword;
-  final int? doneBy;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
 
   ProfileDetail({
     this.id,
     this.name,
     this.email,
     this.phone,
-    this.phoneVerified,
-    this.emailVerifiedAt,
-    this.defaultPassword,
-    this.doneBy,
-    this.createdAt,
-    this.updatedAt,
   });
 
   factory ProfileDetail.fromJson(Map<String, dynamic> json) => ProfileDetail(
@@ -89,16 +77,6 @@ class ProfileDetail {
         name: json["name"],
         email: json["email"],
         phone: json["phone"],
-        phoneVerified: json["phone_verified"],
-        emailVerifiedAt: json["email_verified_at"],
-        defaultPassword: json["default_password"],
-        doneBy: json["done_by"],
-        createdAt: json["created_at"] == null
-            ? null
-            : DateTime.parse(json["created_at"]),
-        updatedAt: json["updated_at"] == null
-            ? null
-            : DateTime.parse(json["updated_at"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -106,12 +84,6 @@ class ProfileDetail {
         "name": name,
         "email": email,
         "phone": phone,
-        "phone_verified": phoneVerified,
-        "email_verified_at": emailVerifiedAt,
-        "default_password": defaultPassword,
-        "done_by": doneBy,
-        "created_at": createdAt?.toIso8601String(),
-        "updated_at": updatedAt?.toIso8601String(),
       };
 }
 
@@ -140,7 +112,9 @@ class TotalSales {
             json["month"] == null ? null : PeriodStats.fromJson(json["month"]),
         year: json["year"] == null ? null : PeriodStats.fromJson(json["year"]),
         count: json["count"],
-        total: json["total"].toDouble(),
+        total: json["total"] is String
+            ? double.parse(json["total"])
+            : json["total"].toDouble(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -165,9 +139,13 @@ class PeriodStats {
   });
 
   factory PeriodStats.fromJson(Map<String, dynamic> json) => PeriodStats(
-        totalSales: _formatDouble(json["total_sales"]),
+        totalSales: json["total_sales"] is String
+            ? double.parse(json["total_sales"])
+            : json["total_sales"].toDouble(),
         totalCustomers: json["total_customers"],
-        totalAmount: _formatDouble(json["total_amount"]),
+        totalAmount: json["total_amount"] is String
+            ? double.parse(json["total_amount"])
+            : json["total_amount"].toDouble(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -175,9 +153,4 @@ class PeriodStats {
         "total_customers": totalCustomers,
         "total_amount": totalAmount?.toStringAsFixed(2),
       };
-
-  static double? _formatDouble(dynamic value) {
-    if (value == null) return null;
-    return double.parse(double.parse(value.toString()).toStringAsFixed(2));
-  }
 }

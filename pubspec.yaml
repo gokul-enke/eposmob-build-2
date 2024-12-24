@@ -83,6 +83,7 @@ dependencies:
   share_plus: ^4.0.4
   pdf_render: ^1.4.10
   flutter_html: ^3.0.0-beta.2
+  dio: ^5.7.0
   
 
 dev_dependencies:

@@ -48,6 +48,7 @@ class _BillingPageState extends State<BillingPage> {
 
   String? mobileNumberText = "";
   int? selectedCustomerID;
+  String? selectedCustomerPhone;
   CartProvider cartProvider = CartProvider();
   int iconColor = 0;
   double _balanceAmount = 0;
@@ -62,6 +63,7 @@ class _BillingPageState extends State<BillingPage> {
   TextEditingController quantityController = TextEditingController();
   TextEditingController unitPriceController = TextEditingController();
   TextEditingController selectedProductIdController = TextEditingController();
+  bool isCustomerFound = false;
 
   @override
   void initState() {
@@ -283,6 +285,7 @@ class _BillingPageState extends State<BillingPage> {
                                           selectedProductIdController.text),
                                       quantity:
                                           int.parse(quantityController.text),
+                                      unitPrice: unitPriceController.text,
                                       accessToken: accessToken ?? "")
                                   .then((value) {
                                 AddToCartModel addToCartModel =
@@ -322,32 +325,44 @@ class _BillingPageState extends State<BillingPage> {
                 ),
                 Expanded(
                   flex: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: Center(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CustomRoundButton(
-                            title: "X",
-                            boxColor: ColorManager.kButtonRed,
-                            borderColor: ColorManager.kButtonRed,
-                            fontSize: FontSize.s14,
-                            height: size.height * .07,
-                            width: size.width / 3,
-                            fct: () {
-                              setState(() {
-                                _autocompleteProductKey = GlobalKey();
-                                quantityController.clear();
-                                barcodeController.clear();
-                                selectedProductIdController.clear();
-                                unitPriceController.clear();
-                              });
-                            },
+                  child: Column(
+                    children: [
+                      BuildBoxShadowContainer(
+                        height: size.height * .07,
+                        width: 50,
+                        circleRadius: 5,
+                        child: InkWell(
+                          onTap: () => {
+                            setState(() {
+                              _autocompleteProductKey = GlobalKey();
+                              quantityController.clear();
+                              barcodeController.clear();
+                              selectedProductIdController.clear();
+                              unitPriceController.clear();
+                            }),
+                            showScaffold(
+                              context: context,
+                              message: 'Product Details Cleared Successfully',
+                            )
+                          },
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Center(
+                                  child: WebsafeSvg.asset(
+                                    ImageAssets.oderlistCloseIcon,
+                                    width: 27,
+                                    color: ColorManager.kButtonRed,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ],
@@ -488,12 +503,79 @@ class _BillingPageState extends State<BillingPage> {
                               )),
                               DataCell(Center(
                                 child: CompactQuantityControl(
-                                  quantity: item.quantity ?? 0,
-                                  onQuantityChanged: (newQuantity) {
-                                    _handleQuantityChange(
-                                        context, item, newQuantity);
-                                  },
-                                ),
+                                    quantity: item.quantity ?? 0,
+                                    onQuantityChanged: (newQuantity) {
+                                      // _handleQuantityChange(
+                                      //     context, item, newQuantity);
+                                      String? accessToken =
+                                          Provider.of<AuthModel>(context,
+                                                  listen: false)
+                                              .token;
+                                      debugPrint(
+                                          "accessToken From AuthModel $accessToken");
+                                      if (newQuantity > item.quantity!) {
+                                        Provider.of<CartProvider>(context,
+                                                listen: false)
+                                            .addToCartAPI(
+                                          accessToken: accessToken ?? "",
+                                          customerId: Provider.of<AuthModel>(
+                                                  context,
+                                                  listen: false)
+                                              .userId!,
+                                          productId: item.productId ?? 1,
+                                          quantity:
+                                              newQuantity - item.quantity!,
+                                        )
+                                            .then(
+                                          (value) {
+                                            AddToCartModel addToCartModel =
+                                                AddToCartModel.fromJson(value);
+                                            if (value["status"] == "success") {
+                                              // showScaffold(
+                                              //   context: context,
+                                              //   message:
+                                              //       'Quantity Updated Successfully',
+                                              // );
+                                            } else {
+                                              showScaffoldError(
+                                                context: context,
+                                                message: addToCartModel
+                                                        .message ??
+                                                    "Error Occured ! Try Again",
+                                              );
+                                            }
+                                          },
+                                        );
+                                      } else if (newQuantity < item.quantity!) {
+                                        String? accessToken =
+                                            Provider.of<AuthModel>(context,
+                                                    listen: false)
+                                                .token;
+                                        Provider.of<CartProvider>(context,
+                                                listen: false)
+                                            .decrementCartItemQuantityAPI(
+                                          accessToken: accessToken ?? "",
+                                          customerId: Provider.of<AuthModel>(
+                                                  context,
+                                                  listen: false)
+                                              .userId!,
+                                          productId: item.id ?? 1,
+                                          remove: '',
+                                          quantity: newQuantity,
+                                        );
+                                        // showScaffold(
+                                        //   context: context,
+                                        //   message:
+                                        //       "Quantity Updated Successfully",
+                                        // );
+                                      }
+                                      //  else {
+                                      //   showScaffoldError(
+                                      //     context: context,
+                                      //     message: "Failed to Update Quantity",
+                                      //   );
+                                      // }
+                                    }),
                               )),
                               DataCell(Center(
                                 child: SizedBox(
@@ -844,8 +926,7 @@ class _BillingPageState extends State<BillingPage> {
               debugPrint("Clear Cart pressed");
               String? accessToken =
                   Provider.of<AuthModel>(context, listen: false).token;
-              Provider.of<CartProvider>(context, listen: false)
-                  .clearCartAPI(
+              Provider.of<CartProvider>(context, listen: false).clearCartAPI(
                 accessToken: accessToken ?? "",
                 customerId:
                     Provider.of<AuthModel>(context, listen: false).userId!,
@@ -856,6 +937,13 @@ class _BillingPageState extends State<BillingPage> {
                     1,
                 remove: "true",
               );
+              setState(() {
+                iconColor = 0;
+                coupenCodeTextController.clear();
+                _transactionNumberController.clear();
+                _paidAmountController.clear();
+                _balanceAmount = 0;
+              });
               showScaffold(
                 context: context,
                 message: "Cart Cleared Succesfully",
@@ -890,8 +978,10 @@ class _BillingPageState extends State<BillingPage> {
 
                 if (iconColor == 1) {
                   paymentMethod = "CASH";
-                } else if (iconColor == 2 || iconColor == 3) {
-                  paymentMethod = "ONLINE";
+                } else if (iconColor == 2) {
+                  paymentMethod = "CARD";
+                } else if (iconColor == 3) {
+                  paymentMethod = "UPI";
                 }
 
                 try {
@@ -906,14 +996,13 @@ class _BillingPageState extends State<BillingPage> {
                             .netTotal
                             .toString(),
                     customerId: selectedCustomerID,
+                    customerPhone: selectedCustomerPhone,
                     phone: mobileNumberText,
                     paymentMethod: paymentMethod,
                     paidAmount: _paidAmountController.text,
                     balanceAmount: _balanceAmount.toString(),
                   )
                       .then((response) {
-                    AddToOrderModel addToOrderModel =
-                        AddToOrderModel.fromJson(response);
                     debugPrint("$response");
                     if (response["order_number"] != null) {
                       showScaffold(
@@ -925,12 +1014,19 @@ class _BillingPageState extends State<BillingPage> {
                       setState(() {
                         mobileNumberText = ""; // Clear the variable
                         selectedCustomerID = null;
+                        selectedCustomerPhone = null;
                         iconColor = 0;
                         mobileNumberTextController.clear();
                         quantityController.clear();
                         barcodeController.clear();
                         selectedProductIdController.clear();
                         unitPriceController.clear();
+                        isCustomerFound = false;
+                        selectedCustomer = null;
+                        coupenCodeTextController.clear();
+                        _transactionNumberController.clear();
+                        _paidAmountController.clear();
+                        _balanceAmount = 0;
                       });
                       resetAutocomplete();
                     } else {
@@ -975,10 +1071,11 @@ class _BillingPageState extends State<BillingPage> {
 
                 if (iconColor == 1) {
                   paymentMethod = "CASH";
-                } else if (iconColor == 2 || iconColor == 3) {
-                  paymentMethod = "ONLINE";
+                } else if (iconColor == 2) {
+                  paymentMethod = "CARD";
+                } else if (iconColor == 3) {
+                  paymentMethod = "UPI";
                 }
-
                 try {
                   await Provider.of<CartProvider>(context, listen: false)
                       .addToOrderConfirmAPI(
@@ -991,6 +1088,7 @@ class _BillingPageState extends State<BillingPage> {
                             .netTotal
                             .toString(),
                     customerId: selectedCustomerID,
+                    customerPhone: selectedCustomerPhone,
                     phone: mobileNumberText,
                     paymentMethod: paymentMethod,
                     paidAmount: _paidAmountController.text,
@@ -1010,12 +1108,19 @@ class _BillingPageState extends State<BillingPage> {
                       setState(() {
                         mobileNumberText = ""; // Clear the variable
                         selectedCustomerID = null;
+                        selectedCustomerPhone = null;
                         iconColor = 0;
                         mobileNumberTextController.clear();
                         quantityController.clear();
                         barcodeController.clear();
                         selectedProductIdController.clear();
                         unitPriceController.clear();
+                        isCustomerFound = false;
+                        selectedCustomer = null;
+                        coupenCodeTextController.clear();
+                        _transactionNumberController.clear();
+                        _paidAmountController.clear();
+                        _balanceAmount = 0;
                       });
                       resetAutocomplete();
                     } else {
@@ -1059,8 +1164,10 @@ class _BillingPageState extends State<BillingPage> {
 
                 if (iconColor == 1) {
                   paymentMethod = "CASH";
-                } else if (iconColor == 2 || iconColor == 3) {
-                  paymentMethod = "ONLINE";
+                } else if (iconColor == 2) {
+                  paymentMethod = "CARD";
+                } else if (iconColor == 3) {
+                  paymentMethod = "UPI";
                 }
 
                 try {
@@ -1075,6 +1182,7 @@ class _BillingPageState extends State<BillingPage> {
                             .netTotal
                             .toString(),
                     customerId: selectedCustomerID,
+                    customerPhone: selectedCustomerPhone,
                     phone: mobileNumberText,
                     paymentMethod: paymentMethod,
                     paidAmount: _paidAmountController.text,
@@ -1094,12 +1202,19 @@ class _BillingPageState extends State<BillingPage> {
                       setState(() {
                         mobileNumberText = ""; // Clear the variable
                         selectedCustomerID = null;
+                        selectedCustomerPhone = null;
                         iconColor = 0;
                         mobileNumberTextController.clear();
                         quantityController.clear();
                         barcodeController.clear();
                         selectedProductIdController.clear();
                         unitPriceController.clear();
+                        isCustomerFound = false;
+                        selectedCustomer = null;
+                        coupenCodeTextController.clear();
+                        _transactionNumberController.clear();
+                        _paidAmountController.clear();
+                        _balanceAmount = 0;
                       });
                       resetAutocomplete();
                     } else {
@@ -1152,12 +1267,13 @@ class _BillingPageState extends State<BillingPage> {
     );
   }
 
-  Widget _buildMobileNumberInput(
-      {required Size size,
-      required TextEditingController mobileNumberTextController}) {
+  Widget _buildMobileNumberInput({
+    required Size size,
+    required TextEditingController mobileNumberTextController,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: BuildBoxShadowContainer(
@@ -1172,6 +1288,9 @@ class _BillingPageState extends State<BillingPage> {
               optionsBuilder: (mobileNumberTextController) async {
                 debugPrint(mobileNumberTextController.text);
                 if (mobileNumberTextController.text.isEmpty) {
+                  setState(() {
+                    isCustomerFound = false; // Reset validity
+                  });
                   return const Iterable<CustomerListModelData>.empty();
                 }
 
@@ -1191,6 +1310,18 @@ class _BillingPageState extends State<BillingPage> {
                         CustomerListModel.fromJson(response);
                     List<CustomerListModelData>? filteredCustomerList =
                         customerListModel.data;
+
+                    if (mobileNumberTextController.text.length == 10 &&
+                        filteredCustomerList!.length == 1) {
+                      setState(() {
+                        isCustomerFound = true;
+                      });
+                    } else {
+                      setState(() {
+                        isCustomerFound = false;
+                      });
+                    }
+
                     return filteredCustomerList!.isNotEmpty
                         ? filteredCustomerList
                         : const Iterable<CustomerListModelData>.empty();
@@ -1200,7 +1331,9 @@ class _BillingPageState extends State<BillingPage> {
                 } catch (error) {
                   debugPrint('Exception caught: $error');
                 }
-
+                setState(() {
+                  isCustomerFound = false;
+                });
                 return const Iterable<
                     CustomerListModelData>.empty(); // Return empty if no customers found
               },
@@ -1217,6 +1350,7 @@ class _BillingPageState extends State<BillingPage> {
                 setState(() {
                   mobileNumberText = "";
                   selectedCustomerID = selection.id!;
+                  selectedCustomerPhone = selection.phone;
                   selectedCustomer = selection;
                 });
               },
@@ -1225,8 +1359,7 @@ class _BillingPageState extends State<BillingPage> {
                   FocusNode focusNode,
                   VoidCallback onFieldSubmitted) {
                 return TextField(
-                  controller:
-                      mobileNumberTextController, // Ensure this is correctly set
+                  controller: mobileNumberTextController,
                   focusNode: focusNode,
                   decoration: InputDecoration(
                     hintText: 'Enter mobile number',
@@ -1240,8 +1373,10 @@ class _BillingPageState extends State<BillingPage> {
                   ),
                   onChanged: (value) {
                     setState(() {
-                      mobileNumberText =
-                          value; // Update the state variable as well
+                      mobileNumberText = value;
+                      selectedCustomerID = null;
+                      selectedCustomerPhone = null;
+                      selectedCustomer = null;
                     });
                   },
                   style: buildCustomStyle(
@@ -1314,22 +1449,78 @@ class _BillingPageState extends State<BillingPage> {
             ),
           ),
         ),
-        // const SizedBox(width: 10),
-        // BuildBoxShadowContainer(
-        //   height: size.height * .07,
-        //   width: 50,
-        //   circleRadius: 5,
-        //   child: InkWell(
-        //     onTap: () => {
-        //       showAddCustomerModal(context, size,
-        //           mobileNumber: mobileNumberText),
-        //     },
-        //     child: WebsafeSvg.asset(
-        //       ImageAssets.userIcon,
-        //       fit: BoxFit.none,
+        const SizedBox(width: 10),
+        BuildBoxShadowContainer(
+          height: size.height * .07,
+          width: 50,
+          circleRadius: 5,
+          child: (isCustomerFound || selectedCustomerID != null)
+              ? InkWell(
+                  onTap: () => {},
+                  child: const Icon(
+                    Icons.check_circle,
+                    color: ColorManager.kButtonGreen,
+                    size: 30,
+                  ),
+                )
+              : InkWell(
+                  onTap: () => {
+                    setState(() {
+                      _autocompletePhoneKey = GlobalKey();
+                      mobileNumberTextController.clear();
+                      selectedCustomerID = null;
+                      selectedCustomerPhone = null;
+                      selectedCustomer = null;
+                      isCustomerFound = false;
+                    }),
+                    showScaffold(
+                      context: context,
+                      message: 'Customer Details Cleared Successfully',
+                    )
+                  },
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Center(
+                          child: WebsafeSvg.asset(
+                            ImageAssets.oderlistCloseIcon,
+                            width: 27,
+                            color: ColorManager.kButtonRed,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+        ),
+        // if (selectedCustomerID == null || !isCustomerFound) ...[
+        //   const SizedBox(width: 10),
+        //   BuildBoxShadowContainer(
+        //     height: size.height * .07,
+        //     width: 50,
+        //     circleRadius: 5,
+        //     child: InkWell(
+        //       onTap: () => {},
+        //       child: Center(
+        //         child: Column(
+        //           mainAxisAlignment: MainAxisAlignment.center,
+        //           crossAxisAlignment: CrossAxisAlignment.center,
+        //           children: [
+        //             Center(
+        //               child: WebsafeSvg.asset(
+        //                 ImageAssets.oderlistCloseIcon,
+        //                 width: 27,
+        //                 color: ColorManager.kButtonRed,
+        //               ),
+        //             ),
+        //           ],
+        //         ),
+        //       ),
         //     ),
         //   ),
-        // ),
+        // ],
       ],
     );
   }
@@ -1464,11 +1655,11 @@ class _BillingPageState extends State<BillingPage> {
     }
   }
 
-  // Call this method to reset the Autocomplete
   void resetAutocomplete() {
     setState(() {
       _autocompletePhoneKey = GlobalKey(); // Reset the key to force rebuild
       _autocompleteProductKey = GlobalKey(); // Reset the key to force rebuild
+      isCustomerFound = false;
     });
   }
 }

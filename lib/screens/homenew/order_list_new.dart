@@ -43,6 +43,7 @@ class _OrderListNewState extends State<OrderListNew> {
 
   String? mobileNumberText = "";
   int? selectedCustomerID;
+  String? selectedCustomerPhone;
   CartProvider cartProvider = CartProvider();
   int iconColor = 0;
   double _balanceAmount = 0;
@@ -258,6 +259,7 @@ class _OrderListNewState extends State<OrderListNew> {
                 setState(() {
                   mobileNumberText = "";
                   selectedCustomerID = selection.id!;
+                  selectedCustomerPhone = selection.phone;
                   selectedCustomer = selection;
                 });
               },
@@ -363,7 +365,7 @@ class _OrderListNewState extends State<OrderListNew> {
           child: InkWell(
             onTap: () => {
               showAddCustomerModal(context, size,
-                  mobileNumber: mobileNumberText),
+                  mobileNumber: mobileNumberText ?? ""),
             },
             child: WebsafeSvg.asset(
               ImageAssets.userIcon,
@@ -1079,8 +1081,10 @@ class _OrderListNewState extends State<OrderListNew> {
 
                     if (iconColor == 1) {
                       paymentMethod = "CASH";
-                    } else if (iconColor == 2 || iconColor == 3) {
-                      paymentMethod = "ONLINE";
+                    } else if (iconColor == 2) {
+                      paymentMethod = "CARD";
+                    } else if (iconColor == 3) {
+                      paymentMethod = "UPI";
                     }
 
                     try {
@@ -1095,6 +1099,7 @@ class _OrderListNewState extends State<OrderListNew> {
                                 .netTotal
                                 .toString(),
                         customerId: selectedCustomerID,
+                        customerPhone: selectedCustomerPhone,
                         phone: mobileNumberText,
                         paymentMethod: paymentMethod,
                       )
@@ -1112,6 +1117,7 @@ class _OrderListNewState extends State<OrderListNew> {
                           setState(() {
                             mobileNumberText = ""; // Clear the variable
                             selectedCustomerID = null;
+                            selectedCustomerPhone = null;
                             iconColor = 0;
                             mobileNumberTextController
                                 .clear(); // Clear the text field

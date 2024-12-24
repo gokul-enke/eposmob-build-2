@@ -26,9 +26,9 @@ class ViewVoucherDetailsWidget extends StatelessWidget {
       context,
     );
     ListTransaction? listTransaction = invoiceProvider.getListTransaction;
-    debugPrint(listTransaction == null
-        ? "listTransaction"
-        : listTransaction.accountName);
+    // debugPrint(listTransaction == null
+    //     ? "listTransaction"
+    //     : listTransaction.accountName);
     return SafeArea(
         child: Container(
       margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
@@ -116,28 +116,28 @@ class ViewVoucherDetailsWidget extends StatelessWidget {
                       title2: "Comment",
                       content2: listTransaction?.transactionComment ?? "",
                     ),
-                    BuildDetailRow(
-                      title1: "Particulars",
-                      content1: listTransaction?.particulars ?? "",
-                      title2: "Payment Status",
-                      content2: listTransaction?.status ?? "",
-                    ),
-                    BuildDetailRow(
-                      title1: "Date",
-                      content1: listTransaction?.createdAt
-                              ?.toString()
-                              .substring(0, 10) ??
-                          "",
-                      title2: "Customer Email",
-                      content2: listTransaction?.user?.email ?? "",
-                    ),
-                    BuildDetailRow(
-                      title1: "Customer Phone",
-                      content1: listTransaction?.user?.phone ?? "",
-                      title2:
-                          "", // Leave this empty if you don't have a second item for this row
-                      content2: "",
-                    ),
+                    // BuildDetailRow(
+                    //   title1: "Particulars",
+                    //   content1: listTransaction?.particulars ?? "",
+                    //   title2: "Payment Status",
+                    //   content2: listTransaction?.status ?? "",
+                    // ),
+                    // BuildDetailRow(
+                    //   title1: "Date",
+                    //   content1: listTransaction?.createdAt
+                    //           ?.toString()
+                    //           .substring(0, 10) ??
+                    //       "",
+                    //   title2: "Customer Email",
+                    //   content2: listTransaction?.user?.email ?? "",
+                    // ),
+                    // BuildDetailRow(
+                    //   title1: "Customer Phone",
+                    //   content1: listTransaction?.user?.phone ?? "",
+                    //   title2:
+                    //       "", // Leave this empty if you don't have a second item for this row
+                    //   content2: "",
+                    // ),
                     const SizedBox(height: 50),
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0),

@@ -26,9 +26,9 @@ class ViewTransactionDetailsWidget extends StatelessWidget {
       context,
     );
     ListTransaction? listTransaction = invoiceProvider.getListTransaction;
-    debugPrint(listTransaction == null
-        ? "listTransaction"
-        : listTransaction.accountName);
+    // debugPrint(listTransaction == null
+    //     ? "listTransaction"
+    //     : listTransaction.accountName);
     return SafeArea(
         child: Container(
       margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
@@ -99,44 +99,34 @@ class ViewTransactionDetailsWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     BuildDetailRow(
+                      title1: "Order Number",
+                      content1: listTransaction?.orderId.toString() ?? "",
+                      title2: "Transaction Type",
+                      content2: listTransaction?.transactionType ?? "",
+                    ),
+                    BuildDetailRow(
                       title1: "Customer Name",
                       content1: listTransaction?.userName ?? "",
                       title2: "Amount",
                       content2: listTransaction?.amount ?? "",
                     ),
                     BuildDetailRow(
-                      title1: "Transaction Type",
+                      title1: "Type",
                       content1: listTransaction?.type ?? "",
-                      title2: "Payment Method",
-                      content2: listTransaction?.paymentMethod ?? "",
-                    ),
-                    BuildDetailRow(
-                      title1: "Reference",
-                      content1: listTransaction?.reference ?? "",
-                      title2: "Comment",
-                      content2: listTransaction?.transactionComment ?? "",
-                    ),
-                    BuildDetailRow(
-                      title1: "Particulars",
-                      content1: listTransaction?.particulars ?? "",
-                      title2: "Payment Status",
+                      title2: "Status",
                       content2: listTransaction?.status ?? "",
                     ),
                     BuildDetailRow(
                       title1: "Date",
-                      content1: listTransaction?.createdAt
-                              ?.toString()
-                              .substring(0, 10) ??
-                          "",
-                      title2: "Customer Email",
-                      content2: listTransaction?.user?.email ?? "",
+                      content1: listTransaction?.reference ?? "",
+                      title2: "Invoice Number",
+                      content2: listTransaction?.transactionComment ?? "",
                     ),
                     BuildDetailRow(
-                      title1: "Customer Phone",
-                      content1: listTransaction?.user?.phone ?? "",
-                      title2:
-                          "", // Left empty as there's no corresponding second item
-                      content2: "",
+                      title1: "Reference",
+                      content1: listTransaction?.reference ?? "",
+                      title2: "Payment Method",
+                      content2: listTransaction?.paymentMethod ?? "",
                     ),
                     const SizedBox(height: 50),
                     Padding(

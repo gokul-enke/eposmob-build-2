@@ -103,6 +103,10 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     });
   }
 
+  Future<void> refreshData() async {
+    resetSearch();
+  }
+
   @override
   Widget build(BuildContext context) {
     final categoryProvider =
@@ -111,136 +115,52 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     Size size = MediaQuery.of(context).size;
 
     return SafeArea(
-      child: Container(
-        margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: const [
-            BoxShadow(
-              color: ColorManager.boxShadowColor,
-              blurRadius: 6,
-              offset: Offset(1, 1),
-            ),
-          ],
-          color: Colors.white,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Text(
-              //   "Category List",
-              //   style: buildCustomStyle(FontWeightManager.semiBold,
-              //       FontSize.s20, 0.30, ColorManager.textColor),
-              // ),
-              _buildHeader(categoryProvider, sideBarController),
-              const SizedBox(
-                height: 15,
+      child: RefreshIndicator(
+        onRefresh: refreshData,
+        child: Container(
+          margin:
+              const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: const [
+              BoxShadow(
+                color: ColorManager.boxShadowColor,
+                blurRadius: 6,
+                offset: Offset(1, 1),
               ),
-              SizedBox(
-                height: 90,
-                child: Row(
-                  // scrollDirection: Axis.horizontal,
-                  // physics: const BouncingScrollPhysics(),
-                  children: [
-                    // Filter Category
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            "Category",
-                            style: buildCustomStyle(
-                              FontWeightManager.regular,
-                              FontSize.s14,
-                              0.27,
-                              Colors.black.withOpacity(0.6),
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          height: 45,
-                          width: 180,
-                          child: BuildBoxShadowContainer(
-                            circleRadius: 7,
-                            alignment: Alignment.centerLeft,
-                            margin: const EdgeInsets.only(
-                              left: 5,
-                            ),
-                            padding: const EdgeInsets.only(left: 15),
-                            height: size.height * .07,
-                            width: size.width / 3,
-                            child: DropdownButtonFormField<Category>(
-                              decoration: const InputDecoration(
-                                border:
-                                    InputBorder.none, // Remove the underline
-                              ),
-                              value: categoryProvider.selectedCategoryIndex >= 0
-                                  ? categoryList![
-                                      categoryProvider.selectedCategoryIndex]
-                                  : null,
-                              hint: Text(
-                                'Select Category',
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s12,
-                                  0.27,
-                                  ColorManager.textColor.withOpacity(.5),
-                                ),
-                              ),
-                              items: categoryList!
-                                  .map((Category category) {
-                                    return DropdownMenuItem<Category>(
-                                        value: category,
-                                        child: category.categoryName == "ALL"
-                                            ? Text(
-                                                ' Please Select',
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s12,
-                                                  0.27,
-                                                  ColorManager.textColor
-                                                      .withOpacity(.5),
-                                                ),
-                                              )
-                                            : Text(
-                                                category.categoryName ?? '',
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s12,
-                                                  0.27,
-                                                  ColorManager.textColor
-                                                      .withOpacity(.5),
-                                                ),
-                                              ));
-                                  })
-                                  .toSet()
-                                  .toList(),
-                              onChanged: (Category? selectedCategory) async {
-                                if (selectedCategory != null) {
-                                  setState(() {
-                                    selectedCategoryId =
-                                        selectedCategory.categoryId.toString();
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10.0),
-                      child: Column(
+            ],
+            color: Colors.white,
+          ),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Text(
+                //   "Category List",
+                //   style: buildCustomStyle(FontWeightManager.semiBold,
+                //       FontSize.s20, 0.30, ColorManager.textColor),
+                // ),
+                _buildHeader(categoryProvider, sideBarController),
+                const SizedBox(
+                  height: 15,
+                ),
+                SizedBox(
+                  height: 90,
+                  child: Row(
+                    // scrollDirection: Axis.horizontal,
+                    // physics: const BouncingScrollPhysics(),
+                    children: [
+                      // Filter Category
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              "Parent Category",
+                              "Category",
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -311,9 +231,9 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                                 onChanged: (Category? selectedCategory) async {
                                   if (selectedCategory != null) {
                                     setState(() {
-                                      selectedParentCategoryId =
-                                          selectedCategory.categoryId
-                                              .toString();
+                                      selectedCategoryId = selectedCategory
+                                          .categoryId
+                                          .toString();
                                     });
                                   }
                                 },
@@ -322,44 +242,138 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                           ),
                         ],
                       ),
-                    ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 10.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(
+                                "Parent Category",
+                                style: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  FontSize.s14,
+                                  0.27,
+                                  Colors.black.withOpacity(0.6),
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              height: 45,
+                              width: 180,
+                              child: BuildBoxShadowContainer(
+                                circleRadius: 7,
+                                alignment: Alignment.centerLeft,
+                                margin: const EdgeInsets.only(
+                                  left: 5,
+                                ),
+                                padding: const EdgeInsets.only(left: 15),
+                                height: size.height * .07,
+                                width: size.width / 3,
+                                child: DropdownButtonFormField<Category>(
+                                  decoration: const InputDecoration(
+                                    border: InputBorder
+                                        .none, // Remove the underline
+                                  ),
+                                  value:
+                                      categoryProvider.selectedCategoryIndex >=
+                                              0
+                                          ? categoryList![categoryProvider
+                                              .selectedCategoryIndex]
+                                          : null,
+                                  hint: Text(
+                                    'Select Category',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s12,
+                                      0.27,
+                                      ColorManager.textColor.withOpacity(.5),
+                                    ),
+                                  ),
+                                  items: categoryList!
+                                      .map((Category category) {
+                                        return DropdownMenuItem<Category>(
+                                            value: category,
+                                            child: category.categoryName ==
+                                                    "ALL"
+                                                ? Text(
+                                                    ' Please Select',
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s12,
+                                                      0.27,
+                                                      ColorManager.textColor
+                                                          .withOpacity(.5),
+                                                    ),
+                                                  )
+                                                : Text(
+                                                    category.categoryName ?? '',
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s12,
+                                                      0.27,
+                                                      ColorManager.textColor
+                                                          .withOpacity(.5),
+                                                    ),
+                                                  ));
+                                      })
+                                      .toSet()
+                                      .toList(),
+                                  onChanged:
+                                      (Category? selectedCategory) async {
+                                    if (selectedCategory != null) {
+                                      setState(() {
+                                        selectedParentCategoryId =
+                                            selectedCategory.categoryId
+                                                .toString();
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10.0, top: 30),
-                      child: CustomRoundButton(
-                        title: "Search",
-                        fct: () => {searchCategory(1)},
-                        height: 45,
-                        width: size.width * 0.09,
-                        fontSize: FontSize.s12,
+                      Padding(
+                        padding: const EdgeInsets.only(left: 10.0, top: 30),
+                        child: CustomRoundButton(
+                          title: "Search",
+                          fct: () => {searchCategory(1)},
+                          height: 45,
+                          width: size.width * 0.09,
+                          fontSize: FontSize.s12,
+                        ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10.0, top: 30),
-                      child: CustomRoundButton(
-                        title: "Reset",
-                        boxColor: Colors.white,
-                        textColor: ColorManager.kPrimaryColor,
-                        fct: resetSearch,
-                        height: 45,
-                        width: size.width * 0.09,
-                        fontSize: FontSize.s12,
+                      Padding(
+                        padding: const EdgeInsets.only(left: 10.0, top: 30),
+                        child: CustomRoundButton(
+                          title: "Reset",
+                          boxColor: Colors.white,
+                          textColor: ColorManager.kPrimaryColor,
+                          fct: resetSearch,
+                          height: 45,
+                          width: size.width * 0.09,
+                          fontSize: FontSize.s12,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: BuildBoxShadowContainer(
-                  circleRadius: 7,
-                  offsetValue: const Offset(1, 1),
-                  child:
-                      _buildCategoryTable(categoryProvider, sideBarController),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: BuildBoxShadowContainer(
+                    circleRadius: 7,
+                    offsetValue: const Offset(1, 1),
+                    child: _buildCategoryTable(
+                        categoryProvider, sideBarController),
+                  ),
                 ),
-              ),
-              _buildPaginationControls(categoryProvider),
-            ],
+                _buildPaginationControls(categoryProvider),
+              ],
+            ),
           ),
         ),
       ),

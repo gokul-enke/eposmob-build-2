@@ -32,18 +32,6 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
     super.dispose();
   }
 
-  @override
-  void didUpdateWidget(CompactQuantityControl oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Check if the quantity has changed
-    if (oldWidget.quantity != widget.quantity) {
-      setState(() {
-        _currentQuantity = widget.quantity;
-        _controller.text = _currentQuantity.toString();
-      });
-    }
-  }
-
   void _updateQuantity(int newQuantity) {
     if (newQuantity >= 0) {
       setState(() {
@@ -66,52 +54,50 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          InkWell(
-            onTap: _decrementQuantity,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: ColorManager.kPrimaryColor.withOpacity(0.1),
-              ),
-              padding: const EdgeInsets.all(8),
-              child: const Icon(Icons.remove,
-                  size: 16, color: ColorManager.kPrimaryColor),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: _decrementQuantity,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: ColorManager.kPrimaryColor.withOpacity(0.1),
             ),
+            padding: const EdgeInsets.all(8),
+            child: const Icon(Icons.remove,
+                size: 16, color: ColorManager.kPrimaryColor),
           ),
-          SizedBox(
-            width: 40,
-            child: TextField(
-              controller: _controller,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 5),
-              ),
-              onSubmitted: (value) {
-                int? newQuantity = int.tryParse(value);
-                _updateQuantity(newQuantity ?? _currentQuantity);
-              },
+        ),
+        SizedBox(
+          width: 40,
+          child: TextField(
+            controller: _controller,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(vertical: 5),
             ),
+            onSubmitted: (value) {
+              int? newQuantity = int.tryParse(value);
+              _updateQuantity(newQuantity ?? _currentQuantity);
+            },
           ),
-          InkWell(
-            onTap: _incrementQuantity,
-            child: Container(
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: ColorManager.kPrimaryColor,
-              ),
-              padding: const EdgeInsets.all(8),
-              child: const Icon(Icons.add,
-                  size: 16, color: ColorManager.kSecondaryColor),
+        ),
+        InkWell(
+          onTap: _incrementQuantity,
+          child: Container(
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: ColorManager.kPrimaryColor,
             ),
+            padding: const EdgeInsets.all(8),
+            child: const Icon(Icons.add,
+                size: 16, color: ColorManager.kSecondaryColor),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

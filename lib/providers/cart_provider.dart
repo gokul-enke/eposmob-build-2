@@ -208,6 +208,7 @@ class CartProvider with ChangeNotifier {
     required int customerId,
     required int productId,
     required int quantity,
+    String? unitPrice,
     required String accessToken,
   }) async {
     // sample data
@@ -216,16 +217,31 @@ class CartProvider with ChangeNotifier {
     // debugPrint(customerId.toString());
     // debugPrint(productId.toString());
     // debugPrint(quantity.toString());
-    final Map<String, dynamic> apiBodyData = {
-      // 'customer_id': "1",
-      'quantity': quantity,
-      // 'app_type': "api",
-      'product_id': productId,
-      // 'address_id':1,
-      // "type": 1
-    };
+    Map<String, dynamic> apiBodyData = {};
+    if (unitPrice == null) {
+      apiBodyData = {
+        // 'customer_id': "1",
+        'quantity': quantity,
+        // 'app_type': "api",
+        'product_id': productId,
+        // 'address_id':1,
+        // "type": 1
+      };
+    } else {
+      apiBodyData = {
+        // 'customer_id': "1",
+        'quantity': quantity,
+        'price': unitPrice,
+        // 'app_type': "api",
+        'product_id': productId,
+        // 'address_id':1,
+        // "type": 1
+      };
+    }
+
     debugPrint("productId $productId");
     debugPrint("customerId $customerId");
+    debugPrint("customerId $apiBodyData");
     final url = Uri.parse(APPUrl.addToCartUrl);
     try {
       final response =
@@ -486,6 +502,7 @@ class CartProvider with ChangeNotifier {
     required int cartIds,
     required String accessToken,
     int? customerId,
+    String? customerPhone,
     String? phone,
     required String transactionId,
     required String totalPrice,
@@ -501,26 +518,27 @@ class CartProvider with ChangeNotifier {
 
     debugPrint("Customer ID $customerId");
     debugPrint("Phone $phone");
+    debugPrint("Phone $accessToken");
 
     Map<String, dynamic> apiBodyData = {};
 
-    if (phone == "") {
-      apiBodyData = {
-        "customer_id": customerId,
-        "transaction_number": transactionId,
-        "payment_method": paymentMethod,
-        "paid_amount": paidAmount,
-        "balance": balanceAmount,
-      };
-    } else {
-      apiBodyData = {
-        "phone": phone,
-        "transaction_number": transactionId,
-        "payment_method": paymentMethod,
-        "paid_amount": paidAmount,
-        "balance": balanceAmount,
-      };
-    }
+    // if (phone == "") {
+    //   apiBodyData = {
+    //     "customer_id": customerPhone,
+    //     "transaction_number": transactionId,
+    //     "payment_method": paymentMethod,
+    //     "paid_amount": paidAmount,
+    //     "balance": balanceAmount,
+    //   };
+    // } else {
+    apiBodyData = {
+      "phone": phone,
+      "transaction_number": transactionId,
+      "payment_method": paymentMethod,
+      "paid_amount": paidAmount,
+      "balance": balanceAmount,
+    };
+    // }
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");
 
@@ -532,7 +550,10 @@ class CartProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
+
       if (response.statusCode == 200) {
         debugPrint('inside 200');
 
@@ -554,6 +575,7 @@ class CartProvider with ChangeNotifier {
     required int cartIds,
     required String accessToken,
     int? customerId,
+    String? customerPhone,
     String? phone,
     required String transactionId,
     required String totalPrice,
@@ -572,23 +594,23 @@ class CartProvider with ChangeNotifier {
 
     Map<String, dynamic> apiBodyData = {};
 
-    if (phone == "") {
-      apiBodyData = {
-        "customer_id": customerId,
-        "transaction_number": transactionId,
-        "payment_method": paymentMethod,
-        "paid_amount": paidAmount,
-        "balance": balanceAmount,
-      };
-    } else {
-      apiBodyData = {
-        "phone": phone,
-        "transaction_number": transactionId,
-        "payment_method": paymentMethod,
-        "paid_amount": paidAmount,
-        "balance": balanceAmount,
-      };
-    }
+    // if (phone == "") {
+    //   apiBodyData = {
+    //     "customer_id": customerPhone,
+    //     "transaction_number": transactionId,
+    //     "payment_method": paymentMethod,
+    //     "paid_amount": paidAmount,
+    //     "balance": balanceAmount,
+    //   };
+    // } else {
+    apiBodyData = {
+      "phone": phone,
+      "transaction_number": transactionId,
+      "payment_method": paymentMethod,
+      "paid_amount": paidAmount,
+      "balance": balanceAmount,
+    };
+    // }
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");
 

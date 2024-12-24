@@ -323,32 +323,38 @@ class SideMenu extends StatelessWidget {
           // ),
           Obx(
             () => DrawerListTileExpandableColumn(
-                onTapTitle1: () {
-                  sideBarController.index.value = 21;
-                },
-                onTapTitle2: () {
-                  sideBarController.index.value = 22;
-                },
-                onTapTitle3: () {
-                  sideBarController.index.value = 23;
-                },
-                listTitle1: "Invoice",
-                listTitle2: "Voucher",
-                listTitle3: "Transaction List",
-                iconPath: ImageAssets.transactionIcon,
-                title: 'Accounts',
-                onTap: () {
-                  sideBarController.index.value = 21;
-                  debugPrint(" 'Category',${sideBarController.index.value}");
-                },
-                selected: sideBarController.index.value == 21 ||
-                    sideBarController.index.value == 22 ||
-                    sideBarController.index.value == 30 ||
-                    sideBarController.index.value == 31 ||
-                    sideBarController.index.value == 32 ||
-                    sideBarController.index.value == 23 ||
-                    sideBarController.index.value == 24 ||
-                    sideBarController.index.value == 25),
+              onTapTitle1: () {
+                sideBarController.index.value = 21;
+              },
+              // onTapTitle2: () {
+              //   sideBarController.index.value = 22;
+              // },
+              onTapTitle3: () {
+                sideBarController.index.value = 23;
+              },
+              onTapTitle2: () {
+                sideBarController.index.value = 47;
+              },
+              listTitle1: "Invoice",
+              // listTitle2: "Voucher",
+              listTitle3: "Transactions",
+              listTitle2: "Receipts",
+              iconPath: ImageAssets.transactionIcon,
+              title: 'Accounts',
+              onTap: () {
+                sideBarController.index.value = 21;
+                debugPrint(" 'Category',${sideBarController.index.value}");
+              },
+              selected: sideBarController.index.value == 21 ||
+                  sideBarController.index.value == 22 ||
+                  sideBarController.index.value == 30 ||
+                  sideBarController.index.value == 31 ||
+                  sideBarController.index.value == 32 ||
+                  sideBarController.index.value == 23 ||
+                  sideBarController.index.value == 24 ||
+                  sideBarController.index.value == 25 ||
+                  sideBarController.index.value == 47,
+            ),
           ),
           // Obx(
           //   () => DrawerListTile(

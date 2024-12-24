@@ -51,7 +51,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> {
         if (value['status'] == 'success') {
           ListTransactionModel listTransactionModel =
               ListTransactionModel.fromJson(value);
-          listTransaction = listTransactionModel.data ?? [];
+          listTransaction = listTransactionModel.data?.transactions ?? [];
         } else {
           showScaffold(context: context, message: "Data Not Found");
         }
@@ -462,7 +462,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> {
                         //  transaction.date.contains(searchDate);
                       }).map((transaction) {
                         String? userName = invoiceProvider
-                            .getUserUpOnId(transaction.userId ?? 1);
+                            .getUserUpOnId(transaction.orderId ?? 1);
 
                         // String? invoiceAccountType =
                         //     invoiceProvider.getInvoiceNameUpOnId(

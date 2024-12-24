@@ -49,7 +49,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
         if (value['status'] == 'success') {
           ListTransactionModel listTransactionModel =
               ListTransactionModel.fromJson(value);
-          listTransaction = listTransactionModel.data ?? [];
+          listTransaction = listTransactionModel.data?.transactions ?? [];
         } else {
           showScaffold(context: context, message: "Data Not Found");
         }
@@ -357,11 +357,11 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                             .contains(searchTextController.text);
                       }).map((transaction) {
                         String? userName = invoiceProvider
-                            .getUserUpOnId(transaction.userId ?? 1);
+                            .getUserUpOnId(transaction.orderId ?? 1);
 
                         String? invoiceAccountType =
                             invoiceProvider.getInvoiceNameUpOnId(
-                                transaction.accountId ?? 1,
+                                transaction.orderId ?? 1,
                                 transaction.type ?? "");
                         return TableRow(
                           children: [

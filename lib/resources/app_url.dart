@@ -38,7 +38,7 @@ class APPUrl {
   static const String resetPasswordUrl = '$baseURL/api/v1/user/reset';
 
   static const String logoutUrl = '$baseURL/api/v1/user/signout';
-  static const String dashBoardUrl = '$baseURL/api/v1/sales/dashboard';
+  static const String dashBoardUrl = '$baseURL/api/v1/dashboard';
   static const String dashBoardGraphUrl = '$baseURL/api/v1/dashboard/orders';
   static const String addCustomerUrl = '$baseURL/api/v1/customer/add-customer';
   // static const String customerListUrl = '$baseURL/api/v1/sales/list-customer';
@@ -108,7 +108,13 @@ class APPUrl {
   static const String detailsOfTransaction =
       '$baseURL/api/v1/transaction/transaction-details';
   static const String listAllTransaction =
-      '$baseURL/api/v1/transaction/list-transaction';
+      '$baseURL/api/v1/transaction/list-transactions';
+  static const String listAllInvoices = '$baseURL/api/v1/invoice/list-invoices';
+  static const String listAllReceipts = '$baseURL/api/v1/receipt/list-receipts';
+  static const String detailsOfReceipt =
+      '$baseURL/api/v1/receipt/receipt-details';
+  static const String detailsOfInvoice =
+      '$baseURL/api/v1/invoice/invoice-details';
   static const String listStates = '$baseURL/api/v1/location/get-states';
   static const String listDistricts = '$baseURL/api/v1/location/get-district';
 

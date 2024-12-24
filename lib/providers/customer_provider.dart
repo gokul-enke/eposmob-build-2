@@ -119,7 +119,7 @@ class CustomerProvider extends ChangeNotifier {
             'Content-Type': 'application/json'
           });
       debugPrint('inside ${response.statusCode}');
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         debugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else if (response.statusCode > 400) {

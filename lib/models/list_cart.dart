@@ -96,7 +96,7 @@ class ListCartModelDataCartItem {
   final int? productId;
   final String? productName;
   final int? categoryId;
-  final int? quantity;
+  late final int? quantity;
   final String? productUnit;
   final String? unitPrice;
   final String? totalPrice;
