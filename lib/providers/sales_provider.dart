@@ -35,6 +35,8 @@ class SalesProvider with ChangeNotifier {
     String? orderNumber,
     String? filterName,
     String? date,
+    int? customerId,
+    int? productId,
     String? filterStatus,
     String? filterPrice,
     String? filterEmail,
@@ -43,13 +45,18 @@ class SalesProvider with ChangeNotifier {
     String? filterCreatedBy,
     int? page,
   }) async {
+    
     final queryParameters = <String, String>{
       // 'store_id': storeId.toString(),
     };
 
-    // if (orderNumber != null) queryParameters['filter_number'] = orderNumber;
+    if (orderNumber != null) queryParameters['order_number'] = orderNumber;
     // if (filterName != null) queryParameters['filter_name'] = filterName;
-    // if (date != null) queryParameters['filter_date'] = date;
+    if (date != null) queryParameters['order_date'] = date;
+    if (customerId != null) {
+      queryParameters['customer_id'] = customerId.toString();
+    }
+    if (productId != null) queryParameters['product_id'] = productId.toString();
     // if (filterStatus != null) queryParameters['filter_status'] = filterStatus;
     // if (filterPrice != null) queryParameters['filter_price'] = filterPrice;
     // if (filterEmail != null) queryParameters['filter_email'] = filterEmail;
@@ -136,5 +143,50 @@ class SalesProvider with ChangeNotifier {
     } catch (error) {
       rethrow;
     } finally {}
+  }
+
+  Future<void> submitSalesReturn({
+    required String accessToken,
+    required int orderId,
+    required double price,
+    required int quantity,
+    required int cartItemId,
+    required String reason,
+  }) async {
+    final url =
+        Uri.parse(APPUrl.salesReturn); // Update with your server base URL
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'order_id': orderId,
+        'price': price,
+        'quantity': quantity,
+        'cart_item_id': cartItemId,
+        'reason': reason,
+      }),
+    );
+
+    debugPrint("accessToken $accessToken");
+    debugPrint("orderId $orderId");
+    debugPrint("price $price");
+    debugPrint("quantity $quantity");
+    debugPrint("cartItemId $cartItemId");
+    debugPrint("reason $reason");
+    debugPrint("response.statusCode ${response.statusCode}");
+    debugPrint("response.body ${response.body}");
+
+    if (response.statusCode == 200) {
+      debugPrint('Sales return submitted successfully: ${response.body}');
+      notifyListeners();
+    } else {
+      debugPrint(
+          'Failed to submit sales return: ${response.statusCode} - ${response.body}');
+      throw Exception('Failed to submit sales return');
+    }
   }
 }

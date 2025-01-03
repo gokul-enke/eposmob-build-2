@@ -30,6 +30,7 @@ import 'package:pos_machine/screens/reports/product_sales_report/product_sales_r
 import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
 import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
 import 'package:pos_machine/screens/sales/sales.dart';
+import 'package:pos_machine/screens/sales_return/sales_return.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
 import 'package:pos_machine/screens/support/support.dart';
 import 'package:pos_machine/screens/transaction-customer/invoice_list.dart';
@@ -107,5 +108,6 @@ class SideBarController extends GetxController {
     BillingPage(), //46 Billing Page
     ReceiptListScreen(), //47 Receipt List
     ViewReceiptDetailsWidget(), //48 Voucher Details
+    SalesReturnScreen(), //49 Sales Return
   ];
 }
