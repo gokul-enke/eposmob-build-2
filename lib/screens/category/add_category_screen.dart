@@ -116,7 +116,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
       categorySlugController.clear();
     }
 
-    bool _validateForm() {
+    bool validateForm() {
       bool isValid = true;
 
       // Check if _formKey.currentState is not null before calling validate()
@@ -568,7 +568,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                             categoryProvider.getParentCategory;
                                         debugPrint(
                                             "categoryIdController.text ${idController.text}");
-                                        if (_validateForm()) {
+                                        if (validateForm()) {
                                           // formKey.currentState!.save();
                                           debugPrint("submit");
                                           debugPrint(

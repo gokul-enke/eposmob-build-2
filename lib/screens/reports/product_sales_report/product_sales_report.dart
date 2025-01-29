@@ -562,10 +562,10 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                     5: FractionColumnWidth(0.15),
                     6: FractionColumnWidth(0.10),
                   },
-                  border: TableBorder.symmetric(
-                      outside: const BorderSide(
+                  border: const TableBorder.symmetric(
+                      outside: BorderSide(
                           color: ColorManager.tableBOrderColor, width: 0.3),
-                      inside: const BorderSide(
+                      inside: BorderSide(
                           color: ColorManager.tableBOrderColor, width: 0.8)),
                   defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                   children: [

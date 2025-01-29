@@ -236,11 +236,15 @@ class GridSelectionProvider extends ChangeNotifier {
   }
   //          *********************** LIST ALL PRODUCTS  API ***************************************************
 
-  Future<void> listAllProductsAPI({int? categoryId}) async {
+  Future<void> listAllProductsAPI({int? categoryId, String? barCode}) async {
     debugPrint("LIST ALL PRODUCTS categoryId $categoryId ");
     final Map<String, dynamic> apiBodyData = {
       'category_id': categoryId == 0 ? null : categoryId,
+      'barcode': barCode,
     };
+
+    debugPrint("apiBodyData ${apiBodyData.toString()}");
+
     isLoading = true;
     // selectedCategoryId = categoryId;
     notifyListeners();
@@ -250,11 +254,8 @@ class GridSelectionProvider extends ChangeNotifier {
       final response = await http.post(url,
           body: json.encode(apiBodyData),
           headers: {'Content-Type': 'application/json'});
-      debugPrint('inside ${response.statusCode}');
+      debugPrint('inside ${response.body}');
       if (response.statusCode == 200) {
-        // debugPrint('inside');
-
-        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
 
@@ -270,13 +271,64 @@ class GridSelectionProvider extends ChangeNotifier {
     }
   }
 
+  //          *********************** FILTER PRODUCT BY BARCODE API ***************************************************
+
+  Future<List<GetProduct>?> filterProductByBarcodeAPI({String? barCode}) async {
+    final queryParams = <String, String>{
+      if (barCode != null) 'barcode': barCode,
+    };
+
+    isLoading = true;
+    notifyListeners();
+
+    final url =
+        Uri.parse(APPUrl.getProductUrl).replace(queryParameters: queryParams);
+
+    try {
+      final response = await http.get(url);
+      debugPrint('Response Status Code: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        debugPrint('Response Body: ${response.body.toString()}');
+
+        final jsonData = json.decode(response.body);
+        GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
+
+        productList = getProductModel.product;
+        filteredProductList = getProductModel.product;
+        mainProductList = getProductModel.product;
+        categoryProductList = getProductModel.product;
+
+        debugPrint("Pagination Info: ${getProductModel.meta?.toString()}");
+
+        currentPage = getProductModel.meta?.currentPage ?? 1;
+        totalPages = getProductModel.meta?.lastPage ?? 1;
+
+        notifyListeners();
+        return productList; // Return the list of products
+      } else {
+        debugPrint('Error Response: ${response.body.toString()}');
+        debugPrint('Error Status Code: ${response.statusCode}');
+        return null; // Return null if the response is not successful
+      }
+    } catch (e) {
+      debugPrint('Exception occurred: $e');
+      return null; // Return null in case of an exception
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
   //          *********************** LIST ALL PRODUCTS FUNCTION RETURNING PRODUCT LIST API ***************************************************
 
-  Future<List<GetProduct>> listAllProductList({required int categoryId}) async {
+  Future<List<GetProduct>> listAllProductList(
+      {required int categoryId, required String barCode}) async {
     List<GetProduct> productLists = [];
     debugPrint("LIST ALL PRODUCTS  categoryId $categoryId ");
     final Map<String, dynamic> apiBodyData = {
       'category_id': categoryId == 0 ? null : categoryId,
+      'barcode': barCode,
     };
     isLoading = true;
     selectedCategoryId = categoryId;
@@ -456,7 +508,7 @@ class GridSelectionProvider extends ChangeNotifier {
       'alt[]': alt,
       'file_path[]': filePath,
     };
-    debugPrint("apiBodyData + ${apiBodyData.toString()}" + filePath);
+    debugPrint("apiBodyData + ${apiBodyData.toString()}$filePath");
     final Map<String, dynamic> error = {
       'status': "failed",
       'message': "Something went wrong, Please try Again!"

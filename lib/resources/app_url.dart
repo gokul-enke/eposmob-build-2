@@ -129,4 +129,5 @@ class APPUrl {
   static const String applyCoupon = '$baseURL/api/v1/discount/apply-coupon';
   static const String listFaqs = '$baseURL/api/v1/faq/faqs/company/1';
   static const String getGeneralSettings = '$baseURL/api/v1/general';
+  static const String getAppSettings = '$baseURL/api/v1/website-settings';
 }

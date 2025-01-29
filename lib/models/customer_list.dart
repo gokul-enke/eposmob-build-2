@@ -66,7 +66,7 @@ class CustomerListModelData {
   factory CustomerListModelData.fromJson(Map<String, dynamic> json) =>
       CustomerListModelData(
         id: json["id"] ?? "0",
-        name: json["name"] ?? "no name",
+        name: json["name"] ?? "NA",
         email: json["email"],
         phone: json["phone"],
         altPhone: json["alt_phone"],

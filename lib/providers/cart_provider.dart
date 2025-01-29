@@ -224,6 +224,7 @@ class CartProvider with ChangeNotifier {
         'quantity': quantity,
         // 'app_type': "api",
         'product_id': productId,
+        'source_type': "executive",
         // 'address_id':1,
         // "type": 1
       };
@@ -234,6 +235,7 @@ class CartProvider with ChangeNotifier {
         'price': unitPrice,
         // 'app_type': "api",
         'product_id': productId,
+        'source_type': "executive",
         // 'address_id':1,
         // "type": 1
       };
@@ -522,23 +524,14 @@ class CartProvider with ChangeNotifier {
 
     Map<String, dynamic> apiBodyData = {};
 
-    // if (phone == "") {
-    //   apiBodyData = {
-    //     "customer_id": customerPhone,
-    //     "transaction_number": transactionId,
-    //     "payment_method": paymentMethod,
-    //     "paid_amount": paidAmount,
-    //     "balance": balanceAmount,
-    //   };
-    // } else {
     apiBodyData = {
       "phone": phone,
       "transaction_number": transactionId,
       "payment_method": paymentMethod,
       "paid_amount": paidAmount,
+      "source_type": "executive",
       "balance": balanceAmount,
     };
-    // }
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");
 
@@ -554,8 +547,8 @@ class CartProvider with ChangeNotifier {
       debugPrint('Response status: ${response.statusCode}');
       debugPrint('Response body: ${response.body}');
 
-      if (response.statusCode == 200) {
-        debugPrint('inside 200');
+      if (response.statusCode == 201) {
+        debugPrint('inside 201');
 
         // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
@@ -608,6 +601,7 @@ class CartProvider with ChangeNotifier {
       "transaction_number": transactionId,
       "payment_method": paymentMethod,
       "paid_amount": paidAmount,
+      "source_type": "executive",
       "balance": balanceAmount,
     };
     // }
@@ -648,7 +642,7 @@ class CartProvider with ChangeNotifier {
     debugPrint("********************APPLY COUPON API******************** ");
 
     final url = Uri.parse(APPUrl.applyCoupon).replace(queryParameters: {
-      'total_amount': totalAmount.toString(),
+      'price': totalAmount.toString(),
       'coupon_code': couponCode,
     });
 
@@ -664,20 +658,28 @@ class CartProvider with ChangeNotifier {
       debugPrint('Response status: ${response.statusCode}');
       debugPrint('Response body: ${response.body}');
 
+      final jsonData = json.decode(response.body);
+
       if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        // Here you can parse the response and update the UI accordingly
-        // For example, you might want to update the price summary with the new discounted price
-        // updateSummary(PriceSummary.fromJson(jsonData['price_summary']));
-        return jsonData;
+        return {
+          'success': true,
+          'message': jsonData['message'],
+          'data': jsonData['data'],
+        };
       } else {
-        // Handle error cases
-        debugPrint('Failed to apply coupon: ${response.reasonPhrase}');
-        return null;
+        return {
+          'success': false,
+          'message': jsonData['message'],
+          'data': null,
+        };
       }
     } catch (e) {
       debugPrint('Error applying coupon: $e');
-      return null;
+      return {
+        'success': false,
+        'message': 'An error occurred: $e',
+        'data': null,
+      };
     }
   }
 }

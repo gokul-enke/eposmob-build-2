@@ -64,7 +64,7 @@ class ProductCardList extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '$currency ${price}',
+                      '$currency $price',
                       style: const TextStyle(
                         fontWeight: FontWeight.w400,
                         fontSize: 14, // Medium priority

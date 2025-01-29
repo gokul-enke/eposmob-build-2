@@ -45,12 +45,11 @@ class SalesProvider with ChangeNotifier {
     String? filterCreatedBy,
     int? page,
   }) async {
-    
     final queryParameters = <String, String>{
       // 'store_id': storeId.toString(),
     };
 
-    if (orderNumber != null) queryParameters['order_number'] = orderNumber;
+    if (orderNumber != null) queryParameters['number'] = orderNumber;
     // if (filterName != null) queryParameters['filter_name'] = filterName;
     if (date != null) queryParameters['order_date'] = date;
     if (customerId != null) {

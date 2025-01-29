@@ -153,7 +153,7 @@ class ViewCategoryWidget extends StatelessWidget {
                                   height: 100,
                                   width: 150,
                                   child: Image.network(
-                                    viewCategory!.categoryIconFullPath!,
+                                    viewCategory.categoryIconFullPath!,
                                     fit: BoxFit.cover,
                                   )),
                             ],

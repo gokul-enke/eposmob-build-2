@@ -47,7 +47,7 @@ class OrderDetailWidget extends StatelessWidget {
                   children: [
                     RichText(
                       text: TextSpan(
-                        text: '${customerDetails!.name ?? "No Name"}\n',
+                        text: '${customerDetails!.name ?? "NA"}\n',
                         style: ResponsiveWidget.isMobile(context)
                             ? buildCustomStyle(FontWeightManager.semiBold,
                                 FontSize.s12, 0.30, ColorManager.textColor)

@@ -565,6 +565,7 @@ Widget buildColumnWidgetForTextFields({
   required String hintText,
   String? Function(String?)? validator,
   FocusNode? focusNode,
+  bool autofocus = false,
 }) =>
     Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -591,6 +592,7 @@ Widget buildColumnWidgetForTextFields({
           width: width ?? size.width / 3, //3.05,
           child: TextFormField(
             onChanged: onchanged,
+            autofocus: autofocus,
             focusNode: focusNode,
             readOnly: readOnly,
             keyboardType: TextInputType.text,

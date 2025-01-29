@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
@@ -49,8 +49,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   String orderNumber = "";
   OrderDetailsModelData? orderDetailsModelData;
   List<OrderDetailsModelDataCartItem>? cartItems = [];
-  GlobalKey _autocompleteProductKey = GlobalKey();
-  GlobalKey _autocompletePhoneKey = GlobalKey();
+  final GlobalKey _autocompleteProductKey = GlobalKey();
+  final GlobalKey _autocompletePhoneKey = GlobalKey();
   bool isCustomerFound = false;
   String? mobileNumberText = "";
   int? selectedCustomerID;
@@ -290,6 +290,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                           padding: const EdgeInsets.only(left: 10.0, top: 38),
                           child: ProductAutocomplete(
                             autocompleteProductKey: _autocompleteProductKey,
+                            // autoCompletefocusNode: FocusNode(),
                             size: size,
                             onSelected: (GetProduct selectedProduct) {
                               setState(() {
@@ -674,89 +675,345 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   }
 
   void _showReturnDialog(
-      BuildContext context, String unitPrice, String orderId, int cartItemId) {
+    BuildContext context, {
+    required String productName,
+    required String unitPrice,
+    required String orderId,
+    required int cartItemId,
+    required String currency,
+    required String totalPrice,
+    required String quantity,
+  }) {
     final TextEditingController quantityController = TextEditingController();
     final TextEditingController reasonController = TextEditingController();
     final TextEditingController returnTotalController = TextEditingController();
+    final maxQuantity = int.parse(quantity);
+    final unitPriceValue = double.parse(unitPrice);
+    final maxTotal = maxQuantity * unitPriceValue;
 
-    // Update return total whenever quantity changes
+    // Update total when quantity changes
     quantityController.addListener(() {
-      final quantity = int.tryParse(quantityController.text) ?? 0;
-      final price = double.tryParse(unitPrice) ?? 0.0;
-      final total = quantity * price;
-      returnTotalController.text =
-          total.toStringAsFixed(2); // Format to 2 decimal places
+      if (quantityController.text.isEmpty) return;
+
+      final enteredQuantity = int.tryParse(quantityController.text) ?? 0;
+
+      // If entered quantity exceeds max, reset to max
+      if (enteredQuantity > maxQuantity) {
+        quantityController.text = maxQuantity.toString();
+        quantityController.selection = TextSelection.fromPosition(
+          TextPosition(offset: quantityController.text.length),
+        );
+      }
+
+      final total = enteredQuantity * unitPriceValue;
+      returnTotalController.text = total.toStringAsFixed(2);
+    });
+
+    // Update quantity when total changes
+    returnTotalController.addListener(() {
+      if (returnTotalController.text.isEmpty) return;
+
+      final enteredTotal = double.tryParse(returnTotalController.text) ?? 0.0;
+
+      // If entered total exceeds max, reset to max
+      if (enteredTotal > maxTotal) {
+        returnTotalController.text = maxTotal.toStringAsFixed(2);
+        returnTotalController.selection = TextSelection.fromPosition(
+          TextPosition(offset: returnTotalController.text.length),
+        );
+      }
+
+      // Calculate and update quantity based on total
+      final calculatedQuantity = (enteredTotal / unitPriceValue).floor();
+      if (calculatedQuantity <= maxQuantity) {
+        quantityController.text = calculatedQuantity.toString();
+      }
     });
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Return Item'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: quantityController,
-                  decoration: const InputDecoration(labelText: 'Quantity'),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: reasonController,
-                  decoration: const InputDecoration(labelText: 'Reason'),
-                  keyboardType: TextInputType.text,
-                ),
-                TextField(
-                  controller: returnTotalController,
-                  decoration: const InputDecoration(labelText: 'Return Total'),
-                  keyboardType: TextInputType.number,
-                  readOnly:
-                      true, // Make it read-only since it's auto-calculated
-                ),
-              ],
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: SingleChildScrollView(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+              ),
+              width: MediaQuery.of(context).size.width * 0.9,
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Return $orderId',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              flex: 3, // Larger flex for product name
+                              child: Text(
+                                'Product name',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'Price',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 14,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'Total Price',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 14,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'Order Quantity',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 14,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              flex: 3, // Match the flex with header
+                              child: Text(
+                                productName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                '$currency $unitPrice',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                '$currency $totalPrice',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                quantity,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: quantityController,
+                    decoration: InputDecoration(
+                      labelText: 'Quantity',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      helperText: 'Maximum quantity: $maxQuantity',
+                      errorText: int.tryParse(quantityController.text) !=
+                                  null &&
+                              int.parse(quantityController.text) > maxQuantity
+                          ? 'Cannot exceed original quantity'
+                          : null,
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      TextInputFormatter.withFunction((oldValue, newValue) {
+                        if (newValue.text.isEmpty) return newValue;
+                        final intValue = int.tryParse(newValue.text);
+                        if (intValue == null || intValue <= maxQuantity) {
+                          return newValue;
+                        }
+                        return oldValue;
+                      }),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: returnTotalController,
+                    decoration: InputDecoration(
+                      labelText: 'Return Total',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      prefixText: '$currency ',
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,2}')),
+                      TextInputFormatter.withFunction((oldValue, newValue) {
+                        if (newValue.text.isEmpty) return newValue;
+                        final doubleValue = double.tryParse(newValue.text);
+                        if (doubleValue == null || doubleValue <= maxTotal) {
+                          return newValue;
+                        }
+                        return oldValue;
+                      }),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: reasonController,
+                    decoration: InputDecoration(
+                      labelText: 'Reason',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                    ),
+                    maxLines: 1,
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () async {
+                          try {
+                            String? accessToken =
+                                Provider.of<AuthModel>(context, listen: false)
+                                    .token;
+
+                            await Provider.of<SalesProvider>(context,
+                                    listen: false)
+                                .submitSalesReturn(
+                              accessToken: accessToken ?? '',
+                              orderId: int.parse(orderId),
+                              price: double.parse(unitPrice),
+                              quantity: int.parse(quantityController.text),
+                              cartItemId: cartItemId,
+                              reason: reasonController.text,
+                            );
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('Sales Return Submitted Successfully'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+
+                            Navigator.pop(context);
+                          } catch (error) {
+                            debugPrint('Error submitting sales return: $error');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Failed to submit sales return'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Submit',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                try {
-                  String? accessToken =
-                      Provider.of<AuthModel>(context, listen: false).token;
-
-                  await Provider.of<SalesProvider>(context, listen: false)
-                      .submitSalesReturn(
-                    accessToken: accessToken ?? '',
-                    orderId: int.parse(orderId),
-                    price: double.parse(unitPrice),
-                    quantity: int.parse(quantityController.text),
-                    cartItemId: cartItemId,
-                    reason: reasonController.text,
-                  );
-
-                  showScaffold(
-                    context: context,
-                    message: 'Sales Return Submitted',
-                  );
-
-                  // Optionally, refresh the orders or cart items after submission
-                  // await Provider.of<SalesProvider>(context, listen: false).fetchOrders(...);
-
-                  Navigator.of(context).pop(); // Close the dialog
-                } catch (error) {
-                  debugPrint('Error submitting sales return: $error');
-                  // Optionally show an error message to the user
-                }
-              },
-              child: const Text('Submit'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: const Text('Cancel'),
-            ),
-          ],
         );
       },
     );
@@ -785,10 +1042,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           DataColumn(label: Text('Quantity')),
           DataColumn(label: Text('Unit Price')),
           DataColumn(label: Text('Total Price')),
-          // DataColumn(label: Text('Returned Quantity')),
-          // DataColumn(label: Text('Reason')),
-          // DataColumn(label: Text('Return Total')),
-          // DataColumn(label: Text('Returned')),
+          DataColumn(label: Text('Returned Quantity')),
+          DataColumn(label: Text('Return Total')),
+          DataColumn(label: Text('Returned')),
           DataColumn(label: Text('Action')),
         ],
         rows: cartItems.map((item) {
@@ -798,18 +1054,21 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             DataCell(Text(item.quantity?.toString() ?? '0')),
             DataCell(Text(item.unitPrice ?? 'N/A')),
             DataCell(Text(item.totalPrice ?? 'N/A')),
-            // DataCell(Text(item.quantity?.toString() ?? '0')),
-            // DataCell(Text(item.quantity?.toString() ?? '0')),
-            // DataCell(Text(item.quantity?.toString() ?? '0')),
-            // DataCell(Text(item.quantity?.toString() ?? '0')),
+            const DataCell(Text(' ')),
+            const DataCell(Text(' ')),
+            const DataCell(Text(' ')),
             DataCell(
               TextButton(
                 onPressed: () {
                   _showReturnDialog(
                     context,
-                    item.unitPrice ?? '0',
-                    orderDetailsModelData!.ordersId.toString(),
-                    item.id ?? 0,
+                    productName: item.productName.toString(),
+                    unitPrice: item.unitPrice.toString(),
+                    orderId: orderDetailsModelData!.orderNumber.toString(),
+                    cartItemId: item.id ?? 0,
+                    currency: item.currency.toString(),
+                    totalPrice: item.totalPrice.toString(),
+                    quantity: item.quantity.toString(),
                   );
                 },
                 child: const Text("Return"),

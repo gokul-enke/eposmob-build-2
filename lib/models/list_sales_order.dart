@@ -167,7 +167,7 @@ class CustomerDetails {
   factory CustomerDetails.fromJson(Map<String, dynamic> json) {
     String? email;
     String? phone;
-    String? name = "no name";
+    String? name = "NA";
 
     // Iterate over the order_props list to extract needed information
     if (json["order_props"] != null) {
@@ -179,7 +179,7 @@ class CustomerDetails {
         } else if (prop["code"] == "DELIVERY_ADDRESS") {
           var address = jsonDecode(prop["value"]);
           if (address is Map<String, dynamic>) {
-            name = address["name"] ?? "no name";
+            name = address["name"] ?? "NA";
           }
         }
       }

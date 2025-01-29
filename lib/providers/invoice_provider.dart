@@ -43,8 +43,8 @@ class InvoiceProvider extends ChangeNotifier {
   Map<String, String>? get getPaymentType => paymentList;
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
-  int _currentPage = 1;
-  int _totalPages = 1;
+  final int _currentPage = 1;
+  final int _totalPages = 1;
 
   String? getUserUpOnId(int value) {
     var user = getUsersList!.firstWhere((e) => e.id == value,

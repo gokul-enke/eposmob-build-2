@@ -287,11 +287,11 @@ class _AddStockScreenState extends State<AddStockScreen> {
                               5: FractionColumnWidth(0.04),
                               6: FractionColumnWidth(0.07),
                             },
-                            border: TableBorder.symmetric(
-                                outside: const BorderSide(
+                            border: const TableBorder.symmetric(
+                                outside: BorderSide(
                                     color: ColorManager.tableBOrderColor,
                                     width: 0.3),
-                                inside: const BorderSide(
+                                inside: BorderSide(
                                     color: ColorManager.tableBOrderColor,
                                     width: 0.8)),
                             defaultVerticalAlignment:

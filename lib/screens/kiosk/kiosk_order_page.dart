@@ -747,7 +747,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
   Widget _buildPaymentMethod() {
     return Column(
       children: [
-        SizedBox(height: 5),
+        const SizedBox(height: 5),
         BuildPaymentRow(
           amount: "",
           title: "Chose Payment Method",

@@ -834,7 +834,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                           child: Text(
-                                            "$categoryName",
+                                            categoryName,
                                             style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               FontSize.s9,

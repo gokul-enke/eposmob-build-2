@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 import 'package:pos_machine/providers/auth_model.dart';
 
@@ -74,6 +75,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CustomerProvider()),
         ChangeNotifierProvider(create: (_) => ReportsProvider()),
         ChangeNotifierProvider(create: (_) => GeneralSettingsProvider()),
+        ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
       ],
       child: GetMaterialApp(
         debugShowCheckedModeBanner: false,

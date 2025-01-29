@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_detail_row.dart';
-import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import '../../../components/build_container_box.dart';
-import '../../../components/build_title.dart';
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
 import '../../../resources/style_manager.dart';

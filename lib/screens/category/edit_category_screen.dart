@@ -724,11 +724,11 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                     4: FractionColumnWidth(0.06),
                                     5: FractionColumnWidth(0.05),
                                   },
-                                  border: TableBorder.symmetric(
-                                      outside: const BorderSide(
+                                  border: const TableBorder.symmetric(
+                                      outside: BorderSide(
                                           color: ColorManager.tableBOrderColor,
                                           width: 0.3),
-                                      inside: const BorderSide(
+                                      inside: BorderSide(
                                           color: ColorManager.tableBOrderColor,
                                           width: 0.8)),
                                   defaultVerticalAlignment:
@@ -1034,11 +1034,11 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                     4: FractionColumnWidth(0.06),
                                     5: FractionColumnWidth(0.05),
                                   },
-                                  border: TableBorder.symmetric(
-                                      outside: const BorderSide(
+                                  border: const TableBorder.symmetric(
+                                      outside: BorderSide(
                                           color: ColorManager.tableBOrderColor,
                                           width: 0.3),
-                                      inside: const BorderSide(
+                                      inside: BorderSide(
                                           color: ColorManager.tableBOrderColor,
                                           width: 0.8)),
                                   defaultVerticalAlignment:

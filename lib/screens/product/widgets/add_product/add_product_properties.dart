@@ -41,14 +41,10 @@ class _AddProductPropertiesScreenState
       int? categoryId = Provider.of<CategoryProvider>(context, listen: false)
           .getPropCategoryId;
       debugPrint("category id $categoryId");
-      if (categoryId != null) {
-        debugPrint("category id $categoryId");
-        Provider.of<CategoryProvider>(context, listen: false).fetchPropValues(
-            categoryId: categoryId, accessToken: accessToken ?? "");
-      } else {
-        debugPrint("Category ID is null");
-      }
-    });
+      debugPrint("category id $categoryId");
+      Provider.of<CategoryProvider>(context, listen: false).fetchPropValues(
+          categoryId: categoryId, accessToken: accessToken ?? "");
+        });
   }
 
   @override

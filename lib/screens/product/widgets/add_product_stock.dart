@@ -1440,16 +1440,16 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                       onTap: (value) {
                                                         setState(() {
                                                           apiBodyData[
-                                                                  '$propsCode']
+                                                                  propsCode]
                                                               .remove(value);
                                                           productPropData[
                                                                   propsCode]
                                                               ?.remove(value);
                                                           if (apiBodyData[
-                                                                  '$propsCode']
+                                                                  propsCode]
                                                               .isEmpty) {
                                                             apiBodyData.remove(
-                                                                '$propsCode');
+                                                                propsCode);
                                                             productPropData
                                                                 .remove(
                                                                     propsCode);

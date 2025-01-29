@@ -5,7 +5,7 @@ class ReceiptPreviewWidget extends StatelessWidget {
   final double paperWidth;
   final double scaleFactor;
 
-  ReceiptPreviewWidget({
+  const ReceiptPreviewWidget({super.key, 
     this.paperWidth = 80, // Default to 80mm paper width
     this.scaleFactor = 2.5, // Adjust this to change the size of the preview
   });
@@ -17,7 +17,7 @@ class ReceiptPreviewWidget extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Receipt Preview'),
+        title: const Text('Receipt Preview'),
       ),
       body: Center(
         child: Container(
@@ -29,7 +29,7 @@ class ReceiptPreviewWidget extends StatelessWidget {
                 color: Colors.grey.withOpacity(0.5),
                 spreadRadius: 5,
                 blurRadius: 7,
-                offset: Offset(0, 3),
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -39,35 +39,35 @@ class ReceiptPreviewWidget extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
+                  const Text(
                     'Dummy Thermal Receipt',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 4),
-                  Text(
+                  const SizedBox(height: 4),
+                  const Text(
                     'Thank you for your purchase!',
                     style: TextStyle(fontSize: 12),
                     textAlign: TextAlign.center,
                   ),
                   Text(
                     'Date: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}',
-                    style: TextStyle(fontSize: 12),
+                    style: const TextStyle(fontSize: 12),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   ReceiptItem('Item 1', 10.00),
                   ReceiptItem('Item 2', 15.00),
                   ReceiptItem('Item 3', 20.00),
-                  Divider(),
+                  const Divider(),
                   ReceiptItem('Total:', 45.00, isTotal: true),
-                  SizedBox(height: 8),
-                  Text(
+                  const SizedBox(height: 8),
+                  const Text(
                     'Have a great day!',
                     style: TextStyle(fontSize: 12),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 16), // Space for tear-off
+                  const SizedBox(height: 16), // Space for tear-off
                 ],
               ),
             ),
@@ -75,11 +75,11 @@ class ReceiptPreviewWidget extends StatelessWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.print),
+        child: const Icon(Icons.print),
         onPressed: () {
           // TODO: Implement actual printing logic
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Printing...')),
+            const SnackBar(content: Text('Printing...')),
           );
         },
       ),
@@ -92,7 +92,7 @@ class ReceiptItem extends StatelessWidget {
   final double price;
   final bool isTotal;
 
-  ReceiptItem(this.name, this.price, {this.isTotal = false});
+  const ReceiptItem(this.name, this.price, {super.key, this.isTotal = false});
 
   @override
   Widget build(BuildContext context) {

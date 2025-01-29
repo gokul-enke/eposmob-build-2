@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
-import 'package:pos_machine/resources/style_manager.dart';
 import 'package:provider/provider.dart';
 
 import '../../../components/build_container_box.dart';

@@ -176,11 +176,11 @@ class ViewPurchaseWidget extends StatelessWidget {
                               5: FractionColumnWidth(0.03),
                               6: FractionColumnWidth(0.03),
                             },
-                            border: TableBorder.symmetric(
-                                outside: const BorderSide(
+                            border: const TableBorder.symmetric(
+                                outside: BorderSide(
                                     color: ColorManager.tableBOrderColor,
                                     width: 0.3),
-                                inside: const BorderSide(
+                                inside: BorderSide(
                                     color: ColorManager.tableBOrderColor,
                                     width: 0.8)),
                             defaultVerticalAlignment:

@@ -241,7 +241,7 @@ class _PrintPageState extends State<PrintPage> {
           styles: const PosStyles(align: PosAlign.center));
 
       // Customer Care Details from API
-      if (customerCareNumber != null && customerCareEmail != null) {
+      if (customerCareEmail != null) {
         bytes += generator.text('Customer Care: $customerCareNumber',
             styles: const PosStyles(align: PosAlign.center));
         bytes += generator.text('Email: $customerCareEmail',

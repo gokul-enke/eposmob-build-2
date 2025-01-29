@@ -715,7 +715,7 @@ class _OrderListState extends State<OrderList> {
                                             padding: const EdgeInsets.all(8.0),
                                             child: LayoutBuilder(
                                               builder: (context, constraints) {
-                                                return Container(
+                                                return SizedBox(
                                                   width: constraints.maxWidth,
                                                   child: Text(
                                                     cartItem[index]

@@ -362,10 +362,10 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> {
                       4: FractionColumnWidth(0.06),
                       5: FractionColumnWidth(0.05),
                     },
-                    border: TableBorder.symmetric(
-                        outside: const BorderSide(
+                    border: const TableBorder.symmetric(
+                        outside: BorderSide(
                             color: ColorManager.tableBOrderColor, width: 0.3),
-                        inside: const BorderSide(
+                        inside: BorderSide(
                             color: ColorManager.tableBOrderColor, width: 0.8)),
                     defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                     children: [

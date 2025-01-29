@@ -112,9 +112,9 @@ class TransactionScreen extends StatelessWidget {
                   2: FractionColumnWidth(0.2),
                   3: FractionColumnWidth(0.4),
                 },
-                border: TableBorder.symmetric(
+                border: const TableBorder.symmetric(
                     outside: BorderSide.none,
-                    inside: const BorderSide(
+                    inside: BorderSide(
                         color: ColorManager.tableBOrderColor, width: 0.8)),
                 defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                 children: [

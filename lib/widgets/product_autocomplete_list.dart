@@ -12,6 +12,7 @@ class ProductAutocomplete extends StatefulWidget {
   final Function(GetProduct) onSelected;
   final List<GetProduct> productList;
   final GlobalKey autocompleteProductKey;
+  final bool autofocus;
 
   const ProductAutocomplete({
     Key? key,
@@ -19,6 +20,7 @@ class ProductAutocomplete extends StatefulWidget {
     required this.onSelected,
     required this.productList,
     required this.autocompleteProductKey,
+    this.autofocus = false,
   }) : super(key: key);
 
   @override
@@ -61,6 +63,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
                 VoidCallback onFieldSubmitted) {
               return buildColumnWidgetForTextFields(
                 controller: textEditingController,
+                autofocus: widget.autofocus,
                 focusNode: focusNode,
                 onchanged: (query) {},
                 size: widget.size,
