@@ -1464,12 +1464,19 @@ class _BillingPageState extends State<BillingPage> {
           1,
       remove: "true",
     );
+    _refetchCartData();
     setState(() {
       iconColor = 0;
       coupenCodeTextController.clear();
       _transactionNumberController.clear();
       _paidAmountController.clear();
       _balanceAmount = 0;
+      _autocompleteProductKey = GlobalKey();
+      quantityController.clear();
+      barcodeController.clear();
+      selectedProductIdController.clear();
+      unitPriceController.clear();
+      isCouponApplied = false;
     });
     showScaffold(
       context: context,
@@ -1519,11 +1526,11 @@ class _BillingPageState extends State<BillingPage> {
               .netTotal
               .toString(),
           customerId: selectedCustomerID,
-          customerPhone: selectedCustomerPhone,
-          phone: mobileNumberText,
+          customerPhone: selectedCustomerPhone ?? mobileNumberText,
           paymentMethod: paymentMethod,
           paidAmount: _paidAmountController.text,
           balanceAmount: _balanceAmount.toString(),
+          couponId: isCouponApplied ? coupenCodeTextController.text : null,
         )
             .then((response) {
           if (response["order_number"] != null) {
@@ -1545,6 +1552,7 @@ class _BillingPageState extends State<BillingPage> {
               unitPriceController.clear();
               isCustomerFound = false;
               selectedCustomer = null;
+              isCouponApplied = false;
               coupenCodeTextController.clear();
               _transactionNumberController.clear();
               _paidAmountController.clear();
@@ -1567,7 +1575,10 @@ class _BillingPageState extends State<BillingPage> {
   }
 
   void _createOrderAndPrint() async {
-    debugPrint("Create Order pressed");
+    debugPrint("selectedCustomerID");
+    debugPrint(selectedCustomerPhone.toString());
+    debugPrint("mobileNumberText");
+    debugPrint(mobileNumberText.toString());
     if (selectedCustomerID == null && mobileNumberText == "") {
       showScaffoldError(
         context: context,
@@ -1595,6 +1606,7 @@ class _BillingPageState extends State<BillingPage> {
       } else if (iconColor == 3) {
         paymentMethod = "UPI";
       }
+
       try {
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderConfirmAPI(
@@ -1606,11 +1618,11 @@ class _BillingPageState extends State<BillingPage> {
               .netTotal
               .toString(),
           customerId: selectedCustomerID,
-          customerPhone: selectedCustomerPhone,
-          phone: mobileNumberText,
+          customerPhone: selectedCustomerPhone ?? mobileNumberText,
           paymentMethod: paymentMethod,
           paidAmount: _paidAmountController.text,
           balanceAmount: _balanceAmount.toString(),
+          couponId: isCouponApplied ? coupenCodeTextController.text : null,
         )
             .then((response) {
           AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
@@ -1619,24 +1631,6 @@ class _BillingPageState extends State<BillingPage> {
             showScaffold(
               context: context,
               message: "${addToOrderModel.message}",
-            );
-
-            String formattedTotal = AmountHelper.formatAmount(
-                Provider.of<CartProvider>(context, listen: false)
-                    .priceSummary!
-                    .netTotal);
-            debugPrint(cartProductItems!.length.toString());
-            debugPrint(formattedTotal.toString());
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PrintPage(
-                  cartItems: cartProductItems!,
-                  formattedTotal: formattedTotal,
-                  orderDate: DateHelper.formatDate(DateTime.now()),
-                  orderNumber: "#000000",
-                ),
-              ),
             );
 
             // Clear the mobile number after successful save
@@ -1652,12 +1646,32 @@ class _BillingPageState extends State<BillingPage> {
               unitPriceController.clear();
               isCustomerFound = false;
               selectedCustomer = null;
+              isCouponApplied = false;
               coupenCodeTextController.clear();
               _transactionNumberController.clear();
               _paidAmountController.clear();
               _balanceAmount = 0;
             });
             resetAutocomplete();
+
+            String formattedTotal = AmountHelper.formatAmount(
+                Provider.of<CartProvider>(context, listen: false)
+                    .priceSummary!
+                    .netTotal);
+            debugPrint(cartProductItems!.length.toString());
+            debugPrint(formattedTotal.toString());
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PrintPage(
+                  cartItems: cartProductItems!,
+                  formattedTotal: formattedTotal,
+                  orderDate: DateHelper.formatDate(DateTime.now()),
+                  orderNumber: "#000000",
+                ),
+              ),
+            );
           } else {
             showScaffoldError(
               context: context,
@@ -1713,11 +1727,11 @@ class _BillingPageState extends State<BillingPage> {
               .netTotal
               .toString(),
           customerId: selectedCustomerID,
-          customerPhone: selectedCustomerPhone,
-          phone: mobileNumberText,
+          customerPhone: selectedCustomerPhone ?? mobileNumberText,
           paymentMethod: paymentMethod,
           paidAmount: _paidAmountController.text,
           balanceAmount: _balanceAmount.toString(),
+          couponId: isCouponApplied ? coupenCodeTextController.text : null,
         )
             .then((response) {
           AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
@@ -1741,6 +1755,7 @@ class _BillingPageState extends State<BillingPage> {
               unitPriceController.clear();
               isCustomerFound = false;
               selectedCustomer = null;
+              isCouponApplied = false;
               coupenCodeTextController.clear();
               _transactionNumberController.clear();
               _paidAmountController.clear();

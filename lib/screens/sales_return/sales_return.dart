@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
@@ -974,22 +975,17 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                               reason: reasonController.text,
                             );
 
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content:
-                                    Text('Sales Return Submitted Successfully'),
-                                backgroundColor: Colors.green,
-                              ),
+                            showScaffold(
+                              context: context,
+                              message: 'Sales Return Submitted Successfully',
                             );
 
                             Navigator.pop(context);
                           } catch (error) {
                             debugPrint('Error submitting sales return: $error');
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Failed to submit sales return'),
-                                backgroundColor: Colors.red,
-                              ),
+                            showScaffoldError(
+                              context: context,
+                              message: 'Failed to submit sales return',
                             );
                           }
                         },
@@ -1064,7 +1060,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     context,
                     productName: item.productName.toString(),
                     unitPrice: item.unitPrice.toString(),
-                    orderId: orderDetailsModelData!.orderNumber.toString(),
+                    orderId: orderDetailsModelData!.ordersId.toString(),
                     cartItemId: item.id ?? 0,
                     currency: item.currency.toString(),
                     totalPrice: item.totalPrice.toString(),

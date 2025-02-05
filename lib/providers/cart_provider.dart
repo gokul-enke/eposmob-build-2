@@ -472,6 +472,7 @@ class CartProvider with ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
       });
       debugPrint('inside ${response.statusCode}');
+      debugPrint('inside ${response.body.toString()}');
       if (response.statusCode == 200) {
         debugPrint('inside');
 
@@ -511,6 +512,7 @@ class CartProvider with ChangeNotifier {
     String? paymentMethod,
     String? paidAmount,
     String? balanceAmount,
+    String? couponId,
   }) async {
     debugPrint("********************ADD TO ORDER API******************** ");
     DateTime now = DateTime.now();
@@ -525,12 +527,13 @@ class CartProvider with ChangeNotifier {
     Map<String, dynamic> apiBodyData = {};
 
     apiBodyData = {
-      "phone": phone,
+      "phone": customerPhone,
       "transaction_number": transactionId,
       "payment_method": paymentMethod,
       "paid_amount": paidAmount,
       "source_type": "executive",
       "balance": balanceAmount,
+      "coupon_id": couponId,
     };
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");
@@ -575,6 +578,7 @@ class CartProvider with ChangeNotifier {
     String? paymentMethod,
     String? paidAmount,
     String? balanceAmount,
+    String? couponId,
   }) async {
     debugPrint("********************ADD TO ORDER API******************** ");
     DateTime now = DateTime.now();
@@ -587,24 +591,15 @@ class CartProvider with ChangeNotifier {
 
     Map<String, dynamic> apiBodyData = {};
 
-    // if (phone == "") {
-    //   apiBodyData = {
-    //     "customer_id": customerPhone,
-    //     "transaction_number": transactionId,
-    //     "payment_method": paymentMethod,
-    //     "paid_amount": paidAmount,
-    //     "balance": balanceAmount,
-    //   };
-    // } else {
     apiBodyData = {
-      "phone": phone,
+      "phone": customerPhone,
       "transaction_number": transactionId,
       "payment_method": paymentMethod,
       "paid_amount": paidAmount,
       "source_type": "executive",
       "balance": balanceAmount,
+      "coupon_id": couponId,
     };
-    // }
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");
 

@@ -49,7 +49,7 @@ class _PrintPageState extends State<PrintPage> {
 
   Future<void> fetchCustomerCareInfo() async {
     final response = await http.get(Uri.parse(
-        "https://epos.enke.in/api/company/get-company-props?cart_id=1"));
+        "https://epos.enke.ae/api/company/get-company-props?cart_id=1"));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
