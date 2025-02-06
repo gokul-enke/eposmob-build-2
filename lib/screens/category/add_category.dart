@@ -27,14 +27,6 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
   String? selectedParentCategoryId;
   List<Category>? categoryList;
 
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   WidgetsBinding.instance.addPostFrameCallback((_) {
-  //     Provider.of<CategoryProvider>(context, listen: false).listAllCategory();
-  //   });
-  // }
-
   @override
   void initState() {
     loadInitData();

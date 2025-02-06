@@ -3,15 +3,18 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pos_machine/models/list_sales_return.dart';
 
 import '../models/list_sales_order.dart';
 import '../resources/app_url.dart';
 
 class SalesProvider with ChangeNotifier {
   List<ListOrderModelData> _orders = [];
+  List<SalesReturnOrder> _salesReturnOrders = [];
   int currentPage = 1;
   int totalPages = 1;
   List<ListOrderModelData> get orders => _orders;
+  List<SalesReturnOrder> get salesReturnOrders => _salesReturnOrders;
   String _orderId = "";
   String get getOrderId {
     return _orderId;
@@ -142,6 +145,54 @@ class SalesProvider with ChangeNotifier {
     } catch (error) {
       rethrow;
     } finally {}
+  }
+
+  Future<void> fetchSalesReturn({
+    required String accessToken,
+    required int customerId,
+    int? page,
+  }) async {
+    final queryParameters = <String, String>{
+      'customer_id': customerId.toString(),
+    };
+    if (page != null) queryParameters['page'] = page.toString();
+
+    final uri = Uri.parse(APPUrl.listSalesReturn)
+        .replace(queryParameters: queryParameters);
+
+    try {
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      debugPrint(
+          'fetch Sales Return list response status code: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        try {
+          final salesReturnResponse = SalesReturnResponse.fromJson(jsonData);
+          debugPrint(
+              'fetch Sales Return list response data: ${salesReturnResponse.data}');
+          _salesReturnOrders = salesReturnResponse.data; // Store fetched data
+          notifyListeners(); // Notify listeners to update UI
+        } catch (e) {
+          debugPrint('Error parsing JSON data: $e');
+        }
+      } else {
+        debugPrint(
+            'Failed to load orders: ${response.statusCode} - ${response.body}');
+        throw Exception('Failed to load orders');
+      }
+    } catch (error) {
+      debugPrint('Error in fetchOrders: $error');
+      _salesReturnOrders = [];
+      rethrow;
+    }
   }
 
   Future<void> submitSalesReturn({

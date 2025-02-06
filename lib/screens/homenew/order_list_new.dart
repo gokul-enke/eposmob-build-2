@@ -492,56 +492,10 @@ class _OrderListNewState extends State<OrderListNew> {
                                         flex: 4,
                                         child: Center(
                                           child: CompactQuantityControl(
+                                            productId:
+                                                cartItem[index].productId!,
+                                            cartItemId: cartItem[index].id!,
                                             quantity: cartItem[index].quantity!,
-                                            onQuantityChanged: (newQuantity) {
-                                              String? accessToken =
-                                                  Provider.of<AuthModel>(
-                                                          context,
-                                                          listen: false)
-                                                      .token;
-                                              if (newQuantity >
-                                                  cartItem[index].quantity!) {
-                                                // Increment the quantity
-                                                Provider.of<CartProvider>(
-                                                        context,
-                                                        listen: false)
-                                                    .addToCartAPI(
-                                                  accessToken:
-                                                      accessToken ?? "",
-                                                  customerId:
-                                                      Provider.of<AuthModel>(
-                                                              context,
-                                                              listen: false)
-                                                          .userId!,
-                                                  productId: cartItem[index]
-                                                          .productId ??
-                                                      1,
-                                                  quantity: newQuantity -
-                                                      cartItem[index]
-                                                          .quantity!, // calculate increment
-                                                );
-                                              } else if (newQuantity <
-                                                  cartItem[index].quantity!) {
-                                                // Decrement the quantity
-                                                Provider.of<CartProvider>(
-                                                        context,
-                                                        listen: false)
-                                                    .decrementCartItemQuantityAPI(
-                                                  accessToken:
-                                                      accessToken ?? "",
-                                                  customerId:
-                                                      Provider.of<AuthModel>(
-                                                              context,
-                                                              listen: false)
-                                                          .userId!,
-                                                  productId:
-                                                      cartItem[index].id ?? 1,
-                                                  remove: '',
-                                                  quantity:
-                                                      newQuantity, // set to new quantity
-                                                );
-                                              }
-                                            },
                                           ),
                                         ),
                                       ),

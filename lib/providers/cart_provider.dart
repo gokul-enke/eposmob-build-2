@@ -404,6 +404,8 @@ class CartProvider with ChangeNotifier {
   }) async {
     debugPrint("********************REMOVE FROM CART API******************** ");
     debugPrint("product id is ${productId.toString()}");
+    debugPrint("product id is ${quantity.toString()}");
+    debugPrint("product id is ${quantity.toString()}");
     final Map<String, dynamic> apiBodyData = {
       'cart_item_id': productId,
       // 'remove': remove,

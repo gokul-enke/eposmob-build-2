@@ -648,79 +648,11 @@ class _BillingPageState extends State<BillingPage> {
                               )),
                               DataCell(Center(
                                 child: CompactQuantityControl(
-                                    quantity: item.quantity ?? 0,
-                                    onQuantityChanged: (newQuantity) {
-                                      // _handleQuantityChange(
-                                      //     context, item, newQuantity);
-                                      String? accessToken =
-                                          Provider.of<AuthModel>(context,
-                                                  listen: false)
-                                              .token;
-                                      debugPrint(
-                                          "accessToken From AuthModel $accessToken");
-                                      if (newQuantity > item.quantity!) {
-                                        Provider.of<CartProvider>(context,
-                                                listen: false)
-                                            .addToCartAPI(
-                                          accessToken: accessToken ?? "",
-                                          customerId: Provider.of<AuthModel>(
-                                                  context,
-                                                  listen: false)
-                                              .userId!,
-                                          productId: item.productId ?? 1,
-                                          quantity:
-                                              newQuantity - item.quantity!,
-                                        )
-                                            .then(
-                                          (value) {
-                                            AddToCartModel addToCartModel =
-                                                AddToCartModel.fromJson(value);
-                                            if (value["status"] == "success") {
-                                              // showScaffold(
-                                              //   context: context,
-                                              //   message:
-                                              //       'Quantity Updated Successfully',
-                                              // );
-                                            } else {
-                                              showScaffoldError(
-                                                context: context,
-                                                message: addToCartModel
-                                                        .message ??
-                                                    "Error Occured ! Try Again",
-                                              );
-                                            }
-                                          },
-                                        );
-                                      } else if (newQuantity < item.quantity!) {
-                                        String? accessToken =
-                                            Provider.of<AuthModel>(context,
-                                                    listen: false)
-                                                .token;
-                                        Provider.of<CartProvider>(context,
-                                                listen: false)
-                                            .decrementCartItemQuantityAPI(
-                                          accessToken: accessToken ?? "",
-                                          customerId: Provider.of<AuthModel>(
-                                                  context,
-                                                  listen: false)
-                                              .userId!,
-                                          productId: item.id ?? 1,
-                                          remove: '',
-                                          quantity: newQuantity,
-                                        );
-                                        // showScaffold(
-                                        //   context: context,
-                                        //   message:
-                                        //       "Quantity Updated Successfully",
-                                        // );
-                                      }
-                                      //  else {
-                                      //   showScaffoldError(
-                                      //     context: context,
-                                      //     message: "Failed to Update Quantity",
-                                      //   );
-                                      // }
-                                    }),
+                                  productId: item.productId!,
+                                  cartItemId: item.id!,
+                                  quantity: item.quantity ?? 0,
+                                  unitPrice: item.unitPrice.toString(),
+                                ),
                               )),
                               DataCell(Center(
                                 child: SizedBox(
@@ -778,29 +710,6 @@ class _BillingPageState extends State<BillingPage> {
         );
       },
     );
-  }
-
-  void _handleQuantityChange(
-      BuildContext context, ListCartModelDataCartItem item, int newQuantity) {
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    final cartProvider = Provider.of<CartProvider>(context, listen: false);
-
-    if (newQuantity > item.quantity!) {
-      cartProvider.addToCartAPI(
-        accessToken: accessToken ?? "",
-        customerId: Provider.of<AuthModel>(context, listen: false).userId!,
-        productId: item.productId ?? 1,
-        quantity: newQuantity - item.quantity!,
-      );
-    } else if (newQuantity < item.quantity!) {
-      cartProvider.decrementCartItemQuantityAPI(
-        accessToken: accessToken ?? "",
-        customerId: Provider.of<AuthModel>(context, listen: false).userId!,
-        productId: item.id ?? 1,
-        remove: '',
-        quantity: newQuantity,
-      );
-    }
   }
 
   void _updateItemPrice(

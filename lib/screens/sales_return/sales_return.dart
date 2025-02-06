@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -185,6 +188,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     Size size = MediaQuery.of(context).size;
     final productProvider =
         Provider.of<GridSelectionProvider>(context, listen: false);
+    final SideBarController sideBarController = Get.put(SideBarController());
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: refreshData,
@@ -206,6 +210,15 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
               child: ListView(
                 children: [
+                  CustomBackButton(
+                    onPressed: () {
+                      sideBarController.index.value = 50;
+                    },
+                    text: 'Sales Return List',
+                    // Optionally, you can customize the color and size
+                    // color: ColorManager.customColor,
+                    // size: 20.0,
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
@@ -1038,9 +1051,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           DataColumn(label: Text('Quantity')),
           DataColumn(label: Text('Unit Price')),
           DataColumn(label: Text('Total Price')),
-          DataColumn(label: Text('Returned Quantity')),
-          DataColumn(label: Text('Return Total')),
-          DataColumn(label: Text('Returned')),
+          // DataColumn(label: Text('Returned Quantity')),
+          // DataColumn(label: Text('Return Total')),
+          // DataColumn(label: Text('Returned')),
           DataColumn(label: Text('Action')),
         ],
         rows: cartItems.map((item) {
@@ -1050,9 +1063,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             DataCell(Text(item.quantity?.toString() ?? '0')),
             DataCell(Text(item.unitPrice ?? 'N/A')),
             DataCell(Text(item.totalPrice ?? 'N/A')),
-            const DataCell(Text(' ')),
-            const DataCell(Text(' ')),
-            const DataCell(Text(' ')),
+            // const DataCell(Text(' ')),
+            // const DataCell(Text(' ')),
+            // const DataCell(Text(' ')),
             DataCell(
               TextButton(
                 onPressed: () {

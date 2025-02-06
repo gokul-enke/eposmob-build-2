@@ -244,9 +244,10 @@ class SideMenu extends StatelessWidget {
               iconPath: ImageAssets.saleIcon,
               title: 'Sales Return',
               onTap: () {
-                sideBarController.index.value = 49;
+                sideBarController.index.value = 50;
               },
-              selected: sideBarController.index.value == 49,
+              selected: sideBarController.index.value == 50 ||
+                  sideBarController.index.value == 49,
             ),
           ),
           Obx(

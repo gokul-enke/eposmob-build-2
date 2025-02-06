@@ -33,6 +33,8 @@ class APPUrl {
   static const String getListOrderDetails =
       '$baseURL/api/v1/order/executive/order-details';
   static const String salesReturn = '$baseURL/api/v1/order/sales-return';
+  static const String listSalesReturn =
+      '$baseURL/api/v1/order/list-return-orders';
 
   static const String loginUrl = '$baseURL/api/v1/user/signin';
   static const String forgotPasswordUrl = '$baseURL/api/v1/user/forgot';
