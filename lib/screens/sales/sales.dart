@@ -888,7 +888,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                   const EdgeInsets.all(20.0),
                                               child: Center(
                                                 child: Text(
-                                                  "${order.customerDetails!.name}\n +91 ${order.customerDetails!.phone}",
+                                                  "${order.customerName ?? "NA"}\n +91 ${order.customerDetails!.phone}",
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s9,

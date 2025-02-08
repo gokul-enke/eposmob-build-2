@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/models/add_to_cart.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 
 class CompactQuantityControl extends StatefulWidget {
   final int quantity;
   final int productId;
   final int? cartItemId;
   final String? unitPrice;
+  final String? productUnit;
 
   const CompactQuantityControl({
     Key? key,
     required this.quantity,
     required this.productId,
     this.unitPrice,
+    this.productUnit,
     this.cartItemId,
   }) : super(key: key);
 
@@ -27,6 +30,11 @@ class CompactQuantityControl extends StatefulWidget {
 class _CompactQuantityControlState extends State<CompactQuantityControl> {
   late TextEditingController _controller;
   late int _currentQuantity;
+  Timer? _debounceTimer;
+  bool _isUpdating = false;
+
+  // Queue to store pending quantity updates
+  int? _pendingQuantity;
 
   @override
   void initState() {
@@ -37,145 +45,89 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
-  void _updateQuantity(int newQuantity) {
-    // Only allow updates through the API response
-    if (newQuantity >= 0) {
-      setState(() {
-        _currentQuantity = newQuantity;
-        _controller.text = _currentQuantity.toString(); // Update text field
-      });
-    }
+  // Update UI immediately but debounce API calls
+  void _handleQuantityChange(int newQuantity) {
+    if (newQuantity < 0) return;
+
+    // Update UI immediately
+    setState(() {
+      _currentQuantity = newQuantity;
+      _controller.text = _currentQuantity.toString();
+    });
+
+    // Cancel existing timer if any
+    _debounceTimer?.cancel();
+
+    // Store the latest pending quantity
+    _pendingQuantity = newQuantity;
+
+    // Debounce API call
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (_pendingQuantity != null && !_isUpdating) {
+        _syncWithServer(_pendingQuantity!);
+      }
+    });
   }
 
-  Future<void> _incrementQuantity() async {
-    // Make API call to increase quantity
-    int newQuantity = _currentQuantity + 1;
+  Future<void> _syncWithServer(int newQuantity) async {
+    if (_isUpdating) return;
 
-    // Retrieve access token and user ID
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    int userId = Provider.of<AuthModel>(context, listen: false).userId!;
-
-    // Update cart via API
-    var response =
-        await Provider.of<CartProvider>(context, listen: false).addToCartAPI(
-      accessToken: accessToken ?? "",
-      customerId: userId,
-      unitPrice: widget.unitPrice,
-      productId: widget.productId,
-      quantity: 1, // Increment by 1
-    );
-
-    // Handle the API response
-    if (response["status"] == "success") {
-      _updateQuantity(newQuantity); // Update UI if API call is successful
-    } else {
-      // Display error message
-      showScaffoldError(
-        context: context,
-        message: response["message"] ?? "Error Occurred! Try Again",
-      );
-    }
-  }
-
-  Future<void> _decrementQuantity() async {
-    int newQuantity = _currentQuantity - 1;
-
-    if (newQuantity >= 0) {
-      // Make API call to decrease quantity
+    _isUpdating = true;
+    try {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       int userId = Provider.of<AuthModel>(context, listen: false).userId!;
 
-      // Call your API method to decrement the quantity
-      var response = await Provider.of<CartProvider>(context, listen: false)
-          .decrementCartItemQuantityAPI(
-        accessToken: accessToken ?? "",
-        customerId: userId,
-        productId: widget.cartItemId!,
-        remove: '',
-        quantity: newQuantity, // set to new quantity
-      );
-
-      // Check if the API call was successful
-      if (response["status"] == "success") {
-        _updateQuantity(newQuantity); // Update UI if successful
-      } else {
-        showScaffoldError(
-          context: context,
-          message: response["message"] ?? "Error Occurred! Try Again",
+      if (newQuantity > widget.quantity) {
+        // Calculate difference and make single API call
+        final difference = newQuantity - widget.quantity;
+        var response = await Provider.of<CartProvider>(context, listen: false)
+            .addToCartAPI(
+          accessToken: accessToken ?? "",
+          customerId: userId,
+          unitPrice: widget.unitPrice,
+          productId: widget.productId,
+          quantity: difference,
         );
+
+        if (response["status"] != "success") {
+          // Revert UI on error
+          _revertUIOnError(response["message"]);
+        }
+      } else if (newQuantity < widget.quantity) {
+        var response = await Provider.of<CartProvider>(context, listen: false)
+            .decrementCartItemQuantityAPI(
+          accessToken: accessToken ?? "",
+          customerId: userId,
+          productId: widget.cartItemId!,
+          remove: '',
+          quantity: newQuantity,
+        );
+
+        if (response["status"] != "success") {
+          _revertUIOnError(response["message"]);
+        }
       }
+    } finally {
+      _isUpdating = false;
+      _pendingQuantity = null;
     }
   }
 
-  Future<void> _chnageQuantity(int newQuantity) async {
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    int userId = Provider.of<AuthModel>(context, listen: false).userId!;
-    if (newQuantity > widget.quantity) {
-      Provider.of<CartProvider>(context, listen: false)
-          .addToCartAPI(
-        accessToken: accessToken!,
-        customerId: userId,
-        unitPrice: widget.unitPrice,
-        productId: widget.productId,
-        quantity: newQuantity - widget.quantity,
-      )
-          .then(
-        (value) {
-          AddToCartModel addToCartModel = AddToCartModel.fromJson(value);
-          if (value["status"] == "success") {
-            if (mounted) {
-              showScaffold(
-                context: context,
-                message: 'Quantity Updated Successfully',
-              );
-            }
-            _updateQuantity(newQuantity);
-          } else {
-            if (mounted) {
-              showScaffoldError(
-                context: context,
-                message: addToCartModel.message ?? "Error Occured ! Try Again",
-              );
-            }
-          }
-        },
-      );
-    } else if (newQuantity < widget.quantity) {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      Provider.of<CartProvider>(context, listen: false)
-          .decrementCartItemQuantityAPI(
-        accessToken: accessToken ?? "",
-        customerId: Provider.of<AuthModel>(context, listen: false).userId!,
-        productId: widget.cartItemId!,
-        remove: '',
-        quantity: newQuantity,
-      )
-          .then(
-        (value) {
-          AddToCartModel addToCartModel = AddToCartModel.fromJson(value);
-          if (value["status"] == "success") {
-            if (mounted) {
-              showScaffold(
-                context: context,
-                message: 'Quantity Updated Successfully',
-              );
-            }
-            _updateQuantity(newQuantity);
-          } else {
-            if (mounted) {
-              showScaffoldError(
-                context: context,
-                message: addToCartModel.message ?? "Error Occured ! Try Again",
-              );
-            }
-          }
-        },
+  void _revertUIOnError(String? message) {
+    if (mounted) {
+      setState(() {
+        _currentQuantity = widget.quantity;
+        _controller.text = _currentQuantity.toString();
+      });
+      showScaffoldError(
+        context: context,
+        message: message ?? "Error Occurred! Try Again",
       );
     }
   }
@@ -186,7 +138,7 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
       mainAxisSize: MainAxisSize.min,
       children: [
         InkWell(
-          onTap: _decrementQuantity,
+          onTap: () => _handleQuantityChange(_currentQuantity - 1),
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -202,6 +154,12 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
           child: TextField(
             controller: _controller,
             keyboardType: TextInputType.number,
+            inputFormatters: [
+              if (widget.productUnit == 'KG' || widget.productUnit == 'LT')
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+              if (widget.productUnit != 'LT' && widget.productUnit != 'KG')
+                FilteringTextInputFormatter.digitsOnly,
+            ],
             textAlign: TextAlign.center,
             decoration: const InputDecoration(
               border: InputBorder.none,
@@ -209,12 +167,14 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
             ),
             onSubmitted: (value) {
               int? newQuantity = int.tryParse(value);
-              _chnageQuantity(newQuantity ?? _currentQuantity);
+              if (newQuantity != null) {
+                _handleQuantityChange(newQuantity);
+              }
             },
           ),
         ),
         InkWell(
-          onTap: _incrementQuantity,
+          onTap: () => _handleQuantityChange(_currentQuantity + 1),
           child: Container(
             decoration: const BoxDecoration(
               shape: BoxShape.circle,

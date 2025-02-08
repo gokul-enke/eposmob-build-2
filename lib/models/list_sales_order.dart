@@ -47,6 +47,7 @@ class ListOrderModelData {
   final PriceSummary? priceSummary;
   final List<OrderProp>? orderProps;
   final List<CartItem>? cartItems;
+  final String? customerName;
 
   ListOrderModelData({
     this.id,
@@ -60,6 +61,7 @@ class ListOrderModelData {
     this.priceSummary,
     this.orderProps,
     this.cartItems,
+    this.customerName,
   });
 
   factory ListOrderModelData.fromJson(Map<String, dynamic> json) =>
@@ -73,6 +75,7 @@ class ListOrderModelData {
         grantTotal: json["grant_total"],
         paymentStatus: json["payment_status"],
         status: json["status"],
+        customerName: json["customer_name"],
         customerDetails:
             json["orderProps"] != null ? CustomerDetails.fromJson(json) : null,
         priceSummary: json["cart_items"]?["price_summary"] != null
@@ -96,6 +99,7 @@ class ListOrderModelData {
         "grant_total": grantTotal,
         "payment_status": paymentStatus,
         "status": status,
+        "customer_name": customerName,
         "orderProps": customerDetails?.toJson(),
         "cart_items": {
           "cart_items": cartItems == null

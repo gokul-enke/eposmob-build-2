@@ -5,6 +5,7 @@ import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platfor
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
+import 'package:pos_machine/components/build_dialog_box.dart';
 
 class PrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
@@ -34,6 +35,12 @@ class _PrintPageState extends State<PrintPage> {
   String customerCareNumber = "Number";
   String customerCareEmail = "Email";
 
+  static const Color primaryColor = Color(0XFF3C92F5);
+  static const Color accentColor = Color(0xFF4CAF50);
+  static const Color textPrimaryColor = Color(0xFF2C3E50);
+  static const Color textSecondaryColor = Color(0xFF7F8C8D);
+  static const Color backgroundColor = Color(0xFFF5F6FA);
+
   @override
   void initState() {
     super.initState();
@@ -48,19 +55,19 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   Future<void> fetchCustomerCareInfo() async {
-    final response = await http.get(Uri.parse(
-        "https://epos.enke.ae/api/company/get-company-props?cart_id=1"));
+    try {
+      final response = await http.get(Uri.parse(
+          "https://epos.enke.ae/api/company/get-company-props?cart_id=1"));
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      setState(() {
-        customerCareNumber = data['customer_care']
-            ['number']; // Adjust these keys as per API response
-        customerCareEmail = data['customer_care']
-            ['email']; // Adjust these keys as per API response
-      });
-    } else {
-      throw Exception('Failed to load customer care information');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          customerCareNumber = data['customer_care']['number'];
+          customerCareEmail = data['customer_care']['email'];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching customer care info: $e');
     }
   }
 
@@ -83,7 +90,7 @@ class _PrintPageState extends State<PrintPage> {
 
       return statuses.values.every((status) => status.isGranted);
     }
-    return true; // For iOS, permissions are handled in Info.plist
+    return true;
   }
 
   void _showPermissionDeniedDialog() {
@@ -114,9 +121,11 @@ class _PrintPageState extends State<PrintPage> {
     });
 
     try {
+      // Scan for Bluetooth printers
       _subscription = printerManager
           .discovery(type: PrinterType.bluetooth, isBle: false)
           .listen((device) {
+        debugPrint('Found Bluetooth device: ${device.name}');
         final printer = BluetoothPrinter(
           deviceName: device.name,
           address: device.address,
@@ -129,9 +138,9 @@ class _PrintPageState extends State<PrintPage> {
 
       // Scan for USB printers
       await printerManager.discovery(type: PrinterType.usb).forEach((device) {
+        debugPrint('Found USB device: ${device.name}');
         final printer = BluetoothPrinter(
           deviceName: device.name,
-          address: device.address,
           vendorId: device.vendorId,
           productId: device.productId,
           typePrinter: PrinterType.usb,
@@ -140,6 +149,8 @@ class _PrintPageState extends State<PrintPage> {
           devices.add(printer);
         });
       });
+    } catch (e) {
+      debugPrint('Error during scanning: $e');
     } finally {
       setState(() {
         _isScanning = false;
@@ -148,35 +159,71 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   void selectPrinter(BluetoothPrinter printer) {
+    debugPrint('Selecting printer:');
+    debugPrint('Device Name: ${printer.deviceName}');
+    debugPrint('Address: ${printer.address}');
+    debugPrint('Type: ${printer.typePrinter}');
+    debugPrint('VendorId: ${printer.vendorId}');
+    debugPrint('ProductId: ${printer.productId}');
+
     setState(() {
       selectedPrinter = printer;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text('${printer.deviceName.toString()} Printer Selected')),
-    );
+
+    if (mounted) {
+      showScaffold(
+        context: context,
+        message: "${printer.deviceName.toString()} Printer Selected",
+      );
+    }
   }
 
   Future<void> printReceipt() async {
+    debugPrint('Starting printReceipt function');
+    debugPrint('Selected Printer: ${selectedPrinter?.deviceName}');
+    debugPrint('Selected Printer Address: ${selectedPrinter?.address}');
+    debugPrint('Printer Type: ${selectedPrinter?.typePrinter}');
+    debugPrint('VendorId: ${selectedPrinter?.vendorId}');
+    debugPrint('ProductId: ${selectedPrinter?.productId}');
+
     if (selectedPrinter == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No Printer Selected')),
-      );
+      debugPrint('Error: No printer selected');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: "No Printer Selected",
+        );
+      }
       return;
     }
 
     try {
-      // Connect to the printer
-      await printerManager.connect(
-        type: selectedPrinter!.typePrinter,
-        model: selectedPrinter!.typePrinter == PrinterType.bluetooth
-            ? BluetoothPrinterInput(
-                name: selectedPrinter!.deviceName!,
-                address: selectedPrinter!.address!,
-                isBle: false,
-              )
-            : TcpPrinterInput(ipAddress: selectedPrinter!.address!),
-      );
+      debugPrint('Attempting to connect to printer...');
+      // Connect to the printer based on type
+      if (selectedPrinter!.typePrinter == PrinterType.usb) {
+        await printerManager.connect(
+          type: PrinterType.usb,
+          model: UsbPrinterInput(
+            name: selectedPrinter!.deviceName ?? 'Unknown',
+            productId: selectedPrinter!.productId,
+            vendorId: selectedPrinter!.vendorId,
+          ),
+        );
+      } else if (selectedPrinter!.typePrinter == PrinterType.bluetooth) {
+        if (selectedPrinter!.address == null) {
+          throw Exception('Bluetooth printer address is null');
+        }
+        await printerManager.connect(
+          type: PrinterType.bluetooth,
+          model: BluetoothPrinterInput(
+            name: selectedPrinter!.deviceName ?? 'Unknown',
+            address: selectedPrinter!.address!,
+            isBle: false,
+          ),
+        );
+      }
+
+      debugPrint('Successfully connected to printer');
 
       // Generate receipt
       final profile = await CapabilityProfile.load();
@@ -184,23 +231,36 @@ class _PrintPageState extends State<PrintPage> {
       List<int> bytes = [];
 
       // Title
-      bytes += generator.text('EPOS Invoice',
+      String title = 'EPOS Invoice';
+      bytes += generator.text(title,
           styles: const PosStyles(
               align: PosAlign.center, bold: true, height: PosTextSize.size2));
+      debugPrint('Printing: $title');
+
       bytes += generator.feed(1);
 
       // Date and Order number
-      bytes += generator.text('Date: ${widget.orderDate}',
+      String orderDateText = 'Date: ${widget.orderDate}';
+      String orderNumberText = 'Order#: ${widget.orderNumber}';
+      bytes += generator.text(orderDateText,
           styles: const PosStyles(align: PosAlign.left));
-      bytes += generator.text('Order#: ${widget.orderNumber}',
-          styles: const PosStyles(align: PosAlign.left));
+      debugPrint('Printing: $orderDateText');
 
-      // Store Name (You might want to make this configurable)
-      bytes += generator.text('Store Name: ${widget.storeName}',
+      bytes += generator.text(orderNumberText,
           styles: const PosStyles(align: PosAlign.left));
+      debugPrint('Printing: $orderNumberText');
+
+      // Store Name
+      String storeNameText = 'Store Name: ${widget.storeName}';
+      bytes += generator.text(storeNameText,
+          styles: const PosStyles(align: PosAlign.left));
+      debugPrint('Printing: $storeNameText');
+
       bytes += generator.feed(1);
 
       // Table header
+      String tableHeader = 'Sl#\tItem\tQty\tUnit Price\tPrice';
+      debugPrint('Printing Table Header: $tableHeader');
       bytes += generator.row([
         PosColumn(text: 'Sl#', width: 1),
         PosColumn(text: 'Item', width: 4),
@@ -208,11 +268,16 @@ class _PrintPageState extends State<PrintPage> {
         PosColumn(text: 'Unit Price', width: 2),
         PosColumn(text: 'Price', width: 3),
       ]);
+
       bytes += generator.hr();
 
       // Add cart items
       for (var i = 0; i < widget.cartItems.length; i++) {
         var item = widget.cartItems[i];
+        String itemRow =
+            '${i + 1}\t${item.productName ?? ''}\t${item.quantity}\t${item.unitPrice}\t${item.totalPrice}';
+        debugPrint('Printing Item: $itemRow');
+
         bytes += generator.row([
           PosColumn(text: (i + 1).toString(), width: 1),
           PosColumn(text: item.productName ?? '', width: 4),
@@ -225,6 +290,9 @@ class _PrintPageState extends State<PrintPage> {
       bytes += generator.hr();
 
       // Add total
+      String totalText = 'Total: ${widget.formattedTotal}';
+      debugPrint('Printing: $totalText');
+
       bytes += generator.row([
         PosColumn(
             text: 'Total:', width: 9, styles: const PosStyles(bold: true)),
@@ -236,82 +304,262 @@ class _PrintPageState extends State<PrintPage> {
 
       bytes += generator.feed(1);
 
-      // Note
-      bytes += generator.text('Note: This is a computer generated invoice',
+      // Customer Care Details
+      String customerCareText = 'Customer Care: $customerCareNumber';
+      String emailText = 'Email: $customerCareEmail';
+      bytes += generator.text(customerCareText,
           styles: const PosStyles(align: PosAlign.center));
+      debugPrint('Printing: $customerCareText');
 
-      // Customer Care Details from API
-      if (customerCareEmail != null) {
-        bytes += generator.text('Customer Care: $customerCareNumber',
-            styles: const PosStyles(align: PosAlign.center));
-        bytes += generator.text('Email: $customerCareEmail',
-            styles: const PosStyles(align: PosAlign.center));
-      }
-
-      // // Customer Care
-      // bytes += generator.text('Customer Care: +91 9496410199',
-      //     styles: const PosStyles(align: PosAlign.center));
-      // bytes += generator.text('Email: customercare@eposenke.in',
-      //     styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.text(emailText,
+          styles: const PosStyles(align: PosAlign.center));
+      debugPrint('Printing: $emailText');
 
       bytes += generator.feed(2);
       bytes += generator.cut();
 
       // Print receipt
+      debugPrint('Sending print job to printer...');
       await printerManager.send(
           type: selectedPrinter!.typePrinter, bytes: bytes);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Print job sent successfully')));
-    } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      debugPrint('Print job sent successfully');
+      if (mounted) {
+        showScaffold(
+          context: context,
+          message: "Print job sent successfully",
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Error in printReceipt: $e');
+      debugPrint('Stack trace: $stackTrace');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Error: ${e.toString()}',
+        );
+      }
     } finally {
-      // Disconnect from the printer
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Print Disconnected')),
-      );
-      await printerManager.disconnect(type: selectedPrinter!.typePrinter);
+      debugPrint('Disconnecting from printer...');
+      try {
+        await printerManager.disconnect(type: selectedPrinter!.typePrinter);
+        debugPrint('Successfully disconnected from printer');
+      } catch (e) {
+        debugPrint('Error disconnecting from printer: $e');
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Your existing build method remains the same
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text('Printer List'),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: devices.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(devices[index].deviceName ?? 'Unknown device'),
-                  subtitle: Text(devices[index].address ?? ''),
-                  trailing: ElevatedButton(
-                    onPressed: () => selectPrinter(devices[index]),
-                    child: Text(selectedPrinter == devices[index]
-                        ? 'Selected'
-                        : 'Select'),
-                  ),
-                );
-              },
-            ),
+        title: const Text(
+          'Select Printer',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
           ),
-          ElevatedButton(
-            onPressed: selectedPrinter == null ? null : printReceipt,
-            child: const Text('Print Receipt'),
-          )
-        ],
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        elevation: 0,
+        backgroundColor: primaryColor,
+      ),
+      body: Container(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              elevation: 2,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [primaryColor.withOpacity(0.1), Colors.white],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Available Printers',
+                      style: TextStyle(
+                        color: textPrimaryColor,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _isScanning
+                          ? 'Scanning...'
+                          : '${devices.length} devices found',
+                      style: const TextStyle(
+                        color: textSecondaryColor,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: devices.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.print_disabled,
+                            size: 64,
+                            color: textSecondaryColor,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No printers found',
+                            style: TextStyle(
+                              color: textSecondaryColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tap the refresh button to scan for printers',
+                            style: TextStyle(
+                              color: textSecondaryColor.withOpacity(0.8),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: devices.length,
+                      itemBuilder: (context, index) {
+                        final printer = devices[index];
+                        final isSelected = selectedPrinter == printer;
+
+                        return Card(
+                          elevation: isSelected ? 2 : 1,
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: isSelected
+                                  ? Border.all(color: primaryColor, width: 2)
+                                  : null,
+                            ),
+                            child: ListTile(
+                              leading: Icon(
+                                Icons.print,
+                                color: isSelected
+                                    ? primaryColor
+                                    : textSecondaryColor,
+                                size: 28,
+                              ),
+                              title: Text(
+                                printer.deviceName ?? 'Unknown device',
+                                style: TextStyle(
+                                  color: textPrimaryColor,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              subtitle: Text(
+                                printer.address ?? '',
+                                style: const TextStyle(
+                                  color: textSecondaryColor,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              trailing: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isSelected
+                                      ? accentColor
+                                      : Colors.grey[200],
+                                  foregroundColor: isSelected
+                                      ? Colors.white
+                                      : textSecondaryColor,
+                                  elevation: isSelected ? 2 : 0,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                ),
+                                onPressed: () => selectPrinter(printer),
+                                child: Text(
+                                  isSelected ? 'Selected' : 'Select',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: selectedPrinter == null ? null : printReceipt,
+              icon: const Icon(Icons.receipt_long),
+              label: const Text(
+                'Print Receipt',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: textSecondaryColor.withOpacity(0.3),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _isScanning ? null : _checkPermissions,
         tooltip: 'Scan for printers',
+        backgroundColor: _isScanning ? textSecondaryColor : primaryColor,
+        elevation: 4,
         child: _isScanning
-            ? const CircularProgressIndicator()
-            : const Icon(Icons.refresh),
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : const Icon(
+                Icons.refresh,
+                color: Colors.white,
+              ),
       ),
     );
   }
@@ -324,6 +572,7 @@ class BluetoothPrinter {
   String? vendorId;
   String? productId;
   PrinterType typePrinter;
+  bool isConnected;
 
   BluetoothPrinter({
     this.deviceName,
@@ -332,5 +581,9 @@ class BluetoothPrinter {
     this.vendorId,
     this.productId,
     this.typePrinter = PrinterType.bluetooth,
+    this.isConnected = false,
   });
+
+  bool get isUSB => typePrinter == PrinterType.usb;
+  bool get isBluetooth => typePrinter == PrinterType.bluetooth;
 }

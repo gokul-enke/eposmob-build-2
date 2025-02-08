@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import '../../../components/build_container_box.dart';
 import '../../../components/build_payment_row.dart';
 import '../../../components/build_profile_picture.dart';
@@ -30,7 +31,8 @@ class OrderDetailWidget extends StatelessWidget {
       );
     }
 
-    return SingleChildScrollView( // Removed Expanded
+    return SingleChildScrollView(
+      // Removed Expanded
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -47,7 +49,8 @@ class OrderDetailWidget extends StatelessWidget {
                   children: [
                     RichText(
                       text: TextSpan(
-                        text: '${customerDetails!.name ?? "NA"}\n',
+                        text:
+                            '${customerDetails!.name ?? "NA"} - ${customerDetails!.phone ?? ""} \n',
                         style: ResponsiveWidget.isMobile(context)
                             ? buildCustomStyle(FontWeightManager.semiBold,
                                 FontSize.s12, 0.30, ColorManager.textColor)
@@ -55,7 +58,8 @@ class OrderDetailWidget extends StatelessWidget {
                                 FontSize.s24, 0.35, ColorManager.textColor),
                         children: <TextSpan>[
                           TextSpan(
-                            text: '${orderDetailsModelData!.orderDate}',
+                            text: DateHelper.formatISODate(
+                                orderDetailsModelData!.orderDate.toString()),
                             style: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s13,
@@ -73,13 +77,15 @@ class OrderDetailWidget extends StatelessWidget {
                   padding: const EdgeInsets.all(20),
                   itemCount: cartItem!.length,
                   shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(), // Prevent scrolling
+                  physics:
+                      const NeverScrollableScrollPhysics(), // Prevent scrolling
                   itemBuilder: (BuildContext context, int index) {
                     return ListTile(
                       minLeadingWidth: 0,
                       minVerticalPadding: 0,
                       contentPadding: EdgeInsets.zero,
-                      visualDensity: const VisualDensity(horizontal: 0, vertical: 0),
+                      visualDensity:
+                          const VisualDensity(horizontal: 0, vertical: 0),
                       leading: Text(
                         '${index + 1}',
                         style: buildCustomStyle(FontWeightManager.regular,
@@ -91,11 +97,8 @@ class OrderDetailWidget extends StatelessWidget {
                           RichText(
                             text: TextSpan(
                               text: '${cartItem![index].productName}\n',
-                              style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s13,
-                                  0.20,
-                                  Colors.black),
+                              style: buildCustomStyle(FontWeightManager.regular,
+                                  FontSize.s13, 0.20, Colors.black),
                               children: <TextSpan>[
                                 TextSpan(
                                   text:

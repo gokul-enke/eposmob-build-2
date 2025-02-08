@@ -10,4 +10,10 @@ class DateHelper {
     final DateFormat formatter = DateFormat('yyyy MMM dd');
     return formatter.format(date);
   }
+
+  static String formatISODate(String isoDateString) {
+    DateTime date = DateTime.parse(isoDateString);
+    final DateFormat formatter = DateFormat('yyyy MMM dd');
+    return formatter.format(date);
+  }
 }
