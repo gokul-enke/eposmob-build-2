@@ -307,7 +307,7 @@ class _KioskScreenState extends State<KioskScreen> {
           title: title,
           currency: currency,
           price: price.toString(),
-          count: count,
+          count: count.toDouble(),
           productId: productId,
           removeFromCart: () => _removeFromCart(context, productId),
           addToCart: () => _addToCart(context, productId),

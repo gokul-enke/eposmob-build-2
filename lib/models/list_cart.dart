@@ -96,7 +96,7 @@ class ListCartModelDataCartItem {
   final int? productId;
   final String? productName;
   final int? categoryId;
-  late final int? quantity;
+  late final num? quantity;
   final String? productUnit;
   final String? unitPrice;
   final String? totalPrice;
@@ -135,7 +135,7 @@ class ListCartModelDataCartItem {
                 ? null
                 : ProductAttachment.fromJson(json["product_attachment"]),
         categoryId: json["category_id"],
-        quantity: json["quantity"],
+        quantity: num.tryParse(json["quantity"]),
         productUnit: json["product_unit"],
         unitPrice: (json["unit_price"]),
         totalPrice: json["total_price"],

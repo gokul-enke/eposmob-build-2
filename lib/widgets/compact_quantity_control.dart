@@ -8,11 +8,12 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 
 class CompactQuantityControl extends StatefulWidget {
-  final int quantity;
+  final num quantity;
   final int productId;
   final int? cartItemId;
   final String? unitPrice;
   final String? productUnit;
+  final Function()? onQuantityChanged;
 
   const CompactQuantityControl({
     Key? key,
@@ -21,6 +22,7 @@ class CompactQuantityControl extends StatefulWidget {
     this.unitPrice,
     this.productUnit,
     this.cartItemId,
+    this.onQuantityChanged,
   }) : super(key: key);
 
   @override
@@ -29,12 +31,12 @@ class CompactQuantityControl extends StatefulWidget {
 
 class _CompactQuantityControlState extends State<CompactQuantityControl> {
   late TextEditingController _controller;
-  late int _currentQuantity;
+  late num _currentQuantity;
   Timer? _debounceTimer;
   bool _isUpdating = false;
 
   // Queue to store pending quantity updates
-  int? _pendingQuantity;
+  num? _pendingQuantity;
 
   @override
   void initState() {
@@ -51,7 +53,7 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
   }
 
   // Update UI immediately but debounce API calls
-  void _handleQuantityChange(int newQuantity) {
+  void _handleQuantityChange(num newQuantity) {
     if (newQuantity < 0) return;
 
     // Update UI immediately
@@ -72,9 +74,13 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
         _syncWithServer(_pendingQuantity!);
       }
     });
+
+    if (widget.onQuantityChanged != null) {
+      widget.onQuantityChanged!(); // Use the null-aware operator
+    }
   }
 
-  Future<void> _syncWithServer(int newQuantity) async {
+  Future<void> _syncWithServer(num newQuantity) async {
     if (_isUpdating) return;
 
     _isUpdating = true;
@@ -166,7 +172,7 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
               contentPadding: EdgeInsets.symmetric(vertical: 5),
             ),
             onSubmitted: (value) {
-              int? newQuantity = int.tryParse(value);
+              num? newQuantity = num.tryParse(value);
               if (newQuantity != null) {
                 _handleQuantityChange(newQuantity);
               }

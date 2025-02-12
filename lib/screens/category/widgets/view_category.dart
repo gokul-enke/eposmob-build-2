@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_detail_row.dart';
-import 'package:pos_machine/components/build_title.dart';
 
 import 'package:provider/provider.dart';
 

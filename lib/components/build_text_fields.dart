@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -553,6 +554,8 @@ class BuildDropDownStatic extends StatelessWidget {
 
 Widget buildColumnWidgetForTextFields({
   TextEditingController? controller,
+  TextInputType? keyboardType,
+  List<TextInputFormatter>? inputFormatters,
   required Size size,
   double? width,
   double? height,
@@ -595,7 +598,8 @@ Widget buildColumnWidgetForTextFields({
             autofocus: autofocus,
             focusNode: focusNode,
             readOnly: readOnly,
-            keyboardType: TextInputType.text,
+            keyboardType: keyboardType ?? TextInputType.text,
+            inputFormatters: inputFormatters,
             cursorColor: ColorManager.kPrimaryColor,
             decoration: InputDecoration(
                 border: InputBorder.none,

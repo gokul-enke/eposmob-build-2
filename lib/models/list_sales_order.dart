@@ -120,7 +120,7 @@ class CartItem {
   final int? storeId;
   final int? productId;
   final String? productName;
-  final int? quantity;
+  final num? quantity;
   final String? totalPrice;
 
   CartItem({
@@ -141,7 +141,7 @@ class CartItem {
         storeId: json["store_id"],
         productId: json["product_id"],
         productName: json["product_name"],
-        quantity: json["quantity"],
+        quantity: num.tryParse(json["quantity"]),
         totalPrice: json["total_price"],
       );
 

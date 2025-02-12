@@ -920,7 +920,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
 }
 
 class CompactQuantityControl extends StatelessWidget {
-  final int quantity;
+  final num quantity;
   final Function() onIncrement;
   final Function() onDecrement;
 

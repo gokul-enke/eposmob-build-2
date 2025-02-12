@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:http/http.dart' as http;
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:provider/provider.dart';
 
 class PrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
@@ -32,8 +32,6 @@ class _PrintPageState extends State<PrintPage> {
   StreamSubscription<PrinterDevice>? _subscription;
   BluetoothPrinter? selectedPrinter;
   bool _isScanning = false;
-  String customerCareNumber = "Number";
-  String customerCareEmail = "Email";
 
   static const Color primaryColor = Color(0XFF3C92F5);
   static const Color accentColor = Color(0xFF4CAF50);
@@ -44,7 +42,11 @@ class _PrintPageState extends State<PrintPage> {
   @override
   void initState() {
     super.initState();
-    fetchCustomerCareInfo();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _checkPermissions();
   }
 
@@ -52,23 +54,6 @@ class _PrintPageState extends State<PrintPage> {
   void dispose() {
     _subscription?.cancel();
     super.dispose();
-  }
-
-  Future<void> fetchCustomerCareInfo() async {
-    try {
-      final response = await http.get(Uri.parse(
-          "https://epos.enke.ae/api/company/get-company-props?cart_id=1"));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          customerCareNumber = data['customer_care']['number'];
-          customerCareEmail = data['customer_care']['email'];
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching customer care info: $e');
-    }
   }
 
   Future<void> _checkPermissions() async {
@@ -178,13 +163,16 @@ class _PrintPageState extends State<PrintPage> {
     }
   }
 
-  Future<void> printReceipt() async {
+  Future<void> printReceipt(
+      String customerCareNumber, String customerCareEmail) async {
     debugPrint('Starting printReceipt function');
     debugPrint('Selected Printer: ${selectedPrinter?.deviceName}');
     debugPrint('Selected Printer Address: ${selectedPrinter?.address}');
     debugPrint('Printer Type: ${selectedPrinter?.typePrinter}');
     debugPrint('VendorId: ${selectedPrinter?.vendorId}');
     debugPrint('ProductId: ${selectedPrinter?.productId}');
+    debugPrint('Customer Care Number: $customerCareNumber');
+    debugPrint('Customer Care Email: $customerCareEmail');
 
     if (selectedPrinter == null) {
       debugPrint('Error: No printer selected');
@@ -237,7 +225,8 @@ class _PrintPageState extends State<PrintPage> {
               align: PosAlign.center, bold: true, height: PosTextSize.size2));
       debugPrint('Printing: $title');
 
-      bytes += generator.feed(1);
+      // bytes += generator.feed(1);
+      bytes += generator.text("================================");
 
       // Date and Order number
       String orderDateText = 'Date: ${widget.orderDate}';
@@ -256,38 +245,55 @@ class _PrintPageState extends State<PrintPage> {
           styles: const PosStyles(align: PosAlign.left));
       debugPrint('Printing: $storeNameText');
 
-      bytes += generator.feed(1);
+      bytes += generator.text("================================");
 
-      // Table header
-      String tableHeader = 'Sl#\tItem\tQty\tUnit Price\tPrice';
-      debugPrint('Printing Table Header: $tableHeader');
+      // bytes += generator.feed(1);
+
+// Table header
       bytes += generator.row([
         PosColumn(text: 'Sl#', width: 1),
-        PosColumn(text: 'Item', width: 4),
-        PosColumn(text: 'Qty', width: 2),
-        PosColumn(text: 'Unit Price', width: 2),
-        PosColumn(text: 'Price', width: 3),
+        PosColumn(text: 'Item', width: 5), // Wider for wrapping
+        PosColumn(
+            text: 'Qty',
+            width: 2,
+            styles: const PosStyles(align: PosAlign.right)),
+        PosColumn(
+            text: 'Price',
+            width: 2,
+            styles: const PosStyles(align: PosAlign.right)),
+        PosColumn(
+            text: 'Amount',
+            width: 2,
+            styles: const PosStyles(align: PosAlign.right)),
       ]);
 
-      bytes += generator.hr();
+      bytes += generator.text("================================");
 
-      // Add cart items
       for (var i = 0; i < widget.cartItems.length; i++) {
         var item = widget.cartItems[i];
-        String itemRow =
-            '${i + 1}\t${item.productName ?? ''}\t${item.quantity}\t${item.unitPrice}\t${item.totalPrice}';
-        debugPrint('Printing Item: $itemRow');
 
         bytes += generator.row([
           PosColumn(text: (i + 1).toString(), width: 1),
-          PosColumn(text: item.productName ?? '', width: 4),
-          PosColumn(text: item.quantity.toString(), width: 2),
-          PosColumn(text: item.unitPrice.toString(), width: 2),
-          PosColumn(text: item.totalPrice.toString(), width: 3),
+          PosColumn(
+            text: item.productName ?? '',
+            width: 5,
+          ),
+          PosColumn(
+              text: item.quantity.toString(),
+              width: 2,
+              styles: const PosStyles(align: PosAlign.right)),
+          PosColumn(
+              text: item.unitPrice.toString(),
+              width: 2,
+              styles: const PosStyles(align: PosAlign.right)),
+          PosColumn(
+              text: item.totalPrice.toString(),
+              width: 2,
+              styles: const PosStyles(align: PosAlign.right)),
         ]);
       }
 
-      bytes += generator.hr();
+      bytes += generator.text("================================");
 
       // Add total
       String totalText = 'Total: ${widget.formattedTotal}';
@@ -301,8 +307,9 @@ class _PrintPageState extends State<PrintPage> {
             width: 3,
             styles: const PosStyles(bold: true, align: PosAlign.right)),
       ]);
+      bytes += generator.text("================================");
 
-      bytes += generator.feed(1);
+      // bytes += generator.feed(1);
 
       // Customer Care Details
       String customerCareText = 'Customer Care: $customerCareNumber';
@@ -315,7 +322,12 @@ class _PrintPageState extends State<PrintPage> {
           styles: const PosStyles(align: PosAlign.center));
       debugPrint('Printing: $emailText');
 
-      bytes += generator.feed(2);
+      bytes += generator.text("================================");
+      bytes += generator.text("Thankyou visit again !!!",
+          styles: const PosStyles(bold: true, align: PosAlign.center));
+      bytes += generator.text("================================");
+
+      // bytes += generator.feed(2);
       bytes += generator.cut();
 
       // Print receipt
@@ -351,7 +363,10 @@ class _PrintPageState extends State<PrintPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Your existing build method remains the same
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final appSettings = appSettingsProvider.appSettings;
+
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
@@ -519,7 +534,10 @@ class _PrintPageState extends State<PrintPage> {
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: selectedPrinter == null ? null : printReceipt,
+              onPressed: () => selectedPrinter == null
+                  ? null
+                  : printReceipt(appSettings!.customerCarePhone,
+                      appSettings.customerCareEmail),
               icon: const Icon(Icons.receipt_long),
               label: const Text(
                 'Print Receipt',

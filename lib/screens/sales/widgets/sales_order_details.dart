@@ -5,7 +5,6 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/order_details.dart';
-import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/print/print.dart';
@@ -184,14 +183,10 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         textColor: ColorManager.kPrimaryColor,
         fct: () async {
           String formattedTotal = AmountHelper.formatAmount(
-            Provider.of<CartProvider>(context, listen: false)
-                .priceSummary!
-                .netTotal,
+            orderDetailsModelData?.cart?.priceSummary?.netTotal ?? 0.00,
           );
-
-          String storeName =
-              Provider.of<PurchaseProvider>(context, listen: false)
-                  .getStoreNameFromId(orderDetailsModelData?.storeId ?? 0);
+          String storeName = orderDetailsModelData!.cart!.storeName ?? "";
+          String orderDate = orderDetailsModelData!.orderDate ?? "";
 
           Navigator.push(
             context,
@@ -200,7 +195,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 storeName: storeName,
                 cartItems: cartItems!,
                 formattedTotal: formattedTotal,
-                orderDate: DateHelper.formatDate(DateTime.now()),
+                orderDate: DateHelper.formatISODate(orderDate),
                 orderNumber: orderNumber,
               ),
             ),

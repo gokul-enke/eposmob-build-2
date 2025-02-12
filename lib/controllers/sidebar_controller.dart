@@ -10,6 +10,7 @@ import 'package:pos_machine/screens/customers/add_customers.dart';
 import 'package:pos_machine/screens/cart/cart_list.dart';
 import 'package:pos_machine/screens/customers/customers.dart';
 import 'package:pos_machine/screens/dashboard/dashboard.dart';
+import 'package:pos_machine/screens/edit_order/edit_order.dart';
 import 'package:pos_machine/screens/homenew/home_new.dart';
 
 import 'package:pos_machine/screens/loyality_card/loyality.dart';
@@ -111,5 +112,6 @@ class SideBarController extends GetxController {
     ViewReceiptDetailsWidget(), //48 Voucher Details
     SalesReturnScreen(), //49 Sales Return
     SalesReturnPage(), //50 Sales Return List
+    EditOrder(), // 51 Edit Order
   ];
 }

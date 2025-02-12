@@ -236,6 +236,7 @@ class SideMenu extends StatelessWidget {
                 );
               },
               selected: sideBarController.index.value == 2 ||
+                  sideBarController.index.value == 51 ||
                   sideBarController.index.value == 11,
             ),
           ),

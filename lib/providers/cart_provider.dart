@@ -207,7 +207,7 @@ class CartProvider with ChangeNotifier {
   Future<dynamic> addToCartAPI({
     required int customerId,
     required int productId,
-    required int quantity,
+    required num quantity,
     String? unitPrice,
     required String accessToken,
   }) async {
@@ -400,7 +400,7 @@ class CartProvider with ChangeNotifier {
     required int productId,
     String remove = "false",
     required String accessToken,
-    required int quantity,
+    required num quantity,
   }) async {
     debugPrint("********************REMOVE FROM CART API******************** ");
     debugPrint("product id is ${productId.toString()}");

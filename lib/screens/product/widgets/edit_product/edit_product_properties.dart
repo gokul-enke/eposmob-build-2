@@ -159,14 +159,12 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_title.dart';
-import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import '../../../../components/build_container_box.dart';
 import '../../../../components/build_round_button.dart';
-import '../../../../components/build_text_fields.dart';
 import '../../../../providers/grid_provider.dart';
 import '../../../../resources/color_manager.dart';
 import '../../../../resources/font_manager.dart';

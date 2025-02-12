@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 // import 'package:get/get_core/src/get_main.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -1255,6 +1254,7 @@ class _OrderListState extends State<OrderList> {
                                             orderDate: DateHelper.formatDate(
                                                 DateTime.now()),
                                             orderNumber: "#000000",
+                                            // storeName: cartProductItems,
                                           ),
                                         ),
                                       );
@@ -1532,7 +1532,7 @@ class _OrderListState extends State<OrderList> {
 //   ],
 
 class CompactQuantityControl extends StatelessWidget {
-  final int quantity;
+  final num quantity;
   final Function() onIncrement;
   final Function() onDecrement;
 

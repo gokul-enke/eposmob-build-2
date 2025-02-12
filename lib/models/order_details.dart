@@ -32,6 +32,7 @@ class OrderDetailsModel {
 class OrderDetailsModelData {
   final int? ordersId;
   final int? storeId;
+  final String? storeName;
   final String? orderDate;
   final OrderDetailsModelDataCart? cart;
   final String? orderNumber;
@@ -46,6 +47,7 @@ class OrderDetailsModelData {
   OrderDetailsModelData({
     this.ordersId,
     this.storeId,
+    this.storeName,
     this.orderDate,
     this.cart,
     this.orderNumber,
@@ -62,6 +64,7 @@ class OrderDetailsModelData {
       OrderDetailsModelData(
         ordersId: json["orders_id"],
         storeId: json["store_id"],
+        storeName: json["store_name"],
         orderDate: json["order_date"],
         cart: json["cart"] == null
             ? null
@@ -91,6 +94,7 @@ class OrderDetailsModelData {
   Map<String, dynamic> toJson() => {
         "orders_id": ordersId,
         "store_id": storeId,
+        "store_name": storeName,
         "order_date": orderDate,
         "cart": cart?.toJson(),
         "order_number": orderNumber,
@@ -112,6 +116,7 @@ class OrderDetailsModelDataCart {
   final int? userId;
   final int? itemCount;
   final int? storeId;
+  final String? storeName;
   final List<OrderDetailsModelDataCartItem>? cartItems;
   final OrderDetailsModelDataPriceSummary? priceSummary;
 
@@ -121,6 +126,7 @@ class OrderDetailsModelDataCart {
     this.userId,
     this.itemCount,
     this.storeId,
+    this.storeName,
     this.cartItems,
     this.priceSummary,
   });
@@ -132,6 +138,7 @@ class OrderDetailsModelDataCart {
         userId: json["user_id"],
         itemCount: json["item_count"],
         storeId: json["store_id"],
+        storeName: json["store_name"],
         cartItems: json["cart_items"] == null
             ? []
             : List<OrderDetailsModelDataCartItem>.from(json["cart_items"]!
@@ -147,6 +154,7 @@ class OrderDetailsModelDataCart {
         "user_id": userId,
         "item_count": itemCount,
         "store_id": storeId,
+        "store_name": storeName,
         "cart_items": cartItems == null
             ? []
             : List<dynamic>.from(cartItems!.map((x) => x.toJson())),
@@ -162,7 +170,7 @@ class OrderDetailsModelDataCartItem {
       productAttachment; // Corrected spelling
   final int? categoryId;
   final String? categoryName; // Added category name
-  final int? quantity;
+  final num? quantity;
   final String? productUnit;
   final String? unitPrice;
   final String? totalPrice; // Changed to int
@@ -198,7 +206,7 @@ class OrderDetailsModelDataCartItem {
                     (x) => OrderDetailsModelDataProductAttachment.fromJson(x))),
         categoryId: json["category_id"],
         categoryName: json["category_name"], // Added category name
-        quantity: json["quantity"],
+        quantity: num.tryParse(json["quantity"]),
         productUnit: json["product_unit"],
         unitPrice: json["unit_price"],
         totalPrice: json["total_price"],

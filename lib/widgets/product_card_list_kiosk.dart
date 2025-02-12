@@ -9,7 +9,7 @@ class ProductCardList extends StatelessWidget {
   final String currency;
   final String price;
   final String? totalPrice;
-  final int count;
+  final num count;
   final int productId;
   final VoidCallback removeFromCart;
   final VoidCallback addToCart;
