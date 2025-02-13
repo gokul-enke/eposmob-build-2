@@ -122,7 +122,7 @@ class CategoryListItemWidget extends StatelessWidget {
             fct: () {
               String? accessToken =
                   Provider.of<AuthModel>(context, listen: false).token;
-              debugPrint("accessToken From AuthModel $accessToken");
+              // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
               Provider.of<CartProvider>(context, listen: false)
                   .addToCartAPI(
                       customerId: customerId,
@@ -272,7 +272,7 @@ class SelectedCategoryListItemWidget extends StatelessWidget {
             fct: () {
               String? accessToken =
                   Provider.of<AuthModel>(context, listen: false).token;
-              debugPrint("accessToken From AuthModel $accessToken");
+              // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
               Provider.of<CartProvider>(context, listen: false)
                   .addToCartAPI(
                       customerId: customerId,

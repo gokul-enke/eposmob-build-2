@@ -70,7 +70,7 @@ class InvoiceProvider extends ChangeNotifier {
       String? accountTypeName = type == 'Cr'
           ? accountTypes['$value']
           : accountVoucherTypes['$value']; // Retrieve payment type with key '1'
-      debugPrint(accountTypeName);
+      // debugPrintdebugPrint(accountTypeName);
       return accountTypeName;
     }
     return null;
@@ -91,7 +91,7 @@ class InvoiceProvider extends ChangeNotifier {
   Future<void> listAllPaymentList(
     String accessToken,
   ) async {
-    debugPrint("LIST ALL listAllPaymentList ");
+    // debugPrintdebugPrint("LIST ALL listAllPaymentList ");
 
     final url = Uri.parse(APPUrl.listTransactionType);
     try {
@@ -99,7 +99,7 @@ class InvoiceProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         GetPaymentMethodsModel getPaymentMethodsModel =
@@ -116,7 +116,7 @@ class InvoiceProvider extends ChangeNotifier {
   Future<void> listAllInvoiceAccountTypes(
     String accessToken,
   ) async {
-    debugPrint("LIST ALL listAllInvoiceAccountTypes ");
+    // debugPrintdebugPrint("LIST ALL listAllInvoiceAccountTypes ");
 
     final url = Uri.parse(APPUrl.listInvoiceAccountType);
     try {
@@ -124,9 +124,9 @@ class InvoiceProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrint(response.body.toString());
+        // // debugPrintdebugPrint(response.body.toString());
         final jsonData = json.decode(response.body);
         GetInvoiceAccountTypesModel getInvoiceAccountTypesModel =
             GetInvoiceAccountTypesModel.fromJson(jsonData);
@@ -143,7 +143,7 @@ class InvoiceProvider extends ChangeNotifier {
   Future<void> listVoucherAccountType(
     String accessToken,
   ) async {
-    debugPrint("LIST ALL listVoucherAccountType ");
+    // debugPrintdebugPrint("LIST ALL listVoucherAccountType ");
 
     final url = Uri.parse(APPUrl.listVoucherAccountType);
     try {
@@ -151,9 +151,9 @@ class InvoiceProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        //   debugPrint(response.body.toString());
+        //   // debugPrintdebugPrint(response.body.toString());
         final jsonData = json.decode(response.body);
         GetVoucherAccountTypesModel getVoucherAccountTypesModel =
             GetVoucherAccountTypesModel.fromJson(jsonData);
@@ -168,7 +168,7 @@ class InvoiceProvider extends ChangeNotifier {
   Future<void> listUsersList(
     String accessToken,
   ) async {
-    debugPrint("LIST ALL listUsersList ");
+    // debugPrintdebugPrint("LIST ALL listUsersList ");
 
     final url = Uri.parse(APPUrl.listUser);
     try {
@@ -176,9 +176,9 @@ class InvoiceProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        //   debugPrint(response.body.toString());
+        //   // debugPrintdebugPrint(response.body.toString());
         final jsonData = json.decode(response.body);
         GetUsersModel getUsersModel = GetUsersModel.fromJson(jsonData);
         getUsersList = getUsersModel.data;
@@ -200,7 +200,7 @@ class InvoiceProvider extends ChangeNotifier {
     required String particular,
     required String accessToken,
   }) async {
-    debugPrint("$comment $particular");
+    // debugPrintdebugPrint("$comment $particular");
     final Map<String, dynamic> apiBodyData = type == "invoice"
         ? {
             'type': type,
@@ -222,16 +222,16 @@ class InvoiceProvider extends ChangeNotifier {
             'comment': comment,
             'particulars': particular
           };
-    debugPrint("voucher and invoice $apiBodyData");
+    // debugPrintdebugPrint("voucher and invoice $apiBodyData");
     final url = Uri.parse(APPUrl.addInvoiceorVoucher);
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
 
         return json.decode(response.body);
       } else {}
@@ -250,7 +250,7 @@ class InvoiceProvider extends ChangeNotifier {
     final Map<String, dynamic> apiBodyData = {
       'type': type,
     };
-    debugPrint(apiBodyData.toString());
+    // debugPrintdebugPrint(apiBodyData.toString());
     final url = type == null
         ? Uri.parse(APPUrl.listAllTransaction)
         : type == "Cr"
@@ -261,9 +261,9 @@ class InvoiceProvider extends ChangeNotifier {
         //'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         ListTransactionModel listTransactionModel =
             ListTransactionModel.fromJson(jsonData);
@@ -283,7 +283,7 @@ class InvoiceProvider extends ChangeNotifier {
     required int id,
     required String accessToken,
   }) async {
-    debugPrint("CALL DETAILS OF TRANSACTION / INVOICE/ VOUCHER  API");
+    // debugPrintdebugPrint("CALL DETAILS OF TRANSACTION / INVOICE/ VOUCHER  API");
     final url = Uri.parse("${APPUrl.detailsOfTransaction}/$id");
 
     try {
@@ -291,9 +291,9 @@ class InvoiceProvider extends ChangeNotifier {
         //'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         ListTransaction listTransactionModel =
             ListTransaction.fromJson(jsonData["data"]);
@@ -317,9 +317,9 @@ class InvoiceProvider extends ChangeNotifier {
           'Authorization': 'Bearer $accessToken',
         },
       );
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         ListInvoiceModel listInvoiceModel = ListInvoiceModel.fromJson(jsonData);
 
@@ -336,14 +336,14 @@ class InvoiceProvider extends ChangeNotifier {
     required int id,
     required String accessToken,
   }) async {
-    debugPrint("CALL DETAILS OF INVOICE API");
+    // debugPrintdebugPrint("CALL DETAILS OF INVOICE API");
     final url = Uri.parse("${APPUrl.detailsOfInvoice}/$id");
 
     try {
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('Response status: ${response.statusCode}');
+      // debugPrintdebugPrint('Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -352,11 +352,11 @@ class InvoiceProvider extends ChangeNotifier {
         invoiceDetails = invoiceDetailsData;
         notifyListeners();
       } else {
-        debugPrint("Error fetching invoice details: ${response.reasonPhrase}");
+        // debugPrintdebugPrint("Error fetching invoice details: ${response.reasonPhrase}");
         // Handle error responses accordingly
       }
     } catch (e) {
-      debugPrint("Exception occurred: $e");
+      // debugPrintdebugPrint("Exception occurred: $e");
       // Handle exceptions accordingly
     }
   }
@@ -374,9 +374,9 @@ class InvoiceProvider extends ChangeNotifier {
           'Authorization': 'Bearer $accessToken',
         },
       );
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         ReceiptResponse receiptResponse = ReceiptResponse.fromJson(jsonData);
 
@@ -385,11 +385,11 @@ class InvoiceProvider extends ChangeNotifier {
         notifyListeners();
         return json.decode(response.body);
       } else {
-        debugPrint("Error fetching receipts: ${response.reasonPhrase}");
+        // debugPrintdebugPrint("Error fetching receipts: ${response.reasonPhrase}");
         // Handle error responses accordingly
       }
     } catch (e) {
-      debugPrint("Exception occurred: $e");
+      // debugPrintdebugPrint("Exception occurred: $e");
       // Handle exceptions accordingly
     }
   }
@@ -400,7 +400,7 @@ class InvoiceProvider extends ChangeNotifier {
     required int id,
     required String accessToken,
   }) async {
-    debugPrint("CALL DETAILS OF RECEIPT API");
+    // debugPrintdebugPrint("CALL DETAILS OF RECEIPT API");
     final url = Uri.parse(
         "${APPUrl.detailsOfReceipt}/$id"); // Update the URL to point to receipt details
 
@@ -408,21 +408,21 @@ class InvoiceProvider extends ChangeNotifier {
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('Response status: ${response.statusCode}');
+      // debugPrintdebugPrint('Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        debugPrint(jsonData.toString());
+        // debugPrintdebugPrint(jsonData.toString());
         ReceiptDetails receiptDetailsData = ReceiptDetails.fromJson(
             jsonData); // Update to use ReceiptDetails model
         receiptDetails = receiptDetailsData;
         notifyListeners();
       } else {
-        debugPrint("Error fetching receipt details: ${response.reasonPhrase}");
+        // debugPrintdebugPrint("Error fetching receipt details: ${response.reasonPhrase}");
         // Handle error responses accordingly
       }
     } catch (e) {
-      debugPrint("Exception occurred: $e");
+      // debugPrintdebugPrint("Exception occurred: $e");
       // Handle exceptions accordingly
     }
   }

@@ -506,7 +506,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                             "categoryIdController.text ${idController.text}");
                                         if (formKey.currentState!.validate()) {
                                           formKey.currentState!.save();
-                                          debugPrint("submit");
+                                          // debugPrintdebugPrint("submit");
                                           debugPrint(
                                               "categoryIdController.text ${idController.text}");
                                           debugPrint(
@@ -639,7 +639,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
 
   showDialogFunctionForCategoryImageDetails(BuildContext context,
       final List<GetProductListFileModelData>? attachment, Size size) {
-    debugPrint("showDialogFunctionForProductDetailsAnimated");
+    // debugPrintdebugPrint("showDialogFunctionForProductDetailsAnimated");
     return showDialog(
         context: context,
         barrierDismissible: true,
@@ -949,7 +949,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
 
   showDialogFunctionForCategoryIconDetails(BuildContext context,
       final List<GetProductListFileModelData>? attachment, Size size) {
-    debugPrint("showDialogFunctionForCategoryIconDetails");
+    // debugPrintdebugPrint("showDialogFunctionForCategoryIconDetails");
     return showDialog(
         context: context,
         barrierDismissible: true,

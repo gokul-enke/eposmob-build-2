@@ -79,7 +79,7 @@ class _BillingPageState extends State<BillingPage> {
   void initState() {
     super.initState();
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    debugPrint("accessToken From AuthModel $accessToken");
+    // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
     int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
     Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
         customerId: customerId!, accessToken: accessToken ?? '');
@@ -102,7 +102,7 @@ class _BillingPageState extends State<BillingPage> {
   }
 
   void _focusTextField() {
-    debugPrint("Focusing Text Field");
+    // debugPrintdebugPrint("Focusing Text Field");
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     if (appSettingsProvider.appSettings!.barcodeSales) {
@@ -113,7 +113,7 @@ class _BillingPageState extends State<BillingPage> {
 
   void _handleFocusChange() {
     if (_focusNode.hasFocus) {
-      debugPrint('Focus gained');
+      // debugPrintdebugPrint('Focus gained');
     }
   }
 
@@ -130,7 +130,7 @@ class _BillingPageState extends State<BillingPage> {
           _confirmOrder();
         }
       } catch (e) {
-        debugPrint("Error handling key press: $e");
+        // debugPrintdebugPrint("Error handling key press: $e");
       }
     }
   }
@@ -313,7 +313,7 @@ class _BillingPageState extends State<BillingPage> {
                                 List<GetProduct>? products;
                                 products = await productProvider
                                     .filterProductByBarcodeAPI(barCode: query);
-                                debugPrint(products?.first.toString());
+                                // debugPrintdebugPrint(products?.first.toString());
                                 if (products!.length == 1) {
                                   // showScaffold(
                                   //   context: context,
@@ -840,7 +840,7 @@ class _BillingPageState extends State<BillingPage> {
             color: ColorManager.kPrimaryColor,
           ),
           onTap: () {
-            debugPrint("Tax Details ${taxNames.toString()}");
+            // debugPrintdebugPrint("Tax Details ${taxNames.toString()}");
             showDialog(
               context: context,
               builder: (context) {
@@ -1114,7 +1114,7 @@ class _BillingPageState extends State<BillingPage> {
             child: Autocomplete<CustomerListModelData>(
               key: _autocompletePhoneKey, // Set the key here
               optionsBuilder: (mobileNumberTextController) async {
-                debugPrint(mobileNumberTextController.text);
+                // debugPrintdebugPrint(mobileNumberTextController.text);
                 if (mobileNumberTextController.text.isEmpty) {
                   setState(() {
                     isCustomerFound = false; // Reset validity
@@ -1124,8 +1124,8 @@ class _BillingPageState extends State<BillingPage> {
 
                 String? accessToken =
                     Provider.of<AuthModel>(context, listen: false).token;
-                debugPrint("accessToken From AuthModel $accessToken");
-                debugPrint(mobileNumberTextController.text);
+                // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
+                // debugPrintdebugPrint(mobileNumberTextController.text);
 
                 try {
                   final response = await CustomerProvider().findCustomerByPhone(
@@ -1154,10 +1154,10 @@ class _BillingPageState extends State<BillingPage> {
                         ? filteredCustomerList
                         : const Iterable<CustomerListModelData>.empty();
                   } else {
-                    debugPrint('Error in response: ${response["message"]}');
+                    // debugPrintdebugPrint('Error in response: ${response["message"]}');
                   }
                 } catch (error) {
-                  debugPrint('Exception caught: $error');
+                  // debugPrintdebugPrint('Exception caught: $error');
                 }
                 setState(() {
                   isCustomerFound = false;
@@ -1170,7 +1170,7 @@ class _BillingPageState extends State<BillingPage> {
               onSelected: (CustomerListModelData selection) {
                 String? accessToken =
                     Provider.of<AuthModel>(context, listen: false).token;
-                debugPrint("accessToken From AuthModel $accessToken");
+                // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
                 Provider.of<CartProvider>(context, listen: false)
                     .fetchCartDataFromApi(
                         customerId: selection.id ?? 0,
@@ -1426,7 +1426,7 @@ class _BillingPageState extends State<BillingPage> {
   }
 
   void _clearCart() {
-    debugPrint("Clear Cart pressed");
+    // debugPrintdebugPrint("Clear Cart pressed");
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     Provider.of<CartProvider>(context, listen: false).clearCartAPI(
       accessToken: accessToken ?? "",
@@ -1460,7 +1460,7 @@ class _BillingPageState extends State<BillingPage> {
   }
 
   void _saveOrder() async {
-    debugPrint("Create Order pressed");
+    // debugPrintdebugPrint("Create Order pressed");
     if (selectedCustomerID == null && mobileNumberText == "") {
       showScaffoldError(
         context: context,
@@ -1474,10 +1474,10 @@ class _BillingPageState extends State<BillingPage> {
     } else {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint("accessToken From AuthModel $accessToken");
+      // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
       int? cartId = provider.getCartIDForOrder;
-      debugPrint("$cartId");
+      // debugPrintdebugPrint("$cartId");
 
       String paymentMethod = "";
 
@@ -1542,7 +1542,7 @@ class _BillingPageState extends State<BillingPage> {
           }
         });
       } catch (error) {
-        debugPrint(error.toString());
+        // debugPrintdebugPrint(error.toString());
       }
     }
     _focusTextField();
@@ -1555,10 +1555,10 @@ class _BillingPageState extends State<BillingPage> {
     OrderDetailsModelDataCart? cart;
     List<OrderDetailsModelDataCartItem>? cartItems = [];
     OrderDetailsModelDataPriceSummary? priceSummary;
-    debugPrint("selectedCustomerID");
-    debugPrint(selectedCustomerPhone.toString());
-    debugPrint("mobileNumberText");
-    debugPrint(mobileNumberText.toString());
+    // debugPrintdebugPrint("selectedCustomerID");
+    // debugPrintdebugPrint(selectedCustomerPhone.toString());
+    // debugPrintdebugPrint("mobileNumberText");
+    // debugPrintdebugPrint(mobileNumberText.toString());
     if (selectedCustomerID == null && mobileNumberText == "") {
       showScaffoldError(
         context: context,
@@ -1572,10 +1572,10 @@ class _BillingPageState extends State<BillingPage> {
     } else {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint("accessToken From AuthModel $accessToken");
+      // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
       int? cartId = provider.getCartIDForOrder;
-      debugPrint("$cartId");
+      // debugPrintdebugPrint("$cartId");
 
       String paymentMethod = "";
 
@@ -1606,7 +1606,7 @@ class _BillingPageState extends State<BillingPage> {
         )
             .then((response) async {
           AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
-          debugPrint("this is response of add to order $response");
+          // debugPrintdebugPrint("this is response of add to order $response");
           if (response["status"] == "success") {
             showScaffold(
               context: context,
@@ -1632,7 +1632,7 @@ class _BillingPageState extends State<BillingPage> {
                 orderNumber = orderDetailsModelData?.orderNumber ?? "";
               }
             } catch (error) {
-              debugPrint(error.toString());
+              // debugPrintdebugPrint(error.toString());
             }
 
             String formattedTotal = AmountHelper.formatAmount(
@@ -1682,14 +1682,14 @@ class _BillingPageState extends State<BillingPage> {
           }
         });
       } catch (error) {
-        debugPrint(error.toString());
+        // debugPrintdebugPrint(error.toString());
       }
     }
     _focusTextField();
   }
 
   void _confirmOrder() async {
-    debugPrint("Create Order pressed");
+    // debugPrintdebugPrint("Create Order pressed");
     if (selectedCustomerID == null && mobileNumberText == "") {
       showScaffoldError(
         context: context,
@@ -1703,10 +1703,10 @@ class _BillingPageState extends State<BillingPage> {
     } else {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint("accessToken From AuthModel $accessToken");
+      // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
       int? cartId = provider.getCartIDForOrder;
-      debugPrint("$cartId");
+      // debugPrintdebugPrint("$cartId");
 
       String paymentMethod = "";
 
@@ -1737,7 +1737,7 @@ class _BillingPageState extends State<BillingPage> {
         )
             .then((response) {
           AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
-          debugPrint("$response");
+          // debugPrintdebugPrint("$response");
           if (response["status"] == "success") {
             showScaffold(
               context: context,
@@ -1772,14 +1772,14 @@ class _BillingPageState extends State<BillingPage> {
           }
         });
       } catch (error) {
-        debugPrint(error.toString());
+        // debugPrintdebugPrint(error.toString());
       }
     }
     _focusTextField();
   }
 
   void _getBalanceAmount() {
-    debugPrint(_paidAmountController.text);
+    // debugPrintdebugPrint(_paidAmountController.text);
     num netTotal = Provider.of<CartProvider>(context, listen: false)
             .priceSummary!
             .netTotal ??

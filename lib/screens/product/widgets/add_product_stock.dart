@@ -104,13 +104,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   void _getCategoryProperty(categoryId) {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
 
-    debugPrint("category id $categoryId");
+    // debugPrintdebugPrint("category id $categoryId");
     if (categoryId != null) {
-      debugPrint("category id $categoryId");
+      // debugPrintdebugPrint("category id $categoryId");
       Provider.of<CategoryProvider>(context, listen: false)
           .fetchPropValues(categoryId: 1, accessToken: accessToken ?? "");
     } else {
-      debugPrint("Category ID is null");
+      // debugPrintdebugPrint("Category ID is null");
     }
   }
 
@@ -129,7 +129,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         retailPrice: retailPriceController.text,
       );
 
-      debugPrint(result.toString());
+      // debugPrintdebugPrint(result.toString());
       taxRateController.text =
           result.taxRate.toStringAsFixed(2); // Example value for including tax
       taxAmountController.text = result.taxAmount
@@ -152,7 +152,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         retailPrice: retailPriceController.text,
       );
 
-      debugPrint(result.toString());
+      // debugPrintdebugPrint(result.toString());
       taxRateController.text =
           result.taxRate.toStringAsFixed(2); // Example value for including tax
       taxAmountController.text = result.taxAmount
@@ -569,7 +569,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                   setState(() {
                                                     parentCategory =
                                                         "${selectedCategory.categoryId ?? 0}";
-                                                    debugPrint(parentCategory);
+                                                    // debugPrintdebugPrint(parentCategory);
 
                                                     productList =
                                                         gridSelectionProvider
@@ -667,7 +667,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                           null
                                                       ? ""
                                                       : "${value.productId ?? 0}";
-                                                  debugPrint(idController.text);
+                                                  // debugPrintdebugPrint(idController.text);
                                                   ProductPrice? price =
                                                       value?.price;
                                                   productAvailabeStockController.text =
@@ -1484,7 +1484,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                             if (formKey.currentState!
                                                 .validate()) {
                                               formKey.currentState!.save();
-                                              debugPrint("submit");
+                                              // debugPrintdebugPrint("submit");
                                               debugPrint(
                                                   "categoryIdController.text ${idController.text}");
                                               // debugPrint(

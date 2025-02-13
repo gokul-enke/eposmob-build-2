@@ -53,7 +53,7 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
       selectedCustomer = await customerProvider.fetchUserById(
           accessToken ?? "", userId, context);
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         isInitLoading = false;

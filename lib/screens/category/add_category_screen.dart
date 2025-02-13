@@ -570,7 +570,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                             "categoryIdController.text ${idController.text}");
                                         if (validateForm()) {
                                           // formKey.currentState!.save();
-                                          debugPrint("submit");
+                                          // debugPrintdebugPrint("submit");
                                           debugPrint(
                                               "categoryIdController.text ${idController.text}");
                                           debugPrint(
@@ -704,7 +704,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
 
   showDialogFunctionForCategoryImageDetails(BuildContext context,
       final List<GetProductListFileModelData>? attachment, Size size) {
-    debugPrint("showDialogFunctionForProductDetailsAnimated");
+    // debugPrintdebugPrint("showDialogFunctionForProductDetailsAnimated");
     return showDialog(
         context: context,
         barrierDismissible: true,
@@ -1014,7 +1014,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
 
   showDialogFunctionForCategoryIconDetails(BuildContext context,
       final List<GetProductListFileModelData>? attachment, Size size) {
-    debugPrint("showDialogFunctionForCategoryIconDetails");
+    // debugPrintdebugPrint("showDialogFunctionForCategoryIconDetails");
     return showDialog(
         context: context,
         barrierDismissible: true,

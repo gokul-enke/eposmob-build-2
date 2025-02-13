@@ -71,7 +71,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           // filterName: productNameController.text,
           );
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -80,7 +80,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   void searchProducts(page) async {
-    debugPrint("SEARCH PRODUCTS CALLED");
+    // debugPrintdebugPrint("SEARCH PRODUCTS CALLED");
     try {
       setState(() {
         initLoading = true;
@@ -100,7 +100,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         page: page,
       );
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -187,7 +187,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         //     cursorHeight: 13,
                         //     //  controller: searchTextController,
                         //     onChanged: (query) {
-                        //       debugPrint(query);
+                        //       // debugPrintdebugPrint(query);
                         //       final filteredProducts =
                         //           gridSelectionProvider.searchProducts(query);
                         //       gridSelectionProvider

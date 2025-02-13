@@ -4,10 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SharedPreferenceProvider {
   saveAccessToken(String accessToken) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    debugPrint('inside shared ');
+    // debugPrintdebugPrint('inside shared ');
 
     prefs.setString('access_token', accessToken);
-    debugPrint('inside shared ,$accessToken');
+    // debugPrintdebugPrint('inside shared ,$accessToken');
   }
 
   saveAccessTokenandCustomerId(
@@ -16,23 +16,23 @@ class SharedPreferenceProvider {
     String customerName,
   ) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    debugPrint('inside shared ');
+    // debugPrintdebugPrint('inside shared ');
 
     prefs.setString('access_token', accessToken);
     prefs.setInt('customerId', customerId);
     prefs.setString('customerName', customerName);
-    debugPrint('inside shared ,$customerName');
+    // debugPrintdebugPrint('inside shared ,$customerName');
   }
 
   removeToken() async {
-    debugPrint("removeToken  prefs.remove('access_token');");
+    // debugPrintdebugPrint("removeToken  prefs.remove('access_token');");
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     prefs.remove('access_token');
   }
 
   removeTokenAndCustomerId() async {
-    debugPrint("removeTokenAndCustomerId  prefs.remove('access_token');");
+    // debugPrintdebugPrint("removeTokenAndCustomerId  prefs.remove('access_token');");
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     prefs.remove('access_token');
@@ -41,7 +41,7 @@ class SharedPreferenceProvider {
   }
 
   Future<String?> getToken() async {
-    debugPrint("getToken  String? token = prefs.getString('access_token');");
+    // debugPrintdebugPrint("getToken  String? token = prefs.getString('access_token');");
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     String? token = prefs.getString('access_token');
@@ -50,7 +50,7 @@ class SharedPreferenceProvider {
   }
 
   Future<int?> getCustomerId() async {
-    debugPrint(" int? customerId = prefs.getInt('customerId');");
+    // debugPrintdebugPrint(" int? customerId = prefs.getInt('customerId');");
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     int? customerId = prefs.getInt('customerId');

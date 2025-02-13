@@ -57,7 +57,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
         }
       });
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -87,7 +87,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
         }
       });
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;

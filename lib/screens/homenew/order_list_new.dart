@@ -59,7 +59,7 @@ class _OrderListNewState extends State<OrderListNew> {
   void initState() {
     super.initState();
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    debugPrint("accessToken From AuthModel $accessToken");
+    // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
     int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
     Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
         customerId: customerId ?? 1, accessToken: accessToken ?? '');
@@ -73,7 +73,7 @@ class _OrderListNewState extends State<OrderListNew> {
       });
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint("accessToken From AuthModel $accessToken");
+      // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
       CustomerProvider()
           .listCustomer(accessToken: accessToken ?? "")
           .then((response) {
@@ -88,7 +88,7 @@ class _OrderListNewState extends State<OrderListNew> {
         }
       });
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         // Reset loading state if needed
@@ -97,7 +97,7 @@ class _OrderListNewState extends State<OrderListNew> {
   }
 
   void _getBalanceAmount() {
-    debugPrint(_paidAmountController.text);
+    // debugPrintdebugPrint(_paidAmountController.text);
     num netTotal = Provider.of<CartProvider>(context, listen: false)
             .priceSummary!
             .netTotal ??
@@ -212,15 +212,15 @@ class _OrderListNewState extends State<OrderListNew> {
             width: size.width / 3,
             child: Autocomplete<CustomerListModelData>(
               optionsBuilder: (mobileNumberTextController) async {
-                debugPrint(mobileNumberTextController.text);
+                // debugPrintdebugPrint(mobileNumberTextController.text);
                 if (mobileNumberTextController.text.isEmpty) {
                   return const Iterable<CustomerListModelData>.empty();
                 }
 
                 String? accessToken =
                     Provider.of<AuthModel>(context, listen: false).token;
-                debugPrint("accessToken From AuthModel $accessToken");
-                debugPrint(mobileNumberTextController.text);
+                // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
+                // debugPrintdebugPrint(mobileNumberTextController.text);
 
                 try {
                   final response = await CustomerProvider().findCustomerByPhone(
@@ -237,10 +237,10 @@ class _OrderListNewState extends State<OrderListNew> {
                         ? filteredCustomerList
                         : const Iterable<CustomerListModelData>.empty();
                   } else {
-                    debugPrint('Error in response: ${response["message"]}');
+                    // debugPrintdebugPrint('Error in response: ${response["message"]}');
                   }
                 } catch (error) {
-                  debugPrint('Exception caught: $error');
+                  // debugPrintdebugPrint('Exception caught: $error');
                 }
 
                 return const Iterable<
@@ -251,7 +251,7 @@ class _OrderListNewState extends State<OrderListNew> {
               onSelected: (CustomerListModelData selection) {
                 String? accessToken =
                     Provider.of<AuthModel>(context, listen: false).token;
-                debugPrint("accessToken From AuthModel $accessToken");
+                // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
                 Provider.of<CartProvider>(context, listen: false)
                     .fetchCartDataFromApi(
                         customerId: selection.id ?? 0,
@@ -388,7 +388,7 @@ class _OrderListNewState extends State<OrderListNew> {
             stream: cartProvider.cartStream,
             builder: (context, snapshot) {
               if (snapshot.hasData) {
-                debugPrint("Inside Order List Consumer");
+                // debugPrintdebugPrint("Inside Order List Consumer");
                 List<ListCartModelData>? cartItems = snapshot.data;
                 List<ListCartModelDataCartItem>? cartItem = cartItems!.isEmpty
                     ? []
@@ -791,7 +791,7 @@ class _OrderListNewState extends State<OrderListNew> {
             color: ColorManager.kPrimaryColor,
           ),
           onTap: () {
-            debugPrint("Tax Details ${taxNames.toString()}");
+            // debugPrintdebugPrint("Tax Details ${taxNames.toString()}");
             showDialog(
               context: context,
               builder: (context) {
@@ -1025,11 +1025,11 @@ class _OrderListNewState extends State<OrderListNew> {
                   } else {
                     String? accessToken =
                         Provider.of<AuthModel>(context, listen: false).token;
-                    debugPrint("accessToken From AuthModel $accessToken");
+                    // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
                     final provider =
                         Provider.of<CartProvider>(context, listen: false);
                     int? cartId = provider.getCartIDForOrder;
-                    debugPrint("$cartId");
+                    // debugPrintdebugPrint("$cartId");
 
                     String paymentMethod = "";
 
@@ -1060,7 +1060,7 @@ class _OrderListNewState extends State<OrderListNew> {
                           .then((response) {
                         AddToOrderModel addToOrderModel =
                             AddToOrderModel.fromJson(response);
-                        debugPrint("$response");
+                        // debugPrintdebugPrint("$response");
                         if (response["status"] == "success") {
                           showScaffold(
                             context: context,
@@ -1084,7 +1084,7 @@ class _OrderListNewState extends State<OrderListNew> {
                         }
                       });
                     } catch (error) {
-                      debugPrint(error.toString());
+                      // debugPrintdebugPrint(error.toString());
                     }
                   }
                 },
@@ -1121,8 +1121,8 @@ class _OrderListNewState extends State<OrderListNew> {
                       Provider.of<CartProvider>(context, listen: false)
                           .priceSummary!
                           .netTotal);
-                  debugPrint(cartProductItems!.length.toString());
-                  debugPrint(formattedTotal.toString());
+                  // debugPrintdebugPrint(cartProductItems!.length.toString());
+                  // debugPrintdebugPrint(formattedTotal.toString());
                   Navigator.push(
                     context,
                     MaterialPageRoute(

@@ -194,7 +194,7 @@ class _KioskScreenState extends State<KioskScreen> {
   Widget _buildListView() {
     return Consumer<GridSelectionProvider>(
       builder: (context, productProvider, child) {
-        debugPrint("Products loaded ${productProvider.productList.toString()}");
+        // debugPrintdebugPrint("Products loaded ${productProvider.productList.toString()}");
         if (productProvider.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -257,7 +257,7 @@ class _KioskScreenState extends State<KioskScreen> {
                   Provider.of<AuthModel>(context, listen: false).userId;
 
               String? file = "";
-              debugPrint("file-");
+              // debugPrintdebugPrint("file-");
               final product = productProvider.productList![index];
               for (var v in product.attachment ?? []) {
                 if (v.isPrimary == 1) {
@@ -352,8 +352,8 @@ class _KioskScreenState extends State<KioskScreen> {
     int? cartId = Provider.of<CartProvider>(context, listen: false)
         .getCartIdFromProductId(productId);
 
-    debugPrint("product id is ${productId.toString()}");
-    debugPrint("cart id is ${cartId.toString()}");
+    // debugPrintdebugPrint("product id is ${productId.toString()}");
+    // debugPrintdebugPrint("cart id is ${cartId.toString()}");
 
     Provider.of<CartProvider>(context, listen: false)
         .removeFromCartAPI(
@@ -363,7 +363,7 @@ class _KioskScreenState extends State<KioskScreen> {
       remove: "false",
     )
         .then((value) {
-      debugPrint("removed succesrfully");
+      // debugPrintdebugPrint("removed succesrfully");
 
       AddToCartModel addToCartModel = AddToCartModel.fromJson(value);
       if (value["status"] == "success") {

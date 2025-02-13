@@ -87,7 +87,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         storeId: 1,
       );
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -105,7 +105,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       SalesProvider orderProvider =
           Provider.of<SalesProvider>(context, listen: false);
 
-      debugPrint("orderNumberController.text ${orderNumberController.text}");
+      // debugPrintdebugPrint("orderNumberController.text ${orderNumberController.text}");
 
       await orderProvider.fetchOrders(
         accessToken: accessToken ?? '',
@@ -124,7 +124,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         page: page,
       );
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -172,7 +172,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         });
       }
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
       setState(() {
         orderNumber = "Error fetching order details";
       });
@@ -460,7 +460,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     return GestureDetector(
       onTap: () {
         getOrderDetails(orderNumber);
-        debugPrint('Card tapped for Order ID: $orderId');
+        // debugPrintdebugPrint('Card tapped for Order ID: $orderId');
       },
       child: Card(
         elevation: 1,
@@ -521,7 +521,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             child: Autocomplete<CustomerListModelData>(
               key: _autocompletePhoneKey, // Set the key here
               optionsBuilder: (mobileNumberTextController) async {
-                debugPrint(mobileNumberTextController.text);
+                // debugPrintdebugPrint(mobileNumberTextController.text);
                 if (mobileNumberTextController.text.isEmpty) {
                   setState(() {
                     isCustomerFound = false; // Reset validity
@@ -531,8 +531,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
                 String? accessToken =
                     Provider.of<AuthModel>(context, listen: false).token;
-                debugPrint("accessToken From AuthModel $accessToken");
-                debugPrint(mobileNumberTextController.text);
+                // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
+                // debugPrintdebugPrint(mobileNumberTextController.text);
 
                 try {
                   final response = await CustomerProvider().findCustomerByPhone(
@@ -561,10 +561,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                         ? filteredCustomerList
                         : const Iterable<CustomerListModelData>.empty();
                   } else {
-                    debugPrint('Error in response: ${response["message"]}');
+                    // debugPrintdebugPrint('Error in response: ${response["message"]}');
                   }
                 } catch (error) {
-                  debugPrint('Exception caught: $error');
+                  // debugPrintdebugPrint('Exception caught: $error');
                 }
                 setState(() {
                   isCustomerFound = false;
@@ -577,7 +577,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               onSelected: (CustomerListModelData selection) {
                 String? accessToken =
                     Provider.of<AuthModel>(context, listen: false).token;
-                debugPrint("accessToken From AuthModel $accessToken");
+                // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
                 Provider.of<CartProvider>(context, listen: false)
                     .fetchCartDataFromApi(
                         customerId: selection.id ?? 0,
@@ -995,7 +995,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
                             Navigator.pop(context);
                           } catch (error) {
-                            debugPrint('Error submitting sales return: $error');
+                            // debugPrintdebugPrint('Error submitting sales return: $error');
                             showScaffoldError(
                               context: context,
                               message: 'Failed to submit sales return',

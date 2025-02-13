@@ -71,7 +71,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint("accessToken From AuthModel $accessToken");
+      // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
       DashboardProvider()
           .dashbaord(accessToken ?? "", context)
           .then((response) {
@@ -84,7 +84,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         } else {}
       });
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         isInitLoading = false;

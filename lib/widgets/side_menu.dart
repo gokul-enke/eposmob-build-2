@@ -168,7 +168,7 @@ class SideMenu extends StatelessWidget {
           //     iconPath: ImageAssets.homeIcon,
           //     title: 'Home',
           //     onTap: () {
-          //       debugPrint(" 'Home',${sideBarController.index.value}");
+          //       // debugPrintdebugPrint(" 'Home',${sideBarController.index.value}");
           //       sideBarController.index.value = 0;
           //     },
           //     selected: sideBarController.index.value == 0,
@@ -180,7 +180,7 @@ class SideMenu extends StatelessWidget {
               iconPath: ImageAssets.homeIcon,
               title: 'Home',
               onTap: () {
-                debugPrint(" Billing, ${sideBarController.index.value}");
+                // debugPrintdebugPrint(" Billing, ${sideBarController.index.value}");
                 sideBarController.index.value = 46;
               },
               selected: sideBarController.index.value == 46,
@@ -191,7 +191,7 @@ class SideMenu extends StatelessWidget {
           //     iconPath: ImageAssets.homeIcon,
           //     title: 'Home Old',
           //     onTap: () {
-          //       debugPrint(" 'Home Old',${sideBarController.index.value}");
+          //       // debugPrintdebugPrint(" 'Home Old',${sideBarController.index.value}");
           //       sideBarController.index.value = 45;
           //     },
           //     selected: sideBarController.index.value == 45,
@@ -202,7 +202,7 @@ class SideMenu extends StatelessWidget {
           //     iconPath: ImageAssets.barcodeIcon,
           //     title: 'Billing',
           //     onTap: () {
-          //       debugPrint(" Billing, ${sideBarController.index.value}");
+          //       // debugPrintdebugPrint(" Billing, ${sideBarController.index.value}");
           //       sideBarController.index.value = 46;
           //     },
           //     selected: sideBarController.index.value == 46,
@@ -224,7 +224,7 @@ class SideMenu extends StatelessWidget {
               iconPath: ImageAssets.dashBoardIcon,
               title: 'Dashboard',
               onTap: () {
-                debugPrint(" 'Dashboard',${sideBarController.index.value}");
+                // debugPrintdebugPrint(" 'Dashboard',${sideBarController.index.value}");
                 sideBarController.index.value = 1;
               },
               selected: sideBarController.index.value == 1,
@@ -235,7 +235,7 @@ class SideMenu extends StatelessWidget {
               iconPath: ImageAssets.saleIcon,
               title: 'Sales',
               onTap: () {
-                debugPrint(" 'Sales',${sideBarController.index.value}");
+                // debugPrintdebugPrint(" 'Sales',${sideBarController.index.value}");
                 sideBarController.index.value = 2;
                 final salesProvider =
                     Provider.of<SalesProvider>(context, listen: false);
@@ -277,7 +277,7 @@ class SideMenu extends StatelessWidget {
               title: 'Category',
               onTap: () {
                 sideBarController.index.value = 12;
-                debugPrint(" 'Category',${sideBarController.index.value}");
+                // debugPrintdebugPrint(" 'Category',${sideBarController.index.value}");
               },
               selected: sideBarController.index.value == 12 ||
                   sideBarController.index.value == 13 ||
@@ -300,7 +300,7 @@ class SideMenu extends StatelessWidget {
                 title: 'Product',
                 onTap: () async {
                   sideBarController.index.value = 14;
-                  debugPrint(" 'Category',${sideBarController.index.value}");
+                  // debugPrintdebugPrint(" 'Category',${sideBarController.index.value}");
                 },
                 selected: sideBarController.index.value == 14 ||
                     sideBarController.index.value == 15 ||
@@ -324,7 +324,7 @@ class SideMenu extends StatelessWidget {
                 title: 'Purchase',
                 onTap: () async {
                   sideBarController.index.value = 19;
-                  debugPrint(" 'Purchase',${sideBarController.index.value}");
+                  // debugPrintdebugPrint(" 'Purchase',${sideBarController.index.value}");
                 },
                 selected: sideBarController.index.value == 19 ||
                     sideBarController.index.value == 29 ||
@@ -340,7 +340,7 @@ class SideMenu extends StatelessWidget {
           //     items: Provider.of<Cart>(context, listen: true).getCartItems,
           //     onTap: () {
           //       sideBarController.index.value = 3;
-          //       debugPrint(" 'Cart',${sideBarController.index.value}");
+          //       // debugPrintdebugPrint(" 'Cart',${sideBarController.index.value}");
           //     },
           //     selected: sideBarController.index.value == 3,
           //   ),
@@ -367,7 +367,7 @@ class SideMenu extends StatelessWidget {
               title: 'Accounts',
               onTap: () {
                 sideBarController.index.value = 21;
-                debugPrint(" 'Category',${sideBarController.index.value}");
+                // debugPrintdebugPrint(" 'Category',${sideBarController.index.value}");
               },
               selected: sideBarController.index.value == 21 ||
                   sideBarController.index.value == 22 ||
@@ -386,7 +386,7 @@ class SideMenu extends StatelessWidget {
           //     title: 'Transaction',
           //     onTap: () {
           //       sideBarController.index.value = 4;
-          //       debugPrint(" 'Transaction',${sideBarController.index.value}");
+          //       // debugPrintdebugPrint(" 'Transaction',${sideBarController.index.value}");
           //     },
           //     selected: sideBarController.index.value == 4,
           //   ),
@@ -397,7 +397,7 @@ class SideMenu extends StatelessWidget {
               title: 'Customers',
               onTap: () {
                 sideBarController.index.value = 5;
-                debugPrint(" 'Customers',${sideBarController.index.value}");
+                // debugPrintdebugPrint(" 'Customers',${sideBarController.index.value}");
               },
               selected: sideBarController.index.value == 5 ||
                   sideBarController.index.value == 9 ||
@@ -410,7 +410,7 @@ class SideMenu extends StatelessWidget {
               title: 'Loyalty Card',
               onTap: () {
                 sideBarController.index.value = 6;
-                debugPrint(" 'Loyality Card',${sideBarController.index.value}");
+                // debugPrintdebugPrint(" 'Loyality Card',${sideBarController.index.value}");
               },
               selected: sideBarController.index.value == 6,
             ),
@@ -437,7 +437,7 @@ class SideMenu extends StatelessWidget {
                 title: 'Reports',
                 onTap: () {
                   sideBarController.index.value = 39;
-                  debugPrint(" 'Reports',${sideBarController.index.value}");
+                  // debugPrintdebugPrint(" 'Reports',${sideBarController.index.value}");
                 },
                 selected: sideBarController.index.value == 39 ||
                     sideBarController.index.value == 40 ||
@@ -454,7 +454,7 @@ class SideMenu extends StatelessWidget {
                 title: 'Settings',
                 onTap: () {
                   sideBarController.index.value = 43;
-                  debugPrint(" 'Settings',${sideBarController.index.value}");
+                  // debugPrintdebugPrint(" 'Settings',${sideBarController.index.value}");
                 },
                 selected: sideBarController.index.value == 43),
           ),
@@ -479,7 +479,7 @@ class SideMenu extends StatelessWidget {
               items: 3,
               onTap: () {
                 sideBarController.index.value = 7;
-                debugPrint(" 'Notifications',${sideBarController.index.value}");
+                // debugPrintdebugPrint(" 'Notifications',${sideBarController.index.value}");
               },
               selected: sideBarController.index.value == 7,
             ),
@@ -491,7 +491,7 @@ class SideMenu extends StatelessWidget {
               title: 'Support',
               onTap: () {
                 sideBarController.index.value = 8;
-                debugPrint(" 'Support',${sideBarController.index.value}");
+                // debugPrintdebugPrint(" 'Support',${sideBarController.index.value}");
               },
               selected: sideBarController.index.value == 8,
             ),
@@ -517,7 +517,7 @@ class SideMenu extends StatelessWidget {
                   authModel.logout();
                   SharedPreferenceProvider().removeTokenAndCustomerId();
 
-                  debugPrint(" authmodel logout token ${authModel.token}");
+                  // debugPrintdebugPrint(" authmodel logout token ${authModel.token}");
                   showScaffold(
                     context: context,
                     message: '${value["message"]}',
@@ -536,7 +536,7 @@ class SideMenu extends StatelessWidget {
                   );
                 }
               });
-              debugPrint(" 'Logout',${sideBarController.index.value}");
+              // debugPrintdebugPrint(" 'Logout',${sideBarController.index.value}");
             },
             selected: false,
           ),

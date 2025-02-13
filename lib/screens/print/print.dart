@@ -110,7 +110,7 @@ class _PrintPageState extends State<PrintPage> {
       _subscription = printerManager
           .discovery(type: PrinterType.bluetooth, isBle: false)
           .listen((device) {
-        debugPrint('Found Bluetooth device: ${device.name}');
+        // debugPrintdebugPrint('Found Bluetooth device: ${device.name}');
         final printer = BluetoothPrinter(
           deviceName: device.name,
           address: device.address,
@@ -123,7 +123,7 @@ class _PrintPageState extends State<PrintPage> {
 
       // Scan for USB printers
       await printerManager.discovery(type: PrinterType.usb).forEach((device) {
-        debugPrint('Found USB device: ${device.name}');
+        // debugPrintdebugPrint('Found USB device: ${device.name}');
         final printer = BluetoothPrinter(
           deviceName: device.name,
           vendorId: device.vendorId,
@@ -135,7 +135,7 @@ class _PrintPageState extends State<PrintPage> {
         });
       });
     } catch (e) {
-      debugPrint('Error during scanning: $e');
+      // debugPrintdebugPrint('Error during scanning: $e');
     } finally {
       setState(() {
         _isScanning = false;
@@ -144,12 +144,12 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   void selectPrinter(BluetoothPrinter printer) {
-    debugPrint('Selecting printer:');
-    debugPrint('Device Name: ${printer.deviceName}');
-    debugPrint('Address: ${printer.address}');
-    debugPrint('Type: ${printer.typePrinter}');
-    debugPrint('VendorId: ${printer.vendorId}');
-    debugPrint('ProductId: ${printer.productId}');
+    // debugPrintdebugPrint('Selecting printer:');
+    // debugPrintdebugPrint('Device Name: ${printer.deviceName}');
+    // debugPrintdebugPrint('Address: ${printer.address}');
+    // debugPrintdebugPrint('Type: ${printer.typePrinter}');
+    // debugPrintdebugPrint('VendorId: ${printer.vendorId}');
+    // debugPrintdebugPrint('ProductId: ${printer.productId}');
 
     setState(() {
       selectedPrinter = printer;
@@ -165,17 +165,17 @@ class _PrintPageState extends State<PrintPage> {
 
   Future<void> printReceipt(
       String customerCareNumber, String customerCareEmail) async {
-    debugPrint('Starting printReceipt function');
-    debugPrint('Selected Printer: ${selectedPrinter?.deviceName}');
-    debugPrint('Selected Printer Address: ${selectedPrinter?.address}');
-    debugPrint('Printer Type: ${selectedPrinter?.typePrinter}');
-    debugPrint('VendorId: ${selectedPrinter?.vendorId}');
-    debugPrint('ProductId: ${selectedPrinter?.productId}');
-    debugPrint('Customer Care Number: $customerCareNumber');
-    debugPrint('Customer Care Email: $customerCareEmail');
+    // debugPrintdebugPrint('Starting printReceipt function');
+    // debugPrintdebugPrint('Selected Printer: ${selectedPrinter?.deviceName}');
+    // debugPrintdebugPrint('Selected Printer Address: ${selectedPrinter?.address}');
+    // debugPrintdebugPrint('Printer Type: ${selectedPrinter?.typePrinter}');
+    // debugPrintdebugPrint('VendorId: ${selectedPrinter?.vendorId}');
+    // debugPrintdebugPrint('ProductId: ${selectedPrinter?.productId}');
+    // debugPrintdebugPrint('Customer Care Number: $customerCareNumber');
+    // debugPrintdebugPrint('Customer Care Email: $customerCareEmail');
 
     if (selectedPrinter == null) {
-      debugPrint('Error: No printer selected');
+      // debugPrintdebugPrint('Error: No printer selected');
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -186,7 +186,7 @@ class _PrintPageState extends State<PrintPage> {
     }
 
     try {
-      debugPrint('Attempting to connect to printer...');
+      // debugPrintdebugPrint('Attempting to connect to printer...');
       // Connect to the printer based on type
       if (selectedPrinter!.typePrinter == PrinterType.usb) {
         await printerManager.connect(
@@ -211,7 +211,7 @@ class _PrintPageState extends State<PrintPage> {
         );
       }
 
-      debugPrint('Successfully connected to printer');
+      // debugPrintdebugPrint('Successfully connected to printer');
 
       // Generate receipt
       final profile = await CapabilityProfile.load();
@@ -223,7 +223,7 @@ class _PrintPageState extends State<PrintPage> {
       bytes += generator.text(title,
           styles: const PosStyles(
               align: PosAlign.center, bold: true, height: PosTextSize.size2));
-      debugPrint('Printing: $title');
+      // debugPrintdebugPrint('Printing: $title');
 
       // bytes += generator.feed(1);
       bytes += generator.text("================================");
@@ -233,17 +233,17 @@ class _PrintPageState extends State<PrintPage> {
       String orderNumberText = 'Order#: ${widget.orderNumber}';
       bytes += generator.text(orderDateText,
           styles: const PosStyles(align: PosAlign.left));
-      debugPrint('Printing: $orderDateText');
+      // debugPrintdebugPrint('Printing: $orderDateText');
 
       bytes += generator.text(orderNumberText,
           styles: const PosStyles(align: PosAlign.left));
-      debugPrint('Printing: $orderNumberText');
+      // debugPrintdebugPrint('Printing: $orderNumberText');
 
       // Store Name
       String storeNameText = 'Store Name: ${widget.storeName}';
       bytes += generator.text(storeNameText,
           styles: const PosStyles(align: PosAlign.left));
-      debugPrint('Printing: $storeNameText');
+      // debugPrintdebugPrint('Printing: $storeNameText');
 
       bytes += generator.text("================================");
 
@@ -297,7 +297,7 @@ class _PrintPageState extends State<PrintPage> {
 
       // Add total
       String totalText = 'Total: ${widget.formattedTotal}';
-      debugPrint('Printing: $totalText');
+      // debugPrintdebugPrint('Printing: $totalText');
 
       bytes += generator.row([
         PosColumn(
@@ -316,11 +316,11 @@ class _PrintPageState extends State<PrintPage> {
       String emailText = 'Email: $customerCareEmail';
       bytes += generator.text(customerCareText,
           styles: const PosStyles(align: PosAlign.center));
-      debugPrint('Printing: $customerCareText');
+      // debugPrintdebugPrint('Printing: $customerCareText');
 
       bytes += generator.text(emailText,
           styles: const PosStyles(align: PosAlign.center));
-      debugPrint('Printing: $emailText');
+      // debugPrintdebugPrint('Printing: $emailText');
 
       bytes += generator.text("================================");
       bytes += generator.text("Thankyou visit again !!!",
@@ -331,10 +331,10 @@ class _PrintPageState extends State<PrintPage> {
       bytes += generator.cut();
 
       // Print receipt
-      debugPrint('Sending print job to printer...');
+      // debugPrintdebugPrint('Sending print job to printer...');
       await printerManager.send(
           type: selectedPrinter!.typePrinter, bytes: bytes);
-      debugPrint('Print job sent successfully');
+      // debugPrintdebugPrint('Print job sent successfully');
       if (mounted) {
         showScaffold(
           context: context,
@@ -342,8 +342,8 @@ class _PrintPageState extends State<PrintPage> {
         );
       }
     } catch (e, stackTrace) {
-      debugPrint('Error in printReceipt: $e');
-      debugPrint('Stack trace: $stackTrace');
+      // debugPrintdebugPrint('Error in printReceipt: $e');
+      // debugPrintdebugPrint('Stack trace: $stackTrace');
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -351,12 +351,12 @@ class _PrintPageState extends State<PrintPage> {
         );
       }
     } finally {
-      debugPrint('Disconnecting from printer...');
+      // debugPrintdebugPrint('Disconnecting from printer...');
       try {
         await printerManager.disconnect(type: selectedPrinter!.typePrinter);
-        debugPrint('Successfully disconnected from printer');
+        // debugPrintdebugPrint('Successfully disconnected from printer');
       } catch (e) {
-        debugPrint('Error disconnecting from printer: $e');
+        // debugPrintdebugPrint('Error disconnecting from printer: $e');
       }
     }
   }

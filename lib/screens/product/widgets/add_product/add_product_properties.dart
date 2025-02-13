@@ -40,8 +40,8 @@ class _AddProductPropertiesScreenState
 
       int? categoryId = Provider.of<CategoryProvider>(context, listen: false)
           .getPropCategoryId;
-      debugPrint("category id $categoryId");
-      debugPrint("category id $categoryId");
+      // debugPrintdebugPrint("category id $categoryId");
+      // debugPrintdebugPrint("category id $categoryId");
       Provider.of<CategoryProvider>(context, listen: false).fetchPropValues(
           categoryId: categoryId, accessToken: accessToken ?? "");
         });
@@ -86,7 +86,7 @@ class _AddProductPropertiesScreenState
                                   categoryProvider.propValues![index];
                               final masterValue = property['master_value'];
                               final propsCode = property['props_code'];
-                              debugPrint(propsCode);
+                              // debugPrintdebugPrint(propsCode);
                               if (masterValue == "NULL") {
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,8 +298,8 @@ class _AddProductPropertiesScreenState
                             //   'MANUFACTURER': 'hgfjfjhf',
                             // };
 
-                            debugPrint("apiBodyData.toString()");
-                            debugPrint(apiBodyData.toString());
+                            // debugPrintdebugPrint("apiBodyData.toString()");
+                            // debugPrintdebugPrint(apiBodyData.toString());
                             int? productId = gridSelectionProvider.getProductId;
                             if (productId == null) {
                               showScaffoldError(

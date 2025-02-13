@@ -63,7 +63,7 @@ class PurchaseProvider extends ChangeNotifier {
   }
 
   void callVoucherDetails({required int voucherId, required int purchaseId}) {
-    debugPrint("voucherId $voucherId purchaseId $purchaseId");
+    // debugPrintdebugPrint("voucherId $voucherId purchaseId $purchaseId");
     List<PurchaseItem> purchaseItemList = purchaseItemListAllPurchase!;
     // .firstWhere((element) =>
     //     element.any((element) => element.purchaseId == purchaseId));
@@ -94,7 +94,7 @@ class PurchaseProvider extends ChangeNotifier {
   //          *********************** LIST ALL STORES  API ***************************************************
 
   Future<void> listAllStores(String accessToken, String? storeName) async {
-    debugPrint("LIST ALL STORES ");
+    // debugPrintdebugPrint("LIST ALL STORES ");
 
     final url = storeName == null
         ? Uri.parse(APPUrl.getStores)
@@ -104,7 +104,7 @@ class PurchaseProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         GetStoreModel getStoreModel = GetStoreModel.fromJson(jsonData);
@@ -120,7 +120,7 @@ class PurchaseProvider extends ChangeNotifier {
 
   Future<void> listAllSuppliers(
       String accessToken, String? supplierName) async {
-    debugPrint("LIST ALL STORES ");
+    // debugPrintdebugPrint("LIST ALL STORES ");
 
     final url = supplierName == null
         ? Uri.parse(APPUrl.getSuppliers)
@@ -130,9 +130,9 @@ class PurchaseProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint(response.body.toString());
+        // debugPrintdebugPrint(response.body.toString());
         final jsonData = json.decode(response.body);
         GetSuppliersModel getSuppliersModel =
             GetSuppliersModel.fromJson(jsonData);
@@ -141,9 +141,9 @@ class PurchaseProvider extends ChangeNotifier {
         supplierList!.insert(0, supplierDemo);
 
         notifyListeners();
-        debugPrint('List supplierList Name in Purchase Provider');
+        // debugPrintdebugPrint('List supplierList Name in Purchase Provider');
         for (var v in supplierList ?? []) {
-          debugPrint(v.name);
+          // debugPrintdebugPrint(v.name);
         }
       } else {}
     } finally {}
@@ -153,7 +153,7 @@ class PurchaseProvider extends ChangeNotifier {
   Future<void> listAllUnits(
     String accessToken,
   ) async {
-    debugPrint("LIST ALL UNITS ");
+    // debugPrintdebugPrint("LIST ALL UNITS ");
 
     final url = Uri.parse(APPUrl.listUnits);
     try {
@@ -161,9 +161,9 @@ class PurchaseProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint(response.body.toString());
+        // debugPrintdebugPrint(response.body.toString());
         final jsonData = json.decode(response.body);
         UnitsResponse unitsResponse = UnitsResponse.fromJson(jsonData);
 
@@ -188,7 +188,7 @@ class PurchaseProvider extends ChangeNotifier {
     String? createdBy,
     int? page,
   }) async {
-    debugPrint("LIST ALL Purchase");
+    // debugPrintdebugPrint("LIST ALL Purchase");
 
     final queryParameters = <String, String>{
       'page': page.toString(),
@@ -215,7 +215,7 @@ class PurchaseProvider extends ChangeNotifier {
       queryParameters['created_by'] = createdBy;
     }
 
-    debugPrint("queryParameters $queryParameters");
+    // debugPrintdebugPrint("queryParameters $queryParameters");
 
     final url = Uri.parse(APPUrl.listPurchases)
         .replace(queryParameters: queryParameters);
@@ -225,17 +225,17 @@ class PurchaseProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        debugPrint(jsonData.toString());
+        // debugPrintdebugPrint(jsonData.toString());
         if (jsonData["status"] == "failed") {
           purchaseItemListAllPurchase = [];
           notifyListeners();
         }
         ListPurchaseModel listPurchaseModel =
             ListPurchaseModel.fromJson(jsonData);
-        debugPrint(listPurchaseModel.pagination?.toString());
+        // debugPrintdebugPrint(listPurchaseModel.pagination?.toString());
 
         currentPage = listPurchaseModel.pagination?.currentPage ??
             1; // Set the current page
@@ -246,12 +246,12 @@ class PurchaseProvider extends ChangeNotifier {
             .map((e) => e.purchaseItems ?? []) // Extract purchase item lists
             .expand((items) => items)
             .toList();
-        debugPrint("purchase items api call log");
-        debugPrint(purchaseItems.toString());
+        // debugPrintdebugPrint("purchase items api call log");
+        // debugPrintdebugPrint(purchaseItems.toString());
         ListPurchaseModelDataDetails = data.first;
         List<PurchaseItem>? listPurchaseitem = purchaseItems;
         if (jsonData["data"] == []) {
-          debugPrint("purchaseItemListAllPurchase is empty");
+          // debugPrintdebugPrint("purchaseItemListAllPurchase is empty");
           purchaseItemListAllPurchase = [];
         } else {
           purchaseItemListAllPurchase = listPurchaseitem;
@@ -270,7 +270,7 @@ class PurchaseProvider extends ChangeNotifier {
     String? filterDate,
     int? page,
   }) async {
-    debugPrint("LIST ALL Purchase");
+    // debugPrintdebugPrint("LIST ALL Purchase");
 
     final queryParameters = <String, String>{
       'page': page.toString(),
@@ -292,16 +292,16 @@ class PurchaseProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint('Response body: ${response.body}');
+        // debugPrintdebugPrint('Response body: ${response.body}');
         final jsonData = json.decode(response.body);
 
         // Use the new ListVoucherModel
         ListVoucherModel listVoucherModel = ListVoucherModel.fromJson(jsonData);
         List<VoucherModelData>? vouchersData = listVoucherModel.data;
-        debugPrint("categoryListModel.pagination?.toString()");
-        debugPrint(listVoucherModel.pagination?.toString());
+        // debugPrintdebugPrint("categoryListModel.pagination?.toString()");
+        // debugPrintdebugPrint(listVoucherModel.pagination?.toString());
         purchaseVoucherCurrentPage = listVoucherModel.pagination?.currentPage ??
             1; // Set the current page
         purchaseVoucherTotalPages =
@@ -309,19 +309,19 @@ class PurchaseProvider extends ChangeNotifier {
 
         // Here you can handle the vouchers data as needed
         if (vouchersData != null && vouchersData.isNotEmpty) {
-          debugPrint("Vouchers found: ${vouchersData.length}");
-          debugPrint(vouchersData.toString());
+          // debugPrintdebugPrint("Vouchers found: ${vouchersData.length}");
+          // debugPrintdebugPrint(vouchersData.toString());
           voucherDetailsListData = vouchersData;
 
           notifyListeners();
         } else {
-          debugPrint("No vouchers found.");
+          // debugPrintdebugPrint("No vouchers found.");
         }
       } else {
-        debugPrint("Error: ${response.reasonPhrase}");
+        // debugPrintdebugPrint("Error: ${response.reasonPhrase}");
       }
     } catch (e) {
-      debugPrint("Exception occurred: $e");
+      // debugPrintdebugPrint("Exception occurred: $e");
     }
   }
 
@@ -330,7 +330,7 @@ class PurchaseProvider extends ChangeNotifier {
   Future<dynamic> listAllPurchaseItems(
     String accessToken,
   ) async {
-    debugPrint("LIST ALL Purchase Item");
+    // debugPrintdebugPrint("LIST ALL Purchase Item");
 
     final url = Uri.parse(APPUrl.listPurchaseItems);
     try {
@@ -338,9 +338,9 @@ class PurchaseProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint(response.body.toString());
+        // debugPrintdebugPrint(response.body.toString());
         final jsonData = json.decode(response.body);
         ListPurchaseItemModel listPurchaseItemModel =
             ListPurchaseItemModel.fromJson(jsonData);
@@ -373,16 +373,16 @@ class PurchaseProvider extends ChangeNotifier {
       'store_id': storeId,
       'batch_number': batchNumber,
     };
-    debugPrint(apiBodyData.toString());
+    // debugPrintdebugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.addToPurchaseItem);
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
 
         return json.decode(response.body);
       } else {}
@@ -420,7 +420,7 @@ class PurchaseProvider extends ChangeNotifier {
       'unit': unit,
       'batch_number': batchNumber
     };
-    debugPrint(apiBodyData.toString());
+    // debugPrintdebugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.addPurchaseStock);
     try {
       final response = await http.post(url,
@@ -430,15 +430,15 @@ class PurchaseProvider extends ChangeNotifier {
             'Content-Type': 'application/json'
           });
 
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else {
         return error;
       }
     } catch (e) {
-      debugPrint(e.toString());
+      // debugPrintdebugPrint(e.toString());
       return error;
     }
   }
@@ -451,16 +451,16 @@ class PurchaseProvider extends ChangeNotifier {
     final Map<String, dynamic> apiBodyData = {
       'purchase_id': purchaseId,
     };
-    debugPrint(apiBodyData.toString());
+    // debugPrintdebugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.finishPurchaseOrder);
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
 
         return json.decode(response.body);
       } else {}
@@ -478,16 +478,16 @@ class PurchaseProvider extends ChangeNotifier {
     final Map<String, dynamic> apiBodyData = {
       'item_id': itemId,
     };
-    debugPrint(apiBodyData.toString());
+    // debugPrintdebugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.removePurchaseitem);
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
 
         return json.decode(response.body);
       } else {}

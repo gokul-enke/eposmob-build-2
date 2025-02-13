@@ -57,7 +57,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
 
   // Search purchases
   Future<void> searchPurchaseVoucher(int page) async {
-    debugPrint("Purchase Voucher Search Called");
+    // debugPrintdebugPrint("Purchase Voucher Search Called");
     setState(() {
       initLoading = true;
     });
@@ -76,12 +76,12 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
         page: page,
       );
 
-      debugPrint(purchaseProvider.getVoucherDetailsList!.length.toString());
+      // debugPrintdebugPrint(purchaseProvider.getVoucherDetailsList!.length.toString());
       setState(() {
         voucherModelListData = purchaseProvider.getVoucherModelDataList;
       });
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;

@@ -44,7 +44,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
               if (textEditingValue.text.isEmpty) {
                 return [];
               }
-              debugPrint(textEditingValue.text);
+              // debugPrintdebugPrint(textEditingValue.text);
 
               await productProvider.listAllProducts(
                   filterName: textEditingValue.text);
@@ -55,7 +55,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
                 product.productName ?? '',
             onSelected: (GetProduct selectedProduct) {
               widget.onSelected(selectedProduct);
-              debugPrint('Selected Product: ${selectedProduct.productName}');
+              // debugPrintdebugPrint('Selected Product: ${selectedProduct.productName}');
             },
             fieldViewBuilder: (BuildContext context,
                 TextEditingController textEditingController,

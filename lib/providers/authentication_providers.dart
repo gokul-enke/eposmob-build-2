@@ -10,23 +10,23 @@ class AuthenticationProvider {
 
   Future<dynamic> login(
       String email, String password, BuildContext context) async {
-    debugPrint("login");
+    // debugPrintdebugPrint("login");
 
     final Map<String, dynamic> apiBodyData = {
       'email': email,
       'password': password,
     };
-    debugPrint(json.encode(apiBodyData));
+    // debugPrintdebugPrint(json.encode(apiBodyData));
     final url = Uri.parse(APPUrl.loginUrl);
     try {
       final response = await http.post(url,
           body: json.encode(apiBodyData),
           headers: {'Content-Type': 'application/json'});
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200 ||
           response.statusCode == 400 ||
           response.statusCode == 401) {
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else if (response.statusCode > 400) {
         throw const HttpException("User Not Found.Try Again!");
@@ -41,7 +41,7 @@ class AuthenticationProvider {
 //                 *********************** LOGOUT API ***************************************************
 
   Future<dynamic> logout(String accessToken, BuildContext context) async {
-    debugPrint("logout");
+    // debugPrintdebugPrint("logout");
 
     final url = Uri.parse(APPUrl.logoutUrl);
     try {
@@ -49,9 +49,9 @@ class AuthenticationProvider {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json'
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else if (response.statusCode > 400) {
         throw const HttpException("Logout Failed.Try Again!");
@@ -66,18 +66,18 @@ class AuthenticationProvider {
   //                 *********************** FORGOT PASSWORD API ***************************************************
 
   Future<dynamic> forgotPassword(String email, BuildContext context) async {
-    debugPrint("forgotPassword");
+    // debugPrintdebugPrint("forgotPassword");
     final Map<String, dynamic> apiBodyData = {
       'email': email,
     };
-    debugPrint(json.encode(apiBodyData));
+    // debugPrintdebugPrint(json.encode(apiBodyData));
 
     final url = Uri.parse(APPUrl.forgotPasswordUrl);
     try {
       final response = await http.post(url,
           body: json.encode(apiBodyData),
           headers: {'Content-Type': 'application/json'});
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200 ||
           response.statusCode == 400 ||
           response.statusCode == 401) {
@@ -95,24 +95,24 @@ class AuthenticationProvider {
 
   Future<dynamic> resetPassword(String code, String password,
       String confirmPassword, BuildContext context) async {
-    debugPrint("resetPassword");
+    // debugPrintdebugPrint("resetPassword");
 
     final Map<String, dynamic> apiBodyData = {
       'code': code,
       'password': password,
       'password_confirmation': confirmPassword,
     };
-    debugPrint(json.encode(apiBodyData));
+    // debugPrintdebugPrint(json.encode(apiBodyData));
     final url = Uri.parse(APPUrl.resetPasswordUrl);
     try {
       final response = await http.post(url,
           body: json.encode(apiBodyData),
           headers: {'Content-Type': 'application/json'});
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200 ||
           response.statusCode == 400 ||
           response.statusCode == 401) {
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else if (response.statusCode > 400) {
         throw const HttpException("User Not Found.Try Again!");

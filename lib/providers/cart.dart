@@ -22,8 +22,8 @@ class Cart with ChangeNotifier {
       {required int productId,
       required int quantity,
       required int customerId}) async {
-    debugPrint("ADD TO CART  API ");
-    debugPrint("customerId $customerId ");
+    // debugPrintdebugPrint("ADD TO CART  API ");
+    // debugPrintdebugPrint("customerId $customerId ");
     final Map<String, dynamic> apiBodyData = {
       'product_id': productId,
       'app_type': "api",
@@ -35,21 +35,21 @@ class Cart with ChangeNotifier {
       final response = await http.post(url,
           body: json.encode(apiBodyData),
           headers: {'Content-Type': 'application/json'});
-      debugPrint('inside ${response.statusCode}');
-      debugPrint(json.decode(response.body).toString());
-      debugPrint("response${response.toString()}");
+      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint(json.decode(response.body).toString());
+      // debugPrintdebugPrint("response${response.toString()}");
       if (response.statusCode == 200) {
-        debugPrint('inside');
+        // debugPrintdebugPrint('inside');
 
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
 
         String status = addToCartModel.status ?? "";
 
-        debugPrint('ADD TO CART  API');
+        // debugPrintdebugPrint('ADD TO CART  API');
         for (var v in addToCartModel.cart!.cartItem ?? []) {
-          debugPrint(v.cartItemId);
+          // debugPrintdebugPrint(v.cartItemId);
         }
         return status == "success" ? true : false;
       } else {

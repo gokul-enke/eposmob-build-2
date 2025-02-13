@@ -82,7 +82,7 @@ class _EditOrderState extends State<EditOrder> {
   void initState() {
     super.initState();
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    debugPrint("accessToken From AuthModel $accessToken");
+    // debugPrint("accessToken From AuthModel $accessToken");
     int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
     int? cartId =
         Provider.of<CartProvider>(context, listen: false).getCartIDForOrder;
@@ -110,7 +110,7 @@ class _EditOrderState extends State<EditOrder> {
   }
 
   void _focusTextField() {
-    debugPrint("Focusing Text Field");
+    // debugPrint("Focusing Text Field");
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     if (appSettingsProvider.appSettings!.barcodeSales) {
@@ -121,7 +121,7 @@ class _EditOrderState extends State<EditOrder> {
 
   void _handleFocusChange() {
     if (_focusNode.hasFocus) {
-      debugPrint('Focus gained');
+      // debugPrint('Focus gained');
     }
   }
 
@@ -138,7 +138,7 @@ class _EditOrderState extends State<EditOrder> {
           _confirmOrder();
         }
       } catch (e) {
-        debugPrint("Error handling key press: $e");
+        // debugPrint("Error handling key press: $e");
       }
     }
   }
@@ -326,7 +326,7 @@ class _EditOrderState extends State<EditOrder> {
                                 List<GetProduct>? products;
                                 products = await productProvider
                                     .filterProductByBarcodeAPI(barCode: query);
-                                debugPrint(products?.first.toString());
+                                // debugPrint(products?.first.toString());
                                 if (products!.length == 1) {
                                   // showScaffold(
                                   //   context: context,
@@ -861,7 +861,7 @@ class _EditOrderState extends State<EditOrder> {
             color: ColorManager.kPrimaryColor,
           ),
           onTap: () {
-            debugPrint("Tax Details ${taxNames.toString()}");
+            // debugPrint("Tax Details ${taxNames.toString()}");
             showDialog(
               context: context,
               builder: (context) {
@@ -1135,7 +1135,7 @@ class _EditOrderState extends State<EditOrder> {
             child: Autocomplete<CustomerListModelData>(
               key: _autocompletePhoneKey, // Set the key here
               optionsBuilder: (mobileNumberTextController) async {
-                debugPrint(mobileNumberTextController.text);
+                // debugPrint(mobileNumberTextController.text);
                 if (mobileNumberTextController.text.isEmpty) {
                   setState(() {
                     isCustomerFound = false; // Reset validity
@@ -1145,8 +1145,8 @@ class _EditOrderState extends State<EditOrder> {
 
                 String? accessToken =
                     Provider.of<AuthModel>(context, listen: false).token;
-                debugPrint("accessToken From AuthModel $accessToken");
-                debugPrint(mobileNumberTextController.text);
+                // debugPrint("accessToken From AuthModel $accessToken");
+                // debugPrint(mobileNumberTextController.text);
 
                 try {
                   final response = await CustomerProvider().findCustomerByPhone(
@@ -1175,10 +1175,10 @@ class _EditOrderState extends State<EditOrder> {
                         ? filteredCustomerList
                         : const Iterable<CustomerListModelData>.empty();
                   } else {
-                    debugPrint('Error in response: ${response["message"]}');
+                    // debugPrint('Error in response: ${response["message"]}');
                   }
                 } catch (error) {
-                  debugPrint('Exception caught: $error');
+                  // debugPrint('Exception caught: $error');
                 }
                 setState(() {
                   isCustomerFound = false;
@@ -1191,7 +1191,7 @@ class _EditOrderState extends State<EditOrder> {
               onSelected: (CustomerListModelData selection) {
                 String? accessToken =
                     Provider.of<AuthModel>(context, listen: false).token;
-                debugPrint("accessToken From AuthModel $accessToken");
+                // debugPrint("accessToken From AuthModel $accessToken");
                 int? cartId = Provider.of<CartProvider>(context, listen: false)
                     .getCartIDForOrder;
                 Provider.of<CartProvider>(context, listen: false)
@@ -1453,7 +1453,7 @@ class _EditOrderState extends State<EditOrder> {
   }
 
   void _clearCart() {
-    debugPrint("Clear Cart pressed");
+    // debugPrint("Clear Cart pressed");
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     Provider.of<CartProvider>(context, listen: false).clearCartAPI(
       accessToken: accessToken ?? "",
@@ -1487,7 +1487,7 @@ class _EditOrderState extends State<EditOrder> {
   }
 
   void _saveOrder() async {
-    debugPrint("Create Order pressed");
+    // debugPrint("Create Order pressed");
     if (selectedCustomerID == null && mobileNumberText == "") {
       showScaffoldError(
         context: context,
@@ -1501,10 +1501,10 @@ class _EditOrderState extends State<EditOrder> {
     } else {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint("accessToken From AuthModel $accessToken");
+      // debugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
       int? cartId = provider.getCartIDForOrder;
-      debugPrint("$cartId");
+      // debugPrint("$cartId");
 
       String paymentMethod = "";
 
@@ -1570,7 +1570,7 @@ class _EditOrderState extends State<EditOrder> {
           }
         });
       } catch (error) {
-        debugPrint(error.toString());
+        // debugPrint(error.toString());
       }
     }
     _focusTextField();
@@ -1583,10 +1583,10 @@ class _EditOrderState extends State<EditOrder> {
     OrderDetailsModelDataCart? cart;
     List<OrderDetailsModelDataCartItem>? cartItems = [];
     OrderDetailsModelDataPriceSummary? priceSummary;
-    debugPrint("selectedCustomerID");
-    debugPrint(selectedCustomerPhone.toString());
-    debugPrint("mobileNumberText");
-    debugPrint(mobileNumberText.toString());
+    // debugPrint("selectedCustomerID");
+    // debugPrint(selectedCustomerPhone.toString());
+    // debugPrint("mobileNumberText");
+    // debugPrint(mobileNumberText.toString());
     if (selectedCustomerID == null && mobileNumberText == "") {
       showScaffoldError(
         context: context,
@@ -1600,10 +1600,10 @@ class _EditOrderState extends State<EditOrder> {
     } else {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint("accessToken From AuthModel $accessToken");
+      // debugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
       int? cartId = provider.getCartIDForOrder;
-      debugPrint("$cartId");
+      // debugPrint("$cartId");
 
       String paymentMethod = "";
 
@@ -1634,7 +1634,7 @@ class _EditOrderState extends State<EditOrder> {
         )
             .then((response) async {
           AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
-          debugPrint("this is response of add to order $response");
+          // debugPrint("this is response of add to order $response");
           if (response["status"] == "success") {
             showScaffold(
               context: context,
@@ -1660,7 +1660,7 @@ class _EditOrderState extends State<EditOrder> {
                 orderNumber = orderDetailsModelData?.orderNumber ?? "";
               }
             } catch (error) {
-              debugPrint(error.toString());
+              // debugPrint(error.toString());
             }
 
             String formattedTotal = AmountHelper.formatAmount(
@@ -1710,14 +1710,14 @@ class _EditOrderState extends State<EditOrder> {
           }
         });
       } catch (error) {
-        debugPrint(error.toString());
+        // debugPrint(error.toString());
       }
     }
     _focusTextField();
   }
 
   void _confirmOrder() async {
-    debugPrint("Create Order pressed");
+    // debugPrint("Create Order pressed");
     if (selectedCustomerID == null && mobileNumberText == "") {
       showScaffoldError(
         context: context,
@@ -1731,10 +1731,10 @@ class _EditOrderState extends State<EditOrder> {
     } else {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint("accessToken From AuthModel $accessToken");
+      // debugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
       int? cartId = provider.getCartIDForOrder;
-      debugPrint("$cartId");
+      // debugPrint("$cartId");
 
       String paymentMethod = "";
 
@@ -1765,7 +1765,7 @@ class _EditOrderState extends State<EditOrder> {
         )
             .then((response) {
           AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
-          debugPrint("$response");
+          // debugPrint("$response");
           if (response["status"] == "success") {
             showScaffold(
               context: context,
@@ -1800,14 +1800,14 @@ class _EditOrderState extends State<EditOrder> {
           }
         });
       } catch (error) {
-        debugPrint(error.toString());
+        // debugPrint(error.toString());
       }
     }
     _focusTextField();
   }
 
   void _getBalanceAmount() {
-    debugPrint(_paidAmountController.text);
+    // debugPrint(_paidAmountController.text);
     num netTotal = Provider.of<CartProvider>(context, listen: false)
             .priceSummary!
             .netTotal ??

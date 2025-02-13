@@ -25,7 +25,7 @@ class ViewPrimaryDetailsScreen extends StatelessWidget {
     );
     
     GetProduct? getProduct = gridSelectionProvider.getProductDetails;
-    debugPrint(getProduct == null ? "getProduct" : getProduct.productName);
+    // debugPrintdebugPrint(getProduct == null ? "getProduct" : getProduct.productName);
 
     return SingleChildScrollView(
       child: Column(

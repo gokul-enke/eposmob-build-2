@@ -82,7 +82,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
         Provider.of<PurchaseProvider>(context, listen: false);
     Map<String, String>? unitList = purchaseProvider.getUnitList;
 
-    debugPrint(getProduct.productName);
+    // debugPrintdebugPrint(getProduct.productName);
 
 // Assign default values
     selectedUnit = getProduct.unit; // Use 'Piece' as the default unit
@@ -215,7 +215,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                           );
                                           parentCategory =
                                               "${selectedCategory.categoryId ?? 0}";
-                                          debugPrint(parentCategory);
+                                          // debugPrintdebugPrint(parentCategory);
                                           categoryProvider.setParentCategory(
                                               "${selectedCategory.categoryId ?? 0}");
                                         }
@@ -572,17 +572,17 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                               child: CustomRoundButton(
                                 title: "Next",
                                 fct: () async {
-                                  debugPrint(parentCategory);
+                                  // debugPrintdebugPrint(parentCategory);
                                   idController.text =
                                       categoryProvider.getParentCategory;
-                                  debugPrint("idController.tex");
-                                  debugPrint(idController.text);
+                                  // debugPrintdebugPrint("idController.tex");
+                                  // debugPrintdebugPrint(idController.text);
                                   debugPrint(
                                       "selectedCurrency $selectedCurrency");
-                                  debugPrint("selectedUnit $selectedUnit");
+                                  // debugPrintdebugPrint("selectedUnit $selectedUnit");
                                   if (formKey.currentState!.validate()) {
                                     formKey.currentState!.save();
-                                    debugPrint("submit");
+                                    // debugPrintdebugPrint("submit");
                                     debugPrint(
                                         "categoryIdController.text ${idController.text}");
 
@@ -646,7 +646,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                           productPriceController.clear();
                                           widget.navigateToScreen(1);
                                         } else {
-                                          debugPrint("errors.password !=null");
+                                          // debugPrintdebugPrint("errors.password !=null");
                                           Navigator.pop(context);
                                           showScaffold(
                                             context: context,

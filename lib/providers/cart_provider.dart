@@ -49,13 +49,13 @@ class CartProvider with ChangeNotifier {
   int? getCartIdFromProductId(int productId) {
     if (cartData.isNotEmpty) {
       for (var item in cartData) {
-        debugPrint("erererererer");
-        debugPrint(item.toString());
+        // debugPrint("erererererer");
+        // debugPrint(item.toString());
         for (var cartItem in item.cartItems ?? []) {
-          debugPrint(cartItem.toString());
+          // debugPrint(cartItem.toString());
           if (cartItem.productId == productId) {
             // Return the cart ID if found
-            debugPrint(cartItem.id.toString());
+            // debugPrint(cartItem.id.toString());
             return cartItem
                 .id; // Assuming `id` is the cartId you want to return
           }
@@ -98,8 +98,8 @@ class CartProvider with ChangeNotifier {
     required String accessToken,
     int? cartId,
   }) async {
-    debugPrint("fetching cart of $customerId");
-    debugPrint("fetching cart of $cartId");
+    // debugPrint("fetching cart of $customerId");
+    // debugPrint("fetching cart of $cartId");
     // Fetch cart data from your API and add it to the stream
     cartData = await fetchCartData(
         customerId: customerId, token: accessToken, cartId: cartId);
@@ -131,9 +131,9 @@ class CartProvider with ChangeNotifier {
 
   Future<List<ListCartModelData>> fetchCartData(
       {required int customerId, required String token, int? cartId}) async {
-    debugPrint("LIST ALL CART ITEMS ");
-    debugPrint("customerId $customerId");
-    debugPrint("cart_id IS $cartId");
+    // debugPrint("LIST ALL CART ITEMS ");
+    // debugPrint("customerId $customerId");
+    // debugPrint("cart_id IS $cartId");
 
     final url = Uri.parse(APPUrl.listCartUrl).replace(queryParameters: {
       'customer_id': "1",
@@ -145,10 +145,10 @@ class CartProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint('inside');
-        debugPrint(json.decode(response.body).toString());
+        // debugPrint('inside');
+        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         ListCartModel listCartModel = ListCartModel.fromJson(jsonData);
 
@@ -163,19 +163,19 @@ class CartProvider with ChangeNotifier {
             : listCartModel.data!.map((e) => e.priceSummary).first;
 
         if (listCartModel.data!.isNotEmpty) {
-          debugPrint("  listCartModel.data!.isNotEmpty");
-          debugPrint("${listCartModel.data![0].id ?? 0}");
+          // debugPrint("  listCartModel.data!.isNotEmpty");
+          // debugPrint("${listCartModel.data![0].id ?? 0}");
           setCartIDForOrder(listCartModel.data![0].id ?? 0);
           notifyListeners();
           debugPrint(
               "  listCartModel.data!.isNotEmpty cartId $cartId $getCartIDForOrder");
-          debugPrint("${listCartModel.data![0].id ?? 0}");
+          // debugPrint("${listCartModel.data![0].id ?? 0}");
         }
         updateSummary(priceSummary);
 
         return listCartModel.data ?? [];
       } else if (response.statusCode == 404) {
-        debugPrint('Cart not found, setting price fields to 0');
+        // debugPrint('Cart not found, setting price fields to 0');
         PriceSummary emptyPriceSummary = PriceSummary(
           discount: 0,
           netPayable: 0,
@@ -221,10 +221,10 @@ class CartProvider with ChangeNotifier {
   }) async {
     // sample data
     // customerId = 1;
-    debugPrint("********************ADD TO CART API******************** ");
-    // debugPrint(customerId.toString());
-    // debugPrint(productId.toString());
-    // debugPrint(quantity.toString());
+    // debugPrint("********************ADD TO CART API******************** ");
+    // // debugPrint(customerId.toString());
+    // // debugPrint(productId.toString());
+    // // debugPrint(quantity.toString());
     Map<String, dynamic> apiBodyData = {};
     apiBodyData = {
       'customer_id': "1",
@@ -238,9 +238,9 @@ class CartProvider with ChangeNotifier {
       // "type": 1
     };
 
-    debugPrint("productId $productId");
-    debugPrint("customerId $customerId");
-    debugPrint("customerId $apiBodyData");
+    // debugPrint("productId $productId");
+    // debugPrint("customerId $customerId");
+    // debugPrint("customerId $apiBodyData");
     final url = Uri.parse(APPUrl.addToCartUrl);
     try {
       final response =
@@ -248,17 +248,17 @@ class CartProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      // debugPrint('inside ${response.statusCode}');
-      // debugPrint('inside 200');
+      // // debugPrint('inside ${response.statusCode}');
+      // // debugPrint('inside 200');
 
-      // debugPrint(json.decode(response.body).toString());
+      // // debugPrint(json.decode(response.body).toString());
       final jsonData = json.decode(response.body);
       AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
       if (response.statusCode == 200) {
         await fetchCartDataFromApi(
             customerId: customerId, accessToken: accessToken, cartId: cartId);
         // customerId: customerId, accessToken: accessToken);
-        debugPrint(addToCartModel.status);
+        // debugPrint(addToCartModel.status);
         // List<ListCartModelData> cartData = await fetchCartData(customerId: 1);
         //   _cartStreamController.add(cartData);
 
@@ -267,8 +267,8 @@ class CartProvider with ChangeNotifier {
 
         // updateSummary(priceSummary);
         if (addToCartModel.status == 'sucesss') {
-          debugPrint("  if (addToCartModel.status == 'sucesss') {");
-          debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
+          // debugPrint("  if (addToCartModel.status == 'sucesss') {");
+          // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
 
           setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
         }
@@ -289,8 +289,8 @@ class CartProvider with ChangeNotifier {
     String remove = "false",
     required String accessToken,
   }) async {
-    debugPrint("********************REMOVE FROM CART API******************** ");
-    debugPrint("product id is ${productId.toString()}");
+    // debugPrint("********************REMOVE FROM CART API******************** ");
+    // debugPrint("product id is ${productId.toString()}");
     final Map<String, dynamic> apiBodyData = {
       'cart_item_id': productId,
       // 'remove': remove,
@@ -300,7 +300,7 @@ class CartProvider with ChangeNotifier {
       // 'action': "clear_cart",
       'customer_id': "1"
     };
-    debugPrint("productId $productId");
+    // debugPrint("productId $productId");
     final url = Uri.parse(APPUrl
         .removeFromCartUrl); // Update this to the correct endpoint for removing items
     try {
@@ -309,11 +309,11 @@ class CartProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint('inside');
+        // debugPrint('inside');
 
-        debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
         await fetchCartDataFromApi(
@@ -322,15 +322,15 @@ class CartProvider with ChangeNotifier {
           cartId: cartId,
         );
         // customerId: customerId, accessToken: accessToken);
-        debugPrint(addToCartModel.status);
+        // debugPrint(addToCartModel.status);
         if (addToCartModel.status == 'success') {
-          debugPrint("  if (addToCartModel.status == 'success') {");
-          // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
+          // debugPrint("  if (addToCartModel.status == 'success') {");
+          // // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
 
           // setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
         }
 
-        debugPrint("Removed from cart successfully");
+        // debugPrint("Removed from cart successfully");
 
         return jsonData; // Return response data or success status
       } else {
@@ -347,8 +347,8 @@ class CartProvider with ChangeNotifier {
     String remove = "false",
     required String accessToken,
   }) async {
-    debugPrint("********************REMOVE FROM CART API******************** ");
-    debugPrint("product id is ${productId.toString()}");
+    // debugPrint("********************REMOVE FROM CART API******************** ");
+    // debugPrint("product id is ${productId.toString()}");
     final Map<String, dynamic> apiBodyData = {
       'cart_item_id': productId,
       // 'remove': remove,
@@ -358,7 +358,7 @@ class CartProvider with ChangeNotifier {
       'action': "clear_cart",
       'customer_id': "1"
     };
-    debugPrint("productId $productId");
+    // debugPrint("productId $productId");
     final url = Uri.parse(APPUrl
         .removeFromCartUrl); // Update this to the correct endpoint for removing items
     try {
@@ -367,25 +367,25 @@ class CartProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint('inside');
+        // debugPrint('inside');
 
-        debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
         await fetchCartDataFromApi(
             customerId: customerId, accessToken: accessToken);
         // customerId: customerId, accessToken: accessToken);
-        debugPrint(addToCartModel.status);
+        // debugPrint(addToCartModel.status);
         if (addToCartModel.status == 'success') {
-          debugPrint("  if (addToCartModel.status == 'success') {");
-          // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
+          // debugPrint("  if (addToCartModel.status == 'success') {");
+          // // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
 
           // setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
         }
 
-        debugPrint("Cart cleared successfully");
+        // debugPrint("Cart cleared successfully");
 
         return jsonData; // Return response data or success status
       } else {
@@ -404,10 +404,10 @@ class CartProvider with ChangeNotifier {
     required String accessToken,
     required num quantity,
   }) async {
-    debugPrint("********************REMOVE FROM CART API******************** ");
-    debugPrint("product id is ${productId.toString()}");
-    debugPrint("product id is ${quantity.toString()}");
-    debugPrint("product id is ${quantity.toString()}");
+    // debugPrint("********************REMOVE FROM CART API******************** ");
+    // debugPrint("product id is ${productId.toString()}");
+    // debugPrint("product id is ${quantity.toString()}");
+    // debugPrint("product id is ${quantity.toString()}");
     final Map<String, dynamic> apiBodyData = {
       if (productId != null) 'cart_item_id': productId,
       // 'remove': remove,
@@ -417,7 +417,7 @@ class CartProvider with ChangeNotifier {
       // 'action': "clear_cart",
       'customer_id': "1"
     };
-    debugPrint("productId $productId");
+    // debugPrint("productId $productId");
     final url = Uri.parse(APPUrl
         .removeFromCartUrl); // Update this to the correct endpoint for removing items
     try {
@@ -426,25 +426,25 @@ class CartProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint('inside');
+        // debugPrint('inside');
 
-        debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
         await fetchCartDataFromApi(
             customerId: customerId, accessToken: accessToken, cartId: cartId);
         // customerId: customerId, accessToken: accessToken);
-        debugPrint(addToCartModel.status);
+        // debugPrint(addToCartModel.status);
         if (addToCartModel.status == 'success') {
-          debugPrint("  if (addToCartModel.status == 'success') {");
-          // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
+          // debugPrint("  if (addToCartModel.status == 'success') {");
+          // // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
 
           // setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
         }
 
-        debugPrint("Removed from cart successfully");
+        // debugPrint("Removed from cart successfully");
 
         return jsonData; // Return response data or success status
       } else {
@@ -462,9 +462,9 @@ class CartProvider with ChangeNotifier {
     required String unitPrice,
     int? customerId,
   }) async {
-    debugPrint("***********Change Cart Item Price API************** ");
-    debugPrint("cartItem id is ${cartItemId.toString()}");
-    debugPrint("unitPrice is ${unitPrice.toString()}");
+    // debugPrint("***********Change Cart Item Price API************** ");
+    // debugPrint("cartItem id is ${cartItemId.toString()}");
+    // debugPrint("unitPrice is ${unitPrice.toString()}");
     final Map<String, dynamic> apiBodyData = {
       'cart_item_id': cartItemId,
       'unit_price': unitPrice,
@@ -476,26 +476,26 @@ class CartProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
-      debugPrint('inside ${response.body.toString()}');
+      // debugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.body.toString()}');
       if (response.statusCode == 200) {
-        debugPrint('inside');
+        // debugPrint('inside');
 
-        debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
         await fetchCartDataFromApi(
             customerId: customerId!, accessToken: accessToken, cartId: cartId);
         // customerId: customerId, accessToken: accessToken);
-        debugPrint(addToCartModel.status);
+        // debugPrint(addToCartModel.status);
         if (addToCartModel.status == 'success') {
-          debugPrint("  if (addToCartModel.status == 'success') {");
-          // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
+          // debugPrint("  if (addToCartModel.status == 'success') {");
+          // // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
 
           // setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
         }
 
-        debugPrint("Removed from cart successfully");
+        // debugPrint("Removed from cart successfully");
 
         return jsonData; // Return response data or success status
       } else {
@@ -519,15 +519,15 @@ class CartProvider with ChangeNotifier {
     String? balanceAmount,
     String? couponId,
   }) async {
-    debugPrint("********************ADD TO ORDER API******************** ");
+    // debugPrint("********************ADD TO ORDER API******************** ");
     DateTime now = DateTime.now();
 
     String formattedDate = DateFormat('yyyy-MM-dd').format(now);
-    debugPrint("$cartIds CadtId Inside ADD TO CART API $formattedDate");
+    // debugPrint("$cartIds CadtId Inside ADD TO CART API $formattedDate");
 
-    debugPrint("Customer ID $customerId");
-    debugPrint("Phone $phone");
-    debugPrint("Phone $accessToken");
+    // debugPrint("Customer ID $customerId");
+    // debugPrint("Phone $phone");
+    // debugPrint("Phone $accessToken");
 
     Map<String, dynamic> apiBodyData = {};
 
@@ -541,7 +541,7 @@ class CartProvider with ChangeNotifier {
       "coupon_id": couponId,
     };
 
-    debugPrint("apiBodyData ${apiBodyData.toString()}");
+    // debugPrint("apiBodyData ${apiBodyData.toString()}");
 
     final url = Uri.parse(APPUrl.addToOrderUrl);
 
@@ -552,18 +552,18 @@ class CartProvider with ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
       });
 
-      debugPrint('Response status: ${response.statusCode}');
-      debugPrint('Response body: ${response.body}');
+      // debugPrint('Response status: ${response.statusCode}');
+      // debugPrint('Response body: ${response.body}');
 
       if (response.statusCode == 201) {
-        debugPrint('inside 201');
+        // debugPrint('inside 201');
 
-        // debugPrint(json.decode(response.body).toString());
+        // // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         // AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(jsonData);
 
-        // debugPrint(jsonData);
-        // debugPrint(addToOrderModel.status);
+        // // debugPrint(jsonData);
+        // // debugPrint(addToOrderModel.status);
         getData();
         return jsonData; //addToOrderModel.status == 'success' ? true : false;
       } else {
@@ -585,14 +585,14 @@ class CartProvider with ChangeNotifier {
     String? balanceAmount,
     String? couponId,
   }) async {
-    debugPrint("********************ADD TO ORDER API******************** ");
+    // debugPrint("********************ADD TO ORDER API******************** ");
     DateTime now = DateTime.now();
 
     String formattedDate = DateFormat('yyyy-MM-dd').format(now);
-    debugPrint("$cartIds CadtId Inside ADD TO CART API $formattedDate");
+    // debugPrint("$cartIds CadtId Inside ADD TO CART API $formattedDate");
 
-    debugPrint("Customer ID $customerId");
-    debugPrint("Phone $phone");
+    // debugPrint("Customer ID $customerId");
+    // debugPrint("Phone $phone");
 
     Map<String, dynamic> apiBodyData = {};
 
@@ -606,7 +606,7 @@ class CartProvider with ChangeNotifier {
       "coupon_id": couponId,
     };
 
-    debugPrint("apiBodyData ${apiBodyData.toString()}");
+    // debugPrint("apiBodyData ${apiBodyData.toString()}");
 
     final url = Uri.parse(APPUrl.addToOrderConfirmUrl);
 
@@ -616,16 +616,16 @@ class CartProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        debugPrint('inside 200');
+        // debugPrint('inside 200');
 
-        // debugPrint(json.decode(response.body).toString());
+        // // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         // AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(jsonData);
 
-        // debugPrint(jsonData);
-        // debugPrint(addToOrderModel.status);
+        // // debugPrint(jsonData);
+        // // debugPrint(addToOrderModel.status);
         getData();
         return jsonData; //addToOrderModel.status == 'success' ? true : false;
       } else {
@@ -639,7 +639,7 @@ class CartProvider with ChangeNotifier {
     required String couponCode,
     required String accessToken,
   }) async {
-    debugPrint("********************APPLY COUPON API******************** ");
+    // debugPrint("********************APPLY COUPON API******************** ");
 
     final url = Uri.parse(APPUrl.applyCoupon).replace(queryParameters: {
       'price': totalAmount.toString(),
@@ -655,8 +655,8 @@ class CartProvider with ChangeNotifier {
         },
       );
 
-      debugPrint('Response status: ${response.statusCode}');
-      debugPrint('Response body: ${response.body}');
+      // debugPrint('Response status: ${response.statusCode}');
+      // debugPrint('Response body: ${response.body}');
 
       final jsonData = json.decode(response.body);
 
@@ -674,7 +674,7 @@ class CartProvider with ChangeNotifier {
         };
       }
     } catch (e) {
-      debugPrint('Error applying coupon: $e');
+      // debugPrint('Error applying coupon: $e');
       return {
         'success': false,
         'message': 'An error occurred: $e',

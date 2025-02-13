@@ -60,7 +60,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
         accessToken: accessToken ?? "", page: 1);
 
     purchaseDetailsList = purchaseProvider.getPurchaseDetailsList;
-    debugPrint("Purchase Details List ${purchaseDetailsList!.length}");
+    // debugPrintdebugPrint("Purchase Details List ${purchaseDetailsList!.length}");
     setState(() {
       initLoading = false;
     });
@@ -68,7 +68,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
 
   // Search purchases
   Future<void> searchPurchase(int page) async {
-    debugPrint("Category search called");
+    // debugPrintdebugPrint("Category search called");
     setState(() {
       initLoading = true;
     });
@@ -86,12 +86,12 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
         page: page,
       );
 
-      debugPrint("Purchase Details List ${purchaseDetailsList!.length}");
+      // debugPrintdebugPrint("Purchase Details List ${purchaseDetailsList!.length}");
       setState(() {
         purchaseDetailsList = purchaseProvider.getPurchaseDetailsList;
       });
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -551,7 +551,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
   // Building rows of the data table
   TableRow _buildTableRow(
       int index, PurchaseItem purchase, PurchaseProvider purchaseProvider) {
-    debugPrint("voucher.amountTotal ${purchase.unitPrice}");
+    // debugPrintdebugPrint("voucher.amountTotal ${purchase.unitPrice}");
     return TableRow(
       children: [
         _buildTableCell((index + 1).toString()),
@@ -582,8 +582,8 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                     color: ColorManager.kPrimaryColor.withOpacity(0.9),
                   ),
                   onPressed: () {
-                    debugPrint("purchase.voucherId ${purchase.voucherId}");
-                    debugPrint("purchase.purchaseId ${purchase.purchaseId}");
+                    // debugPrintdebugPrint("purchase.voucherId ${purchase.voucherId}");
+                    // debugPrintdebugPrint("purchase.purchaseId ${purchase.purchaseId}");
                     purchaseProvider.callVoucherDetails(
                         voucherId: purchase.voucherId ?? 0,
                         purchaseId: purchase.purchaseId ?? 0);

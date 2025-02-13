@@ -56,7 +56,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
         accessToken: accessToken ?? "",
       );
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -74,7 +74,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
       ReportsProvider reportsProvider =
           Provider.of<ReportsProvider>(context, listen: false);
 
-      debugPrint(categoryIdController.text.toString());
+      // debugPrintdebugPrint(categoryIdController.text.toString());
 
       await reportsProvider.fetchProductSalesReport(
         accessToken: accessToken ?? "",
@@ -85,7 +85,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
         amount: amountController.text,
       );
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -233,7 +233,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
 
                                 parentCategory =
                                     "${selectedCategory.categoryId ?? 0}";
-                                debugPrint(parentCategory);
+                                // debugPrintdebugPrint(parentCategory);
 
                                 gridSelectionProvider.updateCategory(
                                     selectedCategory.categoryId ?? 0);
@@ -299,14 +299,14 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                                   .toList(),
                               value: selectedValue,
                               onChanged: (value) {
-                                debugPrint("${value?.productProps.toString()}");
+                                // debugPrintdebugPrint("${value?.productProps.toString()}");
                                 setState(() {
                                   selectedValue = value;
                                 });
                                 idController.text = value == null
                                     ? ""
                                     : "${value.productId ?? 0}";
-                                debugPrint(idController.text);
+                                // debugPrintdebugPrint(idController.text);
                               },
                               buttonStyleData: ButtonStyleData(
                                 height: size.height * .07,
@@ -408,7 +408,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                           width: 150, //size.width * 0.5,
                           child: CalendarPickerTableCell(
                             onDateSelected: (date) {
-                              debugPrint(date.toString());
+                              // debugPrintdebugPrint(date.toString());
                               startDateController.text =
                                   DateFormat('yyyy-MM-dd').format(date);
                               debugPrint(DateFormat('yyyy-MM-dd')
@@ -444,7 +444,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                             margin: const EdgeInsets.only(left: 8),
                             child: CalendarPickerTableCell(
                               onDateSelected: (date) {
-                                debugPrint(date.toString());
+                                // debugPrintdebugPrint(date.toString());
                                 endDateController.text =
                                     DateFormat('yyyy-MM-dd').format(date);
                                 debugPrint(DateFormat('yyyy-MM-dd')

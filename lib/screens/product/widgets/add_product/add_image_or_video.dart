@@ -249,7 +249,7 @@ class _AddProductImageOrVideoScreenState
                                         activeColor: ColorManager.kPrimaryColor,
                                         tristate: true,
                                         onChanged: (value) {
-                                          debugPrint(" First onChanged $value");
+                                          // debugPrintdebugPrint(" First onChanged $value");
                                           setState(() {
                                             isChecked = value ?? false;
                                           });
@@ -649,7 +649,7 @@ class _AddProductImageOrVideoScreenState
                     activeColor: ColorManager.kPrimaryColor,
                     tristate: true,
                     onChanged: (value) {
-                      debugPrint(" Second onChanged $value");
+                      // debugPrintdebugPrint(" Second onChanged $value");
                       setState(() {
                         selectedCheckbox = value ?? false;
                       });
@@ -690,7 +690,7 @@ class _AddProductImageOrVideoScreenState
       int productId,
       final List<GetProductListFileModelData>? attachment,
       Size size) {
-    debugPrint("showDialogFunctionForProductDetailsAnimated");
+    // debugPrintdebugPrint("showDialogFunctionForProductDetailsAnimated");
     return showDialog(
         context: context,
         barrierDismissible: true,
@@ -1007,7 +1007,7 @@ class _AddProductImageOrVideoScreenState
       bool selected,
       final List<GetProductListFileModelData>? attachment,
       Size size) {
-    debugPrint("showDialogFunctionForProductDetailsAnimatedAddMore");
+    // debugPrintdebugPrint("showDialogFunctionForProductDetailsAnimatedAddMore");
     return showDialog(
         context: context,
         barrierDismissible: true,

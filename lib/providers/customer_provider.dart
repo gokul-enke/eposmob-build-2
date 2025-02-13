@@ -38,7 +38,7 @@ class CustomerProvider extends ChangeNotifier {
     String? filterAgeRange,
     int page = 1,
   }) async {
-    debugPrint("listCustomer");
+    // debugPrintdebugPrint("listCustomer");
 
     final queryParameters = <String, String>{
       'page': page.toString(),
@@ -64,14 +64,14 @@ class CustomerProvider extends ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json'
       });
-      debugPrint('inside ${response.body.toString()}');
+      // debugPrintdebugPrint('inside ${response.body.toString()}');
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         CustomerListModel customerListModel =
             CustomerListModel.fromJson(jsonData);
         customerList = customerListModel.data;
         notifyListeners();
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
         return jsonData;
       } else if (response.statusCode > 400) {
         throw const HttpException("Customers Not Found.Try Again!");
@@ -97,7 +97,7 @@ class CustomerProvider extends ChangeNotifier {
       String state,
       String country,
       BuildContext context) async {
-    debugPrint("listCustomer");
+    // debugPrintdebugPrint("listCustomer");
     final Map<String, dynamic> apiBodyData = {
       'phone': phone,
       'name': name,
@@ -109,7 +109,7 @@ class CustomerProvider extends ChangeNotifier {
       'state': state,
       'country': country,
     };
-    debugPrint("add customer apiBodyData ${apiBodyData.toString()}");
+    // debugPrintdebugPrint("add customer apiBodyData ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.addCustomerUrl);
     try {
       final response = await http.post(url,
@@ -118,9 +118,9 @@ class CustomerProvider extends ChangeNotifier {
             'Authorization': 'Bearer $accessToken',
             'Content-Type': 'application/json'
           });
-      debugPrint('inside ${response.statusCode}');
+      // debugPrintdebugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint(json.decode(response.body).toString());
+        // debugPrintdebugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else if (response.statusCode > 400) {
         throw const HttpException("Customers Not Found.Try Again!");
@@ -140,20 +140,20 @@ class CustomerProvider extends ChangeNotifier {
         Uri.parse('${APPUrl.customerListUrl}?filter_phone=$phoneNumber');
 
     try {
-      debugPrint('accessToken: $accessToken');
-      debugPrint('phoneNumber: $phoneNumber');
+      // debugPrintdebugPrint('accessToken: $accessToken');
+      // debugPrintdebugPrint('phoneNumber: $phoneNumber');
 
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json'
       });
 
-      debugPrint('response: ${response.toString()}');
-      debugPrint('response status: ${response.statusCode}');
-      debugPrint('response body: ${response.body}');
+      // debugPrintdebugPrint('response: ${response.toString()}');
+      // debugPrintdebugPrint('response status: ${response.statusCode}');
+      // debugPrintdebugPrint('response body: ${response.body}');
 
       if (response.statusCode == 200) {
-        debugPrint('Decoded response: ${json.decode(response.body)}');
+        // debugPrintdebugPrint('Decoded response: ${json.decode(response.body)}');
         return json.decode(response.body);
       } else if (response.statusCode > 400) {
         throw const HttpException("Customer Not Found. Try Again!");
@@ -161,7 +161,7 @@ class CustomerProvider extends ChangeNotifier {
         throw const HttpException('Failed to load data, Try Again Later!');
       }
     } catch (error) {
-      debugPrint('Error: ${error.toString()}');
+      // debugPrintdebugPrint('Error: ${error.toString()}');
       rethrow;
     }
   }
@@ -173,28 +173,28 @@ class CustomerProvider extends ChangeNotifier {
     final url = Uri.parse('${APPUrl.userDetailsUrl}/$userId');
 
     try {
-      debugPrint('accessToken: $accessToken');
-      debugPrint('phoneNumber: $userId');
+      // debugPrintdebugPrint('accessToken: $accessToken');
+      // debugPrintdebugPrint('phoneNumber: $userId');
 
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json'
       });
 
-      debugPrint('response: ${response.toString()}');
-      debugPrint('response status: ${response.statusCode}');
-      debugPrint('response body: ${response.body.toString()}');
+      // debugPrintdebugPrint('response: ${response.toString()}');
+      // debugPrintdebugPrint('response status: ${response.statusCode}');
+      // debugPrintdebugPrint('response body: ${response.body.toString()}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
         if (data['status'] == 'success') {
           CustomerListModelData customer =
               CustomerListModelData.fromJson(data['data']);
-          debugPrint("User Data ${customer.toString()}");
+          // debugPrintdebugPrint("User Data ${customer.toString()}");
           selectedCustomer = customer;
           notifyListeners();
         }
-        debugPrint('Decoded response: ${json.decode(response.body)}');
+        // debugPrintdebugPrint('Decoded response: ${json.decode(response.body)}');
         return json.decode(response.body);
       } else if (response.statusCode > 400) {
         throw const HttpException("Customer Not Found. Try Again!");
@@ -202,7 +202,7 @@ class CustomerProvider extends ChangeNotifier {
         throw const HttpException('Failed to load data, Try Again Later!');
       }
     } catch (error) {
-      debugPrint('Error: ${error.toString()}');
+      // debugPrintdebugPrint('Error: ${error.toString()}');
       rethrow;
     }
   }

@@ -302,7 +302,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                     title: 'Continue',
                                     fct: () async {
                                       if (_formKey.currentState!.validate()) {
-                                        debugPrint("hello");
+                                        // debugPrintdebugPrint("hello");
                                         showDialog(
                                             context: context,
                                             barrierDismissible: false,

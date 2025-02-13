@@ -47,7 +47,7 @@ class CategoryListItem extends StatelessWidget {
 //  String? accessToken =
 //           Provider.of<AuthModel>(context, listen: false).token;
     int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
-    debugPrint("CategoryListItem  customerId  : $customerId");
+    // debugPrintdebugPrint("CategoryListItem  customerId  : $customerId");
     // Provider.of<CartProvider>(context, listen: false)
     //     .fetchCartData(customerId: 1);
     // Load products when the widget is built
@@ -56,7 +56,7 @@ class CategoryListItem extends StatelessWidget {
     //   //  categoryProvider.listAllProducts(context, categoryId: 1);
     // });
 
-    debugPrint(size.width.toString());
+    // debugPrintdebugPrint(size.width.toString());
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
@@ -94,7 +94,7 @@ class CategoryListItem extends StatelessWidget {
                     //  controller: searchTextController,
                     cursorColor: ColorManager.kPrimaryColor,
                     onChanged: (query) {
-                      debugPrint(query);
+                      // debugPrintdebugPrint(query);
                       final filteredCategories =
                           categoryProvider.searchCategories(query);
 
@@ -161,9 +161,9 @@ class CategoryListItem extends StatelessWidget {
 
                           // debugPrint(
                           //     "Inside category ListItem Widgetcategorys.categorySlug");
-                          // debugPrint("categorys.categoryImage");
-                          // debugPrint(categorys.categoryIcon);
-                          // debugPrint("${provider.category!.length}");
+                          // // debugPrintdebugPrint("categorys.categoryImage");
+                          // // debugPrintdebugPrint(categorys.categoryIcon);
+                          // // debugPrintdebugPrint("${provider.category!.length}");
                           return GestureDetector(
                             onTap: () {
                               provider.selectCategory(
@@ -270,7 +270,7 @@ class CategoryListItem extends StatelessWidget {
                       //  controller: searchTextController,
                       cursorColor: ColorManager.kPrimaryColor,
                       onChanged: (query) {
-                        debugPrint(query);
+                        // debugPrintdebugPrint(query);
                         final filteredProducts =
                             productProvider.searchProducts(query);
 
@@ -341,23 +341,23 @@ class CategoryListItem extends StatelessWidget {
                       // final isSelected =
                       //     selectionProvider.selectedIndices.contains(index);
 
-                      debugPrint("selectionProvider.getProducts!.length");
-                      debugPrint("${selectionProvider.productList!.length}");
+                      // debugPrintdebugPrint("selectionProvider.getProducts!.length");
+                      // debugPrintdebugPrint("${selectionProvider.productList!.length}");
                       // if (selectionProvider.isLoading ||
                       //     selectionProvider.productList!.isEmpty) {
                       if (selectionProvider.productList!.isEmpty) {
                         return const BuildProductDummy();
                       } else {
                         String? file = "";
-                        debugPrint("file-$index$file");
+                        // debugPrintdebugPrint("file-$index$file");
                         for (var v in product.attachment ?? []) {
-                          debugPrint(v.filePath);
+                          // debugPrintdebugPrint(v.filePath);
 
                           if (v.isPrimary == 1) {
-                            debugPrint("file$file");
+                            // debugPrintdebugPrint("file$file");
                             file = v.filePath;
                           } else {
-                            debugPrint("fileShanidha$file");
+                            // debugPrintdebugPrint("fileShanidha$file");
                           }
                         }
 
@@ -396,7 +396,7 @@ class CategoryListItem extends StatelessWidget {
                                 onTap: () {
                                   selectionProvider.toggleSelectionProduct(
                                       index, product);
-                                  debugPrint("selected");
+                                  // debugPrintdebugPrint("selected");
                                   // selectionProvider.setSelection(true);
 
                                   showDialogFunctionForProductDetailsAnimated(
@@ -572,7 +572,7 @@ showDialogFunctionForProductDetails(
                         String? accessToken =
                             Provider.of<AuthModel>(context, listen: false)
                                 .token;
-                        debugPrint("accessToken From AuthModel $accessToken");
+                        // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
                         Provider.of<CartProvider>(context, listen: false)
                             .addToCartAPI(
                                 customerId: customerId,
@@ -1142,8 +1142,8 @@ final List<Product> _items = [
             //           final isSelected =
             //               selectionProvider.selectedIndices.contains(index);
             //           //    final product=selectionProvider.getProducts;
-            //           debugPrint("selectionProvider.getProducts!.length");
-            //           debugPrint("${selectionProvider.productList!.length}");
+            //           // debugPrintdebugPrint("selectionProvider.getProducts!.length");
+            //           // debugPrintdebugPrint("${selectionProvider.productList!.length}");
             //           if (selectionProvider.isLoading ||
             //               selectionProvider.productList!.isEmpty) {
             //             return const BuildProductDummy();

@@ -43,7 +43,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       });
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint("accessToken From AuthModel $accessToken");
+      // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
       CustomerProvider()
           .listCustomer(
         accessToken: accessToken ?? "",
@@ -60,7 +60,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
         } else {}
       });
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         isInitLoading = false;
@@ -69,14 +69,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 
   void searchCustomer(page) async {
-    debugPrint("category search called");
+    // debugPrintdebugPrint("category search called");
     try {
       setState(() {
         initLoading = true;
       });
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint("accessToken From AuthModel $accessToken");
+      // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
       CustomerProvider()
           .listCustomer(
         accessToken: accessToken ?? "",
@@ -96,7 +96,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
         }
       });
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrintdebugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;

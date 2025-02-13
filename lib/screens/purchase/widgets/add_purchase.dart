@@ -113,7 +113,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
         .then((value) {});
     purchaseItemList = purchaseProvider.purchaseItems;
     for (var v in purchaseItemList ?? []) {
-      debugPrint("Porchase Id ${v.purchaseId}");
+      // debugPrintdebugPrint("Porchase Id ${v.purchaseId}");
       purchaseId = v.purchaseId;
     }
     //  });
@@ -142,10 +142,10 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
             ? listPurchaseItemModel.data!.map((e) => purchaseId = e.purchaseId)
             : () {};
         for (var v in listPurchaseItemModel.data!) {
-          debugPrint("Porchase Id ${v.purchaseId}");
+          // debugPrintdebugPrint("Porchase Id ${v.purchaseId}");
           purchaseId = v.purchaseId;
         }
-        debugPrint("Porchase Id $purchaseId");
+        // debugPrintdebugPrint("Porchase Id $purchaseId");
       }
     });
     purchaseItemList = purchaseProvider.purchaseItems;
@@ -159,7 +159,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    debugPrint('zcccdcdc$accessToken');
+    // debugPrintdebugPrint('zcccdcdc$accessToken');
     // Access the CategoryProvider
     CategoryProvider categoryProvider =
         Provider.of<CategoryProvider>(context, listen: false);
@@ -1134,7 +1134,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                               if (formKey.currentState!
                                                   .validate()) {
                                                 formKey.currentState!.save();
-                                                debugPrint("submit");
+                                                // debugPrintdebugPrint("submit");
                                                 debugPrint(
                                                     "categoryIdController.text ${categoryIDController.text}");
                                                 debugPrint(
