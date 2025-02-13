@@ -854,12 +854,12 @@ class KioskOrderPageState extends State<KioskOrderPage> {
   Future<void> _saveSales() async {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     final provider = Provider.of<CartProvider>(context, listen: false);
-    int cartId = provider.getCartIDForOrder;
+    int? cartId = provider.getCartIDForOrder;
 
     try {
       await provider
           .addToOrderAPI(
-        cartIds: cartId,
+        cartIds: cartId!,
         accessToken: accessToken ?? "",
         transactionId: _transactionNumberController.text,
         totalPrice: provider.priceSummary!.netTotal.toString(),

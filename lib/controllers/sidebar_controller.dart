@@ -54,7 +54,7 @@ import '../screens/sales/widgets/sales_order_details.dart';
 import '../widgets/category_list.dart';
 
 class SideBarController extends GetxController {
-  RxInt index = 0.obs;
+  RxInt index = 46.obs;
   RxBool isExpanded = false.obs;
   void toggleExpansion() {
     isExpanded.value = !isExpanded.value;

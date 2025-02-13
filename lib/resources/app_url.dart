@@ -1,7 +1,7 @@
 class APPUrl {
   // static const String baseURL = "https://epos.enke.ae";
   // static const String baseURL = "https://epos.mevcakes.com";
-  static const String baseURL = "https://hypersouq.enke.in";
+  static const String baseURL = "https://epos.enke.ae";
   // static const String baseURL = "https://three-places-cover.loca.lt";
 
   // static const String categoryListUrl = '$baseURL/api/v1/list-category';

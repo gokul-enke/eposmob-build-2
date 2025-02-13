@@ -106,7 +106,10 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
             padding:
                 const EdgeInsets.symmetric(vertical: 20.0, horizontal: 10.0),
             child: isInitLoading
-                ? const Center(child: CircularProgressIndicator.adaptive())
+                ? SizedBox(
+                    height: size.height,
+                    child: const Center(
+                        child: CircularProgressIndicator.adaptive()))
                 : Column(
                     crossAxisAlignment:
                         CrossAxisAlignment.start, // Align items to start

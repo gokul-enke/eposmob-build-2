@@ -26,7 +26,7 @@ class CartProvider with ChangeNotifier {
     totalTax: 0,
     netTotal: 0,
   );
-  int cartId = 0;
+  int? cartId;
 
   final Map<int, int> _itemCounts = {}; // Map to track item counts
 
@@ -44,7 +44,7 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  int get getCartIDForOrder => cartId;
+  int? get getCartIDForOrder => cartId;
 
   int? getCartIdFromProductId(int productId) {
     if (cartData.isNotEmpty) {
@@ -93,11 +93,16 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchCartDataFromApi(
-      {required int customerId, required String accessToken}) async {
+  Future<void> fetchCartDataFromApi({
+    required int customerId,
+    required String accessToken,
+    int? cartId,
+  }) async {
     debugPrint("fetching cart of $customerId");
+    debugPrint("fetching cart of $cartId");
     // Fetch cart data from your API and add it to the stream
-    cartData = await fetchCartData(customerId: customerId, token: accessToken);
+    cartData = await fetchCartData(
+        customerId: customerId, token: accessToken, cartId: cartId);
     _cartStreamController.add(cartData.isEmpty ? [] : cartData);
     notifyListeners();
   }
@@ -112,7 +117,7 @@ class CartProvider with ChangeNotifier {
     // sample data
     // int? customerId = 1;
     String? token = prefs.getString('access_token');
-    fetchCartDataFromApi(customerId: customerId ?? 1, accessToken: token ?? "");
+    fetchCartDataFromApi(customerId: customerId!, accessToken: token ?? "");
   }
 
   // Dispose the stream controller when done
@@ -125,12 +130,14 @@ class CartProvider with ChangeNotifier {
   //          *********************** FETCH  LIST CART API ***************************************************
 
   Future<List<ListCartModelData>> fetchCartData(
-      {required int customerId, required String token}) async {
+      {required int customerId, required String token, int? cartId}) async {
     debugPrint("LIST ALL CART ITEMS ");
     debugPrint("customerId $customerId");
+    debugPrint("cart_id IS $cartId");
 
     final url = Uri.parse(APPUrl.listCartUrl).replace(queryParameters: {
       'customer_id': "1",
+      if (cartId != null) 'cart_id': cartId.toString(),
     });
 
     try {
@@ -210,6 +217,7 @@ class CartProvider with ChangeNotifier {
     required num quantity,
     String? unitPrice,
     required String accessToken,
+    int? cartId,
   }) async {
     // sample data
     // customerId = 1;
@@ -218,28 +226,17 @@ class CartProvider with ChangeNotifier {
     // debugPrint(productId.toString());
     // debugPrint(quantity.toString());
     Map<String, dynamic> apiBodyData = {};
-    if (unitPrice == null) {
-      apiBodyData = {
-        // 'customer_id': "1",
-        'quantity': quantity,
-        // 'app_type': "api",
-        'product_id': productId,
-        'source_type': "executive",
-        // 'address_id':1,
-        // "type": 1
-      };
-    } else {
-      apiBodyData = {
-        // 'customer_id': "1",
-        'quantity': quantity,
-        'price': unitPrice,
-        // 'app_type': "api",
-        'product_id': productId,
-        'source_type': "executive",
-        // 'address_id':1,
-        // "type": 1
-      };
-    }
+    apiBodyData = {
+      'customer_id': "1",
+      'quantity': quantity,
+      // 'app_type': "api",
+      'product_id': productId,
+      'source_type': "executive",
+      if (cartId != null) "cart_id": cartId.toString(),
+      if (unitPrice != null) "price": unitPrice,
+      // 'address_id':1,
+      // "type": 1
+    };
 
     debugPrint("productId $productId");
     debugPrint("customerId $customerId");
@@ -251,15 +248,15 @@ class CartProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
-      debugPrint('inside 200');
+      // debugPrint('inside ${response.statusCode}');
+      // debugPrint('inside 200');
 
-      debugPrint(json.decode(response.body).toString());
+      // debugPrint(json.decode(response.body).toString());
       final jsonData = json.decode(response.body);
       AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
       if (response.statusCode == 200) {
         await fetchCartDataFromApi(
-            customerId: customerId, accessToken: accessToken);
+            customerId: customerId, accessToken: accessToken, cartId: cartId);
         // customerId: customerId, accessToken: accessToken);
         debugPrint(addToCartModel.status);
         // List<ListCartModelData> cartData = await fetchCartData(customerId: 1);
@@ -288,6 +285,7 @@ class CartProvider with ChangeNotifier {
   Future<dynamic> removeFromCartAPI({
     required int customerId,
     required int productId,
+    int? cartId,
     String remove = "false",
     required String accessToken,
   }) async {
@@ -300,7 +298,7 @@ class CartProvider with ChangeNotifier {
       // 'quantity': 1,
       'action': "remove_item",
       // 'action': "clear_cart",
-      'customer_id': 1
+      'customer_id': "1"
     };
     debugPrint("productId $productId");
     final url = Uri.parse(APPUrl
@@ -319,7 +317,10 @@ class CartProvider with ChangeNotifier {
         final jsonData = json.decode(response.body);
         AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
         await fetchCartDataFromApi(
-            customerId: customerId, accessToken: accessToken);
+          customerId: customerId,
+          accessToken: accessToken,
+          cartId: cartId,
+        );
         // customerId: customerId, accessToken: accessToken);
         debugPrint(addToCartModel.status);
         if (addToCartModel.status == 'success') {
@@ -355,7 +356,7 @@ class CartProvider with ChangeNotifier {
       // 'quantity': 1,
       // 'action': "remove_item",
       'action': "clear_cart",
-      'customer_id': 1
+      'customer_id': "1"
     };
     debugPrint("productId $productId");
     final url = Uri.parse(APPUrl
@@ -397,7 +398,8 @@ class CartProvider with ChangeNotifier {
 
   Future<dynamic> decrementCartItemQuantityAPI({
     required int customerId,
-    required int productId,
+    int? productId,
+    int? cartId,
     String remove = "false",
     required String accessToken,
     required num quantity,
@@ -407,13 +409,13 @@ class CartProvider with ChangeNotifier {
     debugPrint("product id is ${quantity.toString()}");
     debugPrint("product id is ${quantity.toString()}");
     final Map<String, dynamic> apiBodyData = {
-      'cart_item_id': productId,
+      if (productId != null) 'cart_item_id': productId,
       // 'remove': remove,
       'action': "update_quantity",
       'quantity': quantity,
       // 'action': "remove_item",
       // 'action': "clear_cart",
-      'customer_id': 1
+      'customer_id': "1"
     };
     debugPrint("productId $productId");
     final url = Uri.parse(APPUrl
@@ -432,7 +434,7 @@ class CartProvider with ChangeNotifier {
         final jsonData = json.decode(response.body);
         AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
         await fetchCartDataFromApi(
-            customerId: customerId, accessToken: accessToken);
+            customerId: customerId, accessToken: accessToken, cartId: cartId);
         // customerId: customerId, accessToken: accessToken);
         debugPrint(addToCartModel.status);
         if (addToCartModel.status == 'success') {
@@ -455,9 +457,10 @@ class CartProvider with ChangeNotifier {
 
   Future<dynamic> updateCartItemPrice({
     required int cartItemId,
+    int? cartId,
     required String accessToken,
     required String unitPrice,
-    int customerId = 1,
+    int? customerId,
   }) async {
     debugPrint("***********Change Cart Item Price API************** ");
     debugPrint("cartItem id is ${cartItemId.toString()}");
@@ -482,7 +485,7 @@ class CartProvider with ChangeNotifier {
         final jsonData = json.decode(response.body);
         AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
         await fetchCartDataFromApi(
-            customerId: customerId, accessToken: accessToken);
+            customerId: customerId!, accessToken: accessToken, cartId: cartId);
         // customerId: customerId, accessToken: accessToken);
         debugPrint(addToCartModel.status);
         if (addToCartModel.status == 'success') {

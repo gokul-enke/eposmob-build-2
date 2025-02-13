@@ -82,7 +82,7 @@ class _BillingPageState extends State<BillingPage> {
     debugPrint("accessToken From AuthModel $accessToken");
     int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
     Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
-        customerId: customerId ?? 1, accessToken: accessToken ?? '');
+        customerId: customerId!, accessToken: accessToken ?? '');
     _focusNode.addListener(_handleFocusChange);
   }
 
@@ -142,7 +142,7 @@ class _BillingPageState extends State<BillingPage> {
     // Fetch cart data
     Provider.of<CartProvider>(context, listen: false)
         .fetchCartDataFromApi(
-      customerId: customerId ?? 1,
+      customerId: customerId!,
       accessToken: accessToken ?? '',
     )
         .then((_) {
@@ -259,7 +259,7 @@ class _BillingPageState extends State<BillingPage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Edit Order',
+              'New Order',
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
                   0.30, ColorManager.textColor),
             ),
@@ -474,18 +474,23 @@ class _BillingPageState extends State<BillingPage> {
                                         context,
                                         listen: false)
                                     .token;
+                                int? customerId = Provider.of<AuthModel>(
+                                        context,
+                                        listen: false)
+                                    .userId;
                                 debugPrint(
                                     "accessToken From AuthModel $accessToken");
                                 Provider.of<CartProvider>(context,
                                         listen: false)
                                     .addToCartAPI(
-                                        customerId: 1,
-                                        productId: int.parse(
-                                            selectedProductIdController.text),
-                                        quantity: double.parse(
-                                            quantityController.text),
-                                        unitPrice: unitPriceController.text,
-                                        accessToken: accessToken ?? "")
+                                  customerId: customerId!,
+                                  productId: int.parse(
+                                      selectedProductIdController.text),
+                                  quantity:
+                                      double.parse(quantityController.text),
+                                  unitPrice: unitPriceController.text,
+                                  accessToken: accessToken ?? "",
+                                )
                                     .then((value) {
                                   AddToCartModel addToCartModel =
                                       AddToCartModel.fromJson(value);
@@ -776,12 +781,13 @@ class _BillingPageState extends State<BillingPage> {
     if (newPrice.isNotEmpty) {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
+      int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
 
       Provider.of<CartProvider>(context, listen: false).updateCartItemPrice(
         accessToken: accessToken ?? "",
         cartItemId: item.id ?? 0,
         unitPrice: newPrice,
-        customerId: 1, // Adjust this as necessary
+        customerId: customerId!,
       );
 
       showScaffold(
@@ -797,7 +803,7 @@ class _BillingPageState extends State<BillingPage> {
     Provider.of<CartProvider>(context, listen: false).removeFromCartAPI(
       accessToken: accessToken ?? "",
       customerId: Provider.of<AuthModel>(context, listen: false).userId!,
-      productId: item.id ?? 1,
+      productId: item.id!,
       remove: "true",
     );
   }
@@ -1470,7 +1476,7 @@ class _BillingPageState extends State<BillingPage> {
           Provider.of<AuthModel>(context, listen: false).token;
       debugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
-      int cartId = provider.getCartIDForOrder;
+      int? cartId = provider.getCartIDForOrder;
       debugPrint("$cartId");
 
       String paymentMethod = "";
@@ -1486,7 +1492,7 @@ class _BillingPageState extends State<BillingPage> {
       try {
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderAPI(
-          cartIds: cartId,
+          cartIds: cartId!,
           accessToken: accessToken ?? "",
           transactionId: _transactionNumberController.text,
           totalPrice: Provider.of<CartProvider>(context, listen: false)
@@ -1568,7 +1574,7 @@ class _BillingPageState extends State<BillingPage> {
           Provider.of<AuthModel>(context, listen: false).token;
       debugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
-      int cartId = provider.getCartIDForOrder;
+      int? cartId = provider.getCartIDForOrder;
       debugPrint("$cartId");
 
       String paymentMethod = "";
@@ -1584,7 +1590,7 @@ class _BillingPageState extends State<BillingPage> {
       try {
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderConfirmAPI(
-          cartIds: cartId,
+          cartIds: cartId!,
           accessToken: accessToken ?? "",
           transactionId: _transactionNumberController.text,
           totalPrice: Provider.of<CartProvider>(context, listen: false)
@@ -1699,7 +1705,7 @@ class _BillingPageState extends State<BillingPage> {
           Provider.of<AuthModel>(context, listen: false).token;
       debugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
-      int cartId = provider.getCartIDForOrder;
+      int? cartId = provider.getCartIDForOrder;
       debugPrint("$cartId");
 
       String paymentMethod = "";
@@ -1715,7 +1721,7 @@ class _BillingPageState extends State<BillingPage> {
       try {
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderConfirmAPI(
-          cartIds: cartId,
+          cartIds: cartId!,
           accessToken: accessToken ?? "",
           transactionId: _transactionNumberController.text,
           totalPrice: Provider.of<CartProvider>(context, listen: false)

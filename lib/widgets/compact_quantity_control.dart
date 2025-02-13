@@ -11,6 +11,7 @@ class CompactQuantityControl extends StatefulWidget {
   final num quantity;
   final int productId;
   final int? cartItemId;
+  final int? cartId;
   final String? unitPrice;
   final String? productUnit;
   final Function()? onQuantityChanged;
@@ -22,6 +23,7 @@ class CompactQuantityControl extends StatefulWidget {
     this.unitPrice,
     this.productUnit,
     this.cartItemId,
+    this.cartId,
     this.onQuantityChanged,
   }) : super(key: key);
 
@@ -92,6 +94,7 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
       if (newQuantity > widget.quantity) {
         // Calculate difference and make single API call
         final difference = newQuantity - widget.quantity;
+
         var response = await Provider.of<CartProvider>(context, listen: false)
             .addToCartAPI(
           accessToken: accessToken ?? "",
@@ -99,6 +102,7 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
           unitPrice: widget.unitPrice,
           productId: widget.productId,
           quantity: difference,
+          cartId: widget.cartId,
         );
 
         if (response["status"] != "success") {
@@ -113,6 +117,7 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
           productId: widget.cartItemId!,
           remove: '',
           quantity: newQuantity,
+          cartId: widget.cartId,
         );
 
         if (response["status"] != "success") {

@@ -1160,13 +1160,13 @@ class _OrderListState extends State<OrderList> {
                                       final provider =
                                           Provider.of<CartProvider>(context,
                                               listen: false);
-                                      int cartId = provider.getCartIDForOrder;
+                                      int? cartId = provider.getCartIDForOrder;
                                       debugPrint("$cartId");
                                       try {
                                         await Provider.of<CartProvider>(context,
                                                 listen: false)
                                             .addToOrderAPI(
-                                          cartIds: cartId,
+                                          cartIds: cartId!,
                                           accessToken: accessToken ?? "",
                                           transactionId:
                                               _transactionNumberController.text,

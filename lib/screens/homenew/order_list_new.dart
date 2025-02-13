@@ -1028,7 +1028,7 @@ class _OrderListNewState extends State<OrderListNew> {
                     debugPrint("accessToken From AuthModel $accessToken");
                     final provider =
                         Provider.of<CartProvider>(context, listen: false);
-                    int cartId = provider.getCartIDForOrder;
+                    int? cartId = provider.getCartIDForOrder;
                     debugPrint("$cartId");
 
                     String paymentMethod = "";
@@ -1044,7 +1044,7 @@ class _OrderListNewState extends State<OrderListNew> {
                     try {
                       await Provider.of<CartProvider>(context, listen: false)
                           .addToOrderAPI(
-                        cartIds: cartId,
+                        cartIds: cartId!,
                         accessToken: accessToken ?? "",
                         transactionId: _transactionNumberController.text,
                         totalPrice:

@@ -163,15 +163,27 @@ class SideMenu extends StatelessWidget {
           //   size: size,
           //   iconPath: ImageAssets.homeIcon,
           // ),
+          // Obx(
+          //   () => DrawerListTile(
+          //     iconPath: ImageAssets.homeIcon,
+          //     title: 'Home',
+          //     onTap: () {
+          //       debugPrint(" 'Home',${sideBarController.index.value}");
+          //       sideBarController.index.value = 0;
+          //     },
+          //     selected: sideBarController.index.value == 0,
+          //   ),
+          // ),
+
           Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.homeIcon,
               title: 'Home',
               onTap: () {
-                debugPrint(" 'Home',${sideBarController.index.value}");
-                sideBarController.index.value = 0;
+                debugPrint(" Billing, ${sideBarController.index.value}");
+                sideBarController.index.value = 46;
               },
-              selected: sideBarController.index.value == 0,
+              selected: sideBarController.index.value == 46,
             ),
           ),
           // Obx(
@@ -185,17 +197,17 @@ class SideMenu extends StatelessWidget {
           //     selected: sideBarController.index.value == 45,
           //   ),
           // ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.barcodeIcon,
-              title: 'Billing',
-              onTap: () {
-                debugPrint(" Billing, ${sideBarController.index.value}");
-                sideBarController.index.value = 46;
-              },
-              selected: sideBarController.index.value == 46,
-            ),
-          ),
+          // Obx(
+          //   () => DrawerListTile(
+          //     iconPath: ImageAssets.barcodeIcon,
+          //     title: 'Billing',
+          //     onTap: () {
+          //       debugPrint(" Billing, ${sideBarController.index.value}");
+          //       sideBarController.index.value = 46;
+          //     },
+          //     selected: sideBarController.index.value == 46,
+          //   ),
+          // ),
           Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.homeIcon,

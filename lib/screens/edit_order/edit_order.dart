@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_cart_list_skelton.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
@@ -14,6 +15,7 @@ import 'package:pos_machine/models/add_to_cart.dart';
 import 'package:pos_machine/models/add_to_order.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -46,6 +48,7 @@ class _EditOrderState extends State<EditOrder> {
   final TextEditingController _transactionNumberController =
       TextEditingController();
   final TextEditingController _paidAmountController = TextEditingController();
+  SideBarController sideBarController = Get.put(SideBarController());
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -59,9 +62,10 @@ class _EditOrderState extends State<EditOrder> {
   int iconColor = 0;
   double _balanceAmount = 0;
   UniqueKey keyTile = UniqueKey();
-  bool isInitLoading = false;
+  bool is1tLoading = false;
   List<CustomerListModelData>? customerList = [];
   CustomerListModelData? selectedCustomer;
+  List<ListCartModelDataCartItem>? cartProductItems = [];
   Map<String, num> taxNames = {};
   Map<int, bool> hoverMap = {};
   TextEditingController barcodeController = TextEditingController();
@@ -74,59 +78,20 @@ class _EditOrderState extends State<EditOrder> {
   final FocusNode _focusNode = FocusNode();
   final FocusNode _barcodeNode = FocusNode();
 
-  final SideBarController sideBarController = Get.put(SideBarController());
-  String orderNumber = "";
-  OrderDetailsModelData? orderDetailsModelData;
-  OrderDetailsModelDataCustomerDetails? customerDetails;
-  OrderDetailsModelDataCart? cart;
-  List<OrderDetailsModelDataCartItem>? cartProductItems = [];
-  OrderDetailsModelDataPriceSummary? priceSummary;
-
   @override
   void initState() {
     super.initState();
+    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    debugPrint("accessToken From AuthModel $accessToken");
+    int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
+    int? cartId =
+        Provider.of<CartProvider>(context, listen: false).getCartIDForOrder;
+    Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
+      customerId: customerId ?? 1,
+      accessToken: accessToken ?? '',
+      cartId: cartId,
+    );
     _focusNode.addListener(_handleFocusChange);
-    getOrderDetails();
-  }
-
-  Future<void> getOrderDetails() async {
-    setState(() {
-      isInitLoading = true;
-    });
-
-    try {
-      String ordersId =
-          Provider.of<SalesProvider>(context, listen: false).getOrderId;
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-
-      final response = await SalesProvider()
-          .listOrderDetails(context, ordersId, accessToken ?? "");
-      if (response["status"] == "success") {
-        setState(() {
-          OrderDetailsModel orderDetails = OrderDetailsModel.fromJson(response);
-          orderDetailsModelData = orderDetails.data;
-          cart = orderDetailsModelData?.cart;
-          priceSummary = cart?.priceSummary;
-          customerDetails = orderDetailsModelData?.customerDetails;
-          cartProductItems = cart?.cartItems;
-          orderNumber = orderDetailsModelData?.orderNumber ?? "";
-        });
-      } else {
-        setState(() {
-          orderNumber = "Order Details Not found";
-        });
-      }
-    } catch (error) {
-      debugPrint(error.toString());
-      setState(() {
-        orderNumber = "Error fetching order details";
-      });
-    } finally {
-      setState(() {
-        isInitLoading = false;
-      });
-    }
   }
 
   @override
@@ -181,12 +146,14 @@ class _EditOrderState extends State<EditOrder> {
   void _refetchCartData() {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
-
+    int? cartId =
+        Provider.of<CartProvider>(context, listen: false).getCartIDForOrder;
     // Fetch cart data
     Provider.of<CartProvider>(context, listen: false)
         .fetchCartDataFromApi(
       customerId: customerId ?? 1,
       accessToken: accessToken ?? '',
+      cartId: cartId,
     )
         .then((_) {
       // Optionally, you can add a message or handle UI changes after fetching
@@ -295,6 +262,9 @@ class _EditOrderState extends State<EditOrder> {
   }
 
   Widget _buildHeader() {
+    String ordersId =
+        Provider.of<SalesProvider>(context, listen: false).getOrderId;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -302,14 +272,14 @@ class _EditOrderState extends State<EditOrder> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Edit Order #$orderNumber',
+              ordersId != "" ? 'Edit Order' : 'New Order',
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
                   0.30, ColorManager.textColor),
             ),
           ],
         ),
         Text(
-          'Order No #$orderNumber',
+          ordersId != "" ? ordersId : 'Order No #00000',
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s12, 0.18,
               ColorManager.textColor),
         ),
@@ -519,21 +489,25 @@ class _EditOrderState extends State<EditOrder> {
                                     .token;
                                 debugPrint(
                                     "accessToken From AuthModel $accessToken");
+                                int? cartId = Provider.of<CartProvider>(context,
+                                        listen: false)
+                                    .getCartIDForOrder;
                                 Provider.of<CartProvider>(context,
                                         listen: false)
                                     .addToCartAPI(
-                                        customerId: 1,
-                                        productId: int.parse(
-                                            selectedProductIdController.text),
-                                        quantity: double.parse(
-                                            quantityController.text),
-                                        unitPrice: unitPriceController.text,
-                                        accessToken: accessToken ?? "")
+                                  customerId: 1,
+                                  productId: int.parse(
+                                      selectedProductIdController.text),
+                                  quantity:
+                                      double.parse(quantityController.text),
+                                  unitPrice: unitPriceController.text,
+                                  accessToken: accessToken ?? "",
+                                  cartId: cartId,
+                                )
                                     .then((value) {
                                   AddToCartModel addToCartModel =
                                       AddToCartModel.fromJson(value);
                                   if (value["status"] == "success") {
-                                    getOrderDetails();
                                     showScaffold(
                                       context: context,
                                       message: addToCartModel.message ??
@@ -621,171 +595,217 @@ class _EditOrderState extends State<EditOrder> {
   }
 
   Widget _buildCartItemsTable(Size size) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: constraints.maxWidth),
-            child: DataTable(
-              columnSpacing: 20,
-              horizontalMargin: 16,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.transparent),
-              ),
-              headingRowColor: WidgetStateColor.resolveWith(
-                  (states) => ColorManager.kPrimaryColor.withOpacity(0.1)),
-              dataRowColor: WidgetStateColor.resolveWith((states) =>
-                  states.contains(WidgetState.selected)
-                      ? Colors.grey.shade100
-                      : Colors.white),
-              dividerThickness: 0,
-              columns: [
-                DataColumn(
-                  label: Expanded(
-                    child: Text('Item Name',
-                        textAlign: TextAlign.center,
-                        style: buildCustomStyle(FontWeightManager.bold, 14,
-                            0.21, ColorManager.textColor)),
-                  ),
-                ),
-                DataColumn(
-                  label: Expanded(
-                    child: Text('Unit',
-                        textAlign: TextAlign.center,
-                        style: buildCustomStyle(FontWeightManager.bold, 14,
-                            0.21, ColorManager.textColor)),
-                  ),
-                ),
-                DataColumn(
-                  label: Expanded(
-                    child: Text('Quantity',
-                        textAlign: TextAlign.center,
-                        style: buildCustomStyle(FontWeightManager.bold, 14,
-                            0.21, ColorManager.textColor)),
-                  ),
-                ),
-                DataColumn(
-                  label: Expanded(
-                    child: Text('Unit Price',
-                        textAlign: TextAlign.center,
-                        style: buildCustomStyle(FontWeightManager.bold, 14,
-                            0.21, ColorManager.textColor)),
-                  ),
-                ),
-                DataColumn(
-                  label: Expanded(
-                    child: Text('Total Price',
-                        textAlign: TextAlign.center,
-                        style: buildCustomStyle(FontWeightManager.bold, 14,
-                            0.21, ColorManager.textColor)),
-                  ),
-                ),
-                DataColumn(
-                  label: Expanded(
-                    child: Text('Actions',
-                        textAlign: TextAlign.center,
-                        style: buildCustomStyle(FontWeightManager.bold, 14,
-                            0.21, ColorManager.textColor)),
-                  ),
-                ),
-              ],
-              rows: cartProductItems!.map((item) {
-                return DataRow(
-                  cells: [
-                    DataCell(Align(
-                      alignment: Alignment.center,
-                      child: Text(
-                        item.productName ?? 'Unknown',
-                        style: buildCustomStyle(FontWeightManager.regular, 12,
-                            0.21, ColorManager.textColor),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                      ),
-                    )),
-                    DataCell(Align(
-                      alignment: Alignment.center,
-                      child: Text(
-                        item.productUnit ?? '-',
-                        style: buildCustomStyle(FontWeightManager.regular, 12,
-                            0.21, ColorManager.textColor),
-                        textAlign: TextAlign.center,
-                      ),
-                    )),
-                    DataCell(Center(
-                      child: CompactQuantityControl(
-                        productId: item.productId!,
-                        cartItemId: item.id!,
-                        quantity: item.quantity!.toDouble(),
-                        unitPrice: item.unitPrice.toString(),
-                        productUnit: item.productUnit,
-                        onQuantityChanged: getOrderDetails,
-                      ),
-                    )),
-                    DataCell(Center(
-                      child: SizedBox(
-                        width: 80,
-                        child: TextField(
-                          textAlign: TextAlign.center,
-                          controller: TextEditingController(
-                              text: item.unitPrice.toString()),
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: 'Unit Price',
-                            hintStyle: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
+    return Consumer<CartProvider>(
+      builder: (context, cartProvider, child) {
+        return StreamBuilder<List<ListCartModelData>>(
+          stream: cartProvider.cartStream,
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              List<ListCartModelDataCartItem>? cartItems =
+                  snapshot.data!.isEmpty ? [] : snapshot.data!.first.cartItems;
+
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints:
+                          BoxConstraints(minWidth: constraints.maxWidth),
+                      child: DataTable(
+                        columnSpacing: 20,
+                        horizontalMargin: 16,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.transparent),
+                        ),
+                        headingRowColor: WidgetStateColor.resolveWith(
+                            (states) =>
+                                ColorManager.kPrimaryColor.withOpacity(0.1)),
+                        dataRowColor: WidgetStateColor.resolveWith((states) =>
+                            states.contains(WidgetState.selected)
+                                ? Colors.grey.shade100
+                                : Colors.white),
+                        dividerThickness: 0,
+                        columns: [
+                          DataColumn(
+                            label: Expanded(
+                              child: Text('Item Name',
+                                  textAlign: TextAlign.center,
+                                  style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      14,
+                                      0.21,
+                                      ColorManager.textColor)),
                             ),
                           ),
-                          onSubmitted: (newPrice) {
-                            _updateItemPrice(context, item, newPrice);
-                          },
-                        ),
+                          DataColumn(
+                            label: Expanded(
+                              child: Text('Unit',
+                                  textAlign: TextAlign.center,
+                                  style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      14,
+                                      0.21,
+                                      ColorManager.textColor)),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Expanded(
+                              child: Text('Quantity',
+                                  textAlign: TextAlign.center,
+                                  style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      14,
+                                      0.21,
+                                      ColorManager.textColor)),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Expanded(
+                              child: Text('Unit Price',
+                                  textAlign: TextAlign.center,
+                                  style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      14,
+                                      0.21,
+                                      ColorManager.textColor)),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Expanded(
+                              child: Text('Total Price',
+                                  textAlign: TextAlign.center,
+                                  style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      14,
+                                      0.21,
+                                      ColorManager.textColor)),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Expanded(
+                              child: Text('Actions',
+                                  textAlign: TextAlign.center,
+                                  style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      14,
+                                      0.21,
+                                      ColorManager.textColor)),
+                            ),
+                          ),
+                        ],
+                        rows: cartItems!.map((item) {
+                          return DataRow(
+                            cells: [
+                              DataCell(Align(
+                                alignment: Alignment.center,
+                                child: Text(
+                                  item.productName ?? 'Unknown',
+                                  style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      12,
+                                      0.21,
+                                      ColorManager.textColor),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+                              )),
+                              DataCell(Align(
+                                alignment: Alignment.center,
+                                child: Text(
+                                  item.productUnit ?? '-',
+                                  style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      12,
+                                      0.21,
+                                      ColorManager.textColor),
+                                  textAlign: TextAlign.center,
+                                ),
+                              )),
+                              DataCell(Center(
+                                child: CompactQuantityControl(
+                                  productId: item.productId!,
+                                  cartItemId: item.id!,
+                                  quantity: item.quantity!.toDouble(),
+                                  unitPrice: item.unitPrice.toString(),
+                                  productUnit: item.productUnit,
+                                  cartId: snapshot.data!.first.id,
+                                ),
+                              )),
+                              DataCell(Center(
+                                child: SizedBox(
+                                  width: 80,
+                                  child: TextField(
+                                    textAlign: TextAlign.center,
+                                    controller: TextEditingController(
+                                        text: item.unitPrice.toString()),
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                      hintText: 'Unit Price',
+                                      hintStyle: TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    onSubmitted: (newPrice) {
+                                      _updateItemPrice(context, item, newPrice);
+                                    },
+                                  ),
+                                ),
+                              )),
+                              DataCell(Center(
+                                child: SizedBox(
+                                  width: 80,
+                                  child: Text(item.totalPrice.toString()),
+                                ),
+                              )),
+                              DataCell(Center(
+                                child: IconButton(
+                                  icon: WebsafeSvg.asset(
+                                    ImageAssets.oderlistCloseIcon,
+                                    width: 15,
+                                  ),
+                                  onPressed: () {
+                                    _removeCartItem(context, item);
+                                  },
+                                ),
+                              )),
+                            ],
+                          );
+                        }).toList(),
                       ),
-                    )),
-                    DataCell(Center(
-                      child: SizedBox(
-                        width: 80,
-                        child: Text(item.totalPrice.toString()),
-                      ),
-                    )),
-                    DataCell(Center(
-                      child: IconButton(
-                        icon: WebsafeSvg.asset(
-                          ImageAssets.oderlistCloseIcon,
-                          width: 15,
-                        ),
-                        onPressed: () {
-                          _removeCartItem(context, item);
-                        },
-                      ),
-                    )),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
+                    ),
+                  );
+                },
+              );
+            } else if (snapshot.hasError) {
+              return Text('Error: ${snapshot.error}');
+            } else {
+              return const Center(child: BuildCartListDesign());
+            }
+          },
         );
       },
     );
   }
 
-  void _updateItemPrice(BuildContext context,
-      OrderDetailsModelDataCartItem item, String newPrice) {
+  void _updateItemPrice(
+      BuildContext context, ListCartModelDataCartItem item, String newPrice) {
     if (newPrice.isNotEmpty) {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
+
+      int? cartId =
+          Provider.of<CartProvider>(context, listen: false).getCartIDForOrder;
 
       Provider.of<CartProvider>(context, listen: false).updateCartItemPrice(
         accessToken: accessToken ?? "",
         cartItemId: item.id ?? 0,
         unitPrice: newPrice,
         customerId: 1, // Adjust this as necessary
+        cartId: cartId,
       );
-
-      getOrderDetails();
 
       showScaffold(
         context: context,
@@ -794,15 +814,18 @@ class _EditOrderState extends State<EditOrder> {
     }
   }
 
-  void _removeCartItem(
-      BuildContext context, OrderDetailsModelDataCartItem item) {
+  void _removeCartItem(BuildContext context, ListCartModelDataCartItem item) {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+
+    int? cartId =
+        Provider.of<CartProvider>(context, listen: false).getCartIDForOrder;
 
     Provider.of<CartProvider>(context, listen: false).removeFromCartAPI(
       accessToken: accessToken ?? "",
       customerId: Provider.of<AuthModel>(context, listen: false).userId!,
       productId: item.id ?? 1,
       remove: "true",
+      cartId: cartId,
     );
   }
 
@@ -1169,10 +1192,14 @@ class _EditOrderState extends State<EditOrder> {
                 String? accessToken =
                     Provider.of<AuthModel>(context, listen: false).token;
                 debugPrint("accessToken From AuthModel $accessToken");
+                int? cartId = Provider.of<CartProvider>(context, listen: false)
+                    .getCartIDForOrder;
                 Provider.of<CartProvider>(context, listen: false)
                     .fetchCartDataFromApi(
-                        customerId: selection.id ?? 0,
-                        accessToken: accessToken ?? '');
+                  customerId: selection.id ?? 0,
+                  accessToken: accessToken ?? '',
+                  cartId: cartId,
+                );
                 setState(() {
                   mobileNumberText = "";
                   selectedCustomerID = selection.id!;
@@ -1399,11 +1426,13 @@ class _EditOrderState extends State<EditOrder> {
                     Provider.of<AuthModel>(context, listen: false).token;
                 int? customerId =
                     Provider.of<AuthModel>(context, listen: false).userId;
-
+                int? cartId = Provider.of<CartProvider>(context, listen: false)
+                    .getCartIDForOrder;
                 Provider.of<CartProvider>(context, listen: false)
                     .fetchCartDataFromApi(
                   customerId: customerId!,
                   accessToken: accessToken ?? '',
+                  cartId: cartId,
                 );
               })
             },
@@ -1474,7 +1503,7 @@ class _EditOrderState extends State<EditOrder> {
           Provider.of<AuthModel>(context, listen: false).token;
       debugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
-      int cartId = provider.getCartIDForOrder;
+      int? cartId = provider.getCartIDForOrder;
       debugPrint("$cartId");
 
       String paymentMethod = "";
@@ -1490,7 +1519,7 @@ class _EditOrderState extends State<EditOrder> {
       try {
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderAPI(
-          cartIds: cartId,
+          cartIds: cartId!,
           accessToken: accessToken ?? "",
           transactionId: _transactionNumberController.text,
           totalPrice: Provider.of<CartProvider>(context, listen: false)
@@ -1531,6 +1560,7 @@ class _EditOrderState extends State<EditOrder> {
               _balanceAmount = 0;
             });
             resetAutocomplete();
+            sideBarController.index.value = 2;
           } else {
             showScaffoldError(
               context: context,
@@ -1547,6 +1577,12 @@ class _EditOrderState extends State<EditOrder> {
   }
 
   void _createOrderAndPrint() async {
+    String orderNumber = "";
+    OrderDetailsModelData? orderDetailsModelData;
+    OrderDetailsModelDataCustomerDetails? customerDetails;
+    OrderDetailsModelDataCart? cart;
+    List<OrderDetailsModelDataCartItem>? cartItems = [];
+    OrderDetailsModelDataPriceSummary? priceSummary;
     debugPrint("selectedCustomerID");
     debugPrint(selectedCustomerPhone.toString());
     debugPrint("mobileNumberText");
@@ -1566,7 +1602,7 @@ class _EditOrderState extends State<EditOrder> {
           Provider.of<AuthModel>(context, listen: false).token;
       debugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
-      int cartId = provider.getCartIDForOrder;
+      int? cartId = provider.getCartIDForOrder;
       debugPrint("$cartId");
 
       String paymentMethod = "";
@@ -1582,7 +1618,7 @@ class _EditOrderState extends State<EditOrder> {
       try {
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderConfirmAPI(
-          cartIds: cartId,
+          cartIds: cartId!,
           accessToken: accessToken ?? "",
           transactionId: _transactionNumberController.text,
           totalPrice: Provider.of<CartProvider>(context, listen: false)
@@ -1596,13 +1632,54 @@ class _EditOrderState extends State<EditOrder> {
           balanceAmount: _balanceAmount.toString(),
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
         )
-            .then((response) {
+            .then((response) async {
           AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
-          debugPrint("$response");
+          debugPrint("this is response of add to order $response");
           if (response["status"] == "success") {
             showScaffold(
               context: context,
               message: "${addToOrderModel.message}",
+            );
+
+            try {
+              String ordersId = addToOrderModel.order!.orderNumber.toString();
+              String? accessToken =
+                  Provider.of<AuthModel>(context, listen: false).token;
+
+              final OrderDetailsresponse = await SalesProvider()
+                  .listOrderDetails(context, ordersId, accessToken ?? "");
+
+              if (OrderDetailsresponse["status"] == "success") {
+                OrderDetailsModel orderDetails =
+                    OrderDetailsModel.fromJson(OrderDetailsresponse);
+                orderDetailsModelData = orderDetails.data;
+                cart = orderDetailsModelData?.cart;
+                priceSummary = cart?.priceSummary;
+                customerDetails = orderDetailsModelData?.customerDetails;
+                cartItems = cart?.cartItems;
+                orderNumber = orderDetailsModelData?.orderNumber ?? "";
+              }
+            } catch (error) {
+              debugPrint(error.toString());
+            }
+
+            String formattedTotal = AmountHelper.formatAmount(
+              orderDetailsModelData?.cart?.priceSummary?.netTotal,
+            );
+            String storeName = orderDetailsModelData!.cart!.storeName ?? "";
+            String orderDate = orderDetailsModelData!.orderDate ?? "";
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PrintPage(
+                  storeName: storeName,
+                  cartItems: cartItems!,
+                  formattedTotal: formattedTotal,
+                  orderDate: DateHelper.formatISODate(orderDate),
+                  orderNumber: orderNumber,
+                ),
+              ),
             );
 
             // Clear the mobile number after successful save
@@ -1625,25 +1702,6 @@ class _EditOrderState extends State<EditOrder> {
               _balanceAmount = 0;
             });
             resetAutocomplete();
-
-            String formattedTotal = AmountHelper.formatAmount(
-                Provider.of<CartProvider>(context, listen: false)
-                    .priceSummary!
-                    .netTotal);
-            debugPrint(cartProductItems!.length.toString());
-            debugPrint(formattedTotal.toString());
-
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PrintPage(
-                  cartItems: cartProductItems!,
-                  formattedTotal: formattedTotal,
-                  orderDate: DateHelper.formatDate(DateTime.now()),
-                  orderNumber: "#000000",
-                ),
-              ),
-            );
           } else {
             showScaffoldError(
               context: context,
@@ -1675,7 +1733,7 @@ class _EditOrderState extends State<EditOrder> {
           Provider.of<AuthModel>(context, listen: false).token;
       debugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
-      int cartId = provider.getCartIDForOrder;
+      int? cartId = provider.getCartIDForOrder;
       debugPrint("$cartId");
 
       String paymentMethod = "";
@@ -1691,7 +1749,7 @@ class _EditOrderState extends State<EditOrder> {
       try {
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderConfirmAPI(
-          cartIds: cartId,
+          cartIds: cartId!,
           accessToken: accessToken ?? "",
           transactionId: _transactionNumberController.text,
           totalPrice: Provider.of<CartProvider>(context, listen: false)

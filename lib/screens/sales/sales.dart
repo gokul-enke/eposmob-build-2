@@ -12,6 +12,7 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/print/print.dart';
@@ -947,6 +948,14 @@ class _SalesScreenState extends State<SalesScreen> {
                                                             color: Colors.white,
                                                           ),
                                                           onPressed: () async {
+                                                            Provider.of<CartProvider>(
+                                                                    context,
+                                                                    listen:
+                                                                        false)
+                                                                .setCartIDForOrder(
+                                                                    int.parse(order
+                                                                        .cartId
+                                                                        .toString()));
                                                             orderProvider
                                                                 .setOrderId(order
                                                                     .orderNumber
