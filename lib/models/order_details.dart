@@ -43,6 +43,8 @@ class OrderDetailsModelData {
   final String? deliveryStatus;
   final OrderDetailsModelDataPaymentDetails? paymentDetails;
   final List<OrderDetailsModelDataOrderProp>? orderProps;
+  final String? deliveryMethodId;
+  final String? deliveryMethodName;
 
   OrderDetailsModelData({
     this.ordersId,
@@ -58,6 +60,8 @@ class OrderDetailsModelData {
     this.deliveryStatus,
     this.paymentDetails,
     this.orderProps,
+    this.deliveryMethodId,
+    this.deliveryMethodName,
   });
 
   factory OrderDetailsModelData.fromJson(Map<String, dynamic> json) =>
@@ -89,6 +93,8 @@ class OrderDetailsModelData {
             ? []
             : List<OrderDetailsModelDataOrderProp>.from(json["order_props"]!
                 .map((x) => OrderDetailsModelDataOrderProp.fromJson(x))),
+        deliveryMethodId: json["delivery_method_id"].toString(),
+        deliveryMethodName: json["delivery_method_name"].toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -107,6 +113,8 @@ class OrderDetailsModelData {
         "order_props": orderProps == null
             ? []
             : List<dynamic>.from(orderProps!.map((x) => x.toJson())),
+        "delivery_method_id": deliveryMethodId,
+        "delivery_method_name": deliveryMethodName,
       };
 }
 
@@ -310,11 +318,11 @@ class OrderDetailsModelDataPriceSummary {
   factory OrderDetailsModelDataPriceSummary.fromJson(
           Map<String, dynamic> json) =>
       OrderDetailsModelDataPriceSummary(
-        subTotal: json["sub_total"],
-        totalTax: json["total_tax"],
-        netTotal: json["net_total"],
-        discount: json["discount"],
-        netPayable: json["net_payable"],
+        subTotal: json["sub_total"] is num ? json["sub_total"] : null,
+        totalTax: json["total_tax"] is num ? json["total_tax"] : null,
+        netTotal: json["net_total"] is num ? json["net_total"] : null,
+        discount: json["discount"] is num ? json["discount"] : null,
+        netPayable: json["net_payable"] is num ? json["net_payable"] : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -330,8 +338,8 @@ class OrderDetailsModelDataCustomerDetails {
   final String? name;
   final String? email;
   final String? phone;
-  final int? customerId;
-  final String? address; // Added address
+  final int? customerId; // Keep as int? if it's an int in JSON
+  final List<dynamic>? address; // Changed to List<dynamic>
 
   OrderDetailsModelDataCustomerDetails({
     this.name,
@@ -347,8 +355,9 @@ class OrderDetailsModelDataCustomerDetails {
         name: json["name"],
         email: json["email"],
         phone: json["phone"],
-        customerId: json["customer_id"],
-        address: json["address"],
+        customerId: json["customer_id"], // Keep as int? if it's an int
+        address:
+            json["address"] == null ? [] : List<dynamic>.from(json["address"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -361,9 +370,9 @@ class OrderDetailsModelDataCustomerDetails {
 }
 
 class OrderDetailsModelDataOrderProp {
-  final int? propsId; // Changed to int
+  final int? propsId;
   final String? propsCode;
-  final String? propsValue;
+  final String? propsValue; // Change this to String?
 
   OrderDetailsModelDataOrderProp({
     this.propsId,
@@ -375,7 +384,9 @@ class OrderDetailsModelDataOrderProp {
       OrderDetailsModelDataOrderProp(
         propsId: json["props_id"],
         propsCode: json["props_code"],
-        propsValue: json["props_value"],
+        propsValue: json["props_value"] is String
+            ? json["props_value"]
+            : null, // Ensure it's a String
       );
 
   Map<String, dynamic> toJson() => {
@@ -386,10 +397,10 @@ class OrderDetailsModelDataOrderProp {
 }
 
 class OrderDetailsModelDataPaymentDetails {
-  final int? paymentId;
-  final String? paymentStatus;
-  final String? transactionId;
-  final String? paymentMethod;
+  final int? paymentId; // Nullable int for payment_id
+  final String? paymentStatus; // String for payment_status
+  final int? transactionId; // Nullable int for transaction_id
+  final String? paymentMethod; // String for payment_method
 
   OrderDetailsModelDataPaymentDetails({
     this.paymentId,
@@ -401,10 +412,12 @@ class OrderDetailsModelDataPaymentDetails {
   factory OrderDetailsModelDataPaymentDetails.fromJson(
           Map<String, dynamic> json) =>
       OrderDetailsModelDataPaymentDetails(
-        paymentId: json["payment_id"],
-        paymentStatus: json["payment_status"],
-        transactionId: json["transaction_id"],
-        paymentMethod: json["payment_method"],
+        paymentId: json["payment_id"], // This can be null
+        paymentStatus: json["payment_status"], // This is a String
+        transactionId: json["transaction_id"] is int
+            ? json["transaction_id"]
+            : null, // Ensure it's an int or null
+        paymentMethod: json["payment_method"], // This is a String
       );
 
   Map<String, dynamic> toJson() => {

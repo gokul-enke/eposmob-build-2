@@ -49,7 +49,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
 
     try {
       String ordersId =
-          Provider.of<SalesProvider>(context, listen: false).getOrderId;
+          Provider.of<SalesProvider>(context, listen: false).getOrderNumber;
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
 

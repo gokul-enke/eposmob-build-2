@@ -12,6 +12,7 @@ import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/cart.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 
 import 'package:pos_machine/providers/grid_provider.dart';
@@ -29,6 +30,7 @@ import 'providers/carousel_provider.dart';
 import 'providers/purchase_provider.dart';
 
 import 'screens/login/login.dart';
+import 'screens/base_url_wrapper.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,18 +44,18 @@ void main() {
   }
 
   Get.put(CategoryProvider());
-  // HttpOverrides.global = MyHttpOverrides();
+  HttpOverrides.global = MyHttpOverrides();
   runApp(const MyApp());
 }
 
-// class MyHttpOverrides extends HttpOverrides {
-//   @override
-//   HttpClient createHttpClient(SecurityContext? context) {
-//     return super.createHttpClient(context)
-//       ..badCertificateCallback =
-//           (X509Certificate cert, String host, int port) => true;
-//   }
-// }.
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -76,12 +78,16 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ReportsProvider()),
         ChangeNotifierProvider(create: (_) => GeneralSettingsProvider()),
         ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
+        ChangeNotifierProvider(create: (_) => DeliveryMethodsProvider()),
       ],
       child: GetMaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Flutter POS Machine',
         theme: ThemeData(),
-        home: const SignInScreen(),
+        home: const BaseUrlWrapper(),
+        routes: {
+          '/login': (context) => const SignInScreen(),
+        },
       ),
     );
   }

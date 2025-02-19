@@ -15,7 +15,14 @@ class SalesProvider with ChangeNotifier {
   int totalPages = 1;
   List<ListOrderModelData> get orders => _orders;
   List<SalesReturnOrder> get salesReturnOrders => _salesReturnOrders;
+
+  String _orderNumber = "";
   String _orderId = "";
+
+  String get getOrderNumber {
+    return _orderNumber;
+  }
+
   String get getOrderId {
     return _orderId;
   }
@@ -26,9 +33,13 @@ class SalesProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  setOrderNumber(String value) {
+    _orderNumber = value;
+    notifyListeners();
+  }
+
   setOrderId(String value) {
     _orderId = value;
-    // debugPrintdebugPrint(_orderId);
     notifyListeners();
   }
 
@@ -81,28 +92,28 @@ class SalesProvider with ChangeNotifier {
         },
       ).timeout(const Duration(seconds: 15));
 
-      // debugPrintdebugPrint('fetchOrders response status code: ${response.statusCode}');
+      // debugPrint('fetchOrders response status code: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         if (response.body.isNotEmpty) {
           final jsonData = json.decode(response.body);
-          // // debugPrintdebugPrint('Received JSON data: ${jsonData.toString()}');
+          // // debugPrint('Received JSON data: ${jsonData.toString()}');
           try {
             ListSalesOrderModel listSalesOrderModel =
                 ListSalesOrderModel.fromJson(jsonData);
             currentPage = listSalesOrderModel.pagination?.currentPage ?? 1;
             totalPages = listSalesOrderModel.pagination?.totalPages ?? 1;
-            // debugPrintdebugPrint(listSalesOrderModel.pagination!.currentPage.toString());
-            // debugPrintdebugPrint(listSalesOrderModel.pagination!.totalPages.toString());
+            // debugPrint(listSalesOrderModel.pagination!.currentPage.toString());
+            // debugPrint(listSalesOrderModel.pagination!.totalPages.toString());
             _orders = listSalesOrderModel.data ?? [];
             notifyListeners();
           } catch (e) {
-            // debugPrintdebugPrint('Error parsing JSON data: $e');
-            // debugPrintdebugPrint('JSON structure: ${jsonData.runtimeType}');
+            // debugPrint('Error parsing JSON data: $e');
+            // debugPrint('JSON structure: ${jsonData.runtimeType}');
             throw Exception('Failed to parse order list data: $e');
           }
         } else {
-          // debugPrintdebugPrint('Empty response body');
+          // debugPrint('Empty response body');
           throw Exception('Received empty response');
         }
       } else {
@@ -111,7 +122,7 @@ class SalesProvider with ChangeNotifier {
         throw Exception('Failed to load orders');
       }
     } catch (error) {
-      // debugPrintdebugPrint('Error in fetchOrders: $error');
+      // debugPrint('Error in fetchOrders: $error');
       _orders = [];
       rethrow;
     }
@@ -120,7 +131,7 @@ class SalesProvider with ChangeNotifier {
   //          *********************** LIST ORDER DETAILS API ***************************************************
   Future<dynamic> listOrderDetails(
       BuildContext context, String orderNumber, String accessToken) async {
-    // debugPrintdebugPrint(" API listOrderDetails $_orderId   passed one$orderNumber");
+    // debugPrint(" API listOrderDetails $_orderId   passed one$orderNumber");
     final url = Uri.parse("${APPUrl.getListOrderDetails}/$orderNumber");
 
     try {
@@ -129,12 +140,12 @@ class SalesProvider with ChangeNotifier {
         'content-type': 'application/json'
       });
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint('List listOrderDetails  inside');
+        // debugPrint('List listOrderDetails  inside');
 
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
 
-        // debugPrintdebugPrint("status ${jsonData["status"]}");
+        // debugPrint("status ${jsonData["status"]}");
 
         return json.decode(response.body);
       } else if (response.statusCode > 400) {
@@ -181,7 +192,7 @@ class SalesProvider with ChangeNotifier {
           _salesReturnOrders = salesReturnResponse.data; // Store fetched data
           notifyListeners(); // Notify listeners to update UI
         } catch (e) {
-          // debugPrintdebugPrint('Error parsing JSON data: $e');
+          // debugPrint('Error parsing JSON data: $e');
         }
       } else {
         debugPrint(
@@ -189,7 +200,7 @@ class SalesProvider with ChangeNotifier {
         throw Exception('Failed to load orders');
       }
     } catch (error) {
-      // debugPrintdebugPrint('Error in fetchOrders: $error');
+      // debugPrint('Error in fetchOrders: $error');
       _salesReturnOrders = [];
       rethrow;
     }
@@ -221,17 +232,17 @@ class SalesProvider with ChangeNotifier {
       }),
     );
 
-    // debugPrintdebugPrint("accessToken $accessToken");
-    // debugPrintdebugPrint("orderId $orderId");
-    // debugPrintdebugPrint("price $price");
-    // debugPrintdebugPrint("quantity $quantity");
-    // debugPrintdebugPrint("cartItemId $cartItemId");
-    // debugPrintdebugPrint("reason $reason");
-    // debugPrintdebugPrint("response.statusCode ${response.statusCode}");
-    // debugPrintdebugPrint("response.body ${response.body}");
+    // debugPrint("accessToken $accessToken");
+    // debugPrint("orderId $orderId");
+    // debugPrint("price $price");
+    // debugPrint("quantity $quantity");
+    // debugPrint("cartItemId $cartItemId");
+    // debugPrint("reason $reason");
+    // debugPrint("response.statusCode ${response.statusCode}");
+    // debugPrint("response.body ${response.body}");
 
     if (response.statusCode == 200) {
-      // debugPrintdebugPrint('Sales return submitted successfully: ${response.body}');
+      // debugPrint('Sales return submitted successfully: ${response.body}');
       notifyListeners();
     } else {
       debugPrint(

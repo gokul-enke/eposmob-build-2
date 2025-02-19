@@ -51,7 +51,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       String ordersId =
-          Provider.of<SalesProvider>(context, listen: false).getOrderId;
+          Provider.of<SalesProvider>(context, listen: false).getOrderNumber;
       // debugPrintdebugPrint(ordersId);
       final response = await SalesProvider().listOrderDetails(
         context,

@@ -39,7 +39,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
     final productSlugController =
         TextEditingController(text: getProduct?.productSlug ?? '');
     final productPriceController =
-        TextEditingController(text: getProduct!.price!.price.toString());
+        TextEditingController(text: getProduct!.price!.toString());
     final productBarcodeController =
         TextEditingController(text: getProduct.barcode ?? 'barcode');
 

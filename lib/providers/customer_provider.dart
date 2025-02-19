@@ -36,12 +36,14 @@ class CustomerProvider extends ChangeNotifier {
     String? filterEmail,
     String? filterPhone,
     String? filterAgeRange,
+    bool sortAscending = false,
     int page = 1,
   }) async {
     // debugPrintdebugPrint("listCustomer");
 
     final queryParameters = <String, String>{
       'page': page.toString(),
+      if (sortAscending) 'sort_asc': 'true',
     };
 
     if (filterName != null && filterName.isNotEmpty) {

@@ -48,6 +48,19 @@ class _CompactQuantityControlState extends State<CompactQuantityControl> {
   }
 
   @override
+  void didUpdateWidget(CompactQuantityControl oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Check if the quantity prop has changed
+    if (widget.quantity != oldWidget.quantity &&
+        widget.quantity != _currentQuantity) {
+      setState(() {
+        _currentQuantity = widget.quantity;
+        _controller.text = _currentQuantity.toString();
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _debounceTimer?.cancel();
     _controller.dispose();

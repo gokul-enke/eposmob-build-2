@@ -113,7 +113,7 @@ class OrderDetailWidget extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${cartItem![index].currency} ${cartItem![index].unitPrice}',
+                            '${cartItem![index].currency} ${cartItem![index].totalPrice}',
                             style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,

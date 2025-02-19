@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 
 class GridSelectionProvider extends ChangeNotifier {
   List<GetProduct>? productList = [];
+  List<GetProduct>? quickAccessProductList = [];
   List<GetProduct>? mainProductList = [];
   List<GetProduct>? filteredProductList = [];
   List<GetProduct>? categoryProductList = [];
@@ -176,7 +177,7 @@ class GridSelectionProvider extends ChangeNotifier {
     String? filterSupplier,
     int page = 1,
   }) async {
-    // debugPrintdebugPrint("LIST ALL PRODUCTS categoryId $categoryId");
+    // debugPrint("LIST ALL PRODUCTS categoryId $categoryId");
 
     // Build query parameters
     final queryParams = <String, String>{
@@ -190,7 +191,7 @@ class GridSelectionProvider extends ChangeNotifier {
       if (filterSupplier != null) 'filter_supplier': filterSupplier,
       'page': page.toString(),
     };
-    // debugPrintdebugPrint("LIST ALL PRODUCTS categoryId $categoryId ");
+    debugPrint("LIST ALL PRODUCTS categoryId $categoryId ");
 
     // Build query parameters
 
@@ -203,11 +204,11 @@ class GridSelectionProvider extends ChangeNotifier {
     try {
       final response = await http.get(url);
 
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint('inside product 200 ${response.body.toString()}');
+        // debugPrint('inside product 200 ${response.body.toString()}');
 
-        // // debugPrintdebugPrint(json.decode(response.body).toString());
+        // // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
 
@@ -216,34 +217,105 @@ class GridSelectionProvider extends ChangeNotifier {
         mainProductList = getProductModel.product;
         categoryProductList = getProductModel.product;
 
-        // debugPrintdebugPrint("categoryListModel.pagination?.toString()");
-        // debugPrintdebugPrint(getProductModel.meta?.toString());
+        // debugPrint("categoryListModel.pagination?.toString()");
+        // debugPrint(getProductModel.meta?.toString());
 
         currentPage = getProductModel.meta?.currentPage ?? 1;
         totalPages = getProductModel.meta?.lastPage ?? 1;
         // selectedCategoryId =
         //     productList!.isEmpty ? 0 : productList![0].categoryId ?? 0;
         notifyListeners();
-        // // debugPrintdebugPrint('List Product Name in Category Provider');
+        // // debugPrint('List Product Name in Category Provider');
       } else {
-        // debugPrintdebugPrint('outside product 200 ${response.body.toString()}');
-        // debugPrintdebugPrint('outside product 200 ${response.statusCode}');
+        // debugPrint('outside product 200 ${response.body.toString()}');
+        // debugPrint('outside product 200 ${response.statusCode}');
       }
     } finally {
       isLoading = false;
       notifyListeners();
     }
   }
+
+  // List Quick Access Products
+
+  Future<void> listQuickAccessProducts({
+    int? categoryId,
+    String? filterName,
+    String? filterCategory,
+    String? filterPrice,
+    String? filterCreatedBy,
+    String? filterProperties,
+    String? filterStore,
+    String? filterSupplier,
+    int page = 1,
+  }) async {
+    // debugPrint("LIST ALL PRODUCTS categoryId $categoryId");
+
+    // Build query parameters
+    final queryParams = <String, String>{
+      if (filterName != null) 'name': filterName,
+      if (filterCategory != null && filterCategory != "0")
+        'category_id': filterCategory,
+      if (filterPrice != null) 'filter_price': filterPrice,
+      if (filterCreatedBy != null) 'filter_created_by': filterCreatedBy,
+      // if (filterProperties != null) 'filter_properties': filterProperties,
+      if (filterStore != null) 'filter_store': filterStore,
+      if (filterSupplier != null) 'filter_supplier': filterSupplier,
+      'page': page.toString(),
+      'quick_access': "true",
+    };
+    debugPrint("LIST ALL PRODUCTS categoryId $categoryId ");
+
+    // Build query parameters
+
+    isLoading = true;
+    // selectedCategoryId = categoryId;
+    notifyListeners();
+    productList = [];
+    final url =
+        Uri.parse(APPUrl.getProductUrl).replace(queryParameters: queryParams);
+    try {
+      final response = await http.get(url);
+
+      debugPrint('inside ${response.statusCode}');
+      if (response.statusCode == 200) {
+        // debugPrint('inside product 200 ${response.body.toString()}');
+
+        // // debugPrint(json.decode(response.body).toString());
+        final jsonData = json.decode(response.body);
+        GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
+
+        quickAccessProductList = getProductModel.product;
+
+        // debugPrint("categoryListModel.pagination?.toString()");
+        // debugPrint(getProductModel.meta?.toString());
+
+        currentPage = getProductModel.meta?.currentPage ?? 1;
+        totalPages = getProductModel.meta?.lastPage ?? 1;
+        // selectedCategoryId =
+        //     productList!.isEmpty ? 0 : productList![0].categoryId ?? 0;
+        notifyListeners();
+        // // debugPrint('List Product Name in Category Provider');
+      } else {
+        // debugPrint('outside product 200 ${response.body.toString()}');
+        // debugPrint('outside product 200 ${response.statusCode}');
+      }
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
   //          *********************** LIST ALL PRODUCTS  API ***************************************************
 
   Future<void> listAllProductsAPI({int? categoryId, String? barCode}) async {
-    // debugPrintdebugPrint("LIST ALL PRODUCTS categoryId $categoryId ");
+    // debugPrint("LIST ALL PRODUCTS categoryId $categoryId ");
     final Map<String, dynamic> apiBodyData = {
       'category_id': categoryId == 0 ? null : categoryId,
       'barcode': barCode,
     };
 
-    // debugPrintdebugPrint("apiBodyData ${apiBodyData.toString()}");
+    debugPrint("apiBodyData ${apiBodyData.toString()}");
 
     isLoading = true;
     // selectedCategoryId = categoryId;
@@ -254,7 +326,7 @@ class GridSelectionProvider extends ChangeNotifier {
       final response = await http.post(url,
           body: json.encode(apiBodyData),
           headers: {'Content-Type': 'application/json'});
-      // debugPrintdebugPrint('inside ${response.body}');
+      // debugPrint('inside ${response.body}');
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
@@ -263,7 +335,7 @@ class GridSelectionProvider extends ChangeNotifier {
         // selectedCategoryId =
         //     productList!.isEmpty ? 0 : productList![0].categoryId ?? 0;
         notifyListeners();
-        // // debugPrintdebugPrint('List Product Name in Category Provider');
+        // debugPrint('List Product Name in Category Provider');
       } else {}
     } finally {
       isLoading = false;
@@ -286,10 +358,10 @@ class GridSelectionProvider extends ChangeNotifier {
 
     try {
       final response = await http.get(url);
-      // debugPrintdebugPrint('Response Status Code: ${response.statusCode}');
+      // debugPrint('Response Status Code: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint('Response Body: ${response.body.toString()}');
+        // debugPrint('Response Body: ${response.body.toString()}');
 
         final jsonData = json.decode(response.body);
         GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
@@ -299,7 +371,7 @@ class GridSelectionProvider extends ChangeNotifier {
         mainProductList = getProductModel.product;
         categoryProductList = getProductModel.product;
 
-        // debugPrintdebugPrint("Pagination Info: ${getProductModel.meta?.toString()}");
+        // debugPrint("Pagination Info: ${getProductModel.meta?.toString()}");
 
         currentPage = getProductModel.meta?.currentPage ?? 1;
         totalPages = getProductModel.meta?.lastPage ?? 1;
@@ -307,12 +379,12 @@ class GridSelectionProvider extends ChangeNotifier {
         notifyListeners();
         return productList; // Return the list of products
       } else {
-        // debugPrintdebugPrint('Error Response: ${response.body.toString()}');
-        // debugPrintdebugPrint('Error Status Code: ${response.statusCode}');
+        // debugPrint('Error Response: ${response.body.toString()}');
+        // debugPrint('Error Status Code: ${response.statusCode}');
         return null; // Return null if the response is not successful
       }
     } catch (e) {
-      // debugPrintdebugPrint('Exception occurred: $e');
+      // debugPrint('Exception occurred: $e');
       return null; // Return null in case of an exception
     } finally {
       isLoading = false;
@@ -325,7 +397,7 @@ class GridSelectionProvider extends ChangeNotifier {
   Future<List<GetProduct>> listAllProductList(
       {required int categoryId, required String barCode}) async {
     List<GetProduct> productLists = [];
-    // debugPrintdebugPrint("LIST ALL PRODUCTS  categoryId $categoryId ");
+    // debugPrint("LIST ALL PRODUCTS  categoryId $categoryId ");
     final Map<String, dynamic> apiBodyData = {
       'category_id': categoryId == 0 ? null : categoryId,
       'barcode': barCode,
@@ -339,11 +411,11 @@ class GridSelectionProvider extends ChangeNotifier {
       final response = await http.post(url,
           body: json.encode(apiBodyData),
           headers: {'Content-Type': 'application/json'});
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // // debugPrintdebugPrint('inside');
+        // // debugPrint('inside');
 
-        // // debugPrintdebugPrint(json.decode(response.body).toString());
+        // // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
         productList = productLists = getProductModel.product ?? [];
@@ -352,7 +424,7 @@ class GridSelectionProvider extends ChangeNotifier {
         //     productList!.isEmpty ? 0 : productList![0].categoryId ?? 0;
         return productLists;
 
-        // // debugPrintdebugPrint('List Product Name in Category Provider');
+        // // debugPrint('List Product Name in Category Provider');
       } else {
         return productLists;
       }
@@ -385,7 +457,7 @@ class GridSelectionProvider extends ChangeNotifier {
       'status': "failed",
       'message': "Something went wrong, Please try Again!"
     };
-    // debugPrintdebugPrint(apiBodyData.toString());
+    // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.addProductUrl);
     try {
       final response =
@@ -393,10 +465,10 @@ class GridSelectionProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(json.decode(response.body).toString());
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else {
         return error;
@@ -421,17 +493,17 @@ class GridSelectionProvider extends ChangeNotifier {
       'status': "failed",
       'message': "Something went wrong, Please try Again!"
     };
-    // debugPrintdebugPrint(apiBodyData.toString());
+    // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.addProductNameUrl);
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(json.decode(response.body).toString());
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else {
         return error;
@@ -466,7 +538,7 @@ class GridSelectionProvider extends ChangeNotifier {
       'stock_applicable': productPropStockApplicable,
     };
 
-    // debugPrintdebugPrint("add prop body ${apiBodyData.toString()}");
+    // debugPrint("add prop body ${apiBodyData.toString()}");
 
 //     Two keys in a map literal shouldn't be equal.
 // Change or remove the duplicate key.
@@ -474,7 +546,7 @@ class GridSelectionProvider extends ChangeNotifier {
       'status': "failed",
       'message': "Something went wrong, Please try Again!"
     };
-    // debugPrintdebugPrint("apiBodyData + ${apiBodyData.toString()}");
+    // debugPrint("apiBodyData + ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.addProductPropsUrl);
     try {
       final response =
@@ -482,10 +554,10 @@ class GridSelectionProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(json.decode(response.body).toString());
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else {
         return error;
@@ -508,21 +580,21 @@ class GridSelectionProvider extends ChangeNotifier {
       'alt[]': alt,
       'file_path[]': filePath,
     };
-    // debugPrintdebugPrint("apiBodyData + ${apiBodyData.toString()}$filePath");
+    // debugPrint("apiBodyData + ${apiBodyData.toString()}$filePath");
     final Map<String, dynamic> error = {
       'status': "failed",
       'message': "Something went wrong, Please try Again!"
     };
-    // debugPrintdebugPrint(apiBodyData.toString());
+    // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.addProductImageUrl);
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         //  'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         listAllProducts(categoryId: 0);
         listAllProductsAPI(categoryId: 0);
         notifyListeners();
@@ -557,7 +629,7 @@ class GridSelectionProvider extends ChangeNotifier {
       'status': "failed",
       'message': "Something went wrong, Please try Again!"
     };
-    // debugPrintdebugPrint(apiBodyData.toString());
+    // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.editProductUrl);
     try {
       final response =
@@ -565,10 +637,10 @@ class GridSelectionProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(json.decode(response.body).toString());
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else {
         return error;
@@ -600,17 +672,17 @@ class GridSelectionProvider extends ChangeNotifier {
       'message': "Something went wrong, Please try Again!"
     };
 
-    // debugPrintdebugPrint(apiBodyData.toString());
+    // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.editProductNameUrl);
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(json.decode(response.body).toString());
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else {
         return error;
@@ -635,14 +707,14 @@ class GridSelectionProvider extends ChangeNotifier {
       'stock_applicable': productPropStockApplicable,
     };
 
-    // debugPrintdebugPrint("edit prop body ${apiBodyData.toString()}");
+    // debugPrint("edit prop body ${apiBodyData.toString()}");
 //     Two keys in a map literal shouldn't be equal.
 // Change or remove the duplicate key.
     final Map<String, dynamic> error = {
       'status': "failed",
       'message': "Something went wrong, Please try Again!"
     };
-    // debugPrintdebugPrint(apiBodyData.toString());
+    // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.editProductPropsUrl);
     try {
       final response =
@@ -650,10 +722,10 @@ class GridSelectionProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(json.decode(response.body).toString());
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else {
         return error;
@@ -680,16 +752,16 @@ class GridSelectionProvider extends ChangeNotifier {
       'status': "failed",
       'message': "Something went wrong, Please try Again!"
     };
-    // debugPrintdebugPrint(apiBodyData.toString());
+    // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.editProductImageUrl);
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         //  'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
 
         return json.decode(response.body);
       } else {
@@ -713,10 +785,10 @@ class GridSelectionProvider extends ChangeNotifier {
         'Content-Type': 'application/json'
       });
 
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(json.decode(response.body).toString());
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else {
         return error;
@@ -740,18 +812,18 @@ class GridSelectionProvider extends ChangeNotifier {
     required List<Map<String, dynamic>> productProperties,
   }) async {
     // Print all parameters
-    // debugPrintdebugPrint("Access Token: $accessToken");
-    // debugPrintdebugPrint("Product ID: $productId");
-    // debugPrintdebugPrint("Store ID: $storeId");
-    // debugPrintdebugPrint("Quantity: $quantity");
-    // debugPrintdebugPrint("Purchase Rate: $purchaseRate");
-    // debugPrintdebugPrint("Retail Price: $retailPrice");
-    // debugPrintdebugPrint("Wholesale Price: $wholesalePrice");
-    // debugPrintdebugPrint("Wholesale Min Unit: $wholesaleMinUnit");
-    // debugPrintdebugPrint("Expiry Date: $expiryDate");
-    // debugPrintdebugPrint("Batch Number: $batchNumber");
-    // debugPrintdebugPrint("Unit: $unit");
-    // debugPrintdebugPrint("Product Properties: ${jsonEncode(productProperties)}");
+    // debugPrint("Access Token: $accessToken");
+    // debugPrint("Product ID: $productId");
+    // debugPrint("Store ID: $storeId");
+    // debugPrint("Quantity: $quantity");
+    // debugPrint("Purchase Rate: $purchaseRate");
+    // debugPrint("Retail Price: $retailPrice");
+    // debugPrint("Wholesale Price: $wholesalePrice");
+    // debugPrint("Wholesale Min Unit: $wholesaleMinUnit");
+    // debugPrint("Expiry Date: $expiryDate");
+    // debugPrint("Batch Number: $batchNumber");
+    // debugPrint("Unit: $unit");
+    // debugPrint("Product Properties: ${jsonEncode(productProperties)}");
 
     final Map<String, dynamic> apiBodyData = {
       'product_id': productId,
@@ -768,7 +840,7 @@ class GridSelectionProvider extends ChangeNotifier {
       'tax_include': "N"
     };
 
-    // debugPrintdebugPrint("API Body Data: ${apiBodyData.toString()}");
+    // debugPrint("API Body Data: ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.addToStock);
     try {
       final response = await http.post(url,
@@ -778,10 +850,10 @@ class GridSelectionProvider extends ChangeNotifier {
             'Content-Type': 'application/json'
           });
 
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(json.decode(response.body).toString());
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         listAllProducts();
         listAllProductsAPI();
         notifyListeners();
@@ -823,12 +895,12 @@ class GridSelectionProvider extends ChangeNotifier {
         },
       ).timeout(const Duration(seconds: 15));
 
-      // debugPrintdebugPrint('inside listSTockAPI ${response.statusCode}');
+      // debugPrint('inside listSTockAPI ${response.statusCode}');
 
       if (response.statusCode == 200) {
         if (response.body.isNotEmpty) {
           final jsonData = json.decode(response.body);
-          // debugPrintdebugPrint('Received JSON data: ${jsonData.toString()}');
+          // debugPrint('Received JSON data: ${jsonData.toString()}');
 
           // Detailed error handling for JSON parsing
           try {
@@ -836,24 +908,24 @@ class GridSelectionProvider extends ChangeNotifier {
             listStockModelDataList = listStockModel.data;
             filteredStockList =
                 List<ListStockModelData>.from(listStockModelDataList!);
-            // debugPrintdebugPrint("categoryListModel.pagination?.toString()");
-            // debugPrintdebugPrint(listStockModel.pagination?.toString());
+            // debugPrint("categoryListModel.pagination?.toString()");
+            // debugPrint(listStockModel.pagination?.toString());
 
             stockCurrentPage = listStockModel.pagination?.currentPage ?? 1;
             stockTotalPages = listStockModel.pagination?.lastPage ?? 1;
             notifyListeners();
           } catch (e) {
-            // debugPrintdebugPrint('Error parsing JSON data: $e');
-            // debugPrintdebugPrint('JSON structure: ${jsonData.runtimeType}');
+            // debugPrint('Error parsing JSON data: $e');
+            // debugPrint('JSON structure: ${jsonData.runtimeType}');
             if (jsonData is Map) {
               jsonData.forEach((key, value) {
-                // debugPrintdebugPrint('Key: $key, Value type: ${value.runtimeType}');
+                // debugPrint('Key: $key, Value type: ${value.runtimeType}');
               });
             }
             throw Exception('Failed to parse stock list data: $e');
           }
         } else {
-          // debugPrintdebugPrint('Empty response body');
+          // debugPrint('Empty response body');
           throw Exception('Received empty response');
         }
       } else {
@@ -862,7 +934,7 @@ class GridSelectionProvider extends ChangeNotifier {
         throw Exception('Failed to load stock list');
       }
     } catch (error) {
-      // debugPrintdebugPrint('Error in listSTockAPI: $error');
+      // debugPrint('Error in listSTockAPI: $error');
       rethrow;
     }
   }
@@ -870,7 +942,7 @@ class GridSelectionProvider extends ChangeNotifier {
 
   void callStockDetails(
       {required int stockId, required String accessToken}) async {
-    // debugPrintdebugPrint("stockId $stockId ");
+    // debugPrint("stockId $stockId ");
 
     final url = Uri.parse("${APPUrl.detailsOfStock}?id=$stockId");
     try {
@@ -879,9 +951,9 @@ class GridSelectionProvider extends ChangeNotifier {
         'Content-Type': 'application/json'
       });
 
-      // debugPrintdebugPrint('inside  listSTockAPI ${response.statusCode}');
+      // debugPrint('inside  listSTockAPI ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
 
         ListStockModelData listStockModel =

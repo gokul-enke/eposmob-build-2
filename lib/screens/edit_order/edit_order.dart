@@ -14,6 +14,7 @@ import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/add_to_cart.dart';
 import 'package:pos_machine/models/add_to_order.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/models/delivery_method.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
@@ -21,6 +22,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
@@ -29,6 +31,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/widgets/compact_quantity_control.dart';
+import 'package:pos_machine/widgets/horizontal_product_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
@@ -56,10 +59,13 @@ class _EditOrderState extends State<EditOrder> {
   GlobalKey _autocompleteProductKey = GlobalKey();
 
   String? mobileNumberText = "";
+  String? initialMobileNumberText = "";
   int? selectedCustomerID;
   String? selectedCustomerPhone;
   CartProvider cartProvider = CartProvider();
   int iconColor = 0;
+  late String deliveryMethod = "";
+  late String deliveryMethodId = "";
   double _balanceAmount = 0;
   UniqueKey keyTile = UniqueKey();
   bool is1tLoading = false;
@@ -73,6 +79,8 @@ class _EditOrderState extends State<EditOrder> {
   TextEditingController unitPriceController = TextEditingController();
   TextEditingController selectedProductIdController = TextEditingController();
   TextEditingController selectedProductNameController = TextEditingController();
+  final TextEditingController _commentController = TextEditingController();
+  final TextEditingController _carNumberController = TextEditingController();
   bool isCustomerFound = false;
   bool isCouponApplied = false;
   final FocusNode _focusNode = FocusNode();
@@ -91,7 +99,60 @@ class _EditOrderState extends State<EditOrder> {
       accessToken: accessToken ?? '',
       cartId: cartId,
     );
+    getOrderDetails();
     _focusNode.addListener(_handleFocusChange);
+  }
+
+  Future<void> getOrderDetails() async {
+    // setState(() {
+    //   isInitLoading = true;
+    // });
+
+    try {
+      String ordersId =
+          Provider.of<SalesProvider>(context, listen: false).getOrderNumber;
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+
+      final response = await SalesProvider()
+          .listOrderDetails(context, ordersId, accessToken ?? "");
+      debugPrint(response.toString());
+      try {
+        OrderDetailsModel orderDetails = OrderDetailsModel.fromJson(response);
+        debugPrint("orderDetails.data!.customerDetails.toString()");
+        debugPrint(orderDetails.data.toString());
+        initialMobileNumberText = orderDetails.data?.customerDetails?.phone;
+        mobileNumberText = orderDetails.data?.customerDetails?.phone;
+        mobileNumberTextController.text =
+            "${orderDetails.data?.customerDetails?.name ?? "NA"} ${orderDetails.data?.customerDetails?.phone}";
+        String? paymentMethod =
+            orderDetails.data?.paymentDetails!.paymentMethod.toString();
+        if (paymentMethod == "CASH") {
+          iconColor = 1;
+        } else if (paymentMethod == "CARD") {
+          iconColor = 2;
+        } else if (paymentMethod == "UPI") {
+          iconColor = 3;
+        }
+        deliveryMethodId = orderDetails.data!.deliveryMethodId.toString();
+        deliveryMethod = orderDetails.data!.deliveryMethodName.toString();
+        _carNumberController.text = orderDetails.data!.orderProps!
+                .firstWhere((prop) => prop.propsCode == "CAR_NUMBER")
+                .propsValue ??
+            "";
+      } catch (e) {
+        debugPrint("Error parsing JSON data: $e");
+      }
+    } catch (error) {
+      // // debugPrintdebugPrint(error.toString());
+      // setState(() {
+      //   orderNumber = "Error fetching order details";
+      // });
+    } finally {
+      // setState(() {
+      //   isInitLoading = false;
+      // });
+    }
   }
 
   @override
@@ -168,7 +229,8 @@ class _EditOrderState extends State<EditOrder> {
     Size size = MediaQuery.of(context).size;
     final productProvider =
         Provider.of<GridSelectionProvider>(context, listen: false);
-
+    int? cartId =
+        Provider.of<CartProvider>(context, listen: false).getCartIDForOrder;
     return SafeArea(
       child: KeyboardListener(
         focusNode: _focusNode,
@@ -191,7 +253,10 @@ class _EditOrderState extends State<EditOrder> {
                       children: [
                         _buildHeader(),
                         const Divider(thickness: 1),
-                        const SizedBox(height: 5),
+                        SizedBox(
+                            height: 100,
+                            child: HorizontalProductView(cartId: cartId)),
+                        const SizedBox(height: 10),
                         _buildOrderHeader(
                           size: size,
                           barcodeController: barcodeController,
@@ -226,7 +291,16 @@ class _EditOrderState extends State<EditOrder> {
                                         mobileNumberTextController:
                                             mobileNumberTextController),
                                     const SizedBox(height: 10),
-                                    _buildPaymentMethodSelection(),
+                                    const SizedBox(height: 10),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _buildPaymentMethodSelection(),
+                                        const SizedBox(height: 10),
+                                        _buildDeliveryMethodSelection(),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),
@@ -263,7 +337,7 @@ class _EditOrderState extends State<EditOrder> {
 
   Widget _buildHeader() {
     String ordersId =
-        Provider.of<SalesProvider>(context, listen: false).getOrderId;
+        Provider.of<SalesProvider>(context, listen: false).getOrderNumber;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1053,6 +1127,135 @@ class _EditOrderState extends State<EditOrder> {
     );
   }
 
+  Widget _buildDeliveryMethodSelection() {
+    Size size = MediaQuery.of(context).size;
+
+    return Consumer<DeliveryMethodsProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading) {
+          return Container();
+        }
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            BuildPaymentRow(
+              amount: "",
+              title: "Delivery Method",
+              firstRowTextStyle: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s14,
+                0.21,
+                ColorManager.kPrimaryColor,
+              ),
+              color: ColorManager.kPrimaryColor,
+            ),
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: provider.deliveryMethods.map((DeliveryMethod method) {
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      deliveryMethod = method.name;
+                      deliveryMethodId = method.id;
+                    });
+                  },
+                  child: BuildBoxShadowContainer(
+                    border: deliveryMethod == method.name
+                        ? Border.all(color: ColorManager.kPrimaryColor)
+                        : null,
+                    margin: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsets.all(8),
+                    blurRadius: 4,
+                    circleRadius: 5,
+                    child: Column(
+                      children: [
+                        Icon(
+                          method.name == "Store Takeaway"
+                              ? Icons.store
+                              : method.name == "Car Delivery"
+                                  ? Icons.car_rental
+                                  : method.name == "Door Delivery"
+                                      ? Icons.doorbell_outlined
+                                      : Icons
+                                          .local_shipping, // Default icon for other methods
+                          size: 16,
+                          color: Colors.black,
+                        ),
+                        Text(
+                          method.name,
+                          style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            FontSize.s10,
+                            0.12,
+                            Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            if (deliveryMethod == "Car Delivery")
+              SizedBox(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    buildColumnWidgetForTextFields(
+                      controller: _carNumberController,
+                      size: size,
+                      margin: const EdgeInsets.all(0),
+                      height: size.height * .06,
+                      hintText: 'Car Number:',
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ),
+              ),
+            // if (deliveryMethod == "Door Delivery")
+            //   SizedBox(
+            //     child: Column(
+            //       mainAxisAlignment: MainAxisAlignment.start,
+            //       crossAxisAlignment: CrossAxisAlignment.start,
+            //       children: [
+            //         buildColumnWidgetForTextFields(
+            //           controller: _transactionNumberController,
+            //           size: size,
+            //           height: size.height * .06,
+            //           margin: const EdgeInsets.all(0),
+            //           hintText: 'Address:',
+            //         ),
+            //         const SizedBox(height: 10),
+            //         buildColumnWidgetForTextFields(
+            //           controller: _transactionNumberController,
+            //           size: size,
+            //           margin: const EdgeInsets.all(0),
+            //           height: size.height * .06,
+            //           hintText: 'Pincode:',
+            //         ),
+            //       ],
+            //     ),
+            //   ),
+            // const SizedBox(height: 10),
+            buildColumnWidgetForTextFields(
+              controller: _commentController,
+              margin: const EdgeInsets.all(0),
+              size: size,
+              height: size.height * .06,
+              hintText: 'Comment:',
+            ),
+            const SizedBox(height: 10),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildActionButtons() {
     return Align(
       alignment: Alignment.bottomCenter,
@@ -1124,184 +1327,195 @@ class _EditOrderState extends State<EditOrder> {
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(
-          child: BuildBoxShadowContainer(
-            circleRadius: 7,
-            alignment: Alignment.centerLeft,
-            margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-            padding: const EdgeInsets.only(left: 15),
-            height: size.height * .07,
-            width: size.width / 3,
-            child: Autocomplete<CustomerListModelData>(
-              key: _autocompletePhoneKey, // Set the key here
-              optionsBuilder: (mobileNumberTextController) async {
-                // debugPrint(mobileNumberTextController.text);
-                if (mobileNumberTextController.text.isEmpty) {
-                  setState(() {
-                    isCustomerFound = false; // Reset validity
-                  });
-                  return const Iterable<CustomerListModelData>.empty();
-                }
+        (initialMobileNumberText != "")
+            ? Expanded(
+                child: buildColumnWidgetForTextFields(
+                  controller: mobileNumberTextController,
+                  readOnly: true,
+                  size: size,
+                  hintText: 'Phone Number',
+                ),
+              )
+            : Expanded(
+                child: BuildBoxShadowContainer(
+                  circleRadius: 7,
+                  alignment: Alignment.centerLeft,
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                  padding: const EdgeInsets.only(left: 15),
+                  height: size.height * .07,
+                  width: size.width / 3,
+                  child: Autocomplete<CustomerListModelData>(
+                    key: _autocompletePhoneKey, // Set the key here
+                    optionsBuilder: (mobileNumberTextController) async {
+                      // debugPrint(mobileNumberTextController.text);
+                      if (mobileNumberTextController.text.isEmpty) {
+                        setState(() {
+                          isCustomerFound = false; // Reset validity
+                        });
+                        return const Iterable<CustomerListModelData>.empty();
+                      }
 
-                String? accessToken =
-                    Provider.of<AuthModel>(context, listen: false).token;
-                // debugPrint("accessToken From AuthModel $accessToken");
-                // debugPrint(mobileNumberTextController.text);
+                      String? accessToken =
+                          Provider.of<AuthModel>(context, listen: false).token;
+                      // debugPrint("accessToken From AuthModel $accessToken");
+                      // debugPrint(mobileNumberTextController.text);
 
-                try {
-                  final response = await CustomerProvider().findCustomerByPhone(
-                      accessToken ?? "",
-                      mobileNumberTextController.text,
-                      context);
+                      try {
+                        final response = await CustomerProvider()
+                            .findCustomerByPhone(accessToken ?? "",
+                                mobileNumberTextController.text, context);
 
-                  if (response["status"] == "success") {
-                    CustomerListModel customerListModel =
-                        CustomerListModel.fromJson(response);
-                    List<CustomerListModelData>? filteredCustomerList =
-                        customerListModel.data;
+                        if (response["status"] == "success") {
+                          CustomerListModel customerListModel =
+                              CustomerListModel.fromJson(response);
+                          List<CustomerListModelData>? filteredCustomerList =
+                              customerListModel.data;
 
-                    if (mobileNumberTextController.text.length == 10 &&
-                        filteredCustomerList!.length == 1) {
-                      setState(() {
-                        isCustomerFound = true;
-                      });
-                    } else {
+                          if (mobileNumberTextController.text.length == 10 &&
+                              filteredCustomerList!.length == 1) {
+                            setState(() {
+                              isCustomerFound = true;
+                            });
+                          } else {
+                            setState(() {
+                              isCustomerFound = false;
+                            });
+                          }
+
+                          return filteredCustomerList!.isNotEmpty
+                              ? filteredCustomerList
+                              : const Iterable<CustomerListModelData>.empty();
+                        } else {
+                          // debugPrint('Error in response: ${response["message"]}');
+                        }
+                      } catch (error) {
+                        // debugPrint('Exception caught: $error');
+                      }
                       setState(() {
                         isCustomerFound = false;
                       });
-                    }
-
-                    return filteredCustomerList!.isNotEmpty
-                        ? filteredCustomerList
-                        : const Iterable<CustomerListModelData>.empty();
-                  } else {
-                    // debugPrint('Error in response: ${response["message"]}');
-                  }
-                } catch (error) {
-                  // debugPrint('Exception caught: $error');
-                }
-                setState(() {
-                  isCustomerFound = false;
-                });
-                return const Iterable<
-                    CustomerListModelData>.empty(); // Return empty if no customers found
-              },
-              displayStringForOption: (CustomerListModelData customer) =>
-                  "${customer.name} ${customer.phone}",
-              onSelected: (CustomerListModelData selection) {
-                String? accessToken =
-                    Provider.of<AuthModel>(context, listen: false).token;
-                // debugPrint("accessToken From AuthModel $accessToken");
-                int? cartId = Provider.of<CartProvider>(context, listen: false)
-                    .getCartIDForOrder;
-                Provider.of<CartProvider>(context, listen: false)
-                    .fetchCartDataFromApi(
-                  customerId: selection.id ?? 0,
-                  accessToken: accessToken ?? '',
-                  cartId: cartId,
-                );
-                setState(() {
-                  mobileNumberText = "";
-                  selectedCustomerID = selection.id!;
-                  selectedCustomerPhone = selection.phone;
-                  selectedCustomer = selection;
-                });
-              },
-              fieldViewBuilder: (BuildContext context,
-                  TextEditingController mobileNumberTextController,
-                  FocusNode focusNode,
-                  VoidCallback onFieldSubmitted) {
-                return TextField(
-                  controller: mobileNumberTextController,
-                  focusNode: focusNode,
-                  decoration: InputDecoration(
-                    hintText: 'Enter mobile number',
-                    hintStyle: buildCustomStyle(
-                      FontWeight.w500,
-                      12,
-                      0.27,
-                      Colors.grey.withOpacity(.5),
-                    ),
-                    border: InputBorder.none,
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      mobileNumberText = value;
-                      selectedCustomerID = null;
-                      selectedCustomerPhone = null;
-                      selectedCustomer = null;
-                    });
-                  },
-                  style: buildCustomStyle(
-                    FontWeight.w500,
-                    12,
-                    0.27,
-                    Colors.black.withOpacity(.5),
-                  ),
-                );
-              },
-              optionsViewBuilder: (BuildContext context,
-                  AutocompleteOnSelected<CustomerListModelData> onSelected,
-                  Iterable<CustomerListModelData> options) {
-                return Align(
-                  alignment: Alignment.topLeft,
-                  child: Material(
-                    elevation: 4,
-                    child: Container(
-                      width: MediaQuery.of(context).size.width / 3,
-                      color: Colors.white,
-                      constraints: const BoxConstraints(maxHeight: 200),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(8.0),
-                        shrinkWrap: true,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: options.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          final CustomerListModelData option =
-                              options.elementAt(index);
-                          return MouseRegion(
-                            onEnter: (_) {
-                              setState(() {
-                                hoverMap[index] = true;
-                              });
-                            },
-                            onExit: (_) {
-                              setState(() {
-                                hoverMap[index] = false;
-                              });
-                            },
-                            child: GestureDetector(
-                              onTap: () {
-                                onSelected(option);
-                              },
-                              child: Container(
-                                color: hoverMap[index] == true
-                                    ? Colors.grey[200]
-                                    : Colors.white,
-                                child: ListTile(
-                                  title: Text(
-                                    "${option.name} ${option.phone}",
-                                    style: buildCustomStyle(
-                                      FontWeight.w500,
-                                      12,
-                                      0.27,
-                                      Colors.black.withOpacity(.5),
+                      return const Iterable<
+                          CustomerListModelData>.empty(); // Return empty if no customers found
+                    },
+                    displayStringForOption: (CustomerListModelData customer) =>
+                        "${customer.name} ${customer.phone}",
+                    onSelected: (CustomerListModelData selection) {
+                      String? accessToken =
+                          Provider.of<AuthModel>(context, listen: false).token;
+                      // debugPrint("accessToken From AuthModel $accessToken");
+                      int? cartId =
+                          Provider.of<CartProvider>(context, listen: false)
+                              .getCartIDForOrder;
+                      Provider.of<CartProvider>(context, listen: false)
+                          .fetchCartDataFromApi(
+                        customerId: selection.id ?? 0,
+                        accessToken: accessToken ?? '',
+                        cartId: cartId,
+                      );
+                      setState(() {
+                        mobileNumberText = "";
+                        selectedCustomerID = selection.id!;
+                        selectedCustomerPhone = selection.phone;
+                        selectedCustomer = selection;
+                      });
+                    },
+                    fieldViewBuilder: (BuildContext context,
+                        TextEditingController mobileNumberTextController,
+                        FocusNode focusNode,
+                        VoidCallback onFieldSubmitted) {
+                      return TextField(
+                        controller: mobileNumberTextController,
+                        focusNode: focusNode,
+                        decoration: InputDecoration(
+                          hintText: 'Enter mobile number',
+                          hintStyle: buildCustomStyle(
+                            FontWeight.w500,
+                            12,
+                            0.27,
+                            Colors.grey.withOpacity(.5),
+                          ),
+                          border: InputBorder.none,
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            mobileNumberText = value;
+                            selectedCustomerID = null;
+                            selectedCustomerPhone = null;
+                            selectedCustomer = null;
+                          });
+                        },
+                        style: buildCustomStyle(
+                          FontWeight.w500,
+                          12,
+                          0.27,
+                          Colors.black.withOpacity(.5),
+                        ),
+                      );
+                    },
+                    optionsViewBuilder: (BuildContext context,
+                        AutocompleteOnSelected<CustomerListModelData>
+                            onSelected,
+                        Iterable<CustomerListModelData> options) {
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          elevation: 4,
+                          child: Container(
+                            width: MediaQuery.of(context).size.width / 3,
+                            color: Colors.white,
+                            constraints: const BoxConstraints(maxHeight: 200),
+                            child: ListView.builder(
+                              padding: const EdgeInsets.all(8.0),
+                              shrinkWrap: true,
+                              physics: const BouncingScrollPhysics(),
+                              itemCount: options.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                final CustomerListModelData option =
+                                    options.elementAt(index);
+                                return MouseRegion(
+                                  onEnter: (_) {
+                                    setState(() {
+                                      hoverMap[index] = true;
+                                    });
+                                  },
+                                  onExit: (_) {
+                                    setState(() {
+                                      hoverMap[index] = false;
+                                    });
+                                  },
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      onSelected(option);
+                                    },
+                                    child: Container(
+                                      color: hoverMap[index] == true
+                                          ? Colors.grey[200]
+                                          : Colors.white,
+                                      child: ListTile(
+                                        title: Text(
+                                          "${option.name} ${option.phone}",
+                                          style: buildCustomStyle(
+                                            FontWeight.w500,
+                                            12,
+                                            0.27,
+                                            Colors.black.withOpacity(.5),
+                                          ),
+                                        ),
+                                        hoverColor: Colors.grey[200],
+                                      ),
                                     ),
                                   ),
-                                  hoverColor: Colors.grey[200],
-                                ),
-                              ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
-                    ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-          ),
-        ),
+                ),
+              ),
         const SizedBox(width: 10),
         BuildBoxShadowContainer(
           height: size.height * .07,
@@ -1325,6 +1539,8 @@ class _EditOrderState extends State<EditOrder> {
                       selectedCustomerPhone = null;
                       selectedCustomer = null;
                       isCustomerFound = false;
+                      mobileNumberText = "";
+                      initialMobileNumberText = "";
                     }),
                     showScaffold(
                       context: context,
@@ -1467,17 +1683,11 @@ class _EditOrderState extends State<EditOrder> {
     );
     _refetchCartData();
     setState(() {
-      iconColor = 0;
-      coupenCodeTextController.clear();
-      _transactionNumberController.clear();
-      _paidAmountController.clear();
-      _balanceAmount = 0;
       _autocompleteProductKey = GlobalKey();
       quantityController.clear();
       barcodeController.clear();
       selectedProductIdController.clear();
       unitPriceController.clear();
-      isCouponApplied = false;
     });
     showScaffold(
       context: context,
@@ -1487,7 +1697,7 @@ class _EditOrderState extends State<EditOrder> {
   }
 
   void _saveOrder() async {
-    // debugPrint("Create Order pressed");
+    debugPrint("Save Order pressed");
     if (selectedCustomerID == null && mobileNumberText == "") {
       showScaffoldError(
         context: context,
@@ -1497,6 +1707,12 @@ class _EditOrderState extends State<EditOrder> {
       showScaffoldError(
         context: context,
         message: "Please chose a Payment Method",
+      );
+    } else if (deliveryMethod == "Car Delivery" &&
+        _carNumberController.text == "") {
+      showScaffoldError(
+        context: context,
+        message: "Please enter Car Number",
       );
     } else {
       String? accessToken =
@@ -1516,10 +1732,12 @@ class _EditOrderState extends State<EditOrder> {
         paymentMethod = "UPI";
       }
 
+      String orderId =
+          Provider.of<SalesProvider>(context, listen: false).getOrderId;
+
       try {
         await Provider.of<CartProvider>(context, listen: false)
-            .addToOrderAPI(
-          cartIds: cartId!,
+            .updateOrderAPI(
           accessToken: accessToken ?? "",
           transactionId: _transactionNumberController.text,
           totalPrice: Provider.of<CartProvider>(context, listen: false)
@@ -1532,12 +1750,18 @@ class _EditOrderState extends State<EditOrder> {
           paidAmount: _paidAmountController.text,
           balanceAmount: _balanceAmount.toString(),
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
+          comment: _commentController.text,
+          deliveryMethodId: deliveryMethodId,
+          carNumber: _carNumberController.text,
+          orderId: orderId,
         )
             .then((response) {
-          if (response["order_number"] != null) {
+          AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
+          debugPrint("this is response of add to order $response");
+          if (response["status"] == "success") {
             showScaffold(
               context: context,
-              message: "Order Saved Succesfully",
+              message: "${addToOrderModel.message}",
             );
 
             // Clear the mobile number after successful save
@@ -1558,6 +1782,10 @@ class _EditOrderState extends State<EditOrder> {
               _transactionNumberController.clear();
               _paidAmountController.clear();
               _balanceAmount = 0;
+              _carNumberController.clear();
+              _commentController.clear();
+              deliveryMethodId = "";
+              deliveryMethod = "";
             });
             resetAutocomplete();
             sideBarController.index.value = 2;
@@ -1570,10 +1798,10 @@ class _EditOrderState extends State<EditOrder> {
           }
         });
       } catch (error) {
-        // debugPrint(error.toString());
+        debugPrint(error.toString());
       }
     }
-    _focusTextField();
+    // _focusTextField();
   }
 
   void _createOrderAndPrint() async {
@@ -1597,6 +1825,12 @@ class _EditOrderState extends State<EditOrder> {
         context: context,
         message: "Please chose a Payment Method",
       );
+    } else if (deliveryMethod == "Car Delivery" &&
+        _carNumberController.text == "") {
+      showScaffoldError(
+        context: context,
+        message: "Please enter Car Number",
+      );
     } else {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
@@ -1615,10 +1849,13 @@ class _EditOrderState extends State<EditOrder> {
         paymentMethod = "UPI";
       }
 
+      String orderId =
+          Provider.of<SalesProvider>(context, listen: false).getOrderId;
+
       try {
         await Provider.of<CartProvider>(context, listen: false)
-            .addToOrderConfirmAPI(
-          cartIds: cartId!,
+            .updateOrderAPI(
+          orderId: orderId,
           accessToken: accessToken ?? "",
           transactionId: _transactionNumberController.text,
           totalPrice: Provider.of<CartProvider>(context, listen: false)
@@ -1631,6 +1868,10 @@ class _EditOrderState extends State<EditOrder> {
           paidAmount: _paidAmountController.text,
           balanceAmount: _balanceAmount.toString(),
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
+          comment: _commentController.text,
+          deliveryMethodId: deliveryMethodId,
+          carNumber: _carNumberController.text,
+          status: "confirmed",
         )
             .then((response) async {
           AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
@@ -1638,10 +1879,11 @@ class _EditOrderState extends State<EditOrder> {
           if (response["status"] == "success") {
             showScaffold(
               context: context,
-              message: "${addToOrderModel.message}",
+              message: "Order Confirmed Successfully",
             );
 
             try {
+              // String ordersId = response["order_number"].toString();
               String ordersId = addToOrderModel.order!.orderNumber.toString();
               String? accessToken =
                   Provider.of<AuthModel>(context, listen: false).token;
@@ -1649,38 +1891,30 @@ class _EditOrderState extends State<EditOrder> {
               final OrderDetailsresponse = await SalesProvider()
                   .listOrderDetails(context, ordersId, accessToken ?? "");
 
-              if (OrderDetailsresponse["status"] == "success") {
-                OrderDetailsModel orderDetails =
-                    OrderDetailsModel.fromJson(OrderDetailsresponse);
-                orderDetailsModelData = orderDetails.data;
-                cart = orderDetailsModelData?.cart;
-                priceSummary = cart?.priceSummary;
-                customerDetails = orderDetailsModelData?.customerDetails;
-                cartItems = cart?.cartItems;
-                orderNumber = orderDetailsModelData?.orderNumber ?? "";
-              }
-            } catch (error) {
-              // debugPrint(error.toString());
-            }
+              OrderDetailsModel orderDetails =
+                  OrderDetailsModel.fromJson(OrderDetailsresponse);
 
-            String formattedTotal = AmountHelper.formatAmount(
-              orderDetailsModelData?.cart?.priceSummary?.netTotal,
-            );
-            String storeName = orderDetailsModelData!.cart!.storeName ?? "";
-            String orderDate = orderDetailsModelData!.orderDate ?? "";
+              String formattedTotal = AmountHelper.formatAmount(
+                orderDetails.data?.cart?.priceSummary?.netTotal,
+              );
+              String storeName = orderDetails.data!.cart!.storeName ?? "";
+              String orderDate = orderDetails.data!.orderDate ?? "";
 
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PrintPage(
-                  storeName: storeName,
-                  cartItems: cartItems!,
-                  formattedTotal: formattedTotal,
-                  orderDate: DateHelper.formatISODate(orderDate),
-                  orderNumber: orderNumber,
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PrintPage(
+                    storeName: storeName,
+                    cartItems: orderDetails.data!.cart!.cartItems!,
+                    formattedTotal: formattedTotal,
+                    orderDate: DateHelper.formatISODate(orderDate),
+                    orderNumber: orderDetails.data!.orderNumber ?? "",
+                  ),
                 ),
-              ),
-            );
+              );
+            } catch (error) {
+              debugPrint(error.toString());
+            }
 
             // Clear the mobile number after successful save
             setState(() {
@@ -1700,6 +1934,10 @@ class _EditOrderState extends State<EditOrder> {
               _transactionNumberController.clear();
               _paidAmountController.clear();
               _balanceAmount = 0;
+              _carNumberController.clear();
+              _commentController.clear();
+              deliveryMethodId = "";
+              deliveryMethod = "";
             });
             resetAutocomplete();
           } else {
@@ -1728,13 +1966,15 @@ class _EditOrderState extends State<EditOrder> {
         context: context,
         message: "Please chose a Payment Method",
       );
+    } else if (deliveryMethod == "Car Delivery" &&
+        _carNumberController.text == "") {
+      showScaffoldError(
+        context: context,
+        message: "Please enter Car Number",
+      );
     } else {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      // debugPrint("accessToken From AuthModel $accessToken");
-      final provider = Provider.of<CartProvider>(context, listen: false);
-      int? cartId = provider.getCartIDForOrder;
-      // debugPrint("$cartId");
 
       String paymentMethod = "";
 
@@ -1746,10 +1986,13 @@ class _EditOrderState extends State<EditOrder> {
         paymentMethod = "UPI";
       }
 
+      String orderId =
+          Provider.of<SalesProvider>(context, listen: false).getOrderId;
+
       try {
         await Provider.of<CartProvider>(context, listen: false)
-            .addToOrderConfirmAPI(
-          cartIds: cartId!,
+            .updateOrderAPI(
+          orderId: orderId,
           accessToken: accessToken ?? "",
           transactionId: _transactionNumberController.text,
           totalPrice: Provider.of<CartProvider>(context, listen: false)
@@ -1762,45 +2005,53 @@ class _EditOrderState extends State<EditOrder> {
           paidAmount: _paidAmountController.text,
           balanceAmount: _balanceAmount.toString(),
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
+          comment: _commentController.text,
+          deliveryMethodId: deliveryMethodId,
+          carNumber: _carNumberController.text,
+          status: "confirmed",
         )
-            .then((response) {
-          AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
-          // debugPrint("$response");
-          if (response["status"] == "success") {
-            showScaffold(
-              context: context,
-              message: "${addToOrderModel.message}",
-            );
-
-            // Clear the mobile number after successful save
-            setState(() {
-              mobileNumberText = ""; // Clear the variable
-              selectedCustomerID = null;
-              selectedCustomerPhone = null;
-              iconColor = 0;
-              mobileNumberTextController.clear();
-              quantityController.clear();
-              barcodeController.clear();
-              selectedProductIdController.clear();
-              unitPriceController.clear();
-              isCustomerFound = false;
-              selectedCustomer = null;
-              isCouponApplied = false;
-              coupenCodeTextController.clear();
-              _transactionNumberController.clear();
-              _paidAmountController.clear();
-              _balanceAmount = 0;
-            });
-            resetAutocomplete();
-          } else {
-            showScaffoldError(
-              context: context,
-              message: "${addToOrderModel.message}",
-            );
-          }
+            .then((response) async {
+          // AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
+          // debugPrint("this is response of add to order $response");
+          // if (response["status"] == "success") {
+          showScaffold(
+            context: context,
+            message: "Order Confirmed Successfully",
+          );
+          sideBarController.index.value = 2;
+          // Clear the mobile number after successful save
+          setState(() {
+            mobileNumberText = ""; // Clear the variable
+            selectedCustomerID = null;
+            selectedCustomerPhone = null;
+            iconColor = 0;
+            mobileNumberTextController.clear();
+            quantityController.clear();
+            barcodeController.clear();
+            selectedProductIdController.clear();
+            unitPriceController.clear();
+            isCustomerFound = false;
+            selectedCustomer = null;
+            isCouponApplied = false;
+            coupenCodeTextController.clear();
+            _transactionNumberController.clear();
+            _paidAmountController.clear();
+            _balanceAmount = 0;
+            _carNumberController.clear();
+            _commentController.clear();
+            deliveryMethodId = "";
+            deliveryMethod = "";
+          });
+          resetAutocomplete();
+          // } else {
+          //   showScaffoldError(
+          //     context: context,
+          //     message: "${addToOrderModel.message}",
+          //   );
+          // }
         });
       } catch (error) {
-        // debugPrint(error.toString());
+        debugPrint(error.toString());
       }
     }
     _focusTextField();

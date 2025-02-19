@@ -212,23 +212,27 @@ class ProductPrice {
   final dynamic oldPrice;
   final dynamic price;
   final dynamic percentage;
+  final dynamic totalPrice;
 
   ProductPrice({
     this.oldPrice,
     this.price,
     this.percentage,
+    this.totalPrice,
   });
 
   factory ProductPrice.fromJson(Map<String, dynamic> json) => ProductPrice(
         oldPrice: json["old_price"],
-        price: json["price"],
+        price: json["base_price"],
         percentage: json["percentage"],
+        totalPrice: json["total_price"],
       );
 
   Map<String, dynamic> toJson() => {
         "old_price": oldPrice,
         "price": price,
         "percentage": percentage,
+        "total_price": totalPrice,
       };
 }
 

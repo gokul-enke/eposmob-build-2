@@ -765,9 +765,10 @@ class _SalesScreenState extends State<SalesScreen> {
                                                     sideBarController
                                                         .index.value = 11;
 
-                                                    orderProvider.setOrderId(
-                                                        order.orderNumber ??
-                                                            "0");
+                                                    orderProvider
+                                                        .setOrderNumber(
+                                                            order.orderNumber ??
+                                                                "0");
                                                   },
                                                   child: Text(
                                                     "#${order.orderNumber}",
@@ -925,7 +926,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                           ),
                                                           onPressed: () async {
                                                             orderProvider
-                                                                .setOrderId(order
+                                                                .setOrderNumber(order
                                                                     .orderNumber
                                                                     .toString());
                                                             sideBarController
@@ -933,38 +934,49 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                 .value = 11;
                                                           },
                                                         )),
-                                                    BuildBoxShadowContainer(
-                                                        margin: const EdgeInsets
-                                                            .only(
-                                                            left: 5, right: 5),
-                                                        color: ColorManager
-                                                            .kPrimaryColor
-                                                            .withOpacity(0.9),
-                                                        circleRadius: 5,
-                                                        child: IconButton(
-                                                          icon: const Icon(
-                                                            Icons.edit,
-                                                            size: 18,
-                                                            color: Colors.white,
-                                                          ),
-                                                          onPressed: () async {
-                                                            Provider.of<CartProvider>(
-                                                                    context,
-                                                                    listen:
-                                                                        false)
-                                                                .setCartIDForOrder(
-                                                                    int.parse(order
-                                                                        .cartId
-                                                                        .toString()));
-                                                            orderProvider
-                                                                .setOrderId(order
-                                                                    .orderNumber
-                                                                    .toString());
-                                                            sideBarController
-                                                                .index
-                                                                .value = 51;
-                                                          },
-                                                        )),
+                                                    (order.status == "new")
+                                                        ? BuildBoxShadowContainer(
+                                                            margin:
+                                                                const EdgeInsets
+                                                                    .only(
+                                                                    left: 5,
+                                                                    right: 5),
+                                                            color: ColorManager
+                                                                .kPrimaryColor
+                                                                .withOpacity(
+                                                                    0.9),
+                                                            circleRadius: 5,
+                                                            child: IconButton(
+                                                              icon: const Icon(
+                                                                Icons.edit,
+                                                                size: 18,
+                                                                color: Colors
+                                                                    .white,
+                                                              ),
+                                                              onPressed:
+                                                                  () async {
+                                                                Provider.of<CartProvider>(
+                                                                        context,
+                                                                        listen:
+                                                                            false)
+                                                                    .setCartIDForOrder(
+                                                                        int.parse(order
+                                                                            .cartId
+                                                                            .toString()));
+                                                                orderProvider
+                                                                    .setOrderNumber(order
+                                                                        .orderNumber
+                                                                        .toString());
+                                                                orderProvider
+                                                                    .setOrderId(
+                                                                        order.id
+                                                                            .toString());
+                                                                sideBarController
+                                                                    .index
+                                                                    .value = 51;
+                                                              },
+                                                            ))
+                                                        : Container(),
                                                     BuildBoxShadowContainer(
                                                         margin: const EdgeInsets
                                                             .only(
@@ -1009,63 +1021,59 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                       OrderDetailsModel
                                                                           .fromJson(
                                                                               OrderDetailsresponse);
-                                                                  setState(() {
-                                                                    orderDetails
-                                                                        .data;
-                                                                    cartItems =
-                                                                        orderDetailsModelData
-                                                                            ?.cart
-                                                                            ?.cartItems;
 
-                                                                    orderNumber =
-                                                                        orderDetailsModelData?.orderNumber ??
-                                                                            "";
-                                                                  });
+                                                                  String
+                                                                      formattedTotal =
+                                                                      AmountHelper
+                                                                          .formatAmount(
+                                                                    orderDetails
+                                                                        .data
+                                                                        ?.cart
+                                                                        ?.priceSummary
+                                                                        ?.netTotal,
+                                                                  );
+                                                                  String
+                                                                      storeName =
+                                                                      orderDetails
+                                                                              .data!
+                                                                              .cart!
+                                                                              .storeName ??
+                                                                          "";
+                                                                  String
+                                                                      orderDate =
+                                                                      orderDetails
+                                                                              .data!
+                                                                              .orderDate ??
+                                                                          "";
+
+                                                                  Navigator
+                                                                      .push(
+                                                                    context,
+                                                                    MaterialPageRoute(
+                                                                      builder:
+                                                                          (context) =>
+                                                                              PrintPage(
+                                                                        storeName:
+                                                                            storeName,
+                                                                        cartItems:
+                                                                            orderDetails.data?.cart?.cartItems ??
+                                                                                [],
+                                                                        formattedTotal:
+                                                                            formattedTotal,
+                                                                        orderDate:
+                                                                            DateHelper.formatISODate(orderDate),
+                                                                        orderNumber: orderDetails
+                                                                            .data!
+                                                                            .orderNumber
+                                                                            .toString(),
+                                                                      ),
+                                                                    ),
+                                                                  );
                                                                 }
                                                               } catch (error) {
                                                                 debugPrint(error
                                                                     .toString());
                                                               }
-
-                                                              String
-                                                                  formattedTotal =
-                                                                  AmountHelper
-                                                                      .formatAmount(
-                                                                orderDetailsModelData
-                                                                    ?.cart
-                                                                    ?.priceSummary
-                                                                    ?.netTotal,
-                                                              );
-                                                              String storeName =
-                                                                  orderDetailsModelData!
-                                                                          .cart!
-                                                                          .storeName ??
-                                                                      "";
-                                                              String orderDate =
-                                                                  orderDetailsModelData!
-                                                                          .orderDate ??
-                                                                      "";
-
-                                                              Navigator.push(
-                                                                context,
-                                                                MaterialPageRoute(
-                                                                  builder:
-                                                                      (context) =>
-                                                                          PrintPage(
-                                                                    storeName:
-                                                                        storeName,
-                                                                    cartItems:
-                                                                        cartItems!,
-                                                                    formattedTotal:
-                                                                        formattedTotal,
-                                                                    orderDate: DateHelper
-                                                                        .formatISODate(
-                                                                            orderDate),
-                                                                    orderNumber:
-                                                                        orderNumber,
-                                                                  ),
-                                                                ),
-                                                              );
                                                             })),
                                                     BuildBoxShadowContainer(
                                                         margin: const EdgeInsets

@@ -218,7 +218,7 @@ class _KioskScreenState extends State<KioskScreen> {
                     ? product.attachment![0].filePath ??
                         'https://via.placeholder.com/150'
                     : 'https://via.placeholder.com/150',
-                product.price?.price ?? 0,
+                product.price.toString(),
                 product.productId ?? 0,
                 product.currency ?? 'INR',
               );
@@ -274,8 +274,7 @@ class _KioskScreenState extends State<KioskScreen> {
                     attachment:
                         productProvider.productList![index].attachment ?? [],
                     isSelected: false,
-                    price:
-                        "${productProvider.productList![index].price!.price}",
+                    price: "${productProvider.productList![index].price}",
                     title: productProvider.productList![index].productName!,
                     weight: productProvider.productList![index].unit ?? '',
                     customerId: customerId ?? 1,
