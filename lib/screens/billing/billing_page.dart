@@ -84,6 +84,12 @@ class _BillingPageState extends State<BillingPage> {
   final FocusNode _focusNode = FocusNode();
   final FocusNode _barcodeNode = FocusNode();
 
+  bool isLoadingClearCart = false;
+  bool isLoadingSaveOrder = false;
+  bool isLoadingCreateOrder = false;
+  bool isLoadingConfirmOrder = false;
+  bool isLoadingAddItem = false;
+
   @override
   void initState() {
     super.initState();
@@ -221,8 +227,7 @@ class _BillingPageState extends State<BillingPage> {
                       children: [
                         _buildHeader(),
                         const Divider(thickness: 1),
-                        const SizedBox(
-                            height: 100, child: HorizontalProductView()),
+                        const HorizontalProductView(),
                         const SizedBox(height: 10),
                         _buildOrderHeader(
                           size: size,
@@ -519,56 +524,74 @@ class _BillingPageState extends State<BillingPage> {
                               title: "Add Item",
                               boxColor: ColorManager.kButtonGreen,
                               borderColor: ColorManager.kButtonGreen,
+                              isLoading: isLoadingAddItem,
                               fct: () {
-                                String? accessToken = Provider.of<AuthModel>(
-                                        context,
-                                        listen: false)
-                                    .token;
-                                int? customerId = Provider.of<AuthModel>(
-                                        context,
-                                        listen: false)
-                                    .userId;
-                                debugPrint(
-                                    "accessToken From AuthModel $accessToken");
-                                Provider.of<CartProvider>(context,
-                                        listen: false)
-                                    .addToCartAPI(
-                                  customerId: customerId!,
-                                  productId: int.parse(
-                                      selectedProductIdController.text),
-                                  quantity:
-                                      double.parse(quantityController.text),
-                                  unitPrice: unitPriceController.text,
-                                  accessToken: accessToken ?? "",
-                                )
-                                    .then((value) {
-                                  AddToCartModel addToCartModel =
-                                      AddToCartModel.fromJson(value);
-                                  if (value["status"] == "success") {
-                                    showScaffold(
-                                      context: context,
-                                      message: addToCartModel.message ??
-                                          'Added To Cart',
-                                    );
-                                    setState(() {
-                                      _autocompleteProductKey = GlobalKey();
-                                      quantityController.clear();
-                                      barcodeController.clear();
-                                      selectedProductIdController.clear();
-                                      unitPriceController.clear();
-                                    });
-                                    _focusTextField();
-                                    //  'Order Placed Successfully',
-                                  } else {
-                                    showScaffoldError(
-                                      context: context,
-                                      message: addToCartModel.message ??
-                                          "Error Occured ! Try Again",
-                                    );
-                                    //  'Added To Cart',
-                                  }
+                                setState(() {
+                                  isLoadingAddItem = true; // Start loading
                                 });
-                                _refetchCartData();
+                                try {
+                                  String? accessToken = Provider.of<AuthModel>(
+                                          context,
+                                          listen: false)
+                                      .token;
+                                  int? customerId = Provider.of<AuthModel>(
+                                          context,
+                                          listen: false)
+                                      .userId;
+                                  debugPrint(
+                                      "accessToken From AuthModel $accessToken");
+                                  Provider.of<CartProvider>(context,
+                                          listen: false)
+                                      .addToCartAPI(
+                                    customerId: customerId!,
+                                    productId: int.parse(
+                                        selectedProductIdController.text),
+                                    quantity:
+                                        double.parse(quantityController.text),
+                                    unitPrice: unitPriceController.text,
+                                    accessToken: accessToken ?? "",
+                                  )
+                                      .then((value) {
+                                    AddToCartModel addToCartModel =
+                                        AddToCartModel.fromJson(value);
+                                    if (value["status"] == "success") {
+                                      showScaffold(
+                                        context: context,
+                                        message: addToCartModel.message ??
+                                            'Added To Cart',
+                                      );
+                                      setState(() {
+                                        _autocompleteProductKey = GlobalKey();
+                                        quantityController.clear();
+                                        barcodeController.clear();
+                                        selectedProductIdController.clear();
+                                        unitPriceController.clear();
+                                      });
+                                      _focusTextField();
+                                      //  'Order Placed Successfully',
+                                    } else {
+                                      showScaffoldError(
+                                        context: context,
+                                        message: addToCartModel.message ??
+                                            "Error Occured ! Try Again",
+                                      );
+                                      //  'Added To Cart',
+                                    }
+                                  });
+                                  _refetchCartData();
+                                } catch (e) {
+                                  debugPrint('Error adding item: $e');
+                                  showScaffoldError(
+                                    context: context,
+                                    message:
+                                        "Failed to add item. Please try again.",
+                                  );
+                                } finally {
+                                  debugPrint('Finally adding item');
+                                  setState(() {
+                                    isLoadingAddItem = false; // End loading
+                                  });
+                                }
                               },
                               fontSize: FontSize.s14,
                               height: size.height * .07,
@@ -1244,21 +1267,25 @@ class _BillingPageState extends State<BillingPage> {
             text: 'Clear Cart',
             color: ColorManager.kButtonRed,
             onPressed: _clearCart,
+            isLoading: isLoadingClearCart,
           ),
           _buildActionButton(
             text: 'Save Order',
             color: ColorManager.kButtonYellow,
             onPressed: _saveOrder,
+            isLoading: isLoadingSaveOrder,
           ),
           _buildActionButton(
             text: 'Create Order and Print',
             color: ColorManager.kButtonBlue,
             onPressed: _createOrderAndPrint,
+            isLoading: isLoadingCreateOrder,
           ),
           _buildActionButton(
             text: 'Confirm Order',
             color: ColorManager.kButtonGreen,
             onPressed: _confirmOrder,
+            isLoading: isLoadingConfirmOrder,
           ),
         ],
       ),
@@ -1269,12 +1296,13 @@ class _BillingPageState extends State<BillingPage> {
     required String text,
     required Color color,
     required VoidCallback onPressed,
+    required bool isLoading,
   }) {
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: GestureDetector(
-          onTap: onPressed,
+          onTap: isLoading ? null : onPressed,
           child: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
@@ -1282,14 +1310,22 @@ class _BillingPageState extends State<BillingPage> {
               color: color,
             ),
             child: Center(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: Colors.white,
-                ),
-              ),
+              child: isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      text,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
           ),
         ),
@@ -1640,77 +1676,96 @@ class _BillingPageState extends State<BillingPage> {
   }
 
   void _clearCart() {
-    // debugPrint("Clear Cart pressed");
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    Provider.of<CartProvider>(context, listen: false).clearCartAPI(
-      accessToken: accessToken ?? "",
-      customerId: Provider.of<AuthModel>(context, listen: false).userId!,
-      productId: Provider.of<CartProvider>(context, listen: false)
-              .cartData[0]
-              .cartItems![0]
-              .id ??
-          1,
-      remove: "true",
-    );
-    _refetchCartData();
+    debugPrint("Clear Cart pressed");
     setState(() {
-      iconColor = 0;
-      coupenCodeTextController.clear();
-      _transactionNumberController.clear();
-      _paidAmountController.clear();
-      _balanceAmount = 0;
-      _autocompleteProductKey = GlobalKey();
-      quantityController.clear();
-      barcodeController.clear();
-      selectedProductIdController.clear();
-      unitPriceController.clear();
-      isCouponApplied = false;
+      isLoadingClearCart = true; // Indicate that loading has started
     });
-    showScaffold(
-      context: context,
-      message: "Cart Cleared Succesfully",
-    );
-    _focusTextField();
-    resetAutocomplete();
+    try {
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      Provider.of<CartProvider>(context, listen: false).clearCartAPI(
+        accessToken: accessToken ?? "",
+        customerId: Provider.of<AuthModel>(context, listen: false).userId!,
+        productId: Provider.of<CartProvider>(context, listen: false)
+                .cartData[0]
+                .cartItems![0]
+                .id ??
+            1,
+        remove: "true",
+      );
+      _refetchCartData();
+      setState(() {
+        iconColor = 0;
+        coupenCodeTextController.clear();
+        _transactionNumberController.clear();
+        _paidAmountController.clear();
+        _balanceAmount = 0;
+        _autocompleteProductKey = GlobalKey();
+        quantityController.clear();
+        barcodeController.clear();
+        selectedProductIdController.clear();
+        unitPriceController.clear();
+        isCouponApplied = false;
+      });
+      showScaffold(
+        context: context,
+        message: "Cart Cleared Succesfully",
+      );
+      _focusTextField();
+      resetAutocomplete();
+    } catch (e) {
+      debugPrint("Error clearing cart: $e");
+      showScaffoldError(
+        context: context,
+        message: "Failed to clear cart. Please try again.",
+      );
+    } finally {
+      setState(() {
+        isLoadingClearCart = false;
+      });
+    }
   }
 
   void _saveOrder() async {
+    setState(() {
+      isLoadingSaveOrder = true; // Indicate that loading has started
+    });
     debugPrint("Save Order pressed");
-    if (selectedCustomerID == null && mobileNumberText == "") {
-      showScaffoldError(
-        context: context,
-        message: "Please select a customer",
-      );
-    } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
-      showScaffoldError(
-        context: context,
-        message: "Please chose a Payment Method",
-      );
-    } else if (deliveryMethod == "Car Delivery" &&
-        _carNumberController.text == "") {
-      showScaffoldError(
-        context: context,
-        message: "Please enter Car Number",
-      );
-    } else {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      // debugPrint("accessToken From AuthModel $accessToken");
-      final provider = Provider.of<CartProvider>(context, listen: false);
-      int? cartId = provider.getCartIDForOrder;
-      // debugPrint("$cartId");
+    try {
+      if (selectedCustomerID == null && mobileNumberText == "") {
+        showScaffoldError(
+          context: context,
+          message: "Please select a customer",
+        );
+      } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
+        showScaffoldError(
+          context: context,
+          message: "Please chose a Payment Method",
+        );
+      } else if (deliveryMethod == "Car Delivery" &&
+          _carNumberController.text == "") {
+        showScaffoldError(
+          context: context,
+          message: "Please enter Car Number",
+        );
+      } else {
+        String? accessToken =
+            Provider.of<AuthModel>(context, listen: false).token;
+        // debugPrint("accessToken From AuthModel $accessToken");
+        final provider = Provider.of<CartProvider>(context, listen: false);
+        int? cartId = provider.getCartIDForOrder;
+        // debugPrint("$cartId");
 
-      String paymentMethod = "";
+        String paymentMethod = "";
 
-      if (iconColor == 1) {
-        paymentMethod = "CASH";
-      } else if (iconColor == 2) {
-        paymentMethod = "CARD";
-      } else if (iconColor == 3) {
-        paymentMethod = "UPI";
-      }
+        if (iconColor == 1) {
+          paymentMethod = "CASH";
+        } else if (iconColor == 2) {
+          paymentMethod = "CARD";
+        } else if (iconColor == 3) {
+          paymentMethod = "UPI";
+        }
 
-      try {
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderAPI(
           cartIds: cartId!,
@@ -1769,51 +1824,58 @@ class _BillingPageState extends State<BillingPage> {
             );
           }
         });
-      } catch (error) {
-        // debugPrint(error.toString());
       }
+      _focusTextField();
+    } catch (error) {
+      debugPrint(error.toString());
+    } finally {
+      // Set loading to false at the end of the function
+      setState(() {
+        isLoadingSaveOrder = false; // Indicate that loading has finished
+      });
     }
-    _focusTextField();
   }
 
   void _createOrderAndPrint() async {
     debugPrint("Create Order and Print pressed");
+    setState(() {
+      isLoadingCreateOrder = true; // Indicate that loading has started
+    });
+    try {
+      if (selectedCustomerID == null && mobileNumberText == "") {
+        showScaffoldError(
+          context: context,
+          message: "Please select a customer",
+        );
+      } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
+        showScaffoldError(
+          context: context,
+          message: "Please chose a Payment Method",
+        );
+      } else if (deliveryMethod == "Car Delivery" &&
+          _carNumberController.text == "") {
+        showScaffoldError(
+          context: context,
+          message: "Please enter Car Number",
+        );
+      } else {
+        String? accessToken =
+            Provider.of<AuthModel>(context, listen: false).token;
+        // debugPrint("accessToken From AuthModel $accessToken");
+        final provider = Provider.of<CartProvider>(context, listen: false);
+        int? cartId = provider.getCartIDForOrder;
+        // debugPrint("$cartId");
 
-    if (selectedCustomerID == null && mobileNumberText == "") {
-      showScaffoldError(
-        context: context,
-        message: "Please select a customer",
-      );
-    } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
-      showScaffoldError(
-        context: context,
-        message: "Please chose a Payment Method",
-      );
-    } else if (deliveryMethod == "Car Delivery" &&
-        _carNumberController.text == "") {
-      showScaffoldError(
-        context: context,
-        message: "Please enter Car Number",
-      );
-    } else {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      // debugPrint("accessToken From AuthModel $accessToken");
-      final provider = Provider.of<CartProvider>(context, listen: false);
-      int? cartId = provider.getCartIDForOrder;
-      // debugPrint("$cartId");
+        String paymentMethod = "";
 
-      String paymentMethod = "";
+        if (iconColor == 1) {
+          paymentMethod = "CASH";
+        } else if (iconColor == 2) {
+          paymentMethod = "CARD";
+        } else if (iconColor == 3) {
+          paymentMethod = "UPI";
+        }
 
-      if (iconColor == 1) {
-        paymentMethod = "CASH";
-      } else if (iconColor == 2) {
-        paymentMethod = "CARD";
-      } else if (iconColor == 3) {
-        paymentMethod = "UPI";
-      }
-
-      try {
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderAPI(
           cartIds: cartId!,
@@ -1907,50 +1969,64 @@ class _BillingPageState extends State<BillingPage> {
           //   );
           // }
         });
-      } catch (error) {
-        // debugPrint(error.toString());
       }
+      _focusTextField();
+    } catch (error) {
+      // Handle any errors that occur during the API call
+      debugPrint("Error creating order: $error");
+      showScaffoldError(
+        context: context,
+        message:
+            "An error occurred while creating the order. Please try again.",
+      );
+    } finally {
+      // Set loading to false at the end of the function
+      setState(() {
+        isLoadingCreateOrder = false; // Indicate that loading has finished
+      });
     }
-    _focusTextField();
   }
 
   void _confirmOrder() async {
     debugPrint("Create Order pressed");
-    if (selectedCustomerID == null && mobileNumberText == "") {
-      showScaffoldError(
-        context: context,
-        message: "Please select a customer",
-      );
-    } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
-      showScaffoldError(
-        context: context,
-        message: "Please chose a Payment Method",
-      );
-    } else if (deliveryMethod == "Car Delivery" &&
-        _carNumberController.text == "") {
-      showScaffoldError(
-        context: context,
-        message: "Please enter Car Number",
-      );
-    } else {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      // debugPrint("accessToken From AuthModel $accessToken");
-      final provider = Provider.of<CartProvider>(context, listen: false);
-      int? cartId = provider.getCartIDForOrder;
-      // debugPrint("$cartId");
+    setState(() {
+      isLoadingConfirmOrder = true; // Indicate that loading has started
+    });
+    try {
+      if (selectedCustomerID == null && mobileNumberText == "") {
+        showScaffoldError(
+          context: context,
+          message: "Please select a customer",
+        );
+      } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
+        showScaffoldError(
+          context: context,
+          message: "Please chose a Payment Method",
+        );
+      } else if (deliveryMethod == "Car Delivery" &&
+          _carNumberController.text == "") {
+        showScaffoldError(
+          context: context,
+          message: "Please enter Car Number",
+        );
+      } else {
+        String? accessToken =
+            Provider.of<AuthModel>(context, listen: false).token;
+        // debugPrint("accessToken From AuthModel $accessToken");
+        final provider = Provider.of<CartProvider>(context, listen: false);
+        int? cartId = provider.getCartIDForOrder;
+        // debugPrint("$cartId");
 
-      String paymentMethod = "";
+        String paymentMethod = "";
 
-      if (iconColor == 1) {
-        paymentMethod = "CASH";
-      } else if (iconColor == 2) {
-        paymentMethod = "CARD";
-      } else if (iconColor == 3) {
-        paymentMethod = "UPI";
-      }
+        if (iconColor == 1) {
+          paymentMethod = "CASH";
+        } else if (iconColor == 2) {
+          paymentMethod = "CARD";
+        } else if (iconColor == 3) {
+          paymentMethod = "UPI";
+        }
 
-      try {
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderAPI(
           cartIds: cartId!,
@@ -2011,11 +2087,16 @@ class _BillingPageState extends State<BillingPage> {
           // );
           // }
         });
-      } catch (error) {
-        // debugPrint(error.toString());
+        _focusTextField();
       }
+    } catch (error) {
+      // debugPrint(error.toString());
+    } finally {
+      // Set loading to false at the end of the function
+      setState(() {
+        isLoadingConfirmOrder = false; // Indicate that loading has finished
+      });
     }
-    _focusTextField();
   }
 
   void _getBalanceAmount() {

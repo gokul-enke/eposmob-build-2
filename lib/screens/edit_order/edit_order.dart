@@ -86,6 +86,12 @@ class _EditOrderState extends State<EditOrder> {
   final FocusNode _focusNode = FocusNode();
   final FocusNode _barcodeNode = FocusNode();
 
+  bool isLoadingClearCart = false;
+  bool isLoadingSaveOrder = false;
+  bool isLoadingCreateOrder = false;
+  bool isLoadingConfirmOrder = false;
+  bool isLoadingAddItem = false;
+
   @override
   void initState() {
     super.initState();
@@ -253,9 +259,7 @@ class _EditOrderState extends State<EditOrder> {
                       children: [
                         _buildHeader(),
                         const Divider(thickness: 1),
-                        SizedBox(
-                            height: 100,
-                            child: HorizontalProductView(cartId: cartId)),
+                        HorizontalProductView(cartId: cartId),
                         const SizedBox(height: 10),
                         _buildOrderHeader(
                           size: size,
@@ -556,56 +560,75 @@ class _EditOrderState extends State<EditOrder> {
                               title: "Add Item",
                               boxColor: ColorManager.kButtonGreen,
                               borderColor: ColorManager.kButtonGreen,
+                              isLoading: isLoadingAddItem,
                               fct: () {
-                                String? accessToken = Provider.of<AuthModel>(
-                                        context,
-                                        listen: false)
-                                    .token;
-                                debugPrint(
-                                    "accessToken From AuthModel $accessToken");
-                                int? cartId = Provider.of<CartProvider>(context,
-                                        listen: false)
-                                    .getCartIDForOrder;
-                                Provider.of<CartProvider>(context,
-                                        listen: false)
-                                    .addToCartAPI(
-                                  customerId: 1,
-                                  productId: int.parse(
-                                      selectedProductIdController.text),
-                                  quantity:
-                                      double.parse(quantityController.text),
-                                  unitPrice: unitPriceController.text,
-                                  accessToken: accessToken ?? "",
-                                  cartId: cartId,
-                                )
-                                    .then((value) {
-                                  AddToCartModel addToCartModel =
-                                      AddToCartModel.fromJson(value);
-                                  if (value["status"] == "success") {
-                                    showScaffold(
-                                      context: context,
-                                      message: addToCartModel.message ??
-                                          'Added To Cart',
-                                    );
-                                    setState(() {
-                                      _autocompleteProductKey = GlobalKey();
-                                      quantityController.clear();
-                                      barcodeController.clear();
-                                      selectedProductIdController.clear();
-                                      unitPriceController.clear();
-                                    });
-                                    _focusTextField();
-                                    //  'Order Placed Successfully',
-                                  } else {
-                                    showScaffoldError(
-                                      context: context,
-                                      message: addToCartModel.message ??
-                                          "Error Occured ! Try Again",
-                                    );
-                                    //  'Added To Cart',
-                                  }
+                                setState(() {
+                                  isLoadingAddItem = true; // Start loading
                                 });
-                                _refetchCartData();
+                                try {
+                                  String? accessToken = Provider.of<AuthModel>(
+                                          context,
+                                          listen: false)
+                                      .token;
+                                  debugPrint(
+                                      "accessToken From AuthModel $accessToken");
+                                  int? cartId = Provider.of<CartProvider>(
+                                          context,
+                                          listen: false)
+                                      .getCartIDForOrder;
+                                  Provider.of<CartProvider>(context,
+                                          listen: false)
+                                      .addToCartAPI(
+                                    customerId: 1,
+                                    productId: int.parse(
+                                        selectedProductIdController.text),
+                                    quantity:
+                                        double.parse(quantityController.text),
+                                    unitPrice: unitPriceController.text,
+                                    accessToken: accessToken ?? "",
+                                    cartId: cartId,
+                                  )
+                                      .then((value) {
+                                    AddToCartModel addToCartModel =
+                                        AddToCartModel.fromJson(value);
+                                    if (value["status"] == "success") {
+                                      showScaffold(
+                                        context: context,
+                                        message: addToCartModel.message ??
+                                            'Added To Cart',
+                                      );
+                                      setState(() {
+                                        _autocompleteProductKey = GlobalKey();
+                                        quantityController.clear();
+                                        barcodeController.clear();
+                                        selectedProductIdController.clear();
+                                        unitPriceController.clear();
+                                      });
+                                      _focusTextField();
+                                      //  'Order Placed Successfully',
+                                    } else {
+                                      showScaffoldError(
+                                        context: context,
+                                        message: addToCartModel.message ??
+                                            "Error Occured ! Try Again",
+                                      );
+                                      //  'Added To Cart',
+                                    }
+                                  });
+                                  _refetchCartData();
+                                } catch (e) {
+                                  debugPrint('Error adding item: $e');
+                                  showScaffoldError(
+                                    context: context,
+                                    message:
+                                        "Failed to add item. Please try again.",
+                                  );
+                                } finally {
+                                  debugPrint('Finally adding item');
+                                  setState(() {
+                                    isLoadingAddItem = false; // End loading
+                                  });
+                                }
                               },
                               fontSize: FontSize.s14,
                               height: size.height * .07,
@@ -1266,21 +1289,25 @@ class _EditOrderState extends State<EditOrder> {
             text: 'Clear Cart',
             color: ColorManager.kButtonRed,
             onPressed: _clearCart,
+            isLoading: isLoadingClearCart,
           ),
           _buildActionButton(
             text: 'Save Order',
             color: ColorManager.kButtonYellow,
             onPressed: _saveOrder,
+            isLoading: isLoadingSaveOrder,
           ),
           _buildActionButton(
             text: 'Create Order and Print',
             color: ColorManager.kButtonBlue,
             onPressed: _createOrderAndPrint,
+            isLoading: isLoadingCreateOrder,
           ),
           _buildActionButton(
             text: 'Confirm Order',
             color: ColorManager.kButtonGreen,
             onPressed: _confirmOrder,
+            isLoading: isLoadingConfirmOrder,
           ),
         ],
       ),
@@ -1291,12 +1318,13 @@ class _EditOrderState extends State<EditOrder> {
     required String text,
     required Color color,
     required VoidCallback onPressed,
+    required bool isLoading,
   }) {
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: GestureDetector(
-          onTap: onPressed,
+          onTap: isLoading ? null : onPressed,
           child: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
@@ -1304,14 +1332,22 @@ class _EditOrderState extends State<EditOrder> {
               color: color,
             ),
             child: Center(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: Colors.white,
-                ),
-              ),
+              child: isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      text,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
           ),
         ),
@@ -1669,73 +1705,92 @@ class _EditOrderState extends State<EditOrder> {
   }
 
   void _clearCart() {
-    // debugPrint("Clear Cart pressed");
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    Provider.of<CartProvider>(context, listen: false).clearCartAPI(
-      accessToken: accessToken ?? "",
-      customerId: Provider.of<AuthModel>(context, listen: false).userId!,
-      productId: Provider.of<CartProvider>(context, listen: false)
-              .cartData[0]
-              .cartItems![0]
-              .id ??
-          1,
-      remove: "true",
-    );
-    _refetchCartData();
     setState(() {
-      _autocompleteProductKey = GlobalKey();
-      quantityController.clear();
-      barcodeController.clear();
-      selectedProductIdController.clear();
-      unitPriceController.clear();
+      isLoadingClearCart = true; // Indicate that loading has started
     });
-    showScaffold(
-      context: context,
-      message: "Cart Cleared Succesfully",
-    );
-    _focusTextField();
+    try {
+      // debugPrint("Clear Cart pressed");
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      Provider.of<CartProvider>(context, listen: false).clearCartAPI(
+        accessToken: accessToken ?? "",
+        customerId: Provider.of<AuthModel>(context, listen: false).userId!,
+        productId: Provider.of<CartProvider>(context, listen: false)
+                .cartData[0]
+                .cartItems![0]
+                .id ??
+            1,
+        remove: "true",
+      );
+      _refetchCartData();
+      setState(() {
+        _autocompleteProductKey = GlobalKey();
+        quantityController.clear();
+        barcodeController.clear();
+        selectedProductIdController.clear();
+        unitPriceController.clear();
+      });
+      showScaffold(
+        context: context,
+        message: "Cart Cleared Succesfully",
+      );
+      _focusTextField();
+    } catch (e) {
+      debugPrint("Error clearing cart: $e");
+      showScaffoldError(
+        context: context,
+        message: "Failed to clear cart. Please try again.",
+      );
+    } finally {
+      setState(() {
+        isLoadingClearCart = false;
+      });
+    }
   }
 
   void _saveOrder() async {
-    debugPrint("Save Order pressed");
-    if (selectedCustomerID == null && mobileNumberText == "") {
-      showScaffoldError(
-        context: context,
-        message: "Please select a customer",
-      );
-    } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
-      showScaffoldError(
-        context: context,
-        message: "Please chose a Payment Method",
-      );
-    } else if (deliveryMethod == "Car Delivery" &&
-        _carNumberController.text == "") {
-      showScaffoldError(
-        context: context,
-        message: "Please enter Car Number",
-      );
-    } else {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      // debugPrint("accessToken From AuthModel $accessToken");
-      final provider = Provider.of<CartProvider>(context, listen: false);
-      int? cartId = provider.getCartIDForOrder;
-      // debugPrint("$cartId");
+    setState(() {
+      isLoadingSaveOrder = true; // Indicate that loading has started
+    });
+    try {
+      debugPrint("Save Order pressed");
+      if (selectedCustomerID == null && mobileNumberText == "") {
+        showScaffoldError(
+          context: context,
+          message: "Please select a customer",
+        );
+      } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
+        showScaffoldError(
+          context: context,
+          message: "Please chose a Payment Method",
+        );
+      } else if (deliveryMethod == "Car Delivery" &&
+          _carNumberController.text == "") {
+        showScaffoldError(
+          context: context,
+          message: "Please enter Car Number",
+        );
+      } else {
+        String? accessToken =
+            Provider.of<AuthModel>(context, listen: false).token;
+        // debugPrint("accessToken From AuthModel $accessToken");
+        final provider = Provider.of<CartProvider>(context, listen: false);
+        int? cartId = provider.getCartIDForOrder;
+        // debugPrint("$cartId");
 
-      String paymentMethod = "";
+        String paymentMethod = "";
 
-      if (iconColor == 1) {
-        paymentMethod = "CASH";
-      } else if (iconColor == 2) {
-        paymentMethod = "CARD";
-      } else if (iconColor == 3) {
-        paymentMethod = "UPI";
-      }
+        if (iconColor == 1) {
+          paymentMethod = "CASH";
+        } else if (iconColor == 2) {
+          paymentMethod = "CARD";
+        } else if (iconColor == 3) {
+          paymentMethod = "UPI";
+        }
 
-      String orderId =
-          Provider.of<SalesProvider>(context, listen: false).getOrderId;
+        String orderId =
+            Provider.of<SalesProvider>(context, listen: false).getOrderId;
 
-      try {
         await Provider.of<CartProvider>(context, listen: false)
             .updateOrderAPI(
           accessToken: accessToken ?? "",
@@ -1797,62 +1852,70 @@ class _EditOrderState extends State<EditOrder> {
             );
           }
         });
-      } catch (error) {
-        debugPrint(error.toString());
       }
+    } catch (error) {
+      debugPrint(error.toString());
+    } finally {
+      // Set loading to false at the end of the function
+      setState(() {
+        isLoadingSaveOrder = false; // Indicate that loading has finished
+      });
     }
     // _focusTextField();
   }
 
   void _createOrderAndPrint() async {
-    String orderNumber = "";
-    OrderDetailsModelData? orderDetailsModelData;
-    OrderDetailsModelDataCustomerDetails? customerDetails;
-    OrderDetailsModelDataCart? cart;
-    List<OrderDetailsModelDataCartItem>? cartItems = [];
-    OrderDetailsModelDataPriceSummary? priceSummary;
-    // debugPrint("selectedCustomerID");
-    // debugPrint(selectedCustomerPhone.toString());
-    // debugPrint("mobileNumberText");
-    // debugPrint(mobileNumberText.toString());
-    if (selectedCustomerID == null && mobileNumberText == "") {
-      showScaffoldError(
-        context: context,
-        message: "Please select a customer",
-      );
-    } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
-      showScaffoldError(
-        context: context,
-        message: "Please chose a Payment Method",
-      );
-    } else if (deliveryMethod == "Car Delivery" &&
-        _carNumberController.text == "") {
-      showScaffoldError(
-        context: context,
-        message: "Please enter Car Number",
-      );
-    } else {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      // debugPrint("accessToken From AuthModel $accessToken");
-      final provider = Provider.of<CartProvider>(context, listen: false);
-      int? cartId = provider.getCartIDForOrder;
-      // debugPrint("$cartId");
+    setState(() {
+      isLoadingCreateOrder = true; // Indicate that loading has started
+    });
+    try {
+      String orderNumber = "";
+      OrderDetailsModelData? orderDetailsModelData;
+      OrderDetailsModelDataCustomerDetails? customerDetails;
+      OrderDetailsModelDataCart? cart;
+      List<OrderDetailsModelDataCartItem>? cartItems = [];
+      OrderDetailsModelDataPriceSummary? priceSummary;
+      // debugPrint("selectedCustomerID");
+      // debugPrint(selectedCustomerPhone.toString());
+      // debugPrint("mobileNumberText");
+      // debugPrint(mobileNumberText.toString());
+      if (selectedCustomerID == null && mobileNumberText == "") {
+        showScaffoldError(
+          context: context,
+          message: "Please select a customer",
+        );
+      } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
+        showScaffoldError(
+          context: context,
+          message: "Please chose a Payment Method",
+        );
+      } else if (deliveryMethod == "Car Delivery" &&
+          _carNumberController.text == "") {
+        showScaffoldError(
+          context: context,
+          message: "Please enter Car Number",
+        );
+      } else {
+        String? accessToken =
+            Provider.of<AuthModel>(context, listen: false).token;
+        // debugPrint("accessToken From AuthModel $accessToken");
+        final provider = Provider.of<CartProvider>(context, listen: false);
+        int? cartId = provider.getCartIDForOrder;
+        // debugPrint("$cartId");
 
-      String paymentMethod = "";
+        String paymentMethod = "";
 
-      if (iconColor == 1) {
-        paymentMethod = "CASH";
-      } else if (iconColor == 2) {
-        paymentMethod = "CARD";
-      } else if (iconColor == 3) {
-        paymentMethod = "UPI";
-      }
+        if (iconColor == 1) {
+          paymentMethod = "CASH";
+        } else if (iconColor == 2) {
+          paymentMethod = "CARD";
+        } else if (iconColor == 3) {
+          paymentMethod = "UPI";
+        }
 
-      String orderId =
-          Provider.of<SalesProvider>(context, listen: false).getOrderId;
+        String orderId =
+            Provider.of<SalesProvider>(context, listen: false).getOrderId;
 
-      try {
         await Provider.of<CartProvider>(context, listen: false)
             .updateOrderAPI(
           orderId: orderId,
@@ -1947,49 +2010,57 @@ class _EditOrderState extends State<EditOrder> {
             );
           }
         });
-      } catch (error) {
-        // debugPrint(error.toString());
       }
+      _focusTextField();
+    } catch (error) {
+      debugPrint(error.toString());
+    } finally {
+      setState(() {
+        isLoadingCreateOrder = false; // Indicate that loading has finished
+      });
     }
-    _focusTextField();
   }
 
   void _confirmOrder() async {
-    // debugPrint("Create Order pressed");
-    if (selectedCustomerID == null && mobileNumberText == "") {
-      showScaffoldError(
-        context: context,
-        message: "Please select a customer",
-      );
-    } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
-      showScaffoldError(
-        context: context,
-        message: "Please chose a Payment Method",
-      );
-    } else if (deliveryMethod == "Car Delivery" &&
-        _carNumberController.text == "") {
-      showScaffoldError(
-        context: context,
-        message: "Please enter Car Number",
-      );
-    } else {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
+    // Set loading to true at the start of the function
+    setState(() {
+      isLoadingConfirmOrder = true; // Indicate that loading has started
+    });
+    try {
+      // debugPrint("Create Order pressed");
+      if (selectedCustomerID == null && mobileNumberText == "") {
+        showScaffoldError(
+          context: context,
+          message: "Please select a customer",
+        );
+      } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
+        showScaffoldError(
+          context: context,
+          message: "Please chose a Payment Method",
+        );
+      } else if (deliveryMethod == "Car Delivery" &&
+          _carNumberController.text == "") {
+        showScaffoldError(
+          context: context,
+          message: "Please enter Car Number",
+        );
+      } else {
+        String? accessToken =
+            Provider.of<AuthModel>(context, listen: false).token;
 
-      String paymentMethod = "";
+        String paymentMethod = "";
 
-      if (iconColor == 1) {
-        paymentMethod = "CASH";
-      } else if (iconColor == 2) {
-        paymentMethod = "CARD";
-      } else if (iconColor == 3) {
-        paymentMethod = "UPI";
-      }
+        if (iconColor == 1) {
+          paymentMethod = "CASH";
+        } else if (iconColor == 2) {
+          paymentMethod = "CARD";
+        } else if (iconColor == 3) {
+          paymentMethod = "UPI";
+        }
 
-      String orderId =
-          Provider.of<SalesProvider>(context, listen: false).getOrderId;
+        String orderId =
+            Provider.of<SalesProvider>(context, listen: false).getOrderId;
 
-      try {
         await Provider.of<CartProvider>(context, listen: false)
             .updateOrderAPI(
           orderId: orderId,
@@ -2050,11 +2121,16 @@ class _EditOrderState extends State<EditOrder> {
           //   );
           // }
         });
-      } catch (error) {
-        debugPrint(error.toString());
+        _focusTextField();
       }
+    } catch (error) {
+      debugPrint(error.toString());
+    } finally {
+      // Set loading to false at the end of the function
+      setState(() {
+        isLoadingConfirmOrder = false; // Indicate that loading has finished
+      });
     }
-    _focusTextField();
   }
 
   void _getBalanceAmount() {
