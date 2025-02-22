@@ -63,7 +63,7 @@ class ReportsProvider with ChangeNotifier {
         throw Exception('Failed to load customer account book');
       }
     } catch (error) {
-      // debugPrintdebugPrint('Error fetching customer account book: $error');
+      // debugPrint('Error fetching customer account book: $error');
       rethrow;
     }
   }
@@ -114,7 +114,7 @@ class ReportsProvider with ChangeNotifier {
               GetProductSalesReportResponse.fromJson(jsonData);
           notifyListeners();
         } else {
-          // debugPrintdebugPrint('Empty response body');
+          // debugPrint('Empty response body');
           throw Exception('Received empty response');
         }
       } else {
@@ -123,7 +123,7 @@ class ReportsProvider with ChangeNotifier {
         throw Exception('Failed to load product sales report');
       }
     } catch (error) {
-      // debugPrintdebugPrint('Error fetching product sales report: $error');
+      // debugPrint('Error fetching product sales report: $error');
       rethrow; // Rethrow the error for further handling
     }
   }
@@ -169,7 +169,7 @@ class ReportsProvider with ChangeNotifier {
           _salesReport = GetSalesReportResponse.fromJson(jsonData);
           notifyListeners();
         } else {
-          // debugPrintdebugPrint('Empty response body');
+          // debugPrint('Empty response body');
           throw Exception('Received empty response');
         }
       } else {
@@ -178,7 +178,7 @@ class ReportsProvider with ChangeNotifier {
         throw Exception('Failed to load sales report');
       }
     } catch (error) {
-      // debugPrintdebugPrint('Error fetching sales report: $error');
+      // debugPrint('Error fetching sales report: $error');
       rethrow; // Rethrow the error for further handling
     }
   }
@@ -225,7 +225,7 @@ class ReportsProvider with ChangeNotifier {
               GetSupplierSalesReportResponse.fromJson(jsonData);
           notifyListeners();
         } else {
-          // debugPrintdebugPrint('Empty response body');
+          // debugPrint('Empty response body');
           throw Exception('Received empty response');
         }
       } else {
@@ -234,7 +234,7 @@ class ReportsProvider with ChangeNotifier {
         throw Exception('Failed to load supplier sales report');
       }
     } catch (error) {
-      // debugPrintdebugPrint('Error fetching supplier sales report: $error');
+      // debugPrint('Error fetching supplier sales report: $error');
       rethrow; // Rethrow the error for further handling
     }
   }

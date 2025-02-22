@@ -50,7 +50,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
         accessToken: accessToken ?? "",
       );
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -76,7 +76,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
         amount: amountController.text,
       );
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -177,7 +177,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                           width: 150, //size.width * 0.5,
                           child: CalendarPickerTableCell(
                             onDateSelected: (date) {
-                              // debugPrintdebugPrint(date.toString());
+                              // debugPrint(date.toString());
                               fromDateController.text =
                                   DateFormat('yyyy-MM-dd').format(date);
                               debugPrint(DateFormat('yyyy-MM-dd')
@@ -223,7 +223,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                             margin: const EdgeInsets.only(left: 8),
                             child: CalendarPickerTableCell(
                               onDateSelected: (date) {
-                                // debugPrintdebugPrint(date.toString());
+                                // debugPrint(date.toString());
                                 toDateController.text =
                                     DateFormat('yyyy-MM-dd').format(date);
                                 debugPrint(DateFormat('yyyy-MM-dd')

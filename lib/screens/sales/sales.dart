@@ -76,21 +76,21 @@ class _SalesScreenState extends State<SalesScreen> {
           context: context,
           message: 'File downloaded successfully',
         );
-        // debugPrintdebugPrint('File downloaded successfully to $filePath');
+        // debugPrint('File downloaded successfully to $filePath');
         // You can use a package like open_file to open the PDF if needed
       } else {
         showScaffoldError(
           context: context,
           message: 'Failed to download file',
         );
-        // debugPrintdebugPrint('Failed to download file: ${response.statusCode}');
+        // debugPrint('Failed to download file: ${response.statusCode}');
       }
     } catch (e) {
       showScaffoldError(
         context: context,
         message: 'Error downloading file',
       );
-      // debugPrintdebugPrint('Error downloading file: $e');
+      // debugPrint('Error downloading file: $e');
     }
   }
 
@@ -111,7 +111,7 @@ class _SalesScreenState extends State<SalesScreen> {
         storeId: 1,
       );
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -144,7 +144,7 @@ class _SalesScreenState extends State<SalesScreen> {
         page: page,
       );
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;

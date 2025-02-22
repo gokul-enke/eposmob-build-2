@@ -25,7 +25,7 @@ class ViewReceiptDetailsWidget extends StatelessWidget {
     ReceiptDetails? receiptDetails = invoiceProvider.getReceiptDetails;
     ReceiptData? receiptData = receiptDetails?.data;
 
-    // debugPrintdebugPrint("receiptData : ${receiptData.toString()}");
+    // debugPrint("receiptData : ${receiptData.toString()}");
 
     return SafeArea(
       child: Container(

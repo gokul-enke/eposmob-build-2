@@ -63,7 +63,7 @@ class _CustomerTransactionListScreenState
         showScaffold(context: context, message: "Data Not Found");
       }
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -95,7 +95,7 @@ class _CustomerTransactionListScreenState
         showScaffold(context: context, message: "Data Not Found");
       }
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;

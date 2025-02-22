@@ -37,7 +37,7 @@ Future<TaxCalculationResult> getCategoryTax({
     'retail_price': retailPrice.toString(),
   };
 
-  // debugPrintdebugPrint(queryParameters.toString());
+  // debugPrint(queryParameters.toString());
 
   final uri = Uri.parse(APPUrl.getTaxtDetails)
       .replace(queryParameters: queryParameters);
@@ -51,12 +51,12 @@ Future<TaxCalculationResult> getCategoryTax({
       },
     ).timeout(const Duration(seconds: 15));
 
-    // debugPrintdebugPrint('getCategoryTax API response status: ${response.statusCode}');
+    // debugPrint('getCategoryTax API response status: ${response.statusCode}');
 
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty) {
         final jsonData = json.decode(response.body);
-        // debugPrintdebugPrint('Received JSON data: ${jsonData.toString()}');
+        // debugPrint('Received JSON data: ${jsonData.toString()}');
 
         if (jsonData['status'] == 'success') {
           return TaxCalculationResult.fromJson(jsonData['data']);
@@ -64,7 +64,7 @@ Future<TaxCalculationResult> getCategoryTax({
           throw Exception('API returned error: ${jsonData['message']}');
         }
       } else {
-        // debugPrintdebugPrint('Empty response body');
+        // debugPrint('Empty response body');
         throw Exception('Received empty response');
       }
     } else {
@@ -73,7 +73,7 @@ Future<TaxCalculationResult> getCategoryTax({
       throw Exception('Failed to calculate tax');
     }
   } catch (error) {
-    // debugPrintdebugPrint('Error in getCategoryTax: $error');
+    // debugPrint('Error in getCategoryTax: $error');
     rethrow;
   }
 }

@@ -208,7 +208,7 @@ class GridSelectionProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         // debugPrint('inside product 200 ${response.body.toString()}');
 
-        // // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
 
@@ -225,7 +225,7 @@ class GridSelectionProvider extends ChangeNotifier {
         // selectedCategoryId =
         //     productList!.isEmpty ? 0 : productList![0].categoryId ?? 0;
         notifyListeners();
-        // // debugPrint('List Product Name in Category Provider');
+        // debugPrint('List Product Name in Category Provider');
       } else {
         // debugPrint('outside product 200 ${response.body.toString()}');
         // debugPrint('outside product 200 ${response.statusCode}');
@@ -281,7 +281,7 @@ class GridSelectionProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         // debugPrint('inside product 200 ${response.body.toString()}');
 
-        // // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
 
@@ -295,7 +295,7 @@ class GridSelectionProvider extends ChangeNotifier {
         // selectedCategoryId =
         //     productList!.isEmpty ? 0 : productList![0].categoryId ?? 0;
         notifyListeners();
-        // // debugPrint('List Product Name in Category Provider');
+        // debugPrint('List Product Name in Category Provider');
       } else {
         // debugPrint('outside product 200 ${response.body.toString()}');
         // debugPrint('outside product 200 ${response.statusCode}');
@@ -413,9 +413,9 @@ class GridSelectionProvider extends ChangeNotifier {
           headers: {'Content-Type': 'application/json'});
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // // debugPrint('inside');
+        // debugPrint('inside');
 
-        // // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
         productList = productLists = getProductModel.product ?? [];
@@ -424,7 +424,7 @@ class GridSelectionProvider extends ChangeNotifier {
         //     productList!.isEmpty ? 0 : productList![0].categoryId ?? 0;
         return productLists;
 
-        // // debugPrint('List Product Name in Category Provider');
+        // debugPrint('List Product Name in Category Provider');
       } else {
         return productLists;
       }

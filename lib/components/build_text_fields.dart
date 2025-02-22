@@ -346,10 +346,10 @@ class BuildTextFieldColumn3 extends StatelessWidget {
                                 horizontal: 5, vertical: 0),
                         child: CalendarPickerTableCell(
                           onDateSelected: (date) {
-                            // debugPrintdebugPrint(date.toString());
+                            // debugPrint(date.toString());
                             controller.text =
                                 DateFormat('yyyy-MM-dd').format(date);
-                            // debugPrintdebugPrint(DateFormat('yyyy-MM-dd').format(date));
+                            // debugPrint(DateFormat('yyyy-MM-dd').format(date));
                           },
                         ),
                       ),
@@ -453,7 +453,7 @@ DateTime parseDate(String date) {
   try {
     return DateFormat("dd/MM/yyyy").parse(date);
   } catch (e) {
-    // debugPrintdebugPrint("Error parsing date: $e");
+    // debugPrint("Error parsing date: $e");
     return DateTime.now();
   }
 }

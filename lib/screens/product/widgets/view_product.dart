@@ -76,9 +76,6 @@ class _ViewProductWidgetState extends State<ViewProductWidget>
                   sideBarController.index.value = 14;
                 },
                 text: 'All Products',
-                // Optionally, you can customize the color and size
-                // color: ColorManager.customColor,
-                // size: 20.0,
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

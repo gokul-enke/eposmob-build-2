@@ -63,7 +63,7 @@ class SalesReturnItem {
   final int cartItemId;
   final String price;
   final String reason;
-  final int quantity;
+  final num quantity;
   final DateTime createdAt;
   final DateTime updatedAt;
   final CartItem cartItem;
@@ -87,7 +87,9 @@ class SalesReturnItem {
       cartItemId: json['cart_item_id'],
       price: json['price'] ?? '0.00', // Provide a default value if null
       reason: json['reason'] ?? '', // Provide an empty string if null
-      quantity: json['quantity'],
+      quantity: (json['quantity'] is String)
+          ? num.tryParse(json['quantity'])
+          : json['quantity'],
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
       cartItem: CartItem.fromJson(json['cart_item']),
@@ -100,7 +102,7 @@ class CartItem {
   final int cartId;
   final int categoryId;
   final int productId;
-  final int quantity;
+  final num quantity;
   final String unitPrice;
   final String totalPrice;
   final String taxRate;
@@ -130,7 +132,9 @@ class CartItem {
       cartId: json['cart_id'],
       categoryId: json['category_id'],
       productId: json['product_id'],
-      quantity: json['quantity'],
+      quantity: (json['quantity'] is String)
+          ? num.tryParse(json['quantity'])
+          : json['quantity'],
       unitPrice: json['unit_price'],
       totalPrice: json['total_price'],
       taxRate: json['tax_rate'],

@@ -5,6 +5,7 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/screens/sales_return/widgets/sales_return_detail_modal.dart';
 import 'package:provider/provider.dart';
 import '../../components/build_container_box.dart';
 import '../../components/build_pagination_control.dart';
@@ -52,7 +53,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
         });
       }
     } catch (e) {
-      // debugPrintdebugPrint(e.toString());
+      debugPrint(e.toString());
     }
   }
 
@@ -71,7 +72,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
         _isLoading = false;
       });
     } catch (e) {
-      // debugPrintdebugPrint(e.toString());
+      // debugPrint(e.toString());
     }
   }
 
@@ -110,11 +111,20 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                     circleRadius: 7,
                     offsetValue: const Offset(1, 1),
                     child: _isLoading
-                        ? Container()
+                        ? const Center(
+                            child: SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            ),
+                          )
                         : _buildSalesReturnTable(salesProvider),
                   ),
                 ),
-                _buildPaginationControls(salesProvider),
+                // _buildPaginationControls(salesProvider),
               ],
             ),
           ),
@@ -157,7 +167,6 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
   Widget _buildSalesReturnTable(SalesProvider salesProvider) {
     return Column(
       children: [
-        // Table header row
         Table(
           border: const TableBorder.symmetric(
             outside:
@@ -170,7 +179,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
             0: FlexColumnWidth(1),
             1: FlexColumnWidth(2),
             2: FlexColumnWidth(2),
-            3: FlexColumnWidth(2),
+            3: FlexColumnWidth(1),
+            4: FlexColumnWidth(1),
           },
           children: [
             _buildTableHeader(),
@@ -183,6 +193,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
             itemCount: salesProvider.salesReturnOrders.length,
             itemBuilder: (context, index) {
               SalesReturnOrder order = salesProvider.salesReturnOrders[index];
+              debugPrint('order.orderId ${order.orderId}');
               return Table(
                 border: const TableBorder.symmetric(
                   outside: BorderSide(
@@ -195,7 +206,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                   0: FlexColumnWidth(1),
                   1: FlexColumnWidth(2),
                   2: FlexColumnWidth(2),
-                  3: FlexColumnWidth(2),
+                  3: FlexColumnWidth(1),
+                  4: FlexColumnWidth(1),
                 },
                 children: [
                   _buildTableRow(order, index + 1),
@@ -212,7 +224,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
     return TableRow(
       decoration:
           BoxDecoration(color: ColorManager.tableBGColor.withOpacity(0.4)),
-      children: ["No", "Order ID", "Total Return Amount", "Status"]
+      children: ["No", "Order ID", "Total Return Amount", "Status", "Action"]
           .map((title) => TableCell(
                 verticalAlignment: TableCellVerticalAlignment.middle,
                 child: Padding(
@@ -241,6 +253,33 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
         _buildTableCell(order.orderId.toString()),
         _buildTableCell(order.totalAmount),
         _buildTableCell(order.status.toString(), isStatusCell: true),
+        TableCell(
+            verticalAlignment: TableCellVerticalAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsets.all(15.0),
+              child: Center(
+                child: BuildBoxShadowContainer(
+                    margin: const EdgeInsets.only(left: 5, right: 5),
+                    color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                    circleRadius: 5,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.visibility,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        // Show modal with sales return details
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return SalesReturnDetailModal(order: order);
+                          },
+                        );
+                      },
+                    )),
+              ),
+            )),
       ],
     );
   }
@@ -256,8 +295,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
         iconColor = Colors.green;
       } else if (text == '0') {
         // Pending or failed status
-        iconData = Icons.pending;
-        iconColor = Colors.orange;
+        iconData = Icons.cancel;
+        iconColor = Colors.red;
       } else {
         // Default case
         iconData = Icons.help_outline;

@@ -87,7 +87,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         storeId: 1,
       );
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -105,7 +105,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       SalesProvider orderProvider =
           Provider.of<SalesProvider>(context, listen: false);
 
-      // debugPrintdebugPrint("orderNumberController.text ${orderNumberController.text}");
+      // debugPrint("orderNumberController.text ${orderNumberController.text}");
 
       await orderProvider.fetchOrders(
         accessToken: accessToken ?? '',
@@ -113,10 +113,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         orderNumber: orderNumberController.text,
         customerId: selectedCustomerID,
         // productId: int.parse(selectedProductIdController.text),
-        // // filterName: customerNameController.text,
-        // // filterPrice: amountController.text,
-        // // filterEmail: emailController.text,
-        // // filterPhone: phoneController.text,
+        // filterName: customerNameController.text,
+        // filterPrice: amountController.text,
+        // filterEmail: emailController.text,
+        // filterPhone: phoneController.text,
         date: selectedDate != null
             ? DateFormat('yyyy-MM-dd').format(selectedDate!)
             : '',
@@ -124,7 +124,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         page: page,
       );
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -172,7 +172,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         });
       }
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
       setState(() {
         orderNumber = "Error fetching order details";
       });
@@ -210,22 +210,24 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
               child: ListView(
                 children: [
-                  CustomBackButton(
-                    onPressed: () {
-                      sideBarController.index.value = 50;
-                    },
-                    text: 'Sales Return List',
-                    // Optionally, you can customize the color and size
-                    // color: ColorManager.customColor,
-                    // size: 20.0,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "Sales Return",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s20, 0.30, ColorManager.textColor),
+                      CustomBackButton(
+                        onPressed: () {
+                          sideBarController.index.value = 50;
+                        },
+                        text: 'Sales Return List',
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Sales Return",
+                            style: buildCustomStyle(FontWeightManager.semiBold,
+                                FontSize.s20, 0.30, ColorManager.textColor),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -404,7 +406,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                               orderId: order.id.toString(),
                               orderNumber: order.orderNumber.toString(),
                               date: order.orderDate.toString(),
-                              customer: order.customerDetails!.name.toString(),
+                              customer: order.customerName.toString(),
                             );
                           },
                         );
@@ -442,6 +444,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   const SizedBox(
                     height: 20,
                   ),
+                  _buildCompleteReturnButton(size),
+                  const SizedBox(
+                    height: 20,
+                  ),
                 ],
               ),
             )),
@@ -460,7 +466,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     return GestureDetector(
       onTap: () {
         getOrderDetails(orderNumber);
-        // debugPrintdebugPrint('Card tapped for Order ID: $orderId');
+        // debugPrint('Card tapped for Order ID: $orderId');
       },
       child: Card(
         elevation: 1,
@@ -521,7 +527,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             child: Autocomplete<CustomerListModelData>(
               key: _autocompletePhoneKey, // Set the key here
               optionsBuilder: (mobileNumberTextController) async {
-                // debugPrintdebugPrint(mobileNumberTextController.text);
+                // debugPrint(mobileNumberTextController.text);
                 if (mobileNumberTextController.text.isEmpty) {
                   setState(() {
                     isCustomerFound = false; // Reset validity
@@ -531,8 +537,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
                 String? accessToken =
                     Provider.of<AuthModel>(context, listen: false).token;
-                // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
-                // debugPrintdebugPrint(mobileNumberTextController.text);
+                // debugPrint("accessToken From AuthModel $accessToken");
+                // debugPrint(mobileNumberTextController.text);
 
                 try {
                   final response = await CustomerProvider().findCustomerByPhone(
@@ -561,10 +567,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                         ? filteredCustomerList
                         : const Iterable<CustomerListModelData>.empty();
                   } else {
-                    // debugPrintdebugPrint('Error in response: ${response["message"]}');
+                    // debugPrint('Error in response: ${response["message"]}');
                   }
                 } catch (error) {
-                  // debugPrintdebugPrint('Exception caught: $error');
+                  // debugPrint('Exception caught: $error');
                 }
                 setState(() {
                   isCustomerFound = false;
@@ -577,7 +583,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               onSelected: (CustomerListModelData selection) {
                 String? accessToken =
                     Provider.of<AuthModel>(context, listen: false).token;
-                // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
+                // debugPrint("accessToken From AuthModel $accessToken");
                 Provider.of<CartProvider>(context, listen: false)
                     .fetchCartDataFromApi(
                         customerId: selection.id ?? 0,
@@ -701,7 +707,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     final TextEditingController quantityController = TextEditingController();
     final TextEditingController reasonController = TextEditingController();
     final TextEditingController returnTotalController = TextEditingController();
-    final maxQuantity = int.parse(quantity);
+    final maxQuantity = double.parse(quantity);
     final unitPriceValue = double.parse(unitPrice);
     final maxTotal = maxQuantity * unitPriceValue;
 
@@ -972,6 +978,13 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       const SizedBox(width: 12),
                       ElevatedButton(
                         onPressed: () async {
+                          // if (reasonController.text.isEmpty) {
+                          //   showScaffoldError(
+                          //     context: context,
+                          //     message: 'Please enter reason',
+                          //   );
+                          //   return;
+                          // }
                           try {
                             String? accessToken =
                                 Provider.of<AuthModel>(context, listen: false)
@@ -995,7 +1008,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
                             Navigator.pop(context);
                           } catch (error) {
-                            // debugPrintdebugPrint('Error submitting sales return: $error');
+                            // debugPrint('Error submitting sales return: $error');
                             showScaffoldError(
                               context: context,
                               message: 'Failed to submit sales return',
@@ -1051,41 +1064,119 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           DataColumn(label: Text('Quantity')),
           DataColumn(label: Text('Unit Price')),
           DataColumn(label: Text('Total Price')),
-          // DataColumn(label: Text('Returned Quantity')),
-          // DataColumn(label: Text('Return Total')),
-          // DataColumn(label: Text('Returned')),
+          DataColumn(label: Text('Returned Quantity')),
+          DataColumn(label: Text('Return Total')),
+          DataColumn(label: Text('Returned')),
           DataColumn(label: Text('Action')),
         ],
         rows: cartItems.map((item) {
-          return DataRow(cells: [
-            DataCell(Text(item.productName ?? 'N/A')),
-            DataCell(Text(item.categoryName ?? 'N/A')),
-            DataCell(Text(item.quantity?.toString() ?? '0')),
-            DataCell(Text(item.unitPrice ?? 'N/A')),
-            DataCell(Text(item.totalPrice ?? 'N/A')),
-            // const DataCell(Text(' ')),
-            // const DataCell(Text(' ')),
-            // const DataCell(Text(' ')),
-            DataCell(
-              TextButton(
-                onPressed: () {
-                  _showReturnDialog(
-                    context,
-                    productName: item.productName.toString(),
-                    unitPrice: item.unitPrice.toString(),
-                    orderId: orderDetailsModelData!.ordersId.toString(),
-                    cartItemId: item.id ?? 0,
-                    currency: item.currency.toString(),
-                    totalPrice: item.totalPrice.toString(),
-                    quantity: item.quantity.toString(),
-                  );
-                },
-                child: const Text("Return"),
+          return DataRow(
+            cells: [
+              DataCell(InkWell(
+                  onTap: () {
+                    debugPrint('item.id ${item.id}');
+                    debugPrint('item.quantity ${item.quantity}');
+                    debugPrint('item.unitPrice ${item.unitPrice}');
+                    debugPrint('item.totalPrice ${item.totalPrice}');
+                    debugPrint('item.currency ${item.currency}');
+                    debugPrint('item.productName ${item.productName}');
+                    debugPrint('item.categoryName ${item.categoryName}');
+                    debugPrint('item.productId ${item.productId}');
+                    debugPrint('item.categoryId ${item.categoryId}');
+                    debugPrint('ordersId ${orderDetailsModelData!.ordersId}');
+
+                    _showReturnDialog(
+                      context,
+                      productName: item.productName.toString(),
+                      unitPrice: item.unitPrice.toString(),
+                      orderId: orderDetailsModelData!.ordersId.toString(),
+                      cartItemId: item.id ?? 0,
+                      currency: item.currency.toString(),
+                      totalPrice: item.totalPrice.toString(),
+                      quantity: item.quantity.toString(),
+                    );
+                  },
+                  child: Text(item.productName ?? 'N/A'))),
+              DataCell(Text(item.categoryName ?? 'N/A')),
+              DataCell(Text(item.quantity?.toString() ?? '0')),
+              DataCell(Text(item.unitPrice ?? 'N/A')),
+              DataCell(Text(item.totalPrice ?? 'N/A')),
+              const DataCell(Text(' ')),
+              const DataCell(Text(' ')),
+              const DataCell(
+                Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                  size: 20,
+                ),
               ),
-            )
-          ]);
+              DataCell(
+                TextButton(
+                  onPressed: () {
+                    debugPrint('item.id ${item.id}');
+                    debugPrint('item.quantity ${item.quantity}');
+                    debugPrint('item.unitPrice ${item.unitPrice}');
+                    debugPrint('item.totalPrice ${item.totalPrice}');
+                    debugPrint('item.currency ${item.currency}');
+                    debugPrint('item.productName ${item.productName}');
+                    debugPrint('item.categoryName ${item.categoryName}');
+                    debugPrint('item.productId ${item.productId}');
+                    debugPrint('item.categoryId ${item.categoryId}');
+                    debugPrint('ordersId ${orderDetailsModelData!.ordersId}');
+
+                    _showReturnDialog(
+                      context,
+                      productName: item.productName.toString(),
+                      unitPrice: item.unitPrice.toString(),
+                      orderId: orderDetailsModelData!.ordersId.toString(),
+                      cartItemId: item.id ?? 0,
+                      currency: item.currency.toString(),
+                      totalPrice: item.totalPrice.toString(),
+                      quantity: item.quantity.toString(),
+                    );
+                  },
+                  child: const Text("Return"),
+                ),
+              )
+            ],
+          );
         }).toList(),
       ),
+    );
+  }
+
+  _buildCompleteReturnButton(Size size) {
+    return CustomRoundButton(
+      title: "Create Sales Return",
+      fct: () async {
+        try {
+          String? accessToken =
+              Provider.of<AuthModel>(context, listen: false).token;
+
+          await Provider.of<SalesProvider>(context, listen: false)
+              .completeSalesReturn(
+            accessToken: accessToken ?? '',
+            returnOrderId:
+                int.parse(orderDetailsModelData!.ordersId.toString()),
+          );
+
+          showScaffold(
+            context: context,
+            message: 'Sales Return Created Successfully',
+          );
+
+          Navigator.pop(context);
+        } catch (error) {
+          debugPrint('Error creating sales return: $error');
+          showScaffoldError(
+            context: context,
+            message: 'Failed to create sales return',
+          );
+        }
+      },
+      height: 40,
+      width: size.width,
+      fontSize: FontSize.s13,
     );
   }
 }

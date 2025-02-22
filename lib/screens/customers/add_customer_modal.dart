@@ -334,7 +334,7 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
       child: CustomRoundButton(
         title: "Submit",
         fct: () async {
-          // debugPrintdebugPrint("Add New Customer");
+          // debugPrint("Add New Customer");
           if (_formKey.currentState!.validate()) {
             // Validate the form
             showDialog(
@@ -393,7 +393,7 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
                 }
               });
             } catch (error) {
-              // debugPrintdebugPrint("Error: $error");
+              // debugPrint("Error: $error");
               Navigator.pop(context);
             }
           }

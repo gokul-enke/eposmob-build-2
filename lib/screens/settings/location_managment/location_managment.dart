@@ -56,7 +56,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> {
         }
       });
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;

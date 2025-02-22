@@ -58,7 +58,7 @@ class _OrderListState extends State<OrderList> {
     // _paidAmountController.addListener(_onTextChanged);
 
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
+    // debugPrint("accessToken From AuthModel $accessToken");
     int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
     Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
         customerId: customerId ?? 1, accessToken: accessToken ?? '');
@@ -76,7 +76,7 @@ class _OrderListState extends State<OrderList> {
       });
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
+      // debugPrint("accessToken From AuthModel $accessToken");
       CustomerProvider()
           .listCustomer(accessToken: accessToken ?? "")
           .then((response) {
@@ -91,7 +91,7 @@ class _OrderListState extends State<OrderList> {
         }
       });
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         // Reset loading state if needed
@@ -100,7 +100,7 @@ class _OrderListState extends State<OrderList> {
   }
 
   void _getBalanceAmount() {
-    // debugPrintdebugPrint(_paidAmountController.text);
+    // debugPrint(_paidAmountController.text);
     // Retrieve netTotal from the provider
     num netTotal = Provider.of<CartProvider>(context, listen: false)
             .priceSummary!
@@ -120,7 +120,7 @@ class _OrderListState extends State<OrderList> {
   }
 
   // void _onTextChanged() {
-  //   // debugPrintdebugPrint("called");
+  //   // debugPrint("called");
   //   _getBalanceAmount();
   // }
 
@@ -250,14 +250,14 @@ class _OrderListState extends State<OrderList> {
                             child: Autocomplete<CustomerListModelData>(
                               optionsBuilder:
                                   (mobileNumberTextController) async {
-                                // debugPrintdebugPrint(mobileNumberTextController.text);
+                                // debugPrint(mobileNumberTextController.text);
                                 if (mobileNumberTextController.text.isEmpty) {
                                   return const Iterable<
                                       CustomerListModelData>.empty();
                                 }
                                 if (mobileNumberTextController.text.length <
                                     5) {
-                                  // debugPrintdebugPrint("called");
+                                  // debugPrint("called");
                                   String? accessToken = Provider.of<AuthModel>(
                                           context,
                                           listen: false)
@@ -265,7 +265,7 @@ class _OrderListState extends State<OrderList> {
                                   debugPrint(
                                       "accessToken From AuthModel $accessToken");
 
-                                  // debugPrintdebugPrint(mobileNumberTextController.text);
+                                  // debugPrint(mobileNumberTextController.text);
 
                                   try {
                                     final response = await CustomerProvider()
@@ -292,7 +292,7 @@ class _OrderListState extends State<OrderList> {
                                     }
                                   } catch (error) {
                                     // Handle network or parsing error
-                                    // debugPrintdebugPrint('Exception caught: $error');
+                                    // debugPrint('Exception caught: $error');
                                   }
                                 }
                                 return customerList!;
@@ -502,7 +502,7 @@ class _OrderListState extends State<OrderList> {
                         stream: cartProvider.cartStream,
                         builder: (context, snapshot) {
                           if (snapshot.hasData) {
-                            // debugPrintdebugPrint("Inside Order List Consumer");
+                            // debugPrint("Inside Order List Consumer");
                             List<ListCartModelData>? cartItems = snapshot.data;
                             // List<ListCartModelDataCartItem>? cart =
                             //     cartItems.;
@@ -768,7 +768,7 @@ class _OrderListState extends State<OrderList> {
                 //         String? accessToken =
                 //             Provider.of<AuthModel>(context, listen: false)
                 //                 .token;
-                //         // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
+                //         // debugPrint("accessToken From AuthModel $accessToken");
 
                 //         // Ensure the cart ID is available
                 //         int cartId =
@@ -894,7 +894,7 @@ class _OrderListState extends State<OrderList> {
                 //   children: [
                 Container(
                     // height: size.height * 0.45, // 280,
-                    // // height: size.height * 0.38, // 280,
+                    // height: size.height * 0.38, // 280,
                     // margin: const EdgeInsets.only(
                     //     left: 10, top: 10, bottom: 10, right: 10),
                     // padding: const EdgeInsets.all(8),
@@ -1161,7 +1161,7 @@ class _OrderListState extends State<OrderList> {
                                           Provider.of<CartProvider>(context,
                                               listen: false);
                                       int? cartId = provider.getCartIDForOrder;
-                                      // debugPrintdebugPrint("$cartId");
+                                      // debugPrint("$cartId");
                                       try {
                                         await Provider.of<CartProvider>(context,
                                                 listen: false)
@@ -1202,7 +1202,7 @@ class _OrderListState extends State<OrderList> {
                                           }
                                         });
                                       } catch (error) {
-                                        // debugPrintdebugPrint(error.toString());
+                                        // debugPrint(error.toString());
                                       }
                                     },
                                     child: Container(
@@ -1244,7 +1244,7 @@ class _OrderListState extends State<OrderList> {
                                                   .netTotal);
                                       debugPrint(
                                           cartProductItems!.length.toString());
-                                      // debugPrintdebugPrint(formattedTotal.toString());
+                                      // debugPrint(formattedTotal.toString());
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -1313,7 +1313,7 @@ class _OrderListState extends State<OrderList> {
 //       stream: cartProvider.cartStream,
 //       builder: (context, snapshot) {
 //         if (snapshot.hasData) {
-//           // debugPrintdebugPrint("Inside Order List Consumer");
+//           // debugPrint("Inside Order List Consumer");
 //           List<ListCartModelData>? cartItems = snapshot.data;
 //           return Text('Error: ${snapshot.error}');
 //           // ... (rest of your code)

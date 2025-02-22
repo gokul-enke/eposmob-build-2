@@ -49,7 +49,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
         page: 1,
       );
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -73,7 +73,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
         page: page,
       );
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;

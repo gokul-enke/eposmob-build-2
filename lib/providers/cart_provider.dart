@@ -227,9 +227,9 @@ class CartProvider with ChangeNotifier {
     // sample data
     // customerId = 1;
     // debugPrint("********************ADD TO CART API******************** ");
-    // // debugPrint(customerId.toString());
-    // // debugPrint(productId.toString());
-    // // debugPrint(quantity.toString());
+    // debugPrint(customerId.toString());
+    // debugPrint(productId.toString());
+    // debugPrint(quantity.toString());
     Map<String, dynamic> apiBodyData = {};
     apiBodyData = {
       'customer_id': "1",
@@ -331,7 +331,7 @@ class CartProvider with ChangeNotifier {
         // debugPrint(addToCartModel.status);
         if (addToCartModel.status == 'success') {
           // debugPrint("  if (addToCartModel.status == 'success') {");
-          // // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
+          // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
 
           // setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
         }
@@ -386,7 +386,7 @@ class CartProvider with ChangeNotifier {
         // debugPrint(addToCartModel.status);
         if (addToCartModel.status == 'success') {
           // debugPrint("  if (addToCartModel.status == 'success') {");
-          // // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
+          // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
 
           // setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
         }
@@ -446,7 +446,7 @@ class CartProvider with ChangeNotifier {
         // debugPrint(addToCartModel.status);
         if (addToCartModel.status == 'success') {
           // debugPrint("  if (addToCartModel.status == 'success') {");
-          // // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
+          // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
 
           setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
         }
@@ -497,7 +497,7 @@ class CartProvider with ChangeNotifier {
         // debugPrint(addToCartModel.status);
         if (addToCartModel.status == 'success') {
           // debugPrint("  if (addToCartModel.status == 'success') {");
-          // // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
+          // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
 
           // setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
         }
@@ -575,12 +575,12 @@ class CartProvider with ChangeNotifier {
       if (response.statusCode == 201) {
         // debugPrint('inside 201');
 
-        // // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         // AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(jsonData);
 
-        // // debugPrint(jsonData);
-        // // debugPrint(addToOrderModel.status);
+        // debugPrint(jsonData);
+        // debugPrint(addToOrderModel.status);
         getData();
         return jsonData; //addToOrderModel.status == 'success' ? true : false;
       } else {
@@ -652,12 +652,12 @@ class CartProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         // debugPrint('inside 201');
 
-        // // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         // AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(jsonData);
 
-        // // debugPrint(jsonData);
-        // // debugPrint(addToOrderModel.status);
+        // debugPrint(jsonData);
+        // debugPrint(addToOrderModel.status);
         getData();
         return jsonData; //addToOrderModel.status == 'success' ? true : false;
       } else {
@@ -728,8 +728,8 @@ class CartProvider with ChangeNotifier {
         final jsonData = json.decode(response.body);
         // AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(jsonData);
 
-        // // debugPrint(jsonData);
-        // // debugPrint(addToOrderModel.status);
+        // debugPrint(jsonData);
+        // debugPrint(addToOrderModel.status);
         getData();
         return jsonData; //addToOrderModel.status == 'success' ? true : false;
       } else {

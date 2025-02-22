@@ -201,8 +201,8 @@ class _EditProductPropertiesScreenState
 
       int? categoryId = Provider.of<CategoryProvider>(context, listen: false)
           .getPropCategoryId;
-      // debugPrintdebugPrint("category id $categoryId");
-      // debugPrintdebugPrint("category id $categoryId");
+      // debugPrint("category id $categoryId");
+      // debugPrint("category id $categoryId");
       Provider.of<CategoryProvider>(context, listen: false).fetchPropValues(
           categoryId: categoryId, accessToken: accessToken ?? "");
     
@@ -219,7 +219,7 @@ class _EditProductPropertiesScreenState
     if (productDetails?.productProps != null) {
       for (var prop in productDetails!.productProps!) {
         if (prop.propsCode != null && prop.masterValue != null) {
-          // debugPrintdebugPrint("propdada${prop.toString()}");
+          // debugPrint("propdada${prop.toString()}");
           String key = prop.propsCode!;
           String value = prop.masterValue!;
 
@@ -499,8 +499,8 @@ class _EditProductPropertiesScreenState
                           boxColor: Colors.white,
                           textColor: ColorManager.kPrimaryColor,
                           fct: () async {
-                            // debugPrintdebugPrint("apiBodyData.toString()");
-                            // debugPrintdebugPrint(apiBodyData.toString());
+                            // debugPrint("apiBodyData.toString()");
+                            // debugPrint(apiBodyData.toString());
                             int? productId = getProduct!.productId;
                             if (productId == null) {
                               showScaffoldError(

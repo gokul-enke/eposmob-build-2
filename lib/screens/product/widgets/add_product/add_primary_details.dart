@@ -175,7 +175,7 @@ class AddProductPageScreen extends StatelessWidget {
                                       );
                                       parentCategory =
                                           "${selectedCategory.categoryId ?? 0}";
-                                      // debugPrintdebugPrint(parentCategory);
+                                      // debugPrint(parentCategory);
                                       categoryProvider.setParentCategory(
                                           "${selectedCategory.categoryId ?? 0}");
                                     }
@@ -542,17 +542,17 @@ class AddProductPageScreen extends StatelessWidget {
                             //   child: CustomRoundButton(
                             //     title: "Submit",
                             //     fct: () async {
-                            //       // debugPrintdebugPrint(parentCategory);
+                            //       // debugPrint(parentCategory);
                             //       idController.text =
                             //           categoryProvider.getParentCategory;
-                            //       // debugPrintdebugPrint("idController.tex");
-                            //       // debugPrintdebugPrint(idController.text);
+                            //       // debugPrint("idController.tex");
+                            //       // debugPrint(idController.text);
                             //       debugPrint(
                             //           "selectedCurrency $selectedCurrency");
-                            //       // debugPrintdebugPrint("selectedUnit $selectedUnit");
+                            //       // debugPrint("selectedUnit $selectedUnit");
                             //       if (formKey.currentState!.validate()) {
                             //         formKey.currentState!.save();
-                            //         // debugPrintdebugPrint("submit");
+                            //         // debugPrint("submit");
                             //         debugPrint(
                             //             "categoryIdController.text ${idController.text}");
                       
@@ -618,7 +618,7 @@ class AddProductPageScreen extends StatelessWidget {
                             //               // productPriceController.clear();
                             //               navigateToScreen(1);
                             //             } else {
-                            //               // debugPrintdebugPrint("errors.password !=null");
+                            //               // debugPrint("errors.password !=null");
                             //               Navigator.pop(context);
                             //               showScaffold(
                             //                 context: context,
@@ -642,17 +642,17 @@ class AddProductPageScreen extends StatelessWidget {
                                 boxColor: Colors.white,
                                 textColor: ColorManager.kPrimaryColor,
                                 fct: () async {
-                                  // debugPrintdebugPrint(parentCategory);
+                                  // debugPrint(parentCategory);
                                   idController.text =
                                       categoryProvider.getParentCategory;
-                                  // debugPrintdebugPrint("idController.tex");
-                                  // debugPrintdebugPrint(idController.text);
+                                  // debugPrint("idController.tex");
+                                  // debugPrint(idController.text);
                                   debugPrint(
                                       "selectedCurrency $selectedCurrency");
-                                  // debugPrintdebugPrint("selectedUnit $selectedUnit");
+                                  // debugPrint("selectedUnit $selectedUnit");
                                   if (formKey.currentState!.validate()) {
                                     formKey.currentState!.save();
-                                    // debugPrintdebugPrint("submit");
+                                    // debugPrint("submit");
                                     debugPrint(
                                         "categoryIdController.text ${idController.text}");
                       

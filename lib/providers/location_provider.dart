@@ -11,7 +11,7 @@ class LocationProvider extends ChangeNotifier {
   List<MapEntry<String, String>> districtList = [];
 
   Future<void> listAllStates(String accessToken) async {
-    // debugPrintdebugPrint("LIST ALL STATES");
+    // debugPrint("LIST ALL STATES");
 
     final url = Uri.parse(APPUrl.listStates);
     try {
@@ -19,9 +19,9 @@ class LocationProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      // debugPrintdebugPrint('Status code: ${response.statusCode}');
+      // debugPrint('Status code: ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(response.body.toString());
+        // debugPrint(response.body.toString());
         final jsonData = json.decode(response.body);
         GetStatesModel statesResponse = GetStatesModel.fromJson(jsonData);
 
@@ -30,17 +30,17 @@ class LocationProvider extends ChangeNotifier {
         notifyListeners();
       } else {
         // Handle error
-        // debugPrintdebugPrint('Error: ${response.statusCode}');
+        // debugPrint('Error: ${response.statusCode}');
       }
     } catch (e) {
       // Handle exception
-      // debugPrintdebugPrint('Exception: $e');
+      // debugPrint('Exception: $e');
     }
   }
 
   Future<void> listAllDistricts(
       {required String accessToken, required String stateId}) async {
-    // debugPrintdebugPrint("LIST ALL DISTRICTS");
+    // debugPrint("LIST ALL DISTRICTS");
 
     final url = Uri.parse("${APPUrl.listDistricts}?state_id=$stateId");
     try {
@@ -48,9 +48,9 @@ class LocationProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      // debugPrintdebugPrint('Status code: ${response.statusCode}');
+      // debugPrint('Status code: ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(response.body.toString());
+        // debugPrint(response.body.toString());
         final jsonData = json.decode(response.body);
         GetDistrictsModel districtsResponse =
             GetDistrictsModel.fromJson(jsonData);
@@ -60,11 +60,11 @@ class LocationProvider extends ChangeNotifier {
         notifyListeners();
       } else {
         // Handle error
-        // debugPrintdebugPrint('Error: ${response.statusCode}');
+        // debugPrint('Error: ${response.statusCode}');
       }
     } catch (e) {
       // Handle exception
-      // debugPrintdebugPrint('Exception: $e');
+      // debugPrint('Exception: $e');
     }
   }
 }

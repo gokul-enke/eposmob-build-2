@@ -68,7 +68,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
   //   'Day Mart',
   // ];
 
-  // // Track the selected unit
+  // Track the selected unit
   // String? selectedStore;
   // List<String> supplier = [
   //   'Select Supplier ',
@@ -113,7 +113,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
         .then((value) {});
     purchaseItemList = purchaseProvider.purchaseItems;
     for (var v in purchaseItemList ?? []) {
-      // debugPrintdebugPrint("Porchase Id ${v.purchaseId}");
+      // debugPrint("Porchase Id ${v.purchaseId}");
       purchaseId = v.purchaseId;
     }
     //  });
@@ -142,10 +142,10 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
             ? listPurchaseItemModel.data!.map((e) => purchaseId = e.purchaseId)
             : () {};
         for (var v in listPurchaseItemModel.data!) {
-          // debugPrintdebugPrint("Porchase Id ${v.purchaseId}");
+          // debugPrint("Porchase Id ${v.purchaseId}");
           purchaseId = v.purchaseId;
         }
-        // debugPrintdebugPrint("Porchase Id $purchaseId");
+        // debugPrint("Porchase Id $purchaseId");
       }
     });
     purchaseItemList = purchaseProvider.purchaseItems;
@@ -159,7 +159,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    // debugPrintdebugPrint('zcccdcdc$accessToken');
+    // debugPrint('zcccdcdc$accessToken');
     // Access the CategoryProvider
     CategoryProvider categoryProvider =
         Provider.of<CategoryProvider>(context, listen: false);
@@ -1134,7 +1134,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                               if (formKey.currentState!
                                                   .validate()) {
                                                 formKey.currentState!.save();
-                                                // debugPrintdebugPrint("submit");
+                                                // debugPrint("submit");
                                                 debugPrint(
                                                     "categoryIdController.text ${categoryIDController.text}");
                                                 debugPrint(

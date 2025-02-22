@@ -34,7 +34,7 @@ class ViewPurchaseWidget extends StatelessWidget {
     List<PurchaseItem>? listPurchaseItems =
         purchaseProvider.getlistPurchaseItemView;
 
-    // debugPrintdebugPrint("purchaseDetails: ${purchaseDetails?.purchaserId.toString()}");
+    // debugPrint("purchaseDetails: ${purchaseDetails?.purchaserId.toString()}");
 
     String store = purchaseProvider.storeName(
             voucherDetails == null ? 1 : voucherDetails.storeId ?? 1) ??

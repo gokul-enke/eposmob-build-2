@@ -25,7 +25,7 @@ class ViewCategoryWidget extends StatelessWidget {
       context,
     );
     ViewCategory? viewCategory = categoryProvider.getViewCategory;
-    // debugPrintdebugPrint(viewCategory == null ? "viewCategory" : viewCategory.name);
+    // debugPrint(viewCategory == null ? "viewCategory" : viewCategory.name);
     return SafeArea(
         child: Container(
       margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),

@@ -19,7 +19,7 @@ class AppSettingsProvider with ChangeNotifier {
   Future<void> fetchAppSettings() async {
     _loading = true;
     notifyListeners();
-    // debugPrintdebugPrint("fetchAppSettings");
+    // debugPrint("fetchAppSettings");
     try {
       final response = await http.get(Uri.parse(APPUrl.getAppSettings));
 

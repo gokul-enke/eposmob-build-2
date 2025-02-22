@@ -67,7 +67,7 @@ class KioskBillingPageState extends State<KioskBillingPage> {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
 
-    // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
+    // debugPrint("accessToken From AuthModel $accessToken");
     Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
         customerId: customerId ?? 1, accessToken: accessToken ?? '');
   }
@@ -76,7 +76,7 @@ class KioskBillingPageState extends State<KioskBillingPage> {
     try {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
+      // debugPrint("accessToken From AuthModel $accessToken");
 
       final response =
           await CustomerProvider().listCustomer(accessToken: accessToken ?? "");
@@ -91,7 +91,7 @@ class KioskBillingPageState extends State<KioskBillingPage> {
         // Handle error
       }
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     }
   }
 
@@ -528,7 +528,7 @@ class KioskBillingPageState extends State<KioskBillingPage> {
         }
       });
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     }
   }
 }

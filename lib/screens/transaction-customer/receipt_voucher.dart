@@ -55,7 +55,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
         }
       });
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;

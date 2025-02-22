@@ -506,7 +506,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                             "categoryIdController.text ${idController.text}");
                                         if (formKey.currentState!.validate()) {
                                           formKey.currentState!.save();
-                                          // debugPrintdebugPrint("submit");
+                                          // debugPrint("submit");
                                           debugPrint(
                                               "categoryIdController.text ${idController.text}");
                                           debugPrint(
@@ -639,7 +639,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
 
   showDialogFunctionForCategoryImageDetails(BuildContext context,
       final List<GetProductListFileModelData>? attachment, Size size) {
-    // debugPrintdebugPrint("showDialogFunctionForProductDetailsAnimated");
+    // debugPrint("showDialogFunctionForProductDetailsAnimated");
     return showDialog(
         context: context,
         barrierDismissible: true,
@@ -794,7 +794,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                               )),
                                         ]),
 
-                                    // // Map your order data to table rows here
+                                    // Map your order data to table rows here
                                     // ...imageFiles!.map((image) {
                                     if (attachment != null)
                                       ...attachment
@@ -949,7 +949,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
 
   showDialogFunctionForCategoryIconDetails(BuildContext context,
       final List<GetProductListFileModelData>? attachment, Size size) {
-    // debugPrintdebugPrint("showDialogFunctionForCategoryIconDetails");
+    // debugPrint("showDialogFunctionForCategoryIconDetails");
     return showDialog(
         context: context,
         barrierDismissible: true,
@@ -1104,7 +1104,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                               )),
                                         ]),
 
-                                    // // Map your order data to table rows here
+                                    // Map your order data to table rows here
                                     // ...imageFiles!.map((image) {
                                     if (attachment != null)
                                       ...attachment

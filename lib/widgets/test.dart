@@ -64,7 +64,7 @@ class _YourBagState extends State<YourBag> {
                 var serviceType = serviceTypeListss[index];
                 //   var serviceName = serviceType['service_name'];
                 var serviceAreaTypes = serviceType['service_area_types'];
-                // debugPrintdebugPrint("${serviceNames.length}");
+                // debugPrint("${serviceNames.length}");
                 return Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -324,83 +324,83 @@ class _YourBagState extends State<YourBag> {
   Future<void> fetchCartItems(BuildContext context) async {
     try {
       // DashboardProvider().listCartItnes(context).then((value) {
-      //   // debugPrintdebugPrint("listCartItems Listing");
-      //   // debugPrintdebugPrint(value["status"]);
+      //   // debugPrint("listCartItems Listing");
+      //   // debugPrint(value["status"]);
       // });
       await DashboardProvider().listCartItnes(context).then((response) {
-        // debugPrintdebugPrint("inside api call");
-        // debugPrintdebugPrint(response['status']);
-        //// debugPrintdebugPrint(response['data']['service_types'].toString());
+        // debugPrint("inside api call");
+        // debugPrint(response['status']);
+        //// debugPrint(response['data']['service_types'].toString());
 
         // ListCartItems listCartItemResponse = ListCartItems.fromJson(response);
-        // // debugPrintdebugPrint("function called inside fetchCartItems");
-        // // debugPrintdebugPrint(listCartItemResponse.status);
+        // debugPrint("function called inside fetchCartItems");
+        // debugPrint(listCartItemResponse.status);
         // ListCartItemsData? listCartItemsData =
         //     listCartItemResponse.listCartItemsData;
         // serviceAreaTypeList = listCartItemsData!.serviceAreaType;
         // serviceAreaList = listCartItemsData.serviceArea;
         // serviceTypesList = listCartItemsData.serviceTypes;
-        // // debugPrintdebugPrint("serviceAreaList.map((e) => debugPrint(e.serviceTypeId));");
+        // debugPrint("serviceAreaList.map((e) => debugPrint(e.serviceTypeId));");
 
         // for (var e in serviceAreaList) {
-        //   // debugPrintdebugPrint(e.serviceAreaName);
-        //   // debugPrintdebugPrint(e.serviceAreaType);
-        //   // debugPrintdebugPrint(e.serviceTypeId);
+        //   // debugPrint(e.serviceAreaName);
+        //   // debugPrint(e.serviceAreaType);
+        //   // debugPrint(e.serviceTypeId);
         // }
-        // // debugPrintdebugPrint("serviceTypesList");
+        // debugPrint("serviceTypesList");
         // for (var e in serviceTypesList) {
-        //   // debugPrintdebugPrint(e.serviceAreaTypes!.floor.toString());
-        //   // debugPrintdebugPrint(e.serviceName);
-        //   // debugPrintdebugPrint(e.serviceAreaTypes!.vehicle.toString());
+        //   // debugPrint(e.serviceAreaTypes!.floor.toString());
+        //   // debugPrint(e.serviceName);
+        //   // debugPrint(e.serviceAreaTypes!.vehicle.toString());
         // }
         // debugPrint(
         //     "serviceTypesList checking------------------------------------------------------");
         // for (var e in serviceTypesList) {
-        //   // debugPrintdebugPrint(e.serviceAreaTypes!.toJson().toString());
-        //   // debugPrintdebugPrint(e.serviceAreaTypes!.floor.toString());
-        //   // debugPrintdebugPrint(e.serviceName);
-        //   // debugPrintdebugPrint(e.serviceAreaTypes!.vehicle.toString());
+        //   // debugPrint(e.serviceAreaTypes!.toJson().toString());
+        //   // debugPrint(e.serviceAreaTypes!.floor.toString());
+        //   // debugPrint(e.serviceName);
+        //   // debugPrint(e.serviceAreaTypes!.vehicle.toString());
         // }
-        // //        serviceAreaTypes.forEach((key, values) {
-        // //   print('$key: $values');
-        // // });
-        // debugPrint(
-        //     "serviceTypesList checking------------------------------------------------------");
-        // // debugPrintdebugPrint(serviceAreaTypeList!.wall);
-        // serviceTypesList
-        //     .map((e) => // debugPrintdebugPrint(e.serviceAreaTypes!.floor.toString()));
-        // // debugPrintdebugPrint("Print and update service names to the list");
-        // serviceTypesList.map((e) {
-        //   // debugPrintdebugPrint(e.serviceAreaTypes.toString());
-        //   // debugPrintdebugPrint(e.serviceAreaTypes!.vehicle.toString());
+        //        serviceAreaTypes.forEach((key, values) {
+        //   print('$key: $values');
         // });
-        // // Print and update service names to the list
+        // debugPrint(
+        //     "serviceTypesList checking------------------------------------------------------");
+        // debugPrint(serviceAreaTypeList!.wall);
+        // serviceTypesList
+        //     .map((e) => // debugPrint(e.serviceAreaTypes!.floor.toString()));
+        // debugPrint("Print and update service names to the list");
+        // serviceTypesList.map((e) {
+        //   // debugPrint(e.serviceAreaTypes.toString());
+        //   // debugPrint(e.serviceAreaTypes!.vehicle.toString());
+        // });
+        // Print and update service names to the list
         // for (ServiceType serviceType
         //     in listCartItemResponse.listCartItemsData!.serviceTypes) {
         //   String serviceName = serviceType.serviceName;
-        //   // debugPrintdebugPrint("Service Name: $serviceName");
+        //   // debugPrint("Service Name: $serviceName");
         //   serviceNames.add(serviceName);
         // }
 
-        // //Print and update service area types to the list:
+        //Print and update service area types to the list:
         // listCartItemResponse.listCartItemsData!.serviceAreaType
         //     .toJson()
         //     .values
         //     .forEach((value) {
-        //   // debugPrintdebugPrint("Service Area Type: $value");
+        //   // debugPrint("Service Area Type: $value");
         //   serviceAreaTypes.add(value);
         //   if (value == 'Floor') {
-        //     // debugPrintdebugPrint("haiiiiiiiiii");
+        //     // debugPrint("haiiiiiiiiii");
         //   } else if (value == 'Vehicle') {
-        //     // debugPrintdebugPrint("haiiiiiiiiii");
+        //     // debugPrint("haiiiiiiiiii");
         //   }
         // });
 
-        // //Print and update service area names to the list:
+        //Print and update service area names to the list:
         // for (ServiceArea serviceArea
         //     in listCartItemResponse.listCartItemsData!.serviceArea) {
         //   String serviceAreaName = serviceArea.serviceAreaName;
-        //   // debugPrintdebugPrint("Service Area Name: $serviceAreaName");
+        //   // debugPrint("Service Area Name: $serviceAreaName");
         //   //serviceAreaNames.add(serviceAreaName);
         // }
 
@@ -411,7 +411,7 @@ class _YourBagState extends State<YourBag> {
 //         ServiceAreaType serviceAreaType =
 //             ServiceAreaType.fromJson(serviceAreaTypeData);
 
-// // Parse service area types and their data
+// Parse service area types and their data
 //         List<dynamic> serviceTypesData = serviceData.data['service_types'];
 //         Map<String, List<ServiceArea>> serviceAreaTypes = {};
 //         serviceTypesData.forEach((serviceTypeData) {
@@ -427,17 +427,17 @@ class _YourBagState extends State<YourBag> {
 //           serviceAreaTypes[key] = serviceAreas;
 //         });
 
-// // Print service area types
+// Print service area types
 //         serviceAreaTypes.forEach((key, value) {
-//           // debugPrintdebugPrint("Service Type ID: $key");
+//           // debugPrint("Service Type ID: $key");
 //           value.forEach((serviceArea) {
-//             // debugPrintdebugPrint("Service Area Name: ${serviceArea.serviceAreaName}");
+//             // debugPrint("Service Area Name: ${serviceArea.serviceAreaName}");
 //             // Print other properties of service area if needed
 //           });
 //         });
 
 //         Map<String, dynamic> serviceTypesData = response['service_types'];
-// //Map<String, List<ServiceArea>> allServiceAreas = {};
+//Map<String, List<ServiceArea>> allServiceAreas = {};
 
 //         serviceTypesData.forEach((key, value) {
 //           List<ServiceArea> serviceAreas = [];
@@ -465,7 +465,7 @@ class _YourBagState extends State<YourBag> {
           isLoading = false;
         });
 
-        // // Extract the "service_types" array from the data
+        // Extract the "service_types" array from the data
         // List<dynamic> serviceTypes1 = response['data']['service_types'];
 
         // Extract service names from each service type
@@ -476,13 +476,13 @@ class _YourBagState extends State<YourBag> {
         }
 
         // Print the extracted service names
-        // debugPrintdebugPrint('All Service Names: $serviceNames');
+        // debugPrint('All Service Names: $serviceNames');
 
         serviceTypeListss = response['data']['service_types'];
       });
     } catch (error) {
       // Handle any exceptions here, e.g., show an error dialog
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
       // Show an error dialog or handle the error accordingly
       setState(() {
         isLoading = false;

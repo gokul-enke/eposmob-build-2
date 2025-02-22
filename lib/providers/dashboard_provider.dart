@@ -10,7 +10,7 @@ class DashboardProvider {
   //                 *********************** DASHBOARD API ***************************************************
 
   Future<dynamic> dashbaord(String accessToken, BuildContext context) async {
-    // debugPrintdebugPrint("dashbaord");
+    // debugPrint("dashbaord");
 
     final url = Uri.parse(APPUrl.dashBoardUrl);
     try {
@@ -19,9 +19,9 @@ class DashboardProvider {
         'Content-Type': 'application/json'
       });
 
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else if (response.statusCode > 400) {
         throw const HttpException("Data Not Found.Try Again!");
@@ -64,7 +64,7 @@ class DashboardProvider {
             'Failed to load graph data. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      // debugPrintdebugPrint('Error fetching graph data: $error');
+      // debugPrint('Error fetching graph data: $error');
       rethrow;
     }
   }
@@ -98,7 +98,7 @@ class DashboardProvider {
   // }
 
   Future<Map<String, dynamic>> listCartItnes(BuildContext context) async {
-    // debugPrintdebugPrint("dashbaord");
+    // debugPrint("dashbaord");
 
     final url = Uri.parse(
         "https://safai.enke.ae/api/carts/list-cart-items?customer_id=5");
@@ -108,9 +108,9 @@ class DashboardProvider {
         'Content-Type': 'application/json'
       });
 
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else if (response.statusCode > 400) {
         throw const HttpException("Data Not Found.Try Again!");

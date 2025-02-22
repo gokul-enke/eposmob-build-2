@@ -51,7 +51,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
         page: 1,
       );
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -60,7 +60,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
   }
 
   void searchCategory(page) async {
-    // debugPrintdebugPrint("category search called");
+    // debugPrint("category search called");
     try {
       setState(() {
         initLoading = true;
@@ -74,7 +74,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
         page: page,
       );
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;

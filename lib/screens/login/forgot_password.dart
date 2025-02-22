@@ -124,7 +124,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               fct: () async {
                                 if (_emailController.text.isNotEmpty &&
                                     _formKey.currentState!.validate()) {
-                                  // debugPrintdebugPrint("hello");
+                                  // debugPrint("hello");
                                   showDialog(
                                       context: context,
                                       barrierDismissible: false,
@@ -140,7 +140,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       .then((value) async {
                                     // Navigator.pop(context);
                                     if (value["status"] == "success") {
-                                      // debugPrintdebugPrint(value.toString());
+                                      // debugPrint(value.toString());
 
                                       showScaffold(
                                         context: context,

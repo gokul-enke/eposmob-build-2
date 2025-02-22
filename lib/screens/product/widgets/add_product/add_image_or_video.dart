@@ -249,7 +249,7 @@ class _AddProductImageOrVideoScreenState
                                         activeColor: ColorManager.kPrimaryColor,
                                         tristate: true,
                                         onChanged: (value) {
-                                          // debugPrintdebugPrint(" First onChanged $value");
+                                          // debugPrint(" First onChanged $value");
                                           setState(() {
                                             isChecked = value ?? false;
                                           });
@@ -317,7 +317,7 @@ class _AddProductImageOrVideoScreenState
 
                                     checkboxValues.add(selectedCheckbox);
 
-                                    // // Create a new set of text fields
+                                    // Create a new set of text fields
                                     // Widget newTextField = buildTextField(titleController, "Title");
                                     // Widget newAltField = buildTextField(altController, "Alt");
                                     // Widget newFileField = buildTextField(fileController, "File");
@@ -649,7 +649,7 @@ class _AddProductImageOrVideoScreenState
                     activeColor: ColorManager.kPrimaryColor,
                     tristate: true,
                     onChanged: (value) {
-                      // debugPrintdebugPrint(" Second onChanged $value");
+                      // debugPrint(" Second onChanged $value");
                       setState(() {
                         selectedCheckbox = value ?? false;
                       });
@@ -690,7 +690,7 @@ class _AddProductImageOrVideoScreenState
       int productId,
       final List<GetProductListFileModelData>? attachment,
       Size size) {
-    // debugPrintdebugPrint("showDialogFunctionForProductDetailsAnimated");
+    // debugPrint("showDialogFunctionForProductDetailsAnimated");
     return showDialog(
         context: context,
         barrierDismissible: true,
@@ -845,7 +845,7 @@ class _AddProductImageOrVideoScreenState
                                               )),
                                         ]),
 
-                                    // // Map your order data to table rows here
+                                    // Map your order data to table rows here
                                     // ...imageFiles!.map((image) {
                                     if (attachment != null)
                                       ...attachment
@@ -1007,7 +1007,7 @@ class _AddProductImageOrVideoScreenState
       bool selected,
       final List<GetProductListFileModelData>? attachment,
       Size size) {
-    // debugPrintdebugPrint("showDialogFunctionForProductDetailsAnimatedAddMore");
+    // debugPrint("showDialogFunctionForProductDetailsAnimatedAddMore");
     return showDialog(
         context: context,
         barrierDismissible: true,
@@ -1162,7 +1162,7 @@ class _AddProductImageOrVideoScreenState
                                               )),
                                         ]),
 
-                                    // // Map your order data to table rows here
+                                    // Map your order data to table rows here
                                     // ...imageFiles!.map((image) {
                                     if (attachment != null)
                                       ...attachment

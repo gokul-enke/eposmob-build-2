@@ -51,7 +51,7 @@ class CategoryProvider extends ChangeNotifier {
   }
 
   setCategoryIdforProp({required int categoryId}) {
-    // debugPrintdebugPrint("SET CATEGORY ID FOR PROP $categoryId");
+    // debugPrint("SET CATEGORY ID FOR PROP $categoryId");
     propCategory = categoryId;
     notifyListeners();
   }
@@ -128,7 +128,7 @@ class CategoryProvider extends ChangeNotifier {
         throw Exception('Failed to load categories');
       }
     } catch (error) {
-      // debugPrintdebugPrint('Error fetching categories: $error');
+      // debugPrint('Error fetching categories: $error');
       rethrow;
     }
   }
@@ -167,8 +167,8 @@ class CategoryProvider extends ChangeNotifier {
         searchCategoryList!.insert(0, categoryDemo);
         searchCategoryList = categoryListModel.category;
 
-        // debugPrintdebugPrint("categoryListModel.pagination?.toString()");
-        // debugPrintdebugPrint(categoryListModel.pagination?.toString());
+        // debugPrint("categoryListModel.pagination?.toString()");
+        // debugPrint(categoryListModel.pagination?.toString());
 
         currentPage = categoryListModel.pagination?.currentPage ?? 1;
         totalPages = categoryListModel.pagination?.lastPage ?? 1;
@@ -178,7 +178,7 @@ class CategoryProvider extends ChangeNotifier {
         throw Exception('Failed to load categories');
       }
     } catch (error) {
-      // debugPrintdebugPrint('Error fetching categories: $error');
+      // debugPrint('Error fetching categories: $error');
       rethrow;
     }
   }
@@ -186,15 +186,15 @@ class CategoryProvider extends ChangeNotifier {
   //          *********************** VIEW  CATEGORY USING CATEGORY ID API ***************************************************
 
   Future<void> viewCategoryApi({required int categoryId}) async {
-    // debugPrintdebugPrint("VIEW  CATEGORY ");
+    // debugPrint("VIEW  CATEGORY ");
 
     final url = Uri.parse("${APPUrl.viewCategoryListUrl}?id=$categoryId");
     try {
       final response =
           await http.get(url, headers: {'Content-Type': 'application/json'});
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         ViewCategoryModel viewCategoryModel =
             ViewCategoryModel.fromJson(jsonData);
@@ -218,12 +218,12 @@ class CategoryProvider extends ChangeNotifier {
       required String imagePath,
       required String iconPath,
       required String accessToken}) async {
-    // debugPrintdebugPrint("ADD CATEGORY  API parentCategory $parentCategory ");
-    // debugPrintdebugPrint("ADD CATEGORY  API categoryName $categoryName ");
-    // debugPrintdebugPrint("ADD CATEGORY  API slug $slug ");
-    // debugPrintdebugPrint("ADD CATEGORY  API categoryNameEnglish $categoryNameEnglish ");
-    // debugPrintdebugPrint("ADD CATEGORY  API categoryNameHindi $categoryNameHindi ");
-    // debugPrintdebugPrint("ADD CATEGORY  API categoryNameArabic $categoryNameArabic ");
+    // debugPrint("ADD CATEGORY  API parentCategory $parentCategory ");
+    // debugPrint("ADD CATEGORY  API categoryName $categoryName ");
+    // debugPrint("ADD CATEGORY  API slug $slug ");
+    // debugPrint("ADD CATEGORY  API categoryNameEnglish $categoryNameEnglish ");
+    // debugPrint("ADD CATEGORY  API categoryNameHindi $categoryNameHindi ");
+    // debugPrint("ADD CATEGORY  API categoryNameArabic $categoryNameArabic ");
 
     final Map<String, dynamic> apiBodyData = {
       'name': categoryName,
@@ -236,19 +236,19 @@ class CategoryProvider extends ChangeNotifier {
       'icon': iconPath
     };
 
-    // debugPrintdebugPrint(apiBodyData.toString());
+    // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.addCategoryUrl);
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
         listAllCategory();
         notifyListeners();
-        // debugPrintdebugPrint(json.decode(response.body).toString());
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else {}
     } finally {
@@ -286,7 +286,7 @@ class CategoryProvider extends ChangeNotifier {
   }
 
   List<Category> searchCategoryPageCategories(String query) {
-    // debugPrintdebugPrint("searchCategoryPageCategories $query");
+    // debugPrint("searchCategoryPageCategories $query");
     if (query.isNotEmpty) {
       return categoryListWithoutQuery!
           .where((category) => category.categoryName!
@@ -322,12 +322,12 @@ class CategoryProvider extends ChangeNotifier {
       required String imagePath,
       required String iconPath,
       required String accessToken}) async {
-    // debugPrintdebugPrint("ADD CATEGORY  API parentCategory $parentCategory ");
-    // debugPrintdebugPrint("ADD CATEGORY  API categoryName $categoryName ");
-    // debugPrintdebugPrint("ADD CATEGORY  API slug $slug ");
-    // debugPrintdebugPrint("ADD CATEGORY  API categoryNameEnglish $categoryNameEnglish ");
-    // debugPrintdebugPrint("ADD CATEGORY  API categoryNameHindi $categoryNameHindi ");
-    // debugPrintdebugPrint("ADD CATEGORY  API categoryNameArabic $categoryNameArabic ");
+    // debugPrint("ADD CATEGORY  API parentCategory $parentCategory ");
+    // debugPrint("ADD CATEGORY  API categoryName $categoryName ");
+    // debugPrint("ADD CATEGORY  API slug $slug ");
+    // debugPrint("ADD CATEGORY  API categoryNameEnglish $categoryNameEnglish ");
+    // debugPrint("ADD CATEGORY  API categoryNameHindi $categoryNameHindi ");
+    // debugPrint("ADD CATEGORY  API categoryNameArabic $categoryNameArabic ");
 
     final Map<String, dynamic> apiBodyData = {
       'name': categoryName,
@@ -340,7 +340,7 @@ class CategoryProvider extends ChangeNotifier {
       'category_icon': iconPath
     };
 
-    // debugPrintdebugPrint(apiBodyData.toString());
+    // debugPrint(apiBodyData.toString());
 
     final url = Uri.parse("${APPUrl.editCategoryUrl}/$categoryId");
     try {
@@ -348,12 +348,12 @@ class CategoryProvider extends ChangeNotifier {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      // debugPrintdebugPrint('inside ${response.statusCode}');
+      // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
         listAllCategory();
         notifyListeners();
-        // debugPrintdebugPrint(json.decode(response.body).toString());
-        // debugPrintdebugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
+        // debugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else {}
     } finally {
@@ -366,7 +366,7 @@ class CategoryProvider extends ChangeNotifier {
     required int categoryId,
     required String accessToken,
   }) async {
-    // debugPrintdebugPrint("FETCH PROP VALUES for category_id $categoryId");
+    // debugPrint("FETCH PROP VALUES for category_id $categoryId");
     final url =
         Uri.parse("${APPUrl.fetchCategoryProps}?category_id=$categoryId");
 
@@ -375,23 +375,23 @@ class CategoryProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      // debugPrintdebugPrint('Response status: ${response.statusCode}');
+      // debugPrint('Response status: ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrintdebugPrint("Response body: ${response.body}");
+        // debugPrint("Response body: ${response.body}");
         final jsonData = json.decode(response.body);
-        // debugPrintdebugPrint("Parsed JSON data: ${jsonData.toString()}");
+        // debugPrint("Parsed JSON data: ${jsonData.toString()}");
         propValues = jsonData['success'];
         notifyListeners();
       } else {
-        // debugPrintdebugPrint("Response body: ${response.body}");
+        // debugPrint("Response body: ${response.body}");
         final jsonData = json.decode(response.body);
-        // debugPrintdebugPrint("Parsed Null data: ${jsonData.toString()}");
+        // debugPrint("Parsed Null data: ${jsonData.toString()}");
         propValues = [];
         notifyListeners();
-        // debugPrintdebugPrint("Failed to fetch data. Status code: ${response.statusCode}");
+        // debugPrint("Failed to fetch data. Status code: ${response.statusCode}");
       }
     } catch (e) {
-      // debugPrintdebugPrint('Error fetching prop values: ${e.toString()}');
+      // debugPrint('Error fetching prop values: ${e.toString()}');
     }
   }
 }

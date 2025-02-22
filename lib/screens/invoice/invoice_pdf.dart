@@ -38,7 +38,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       setState(() {
         _status = 'Error: $e';
       });
-      // debugPrintdebugPrint('Error: $e');
+      // debugPrint('Error: $e');
     }
   }
 
@@ -52,7 +52,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
           Provider.of<AuthModel>(context, listen: false).token;
       String ordersId =
           Provider.of<SalesProvider>(context, listen: false).getOrderNumber;
-      // debugPrintdebugPrint(ordersId);
+      // debugPrint(ordersId);
       final response = await SalesProvider().listOrderDetails(
         context,
         ordersId,
@@ -73,7 +73,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       setState(() {
         _status = 'Error fetching order details: $e';
       });
-      // debugPrintdebugPrint('Error fetching order details: $e');
+      // debugPrint('Error fetching order details: $e');
     }
   }
 
@@ -125,7 +125,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       setState(() {
         _status = 'Error generating PDF: $e';
       });
-      // debugPrintdebugPrint('Error generating PDF: $e');
+      // debugPrint('Error generating PDF: $e');
     }
   }
 
@@ -278,7 +278,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       await Share.shareFiles([_pdfFile!.path],
           text: 'Here is your order details PDF');
     } else {
-      // debugPrintdebugPrint('PDF file is null, cannot share');
+      // debugPrint('PDF file is null, cannot share');
     }
   }
 

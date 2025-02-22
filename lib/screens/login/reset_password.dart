@@ -115,12 +115,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             ),
                             onCompleted: ((value) {
                               setState(() {
-                                // debugPrintdebugPrint("OnCompleted");
+                                // debugPrint("OnCompleted");
                                 otpCode = value;
                               });
                             }),
                             onSubmitted: ((value) {
-                              // debugPrintdebugPrint("OnCompleted");
+                              // debugPrint("OnCompleted");
                               setState(() {
                                 otpCode = value;
                               });
@@ -255,7 +255,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     fct: () async {
                                       if (_passwordTextController
                                           .text.isNotEmpty) {
-                                        // debugPrintdebugPrint("hello");
+                                        // debugPrint("hello");
                                         showDialog(
                                             context: context,
                                             barrierDismissible: false,
@@ -265,7 +265,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                                     .adaptive(),
                                               );
                                             });
-                                        // debugPrintdebugPrint(otpCode);
+                                        // debugPrint(otpCode);
                                         await AuthenticationProvider()
                                             .resetPassword(
                                                 otpCode ?? '',

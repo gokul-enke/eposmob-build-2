@@ -327,7 +327,7 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
       child: CustomRoundButton(
         title: "Submit",
         fct: () async {
-          // debugPrintdebugPrint("Add New Customer");
+          // debugPrint("Add New Customer");
           if (_formKey.currentState!.validate()) {
             // Validate the form
             showDialog(
@@ -385,7 +385,7 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
                 }
               });
             } catch (error) {
-              // debugPrintdebugPrint("Error: $error");
+              // debugPrint("Error: $error");
               Navigator.pop(context);
             }
           }

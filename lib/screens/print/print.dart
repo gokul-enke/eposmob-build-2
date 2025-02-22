@@ -110,7 +110,7 @@ class _PrintPageState extends State<PrintPage> {
       _subscription = printerManager
           .discovery(type: PrinterType.bluetooth, isBle: false)
           .listen((device) {
-        // debugPrintdebugPrint('Found Bluetooth device: ${device.name}');
+        // debugPrint('Found Bluetooth device: ${device.name}');
         final printer = BluetoothPrinter(
           deviceName: device.name,
           address: device.address,
@@ -123,7 +123,7 @@ class _PrintPageState extends State<PrintPage> {
 
       // Scan for USB printers
       await printerManager.discovery(type: PrinterType.usb).forEach((device) {
-        // debugPrintdebugPrint('Found USB device: ${device.name}');
+        // debugPrint('Found USB device: ${device.name}');
         final printer = BluetoothPrinter(
           deviceName: device.name,
           vendorId: device.vendorId,
@@ -135,7 +135,7 @@ class _PrintPageState extends State<PrintPage> {
         });
       });
     } catch (e) {
-      // debugPrintdebugPrint('Error during scanning: $e');
+      // debugPrint('Error during scanning: $e');
     } finally {
       setState(() {
         _isScanning = false;
@@ -144,12 +144,12 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   void selectPrinter(BluetoothPrinter printer) {
-    // debugPrintdebugPrint('Selecting printer:');
-    // debugPrintdebugPrint('Device Name: ${printer.deviceName}');
-    // debugPrintdebugPrint('Address: ${printer.address}');
-    // debugPrintdebugPrint('Type: ${printer.typePrinter}');
-    // debugPrintdebugPrint('VendorId: ${printer.vendorId}');
-    // debugPrintdebugPrint('ProductId: ${printer.productId}');
+    // debugPrint('Selecting printer:');
+    // debugPrint('Device Name: ${printer.deviceName}');
+    // debugPrint('Address: ${printer.address}');
+    // debugPrint('Type: ${printer.typePrinter}');
+    // debugPrint('VendorId: ${printer.vendorId}');
+    // debugPrint('ProductId: ${printer.productId}');
 
     setState(() {
       selectedPrinter = printer;
@@ -165,17 +165,17 @@ class _PrintPageState extends State<PrintPage> {
 
   Future<void> printReceipt(
       String customerCareNumber, String customerCareEmail) async {
-    // debugPrintdebugPrint('Starting printReceipt function');
-    // debugPrintdebugPrint('Selected Printer: ${selectedPrinter?.deviceName}');
-    // debugPrintdebugPrint('Selected Printer Address: ${selectedPrinter?.address}');
-    // debugPrintdebugPrint('Printer Type: ${selectedPrinter?.typePrinter}');
-    // debugPrintdebugPrint('VendorId: ${selectedPrinter?.vendorId}');
-    // debugPrintdebugPrint('ProductId: ${selectedPrinter?.productId}');
-    // debugPrintdebugPrint('Customer Care Number: $customerCareNumber');
-    // debugPrintdebugPrint('Customer Care Email: $customerCareEmail');
+    // debugPrint('Starting printReceipt function');
+    // debugPrint('Selected Printer: ${selectedPrinter?.deviceName}');
+    // debugPrint('Selected Printer Address: ${selectedPrinter?.address}');
+    // debugPrint('Printer Type: ${selectedPrinter?.typePrinter}');
+    // debugPrint('VendorId: ${selectedPrinter?.vendorId}');
+    // debugPrint('ProductId: ${selectedPrinter?.productId}');
+    // debugPrint('Customer Care Number: $customerCareNumber');
+    // debugPrint('Customer Care Email: $customerCareEmail');
 
     if (selectedPrinter == null) {
-      // debugPrintdebugPrint('Error: No printer selected');
+      // debugPrint('Error: No printer selected');
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -186,7 +186,7 @@ class _PrintPageState extends State<PrintPage> {
     }
 
     try {
-      // debugPrintdebugPrint('Attempting to connect to printer...');
+      // debugPrint('Attempting to connect to printer...');
       // Connect to the printer based on type
       if (selectedPrinter!.typePrinter == PrinterType.usb) {
         await printerManager.connect(
@@ -211,7 +211,7 @@ class _PrintPageState extends State<PrintPage> {
         );
       }
 
-      // debugPrintdebugPrint('Successfully connected to printer');
+      // debugPrint('Successfully connected to printer');
 
       // Generate receipt
       final profile = await CapabilityProfile.load();
@@ -223,7 +223,7 @@ class _PrintPageState extends State<PrintPage> {
       bytes += generator.text(title,
           styles: const PosStyles(
               align: PosAlign.center, bold: true, height: PosTextSize.size2));
-      // debugPrintdebugPrint('Printing: $title');
+      // debugPrint('Printing: $title');
 
       // bytes += generator.feed(1);
       bytes += generator.text("================================");
@@ -233,17 +233,17 @@ class _PrintPageState extends State<PrintPage> {
       String orderNumberText = 'Order#: ${widget.orderNumber}';
       bytes += generator.text(orderDateText,
           styles: const PosStyles(align: PosAlign.left));
-      // debugPrintdebugPrint('Printing: $orderDateText');
+      // debugPrint('Printing: $orderDateText');
 
       bytes += generator.text(orderNumberText,
           styles: const PosStyles(align: PosAlign.left));
-      // debugPrintdebugPrint('Printing: $orderNumberText');
+      // debugPrint('Printing: $orderNumberText');
 
       // Store Name
       String storeNameText = 'Store Name: ${widget.storeName}';
       bytes += generator.text(storeNameText,
           styles: const PosStyles(align: PosAlign.left));
-      // debugPrintdebugPrint('Printing: $storeNameText');
+      // debugPrint('Printing: $storeNameText');
 
       bytes += generator.text("================================");
 
@@ -297,7 +297,7 @@ class _PrintPageState extends State<PrintPage> {
 
       // Add total
       String totalText = 'Total: ${widget.formattedTotal}';
-      // debugPrintdebugPrint('Printing: $totalText');
+      // debugPrint('Printing: $totalText');
 
       bytes += generator.row([
         PosColumn(
@@ -316,11 +316,11 @@ class _PrintPageState extends State<PrintPage> {
       String emailText = 'Email: $customerCareEmail';
       bytes += generator.text(customerCareText,
           styles: const PosStyles(align: PosAlign.center));
-      // debugPrintdebugPrint('Printing: $customerCareText');
+      // debugPrint('Printing: $customerCareText');
 
       bytes += generator.text(emailText,
           styles: const PosStyles(align: PosAlign.center));
-      // debugPrintdebugPrint('Printing: $emailText');
+      // debugPrint('Printing: $emailText');
 
       bytes += generator.text("================================");
       bytes += generator.text("Thankyou visit again !!!",
@@ -331,10 +331,10 @@ class _PrintPageState extends State<PrintPage> {
       bytes += generator.cut();
 
       // Print receipt
-      // debugPrintdebugPrint('Sending print job to printer...');
+      // debugPrint('Sending print job to printer...');
       await printerManager.send(
           type: selectedPrinter!.typePrinter, bytes: bytes);
-      // debugPrintdebugPrint('Print job sent successfully');
+      // debugPrint('Print job sent successfully');
       if (mounted) {
         showScaffold(
           context: context,
@@ -342,8 +342,8 @@ class _PrintPageState extends State<PrintPage> {
         );
       }
     } catch (e, stackTrace) {
-      // debugPrintdebugPrint('Error in printReceipt: $e');
-      // debugPrintdebugPrint('Stack trace: $stackTrace');
+      // debugPrint('Error in printReceipt: $e');
+      // debugPrint('Stack trace: $stackTrace');
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -351,12 +351,12 @@ class _PrintPageState extends State<PrintPage> {
         );
       }
     } finally {
-      // debugPrintdebugPrint('Disconnecting from printer...');
+      // debugPrint('Disconnecting from printer...');
       try {
         await printerManager.disconnect(type: selectedPrinter!.typePrinter);
-        // debugPrintdebugPrint('Successfully disconnected from printer');
+        // debugPrint('Successfully disconnected from printer');
       } catch (e) {
-        // debugPrintdebugPrint('Error disconnecting from printer: $e');
+        // debugPrint('Error disconnecting from printer: $e');
       }
     }
   }

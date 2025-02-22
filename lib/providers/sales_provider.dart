@@ -97,7 +97,7 @@ class SalesProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         if (response.body.isNotEmpty) {
           final jsonData = json.decode(response.body);
-          // // debugPrint('Received JSON data: ${jsonData.toString()}');
+          // debugPrint('Received JSON data: ${jsonData.toString()}');
           try {
             ListSalesOrderModel listSalesOrderModel =
                 ListSalesOrderModel.fromJson(jsonData);
@@ -164,7 +164,7 @@ class SalesProvider with ChangeNotifier {
     int? page,
   }) async {
     final queryParameters = <String, String>{
-      'customer_id': customerId.toString(),
+      'customer_id': "1",
     };
     if (page != null) queryParameters['page'] = page.toString();
 
@@ -182,6 +182,7 @@ class SalesProvider with ChangeNotifier {
 
       debugPrint(
           'fetch Sales Return list response status code: ${response.statusCode}');
+      debugPrint('response.body ${response.body}');
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -192,7 +193,7 @@ class SalesProvider with ChangeNotifier {
           _salesReturnOrders = salesReturnResponse.data; // Store fetched data
           notifyListeners(); // Notify listeners to update UI
         } catch (e) {
-          // debugPrint('Error parsing JSON data: $e');
+          debugPrint('Error parsing JSON data: $e');
         }
       } else {
         debugPrint(
@@ -243,6 +244,34 @@ class SalesProvider with ChangeNotifier {
 
     if (response.statusCode == 200) {
       // debugPrint('Sales return submitted successfully: ${response.body}');
+      notifyListeners();
+    } else {
+      debugPrint(
+          'Failed to submit sales return: ${response.statusCode} - ${response.body}');
+      throw Exception('Failed to submit sales return');
+    }
+  }
+
+  Future<void> completeSalesReturn({
+    required String accessToken,
+    required int returnOrderId,
+  }) async {
+    final url = Uri.parse(
+        APPUrl.completeSalesReturn); // Update with your server base URL
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'return_order_id': returnOrderId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      debugPrint('Sales return submitted successfully: ${response.body}');
       notifyListeners();
     } else {
       debugPrint(

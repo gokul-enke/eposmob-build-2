@@ -57,7 +57,7 @@ class _CategoryListItemNewState extends State<CategoryListItemNew> {
 //  String? accessToken =
 //           Provider.of<AuthModel>(context, listen: false).token;
     int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
-    // debugPrintdebugPrint("CategoryListItem  customerId  : $customerId");
+    // debugPrint("CategoryListItem  customerId  : $customerId");
     // Provider.of<CartProvider>(context, listen: false)
     //     .fetchCartData(customerId: 1);
     // Load products when the widget is built
@@ -66,7 +66,7 @@ class _CategoryListItemNewState extends State<CategoryListItemNew> {
     //   //  categoryProvider.listAllProducts(context, categoryId: 1);
     // });
 
-    // debugPrintdebugPrint(size.width.toString());
+    // debugPrint(size.width.toString());
     return Padding(
       padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
       child: SingleChildScrollView(
@@ -88,7 +88,7 @@ class _CategoryListItemNewState extends State<CategoryListItemNew> {
             //   //  controller: searchTextController,
             //   cursorColor: ColorManager.kPrimaryColor,
             //   onChanged: (query) {
-            //     // debugPrintdebugPrint(query);
+            //     // debugPrint(query);
             //     final filteredCategories =
             //         categoryProvider.searchCategories(query);
 
@@ -155,9 +155,9 @@ class _CategoryListItemNewState extends State<CategoryListItemNew> {
 
                           // debugPrint(
                           //     "Inside category ListItem Widgetcategorys.categorySlug");
-                          // // debugPrintdebugPrint("categorys.categoryImage");
-                          // // debugPrintdebugPrint(categorys.categoryIcon);
-                          // // debugPrintdebugPrint("${provider.category!.length}");
+                          // debugPrint("categorys.categoryImage");
+                          // debugPrint(categorys.categoryIcon);
+                          // debugPrint("${provider.category!.length}");
                           return GestureDetector(
                             onTap: () {
                               // provider.selectCategory(
@@ -236,7 +236,7 @@ class _CategoryListItemNewState extends State<CategoryListItemNew> {
             //   //  controller: searchTextController,
             //   cursorColor: ColorManager.kPrimaryColor,
             //   onChanged: (query) {
-            //     // debugPrintdebugPrint(query);
+            //     // debugPrint(query);
             //     final filteredProducts = productProvider.searchProducts(query);
 
             //     productProvider.updateFilteredProducts(filteredProducts);
@@ -306,23 +306,23 @@ class _CategoryListItemNewState extends State<CategoryListItemNew> {
                     // final isSelected =
                     //     selectionProvider.selectedIndices.contains(index);
 
-                    // debugPrintdebugPrint("selectionProvider.getProducts!.length");
-                    // debugPrintdebugPrint("${selectionProvider.productList!.length}");
+                    // debugPrint("selectionProvider.getProducts!.length");
+                    // debugPrint("${selectionProvider.productList!.length}");
                     // if (selectionProvider.isLoading ||
                     //     selectionProvider.productList!.isEmpty) {
                     if (selectionProvider.productList!.isEmpty) {
                       return const BuildProductDummy();
                     } else {
                       String? file = "";
-                      // debugPrintdebugPrint("file-$index$file");
+                      // debugPrint("file-$index$file");
                       for (var v in product.attachment ?? []) {
-                        // debugPrintdebugPrint(v.filePath);
+                        // debugPrint(v.filePath);
 
                         if (v.isPrimary == 1) {
-                          // debugPrintdebugPrint("file$file");
+                          // debugPrint("file$file");
                           file = v.filePath;
                         } else {
-                          // debugPrintdebugPrint("fileShanidha$file");
+                          // debugPrint("fileShanidha$file");
                         }
                       }
 
@@ -366,7 +366,7 @@ class _CategoryListItemNewState extends State<CategoryListItemNew> {
                                 onTap: () {
                                   selectionProvider.toggleSelectionProduct(
                                       index, product);
-                                  // debugPrintdebugPrint("selected");
+                                  // debugPrint("selected");
                                   // selectionProvider.setSelection(true);
 
                                   showDialogFunctionForProductDetailsAnimated(
@@ -542,7 +542,7 @@ showDialogFunctionForProductDetails(
                         String? accessToken =
                             Provider.of<AuthModel>(context, listen: false)
                                 .token;
-                        // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
+                        // debugPrint("accessToken From AuthModel $accessToken");
                         Provider.of<CartProvider>(context, listen: false)
                             .addToCartAPI(
                                 customerId: customerId,

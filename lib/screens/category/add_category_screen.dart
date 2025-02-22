@@ -570,7 +570,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                             "categoryIdController.text ${idController.text}");
                                         if (validateForm()) {
                                           // formKey.currentState!.save();
-                                          // debugPrintdebugPrint("submit");
+                                          // debugPrint("submit");
                                           debugPrint(
                                               "categoryIdController.text ${idController.text}");
                                           debugPrint(
@@ -704,7 +704,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
 
   showDialogFunctionForCategoryImageDetails(BuildContext context,
       final List<GetProductListFileModelData>? attachment, Size size) {
-    // debugPrintdebugPrint("showDialogFunctionForProductDetailsAnimated");
+    // debugPrint("showDialogFunctionForProductDetailsAnimated");
     return showDialog(
         context: context,
         barrierDismissible: true,
@@ -859,7 +859,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                               )),
                                         ]),
 
-                                    // // Map your order data to table rows here
+                                    // Map your order data to table rows here
                                     // ...imageFiles!.map((image) {
                                     if (attachment != null)
                                       ...attachment
@@ -1014,7 +1014,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
 
   showDialogFunctionForCategoryIconDetails(BuildContext context,
       final List<GetProductListFileModelData>? attachment, Size size) {
-    // debugPrintdebugPrint("showDialogFunctionForCategoryIconDetails");
+    // debugPrint("showDialogFunctionForCategoryIconDetails");
     return showDialog(
         context: context,
         barrierDismissible: true,
@@ -1169,7 +1169,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                               )),
                                         ]),
 
-                                    // // Map your order data to table rows here
+                                    // Map your order data to table rows here
                                     // ...imageFiles!.map((image) {
                                     if (attachment != null)
                                       ...attachment

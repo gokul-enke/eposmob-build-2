@@ -29,7 +29,7 @@ class FaqPageState extends State<FaqPage> {
     try {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
+      // debugPrint("accessToken From AuthModel $accessToken");
       final response = await http.get(Uri.parse(APPUrl.listFaqs), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
@@ -49,7 +49,7 @@ class FaqPageState extends State<FaqPage> {
         });
       }
     } catch (error) {
-      // debugPrintdebugPrint('Error fetching FAQs: $error');
+      // debugPrint('Error fetching FAQs: $error');
       setState(() {
         isLoading = false; // Set loading to false on error
       });

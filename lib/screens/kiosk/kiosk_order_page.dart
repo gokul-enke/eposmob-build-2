@@ -65,7 +65,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
 
-    // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
+    // debugPrint("accessToken From AuthModel $accessToken");
     Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
         customerId: customerId ?? 1, accessToken: accessToken ?? '');
   }
@@ -74,7 +74,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
     try {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
+      // debugPrint("accessToken From AuthModel $accessToken");
 
       final response =
           await CustomerProvider().listCustomer(accessToken: accessToken ?? "");
@@ -89,7 +89,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
         // Handle error
       }
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     }
   }
 
@@ -196,7 +196,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
       width: size.width / 3,
       child: Autocomplete<CustomerListModelData>(
         optionsBuilder: (mobileNumberTextController) async {
-          // debugPrintdebugPrint(mobileNumberTextController.text);
+          // debugPrint(mobileNumberTextController.text);
           if (mobileNumberTextController.text.isEmpty) {
             return const Iterable<CustomerListModelData>.empty();
           }
@@ -205,8 +205,8 @@ class KioskOrderPageState extends State<KioskOrderPage> {
             String? accessToken =
                 Provider.of<AuthModel>(context, listen: false).token;
 
-            // debugPrintdebugPrint("accessToken From AuthModel $accessToken");
-            // debugPrintdebugPrint(mobileNumberTextController.text);
+            // debugPrint("accessToken From AuthModel $accessToken");
+            // debugPrint(mobileNumberTextController.text);
 
             try {
               final response = await CustomerProvider().findCustomerByPhone(
@@ -218,10 +218,10 @@ class KioskOrderPageState extends State<KioskOrderPage> {
                 return customerListModel.data!;
               } else {
                 // Handle error
-                // debugPrintdebugPrint('Error in response: ${response["message"]}');
+                // debugPrint('Error in response: ${response["message"]}');
               }
             } catch (error) {
-              // debugPrintdebugPrint('Exception caught: $error');
+              // debugPrint('Exception caught: $error');
             }
           }
 
@@ -346,7 +346,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
         stream: cartProvider.cartStream,
         builder: (context, snapshot) {
           if (snapshot.hasData) {
-            // debugPrintdebugPrint("Inside Order List Consumer");
+            // debugPrint("Inside Order List Consumer");
             List<ListCartModelData>? cartItems = snapshot.data;
             List<ListCartModelDataCartItem>? cartItem = cartItems!.isEmpty
                 ? []
@@ -427,8 +427,8 @@ class KioskOrderPageState extends State<KioskOrderPage> {
     int? cartId = Provider.of<CartProvider>(context, listen: false)
         .getCartIdFromProductId(productId);
 
-    // debugPrintdebugPrint("product id is ${productId.toString()}");
-    // debugPrintdebugPrint("cart id is ${cartId.toString()}");
+    // debugPrint("product id is ${productId.toString()}");
+    // debugPrint("cart id is ${cartId.toString()}");
 
     Provider.of<CartProvider>(context, listen: false)
         .removeFromCartAPI(
@@ -438,7 +438,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
       remove: "false",
     )
         .then((value) {
-      // debugPrintdebugPrint("removed succesrfully");
+      // debugPrint("removed succesrfully");
 
       AddToCartModel addToCartModel = AddToCartModel.fromJson(value);
       if (value["status"] == "success") {
@@ -713,7 +713,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
             color: ColorManager.kPrimaryColor,
           ),
           onTap: () {
-            // debugPrintdebugPrint("Tax Details ${taxNames.toString()}");
+            // debugPrint("Tax Details ${taxNames.toString()}");
             showDialog(
               context: context,
               builder: (context) {
@@ -875,7 +875,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
         }
       });
     } catch (error) {
-      // debugPrintdebugPrint(error.toString());
+      // debugPrint(error.toString());
     }
   }
 
@@ -903,7 +903,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
         Provider.of<CartProvider>(context, listen: false)
             .priceSummary!
             .netTotal);
-    // debugPrintdebugPrint(cartProductItems!.length.toString());
+    // debugPrint(cartProductItems!.length.toString());
 
     Navigator.push(
       context,
