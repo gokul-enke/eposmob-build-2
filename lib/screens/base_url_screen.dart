@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../resources/app_url.dart';
 
 class BaseURLScreen extends StatefulWidget {
+  const BaseURLScreen({super.key});
+
   @override
   _BaseURLScreenState createState() => _BaseURLScreenState();
 }
@@ -36,7 +38,7 @@ class _BaseURLScreenState extends State<BaseURLScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Set Base URL')),
+      appBar: AppBar(title: const Text('Set Base URL')),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -44,12 +46,12 @@ class _BaseURLScreenState extends State<BaseURLScreen> {
           children: <Widget>[
             TextField(
               controller: _baseURLController,
-              decoration: InputDecoration(labelText: 'Base URL'),
+              decoration: const InputDecoration(labelText: 'Base URL'),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _saveBaseURL,
-              child: Text('Save Base URL'),
+              child: const Text('Save Base URL'),
             ),
           ],
         ),

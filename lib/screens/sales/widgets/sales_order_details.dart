@@ -5,7 +5,6 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/order_details.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/sales/widgets/buid_order_details_widget.dart';

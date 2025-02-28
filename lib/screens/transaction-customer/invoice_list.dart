@@ -68,7 +68,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       } else {
         showScaffold(context: context, message: "Data Not Found");
       }
-    } catch (error, stackTrace) {
+    } catch (error) {
       // debugPrint("Error loading invoices: $error");
       // debugPrint("Stack Trace: $stackTrace");
     } finally {
@@ -111,7 +111,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       } else {
         showScaffold(context: context, message: "Data Not Found");
       }
-    } catch (error, stackTrace) {
+    } catch (error) {
       // debugPrint("Error loading invoices: $error");
       // debugPrint("Stack Trace: $stackTrace");
     } finally {

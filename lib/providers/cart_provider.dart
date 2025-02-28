@@ -572,7 +572,7 @@ class CartProvider with ChangeNotifier {
       debugPrint('Response status: ${response.statusCode}');
       debugPrint('Response body: ${response.body}');
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201 || response.statusCode == 200) {
         // debugPrint('inside 201');
 
         // debugPrint(json.decode(response.body).toString());
@@ -649,7 +649,7 @@ class CartProvider with ChangeNotifier {
       debugPrint('Response status: ${response.statusCode}');
       debugPrint('Response body: ${response.body}');
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         // debugPrint('inside 201');
 
         // debugPrint(json.decode(response.body).toString());

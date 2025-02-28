@@ -50,9 +50,10 @@ class SalesReturnOrder {
       status: json['status'],
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
-      items: (json['items'] as List)
-          .map((item) => SalesReturnItem.fromJson(item))
-          .toList(),
+      items: (json['items'] as List?)
+              ?.map((item) => SalesReturnItem.fromJson(item))
+              .toList() ??
+          [],
     );
   }
 }

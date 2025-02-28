@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
@@ -224,7 +225,14 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
     return TableRow(
       decoration:
           BoxDecoration(color: ColorManager.tableBGColor.withOpacity(0.4)),
-      children: ["No", "Order ID", "Total Return Amount", "Status", "Action"]
+      children: [
+        "Order Number",
+        "Total Quantity",
+        "Total Return Amount",
+        "Status",
+        "Date",
+        "Action"
+      ]
           .map((title) => TableCell(
                 verticalAlignment: TableCellVerticalAlignment.middle,
                 child: Padding(
@@ -249,9 +257,10 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
   TableRow _buildTableRow(SalesReturnOrder order, int index) {
     return TableRow(
       children: [
-        _buildTableCell(index.toString()),
         _buildTableCell(order.orderId.toString()),
+        _buildTableCell(order.items.length.toString()),
         _buildTableCell(order.totalAmount),
+        _buildTableCell(DateHelper.formatISODate(order.createdAt.toString())),
         _buildTableCell(order.status.toString(), isStatusCell: true),
         TableCell(
             verticalAlignment: TableCellVerticalAlignment.middle,

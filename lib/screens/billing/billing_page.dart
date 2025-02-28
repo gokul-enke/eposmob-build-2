@@ -1786,6 +1786,7 @@ class _BillingPageState extends State<BillingPage> {
           carNumber: _carNumberController.text,
         )
             .then((response) {
+          debugPrint("response ${response["order_number"]}");
           if (response["order_number"] != null) {
             showScaffold(
               context: context,

@@ -4,6 +4,7 @@ import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platfor
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/models/list_sales_order.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -165,17 +166,7 @@ class _PrintPageState extends State<PrintPage> {
 
   Future<void> printReceipt(
       String customerCareNumber, String customerCareEmail) async {
-    // debugPrint('Starting printReceipt function');
-    // debugPrint('Selected Printer: ${selectedPrinter?.deviceName}');
-    // debugPrint('Selected Printer Address: ${selectedPrinter?.address}');
-    // debugPrint('Printer Type: ${selectedPrinter?.typePrinter}');
-    // debugPrint('VendorId: ${selectedPrinter?.vendorId}');
-    // debugPrint('ProductId: ${selectedPrinter?.productId}');
-    // debugPrint('Customer Care Number: $customerCareNumber');
-    // debugPrint('Customer Care Email: $customerCareEmail');
-
     if (selectedPrinter == null) {
-      // debugPrint('Error: No printer selected');
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -186,32 +177,8 @@ class _PrintPageState extends State<PrintPage> {
     }
 
     try {
-      // debugPrint('Attempting to connect to printer...');
-      // Connect to the printer based on type
-      if (selectedPrinter!.typePrinter == PrinterType.usb) {
-        await printerManager.connect(
-          type: PrinterType.usb,
-          model: UsbPrinterInput(
-            name: selectedPrinter!.deviceName ?? 'Unknown',
-            productId: selectedPrinter!.productId,
-            vendorId: selectedPrinter!.vendorId,
-          ),
-        );
-      } else if (selectedPrinter!.typePrinter == PrinterType.bluetooth) {
-        if (selectedPrinter!.address == null) {
-          throw Exception('Bluetooth printer address is null');
-        }
-        await printerManager.connect(
-          type: PrinterType.bluetooth,
-          model: BluetoothPrinterInput(
-            name: selectedPrinter!.deviceName ?? 'Unknown',
-            address: selectedPrinter!.address!,
-            isBle: false,
-          ),
-        );
-      }
-
-      // debugPrint('Successfully connected to printer');
+      // Connect to the printer
+      await _connectToPrinter();
 
       // Generate receipt
       final profile = await CapabilityProfile.load();
@@ -219,145 +186,375 @@ class _PrintPageState extends State<PrintPage> {
       List<int> bytes = [];
 
       // Title
-      String title = 'EPOS Invoice';
-      bytes += generator.text(title,
-          styles: const PosStyles(
-              align: PosAlign.center, bold: true, height: PosTextSize.size2));
-      // debugPrint('Printing: $title');
+      // bytes += _buildTitle(generator, 'EPOS Invoice');
 
-      // bytes += generator.feed(1);
-      bytes += generator.text("================================");
+      //Header
+      bytes += _buildHeader(
+          generator, 'EPOS Invoice', customerCareNumber, customerCareEmail);
 
-      // Date and Order number
-      String orderDateText = 'Date: ${widget.orderDate}';
-      String orderNumberText = 'Order#: ${widget.orderNumber}';
-      bytes += generator.text(orderDateText,
-          styles: const PosStyles(align: PosAlign.left));
-      // debugPrint('Printing: $orderDateText');
-
-      bytes += generator.text(orderNumberText,
-          styles: const PosStyles(align: PosAlign.left));
-      // debugPrint('Printing: $orderNumberText');
+      // Date and Order Number
+      // bytes += _buildOrderDetails(generator);
 
       // Store Name
-      String storeNameText = 'Store Name: ${widget.storeName}';
-      bytes += generator.text(storeNameText,
-          styles: const PosStyles(align: PosAlign.left));
-      // debugPrint('Printing: $storeNameText');
+      bytes += _buildStoreName(generator, widget.storeName.toString());
 
-      bytes += generator.text("================================");
+      // Item Table Header
+      bytes += _buildTableHeader(generator);
 
-      // bytes += generator.feed(1);
+      // Cart Items
+      bytes += _buildCartItems(generator, widget.cartItems);
 
-// Table header
-      bytes += generator.row([
-        PosColumn(text: 'Sl#', width: 1),
-        PosColumn(text: 'Item', width: 5), // Wider for wrapping
-        PosColumn(
-            text: 'Qty',
-            width: 2,
-            styles: const PosStyles(align: PosAlign.right)),
-        PosColumn(
-            text: 'Price',
-            width: 2,
-            styles: const PosStyles(align: PosAlign.right)),
-        PosColumn(
-            text: 'Amount',
-            width: 2,
-            styles: const PosStyles(align: PosAlign.right)),
-      ]);
+      // Total Amount
+      bytes += _buildTotalAmount(generator);
 
-      bytes += generator.text("================================");
+      // Payment Details
+      bytes += _buildPaymentDetails(generator);
 
-      for (var i = 0; i < widget.cartItems.length; i++) {
-        var item = widget.cartItems[i];
+      // Tax Details
+      // bytes += _buildTaxDetails(generator);
 
-        bytes += generator.row([
-          PosColumn(text: (i + 1).toString(), width: 1),
-          PosColumn(
-            text: item.productName ?? '',
-            width: 5,
-          ),
-          PosColumn(
-              text: item.quantity.toString(),
-              width: 2,
-              styles: const PosStyles(align: PosAlign.right)),
-          PosColumn(
-              text: item.unitPrice.toString(),
-              width: 2,
-              styles: const PosStyles(align: PosAlign.right)),
-          PosColumn(
-              text: item.totalPrice.toString(),
-              width: 2,
-              styles: const PosStyles(align: PosAlign.right)),
-        ]);
-      }
+      // Tax Details
+      // bytes += _buildPointsDetails(generator);
 
-      bytes += generator.text("================================");
-
-      // Add total
-      String totalText = 'Total: ${widget.formattedTotal}';
-      // debugPrint('Printing: $totalText');
-
-      bytes += generator.row([
-        PosColumn(
-            text: 'Total:', width: 9, styles: const PosStyles(bold: true)),
-        PosColumn(
-            text: widget.formattedTotal,
-            width: 3,
-            styles: const PosStyles(bold: true, align: PosAlign.right)),
-      ]);
-      bytes += generator.text("================================");
-
-      // bytes += generator.feed(1);
+      // Tax Details
+      // bytes += _buildServiceDetails(generator);
 
       // Customer Care Details
-      String customerCareText = 'Customer Care: $customerCareNumber';
-      String emailText = 'Email: $customerCareEmail';
-      bytes += generator.text(customerCareText,
-          styles: const PosStyles(align: PosAlign.center));
-      // debugPrint('Printing: $customerCareText');
+      bytes += _buildCustomerCareDetails(
+          generator, customerCareNumber, customerCareEmail);
 
-      bytes += generator.text(emailText,
-          styles: const PosStyles(align: PosAlign.center));
-      // debugPrint('Printing: $emailText');
+      // Thank You Message
+      bytes += _buildThankYouMessage(generator);
 
-      bytes += generator.text("================================");
-      bytes += generator.text("Thankyou visit again !!!",
-          styles: const PosStyles(bold: true, align: PosAlign.center));
-      bytes += generator.text("================================");
-
-      // bytes += generator.feed(2);
+      // Cut the receipt
       bytes += generator.cut();
 
       // Print receipt
-      // debugPrint('Sending print job to printer...');
       await printerManager.send(
           type: selectedPrinter!.typePrinter, bytes: bytes);
-      // debugPrint('Print job sent successfully');
+
       if (mounted) {
-        showScaffold(
-          context: context,
-          message: "Print job sent successfully",
-        );
+        showScaffold(context: context, message: "Print job sent successfully");
       }
-    } catch (e, stackTrace) {
-      // debugPrint('Error in printReceipt: $e');
-      // debugPrint('Stack trace: $stackTrace');
+    } catch (e) {
       if (mounted) {
-        showScaffoldError(
-          context: context,
-          message: 'Error: ${e.toString()}',
-        );
+        showScaffoldError(context: context, message: 'Error: ${e.toString()}');
       }
     } finally {
-      // debugPrint('Disconnecting from printer...');
-      try {
-        await printerManager.disconnect(type: selectedPrinter!.typePrinter);
-        // debugPrint('Successfully disconnected from printer');
-      } catch (e) {
-        // debugPrint('Error disconnecting from printer: $e');
+      await _disconnectPrinter();
+    }
+  }
+
+  Future<void> _connectToPrinter() async {
+    if (selectedPrinter!.typePrinter == PrinterType.usb) {
+      await printerManager.connect(
+        type: PrinterType.usb,
+        model: UsbPrinterInput(
+          name: selectedPrinter!.deviceName ?? 'Unknown',
+          productId: selectedPrinter!.productId,
+          vendorId: selectedPrinter!.vendorId,
+        ),
+      );
+    } else if (selectedPrinter!.typePrinter == PrinterType.bluetooth) {
+      if (selectedPrinter!.address == null) {
+        throw Exception('Bluetooth printer address is null');
       }
+      await printerManager.connect(
+        type: PrinterType.bluetooth,
+        model: BluetoothPrinterInput(
+          name: selectedPrinter!.deviceName ?? 'Unknown',
+          address: selectedPrinter!.address!,
+          isBle: false,
+        ),
+      );
+    }
+  }
+
+  List<int> _buildHeader(Generator generator, String title,
+      String customerCareNumber, String customerCareEmail) {
+    List<int> bytes = [];
+
+    // Store Details
+    bytes += generator.text(title,
+        styles: const PosStyles(
+            align: PosAlign.center, bold: true, height: PosTextSize.size2));
+    // bytes += generator.text('Manjeri,Malappuram',
+    //     styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.text('TEL: $customerCareNumber',
+        styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.text('Email: $customerCareEmail',
+        styles: const PosStyles(align: PosAlign.center));
+    // bytes += generator.text('The Goods and Service Tax Rule 2017',
+    //     styles: const PosStyles(align: PosAlign.center));
+    // bytes += generator.text('GSTIN No: 32AAT000004G1ZH',
+    //     styles: const PosStyles(align: PosAlign.center));
+    // bytes += generator.text('FSSAI: 113250100000078',
+    //     styles: const PosStyles(align: PosAlign.center));
+
+    // Invoice Title
+    bytes += generator.text('TAX INVOICE',
+        styles: const PosStyles(align: PosAlign.center, bold: true));
+
+    // Date and Time
+    bytes += generator.text(
+        'Date: ${widget.orderDate}  Order#: ${widget.orderNumber}',
+        styles: const PosStyles(align: PosAlign.center));
+
+    // Separator
+    // bytes += generator.text("================================");
+    generator.hr();
+
+    return bytes;
+  }
+
+  List<int> _buildTitle(Generator generator, String title) {
+    return generator.text(title,
+            styles: const PosStyles(
+                align: PosAlign.center,
+                bold: true,
+                height: PosTextSize.size2)) +
+        // generator.text("================================");
+        generator.hr();
+  }
+
+  List<int> _buildOrderDetails(Generator generator) {
+    return generator.text('Date: ${widget.orderDate}',
+            styles: const PosStyles(align: PosAlign.left)) +
+        generator.text('Order#: ${widget.orderNumber}',
+            styles: const PosStyles(align: PosAlign.left)) +
+        // generator.text("================================");
+        generator.hr();
+  }
+
+  List<int> _buildStoreName(Generator generator, String storeName) {
+    return generator.text('Store Name: $storeName',
+            styles: const PosStyles(align: PosAlign.left)) +
+        generator.hr();
+    // generator.text("================================");
+  }
+
+  List<int> _buildTableHeader(Generator generator) {
+    return generator.row([
+          PosColumn(text: 'Sl#', width: 1),
+          PosColumn(text: 'Item', width: 5),
+          PosColumn(
+              text: 'Qty',
+              width: 2,
+              styles: const PosStyles(align: PosAlign.right)),
+          PosColumn(
+              text: 'Price',
+              width: 2,
+              styles: const PosStyles(align: PosAlign.right)),
+          PosColumn(
+              text: 'Amount',
+              width: 2,
+              styles: const PosStyles(align: PosAlign.right)),
+        ]) +
+        generator.hr();
+    // generator.text("================================");
+  }
+
+  List<int> _buildCartItems(Generator generator, List<dynamic> cartItems) {
+    List<int> bytes = [];
+    for (var i = 0; i < cartItems.length; i++) {
+      var item = cartItems[i];
+      bytes += generator.row([
+        PosColumn(text: (i + 1).toString(), width: 1),
+        PosColumn(text: item.productName ?? '', width: 5),
+        PosColumn(
+            text: item.quantity.toString(),
+            width: 2,
+            styles: const PosStyles(align: PosAlign.right)),
+        PosColumn(
+            text: item.unitPrice.toString(),
+            width: 2,
+            styles: const PosStyles(align: PosAlign.right)),
+        PosColumn(
+            text: item.totalPrice.toString(),
+            width: 2,
+            styles: const PosStyles(align: PosAlign.right)),
+      ]);
+    }
+    return bytes + generator.hr();
+  }
+
+  List<int> _buildTotalAmount(Generator generator) {
+    List<int> bytes = [];
+
+    List<Map<String, String>> items = [
+      {'label': 'Net Amount', 'value': widget.formattedTotal},
+      // {'label': 'E&OE Discount', 'value': '0.00'},
+      // {'label': 'Sales Return', 'value': '0.00'},
+      // {'label': 'RoundOff', 'value': '0.00'},
+      // {'label': 'Invoice Total:', 'value': widget.formattedTotal},
+    ];
+
+    for (var item in items) {
+      bytes += generator.row([
+        PosColumn(
+            text: item['label']!,
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+        PosColumn(
+            text: item['value']!,
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+      ]);
+    }
+
+    // Amount in Words
+    // bytes += generator.text(
+    //     'Two Thousand Nine Hundred Fifty Four INDIAN RUPEES Only.',
+    //     styles: const PosStyles(align: PosAlign.left));
+
+    // Separator
+    // bytes += generator.text("================================");
+    generator.hr();
+    return bytes;
+  }
+
+  List<int> _buildPaymentDetails(Generator generator) {
+    List<int> bytes = [];
+
+    // Payment Header
+    // bytes += generator.text('CASH     | CARD     | COUPON   | CHANGE',
+    //     styles: const PosStyles(align: PosAlign.center));
+
+    // // Payment Values (dummy data)
+    // bytes += generator.text('3000.00  | 0.00     | 0.00     | 46.00',
+    //     styles: const PosStyles(align: PosAlign.center));
+
+    // Savings Message
+    bytes += generator.text('You Have Saved',
+        styles: const PosStyles(bold: true, align: PosAlign.center));
+    bytes += generator.text('0.00',
+        styles: const PosStyles(bold: true, align: PosAlign.center));
+
+    // Separator
+    bytes += generator.hr();
+
+    return bytes;
+  }
+
+  List<int> _buildTaxDetails(Generator generator) {
+    List<int> bytes = [];
+
+    // Tax Header
+    bytes += generator.text(
+        'GST       | TaxableAmt | SGST     | CGST     | TotalGST',
+        styles: const PosStyles(bold: true, align: PosAlign.center));
+    bytes += generator.hr();
+
+    // Tax Details (dummy data)
+    bytes += generator.text(
+        '0%       | 207.00     | 0.00     | 0.00     | 0.00',
+        styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.text(
+        '5%       | 947.62     | 23.69    | 23.69    | 23.69',
+        styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.text(
+        '12%      | 936.79     | 28.61    | 28.61    | 57.21',
+        styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.text(
+        '18%      | 1032.18    | 92.90    | 92.90    | 185.80',
+        styles: const PosStyles(align: PosAlign.center));
+
+    // Total Taxable Amount
+    bytes += generator.hr();
+    bytes += generator.text(
+        'Total    | 2663.59    | 145.20   | 145.20   | 290.39',
+        styles: const PosStyles(bold: true, align: PosAlign.center));
+
+    // MRP Total
+    bytes += generator.text('MRP Total: 5495.00',
+        styles: const PosStyles(bold: true, align: PosAlign.left));
+
+    // Separator
+    bytes += generator.hr();
+
+    return bytes;
+  }
+
+  List<int> _buildPointsDetails(Generator generator) {
+    List<int> bytes = [];
+
+    // Points Header
+    bytes += generator.text('NewPoint | Redeem | Balance | CardBalance',
+        styles: const PosStyles(bold: true, align: PosAlign.center));
+
+    bytes += generator.hr();
+
+    return bytes;
+  }
+
+  List<int> _buildServiceDetails(Generator generator) {
+    List<int> bytes = [];
+
+    // Points Values (dummy data)
+    bytes += generator.text('0.00     | 0.00   | 0.00    | 0.00',
+        styles: const PosStyles(align: PosAlign.center));
+
+    // Service Details Header
+    bytes += generator.text(
+        'Served by | Total Item | Print Date & Time | Counter | DD',
+        styles: const PosStyles(bold: true, align: PosAlign.center));
+
+    bytes += generator.hr();
+
+    // Service Details Values (dummy data)
+    bytes += generator.text(
+        'adhi      | 27.00     | 21-02-2025 19:39:36 | POS5',
+        styles: const PosStyles(align: PosAlign.center));
+
+    // Separator
+    bytes += generator.hr();
+
+    return bytes;
+  }
+
+  List<int> _buildCustomerCareDetails(
+      Generator generator, String customerCareNumber, String email) {
+    return generator.text('Customer Care: $customerCareNumber',
+            styles: const PosStyles(align: PosAlign.center)) +
+        generator.text('Email: $email',
+            styles: const PosStyles(align: PosAlign.center)) +
+        // generator.text("================================");
+        generator.hr();
+  }
+
+  List<int> _buildThankYouMessage(Generator generator) {
+    List<int> bytes = [];
+
+    // Terms & Conditions Header
+    bytes += generator.text('Terms & Conditions',
+        styles: const PosStyles(bold: true, align: PosAlign.center));
+
+    // Terms & Conditions Text
+    bytes += generator.text(
+        '* No product will be replaced/returned after 7 days',
+        styles: const PosStyles(align: PosAlign.left));
+    bytes += generator.text('  from the date of purchase.',
+        styles: const PosStyles(align: PosAlign.left));
+    bytes += generator.text('* No product will be replaced without bill.',
+        styles: const PosStyles(align: PosAlign.left));
+
+    // Thank You Message
+    bytes += generator.text('*** Thank You For Shopping With Us ***',
+        styles: const PosStyles(bold: true, align: PosAlign.center));
+
+    // Separator
+    bytes += generator.hr();
+
+    return bytes;
+  }
+
+  Future<void> _disconnectPrinter() async {
+    try {
+      await printerManager.disconnect(type: selectedPrinter!.typePrinter);
+    } catch (e) {
+      // Handle disconnection error
     }
   }
 
@@ -366,6 +563,9 @@ class _PrintPageState extends State<PrintPage> {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final appSettings = appSettingsProvider.appSettings;
+
+    debugPrint("appSettings!.customerCareEmail.toString()");
+    debugPrint(appSettings!.customerCareEmail.toString());
 
     return Scaffold(
       backgroundColor: backgroundColor,

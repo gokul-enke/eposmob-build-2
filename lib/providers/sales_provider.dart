@@ -139,21 +139,18 @@ class SalesProvider with ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
         'content-type': 'application/json'
       });
-      if (response.statusCode == 200) {
-        // debugPrint('List listOrderDetails  inside');
+      // if (response.statusCode == 200) {
+      debugPrint('List listOrderDetails  inside');
 
-        // debugPrint(json.decode(response.body).toString());
-        final jsonData = json.decode(response.body);
+      debugPrint(json.decode(response.body).toString());
+      final jsonData = json.decode(response.body);
 
-        // debugPrint("status ${jsonData["status"]}");
+      debugPrint("status ${jsonData["status"]}");
 
-        return json.decode(response.body);
-      } else if (response.statusCode > 400) {
-        throw const HttpException("Please Try Again!");
-      } else {
-        throw const HttpException('Failed to load Data,,Try Again Later!');
-      }
+      return json.decode(response.body);
+      // }
     } catch (error) {
+      debugPrint(error.toString());
       rethrow;
     } finally {}
   }
