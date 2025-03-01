@@ -1,7 +1,7 @@
 class APPUrl {
-  // static String baseURL = "https://epos.enke.ae";
+  static String baseURL = "https://epos.enke.ae";
   // static String baseURL = "https://epos.mevcakes.com";
-  static String baseURL = "https://hypersouq.enke.in";
+  // static String baseURL = "https://hypersouq.enke.in";
   // static String baseURL = "http://localhost:8000";
   // static String baseURL = "https://three-places-cover.loca.lt";
   // static void setBaseUrl(String url) {
@@ -51,6 +51,7 @@ class APPUrl {
   static String userDetailsUrl = '$baseURL/api/v1/user/get-user-details';
   static String findCustomerByPhone = '$baseURL/api/v1/search-user-by-key';
 
+  static String createProductUrl = '$baseURL/api/v1/product/create-product';
   static String addProductUrl =
       '$baseURL/api/v1/product/add-product-general-item';
   static String addProductNameUrl = '$baseURL/api/v1/product/add-product-name';

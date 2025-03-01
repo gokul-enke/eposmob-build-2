@@ -433,6 +433,49 @@ class GridSelectionProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  //          *********************** CREATE PRODUCT  API ***************************************************
+
+  Future<dynamic> createProductAPI({
+    required String categoryId,
+    required String productName,
+    required String sellingPrice,
+    required String mrp,
+    required String unit,
+    required String barcode,
+    required String accessToken,
+  }) async {
+    final Map<String, dynamic> apiBodyData = {
+      'name': productName,
+      'price': sellingPrice,
+      'category_id': categoryId,
+      'mrp': mrp,
+      'barcode': barcode,
+      'unit': unit,
+    };
+
+    debugPrint("apiBodyData ${apiBodyData.toString()}");
+    debugPrint("accessToken ${accessToken.toString()}");
+
+    final url = Uri.parse(APPUrl.createProductUrl);
+    try {
+      final response =
+          await http.post(url, body: json.encode(apiBodyData), headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      });
+      debugPrint('inside ${response.statusCode}');
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        return response.body;
+      }
+    } catch (e) {
+      debugPrint('Error in createProductAPI: $e');
+      rethrow;
+    }
+  }
+
   //          *********************** ADD PRODUCT  API ***************************************************
 
   Future<dynamic> addProductAPI(

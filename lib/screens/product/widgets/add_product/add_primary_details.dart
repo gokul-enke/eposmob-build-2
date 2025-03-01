@@ -722,6 +722,7 @@ class AddProductPageScreen extends StatelessWidget {
                                           gridSelectionProvider
                                               .setProductIDForAdding(
                                                   value["product_id"]);
+                                                  
                                           Navigator.pop(context);
                                           // productBarcodeController.clear();
                                           // productNameController.clear();

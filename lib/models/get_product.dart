@@ -57,11 +57,8 @@ class GetProduct {
   final ProductPrice? price;
   final List<Attachment>? attachment;
   bool isSelected = false;
-  final Names? names;
-  final List<ProductProp>? productProps; // Changed from Map<String, String>?
-
-  // final List<dynamic>? propValues;
-  // final List<dynamic>? attachement;
+  final dynamic names; // Change to dynamic
+  final List<ProductProp>? productProps;
 
   GetProduct({
     this.productId,
@@ -101,7 +98,7 @@ class GetProduct {
             ? []
             : List<Attachment>.from(
                 json["attachment"]!.map((x) => Attachment.fromJson(x))),
-        names: json["names"] == null ? null : Names.fromJson(json["names"]),
+        names: json["names"], // Keep as dynamic
         productProps: json["product_props"] == null
             ? []
             : List<ProductProp>.from(
@@ -121,14 +118,11 @@ class GetProduct {
         "unit": unit,
         "currency": currency,
         "description": description,
-
         "attachment": attachment == null
             ? []
             : List<dynamic>.from(attachment!.map((x) => x.toJson())),
-        // "attachement": attachement == null
-        //     ? []
-        //     : List<dynamic>.from(attachement!.map((x) => x)),
-        "names": names?.toJson(),
+        "names":
+            names is Map ? (names as Names).toJson() : null, // Handle toJson
         "product_props": productProps == null
             ? []
             : List<dynamic>.from(productProps!.map((x) => x.toJson())),

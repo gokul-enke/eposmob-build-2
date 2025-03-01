@@ -28,6 +28,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/compact_quantity_control.dart';
 import 'package:pos_machine/widgets/horizontal_product_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
@@ -365,72 +366,121 @@ class _BillingPageState extends State<BillingPage> {
                               readOnly:
                                   selectedProductNameController.text.isNotEmpty,
                               onchanged: (query) async {
-                                List<GetProduct>? products;
-                                products = await productProvider
-                                    .filterProductByBarcodeAPI(barCode: query);
-                                // debugPrint(products?.first.toString());
-                                if (products!.length == 1) {
-                                  // showScaffold(
-                                  //   context: context,
-                                  //   message: 'Product Found',
-                                  // );
-                                  // setState(() {
-                                  //   selectedProductIdController.text =
-                                  //       products!.first.productId.toString();
-                                  //   unitPriceController.text =
-                                  //       products.first.price?.price ?? '';
-                                  //   quantityController.text = '1';
-                                  //   selectedProductNameController.text =
-                                  //       products.first.productName ?? '';
-                                  //   barcodeController.text =
-                                  //       products.first.barcode ?? '';
-                                  // });
-                                  String? accessToken = Provider.of<AuthModel>(
-                                          context,
-                                          listen: false)
-                                      .token;
-                                  int? userId = Provider.of<AuthModel>(context,
-                                          listen: false)
-                                      .userId;
-                                  debugPrint(
-                                      "accessToken From AuthModel $accessToken");
-                                  Provider.of<CartProvider>(context,
-                                          listen: false)
-                                      .addToCartAPI(
-                                          customerId: userId!,
-                                          productId: products.first.productId!,
-                                          quantity: 1,
-                                          unitPrice:
-                                              products.first.price?.price,
-                                          accessToken: accessToken ?? "")
-                                      .then((value) {
-                                    AddToCartModel addToCartModel =
-                                        AddToCartModel.fromJson(value);
-                                    if (value["status"] == "success") {
-                                      showScaffold(
-                                        context: context,
-                                        message: addToCartModel.message ??
-                                            'Added To Cart',
-                                      );
-                                      setState(() {
-                                        _autocompleteProductKey = GlobalKey();
-                                        quantityController.clear();
-                                        barcodeController.clear();
-                                        selectedProductIdController.clear();
-                                        unitPriceController.clear();
+                                if (query!.length > 5) {
+                                  List<GetProduct>? products;
+                                  products = await productProvider
+                                      .filterProductByBarcodeAPI(
+                                          barCode: query);
+                                  // debugPrint(products?.first.toString());
+
+                                  if (products!.length == 1) {
+                                    String? accessToken =
+                                        Provider.of<AuthModel>(context,
+                                                listen: false)
+                                            .token;
+                                    int? userId = Provider.of<AuthModel>(
+                                            context,
+                                            listen: false)
+                                        .userId;
+                                    debugPrint(
+                                        "accessToken From AuthModel $accessToken");
+                                    Provider.of<CartProvider>(context,
+                                            listen: false)
+                                        .addToCartAPI(
+                                            customerId: userId!,
+                                            productId:
+                                                products.first.productId!,
+                                            quantity: 1,
+                                            unitPrice:
+                                                products.first.price?.price,
+                                            accessToken: accessToken ?? "")
+                                        .then((value) {
+                                      AddToCartModel addToCartModel =
+                                          AddToCartModel.fromJson(value);
+                                      if (value["status"] == "success") {
+                                        showScaffold(
+                                          context: context,
+                                          message: addToCartModel.message ??
+                                              'Added To Cart',
+                                        );
+                                        setState(() {
+                                          _autocompleteProductKey = GlobalKey();
+                                          quantityController.clear();
+                                          barcodeController.clear();
+                                          selectedProductIdController.clear();
+                                          unitPriceController.clear();
+                                        });
+                                        _focusTextField();
+                                        //  'Order Placed Successfully',
+                                      } else {
+                                        showScaffoldError(
+                                          context: context,
+                                          message: addToCartModel.message ??
+                                              "Error Occured ! Try Again",
+                                        );
+                                        //  'Added To Cart',
+                                      }
+                                    });
+                                    _refetchCartData();
+                                  } else {
+                                    final result = await showDialog(
+                                      context: context,
+                                      builder: (context) =>
+                                          AddProductWithBarcodeModal(
+                                              barcode: query),
+                                    );
+                                    debugPrint("result $result");
+                                    if (result != null) {
+                                      String? accessToken =
+                                          Provider.of<AuthModel>(context,
+                                                  listen: false)
+                                              .token;
+                                      int? userId = Provider.of<AuthModel>(
+                                              context,
+                                              listen: false)
+                                          .userId;
+                                      debugPrint(
+                                          "accessToken From AuthModel $accessToken");
+                                      Provider.of<CartProvider>(context,
+                                              listen: false)
+                                          .addToCartAPI(
+                                              customerId: userId!,
+                                              productId: result["id"],
+                                              quantity: 1,
+                                              unitPrice:
+                                                  result["price"].toString(),
+                                              accessToken: accessToken ?? "")
+                                          .then((value) {
+                                        AddToCartModel addToCartModel =
+                                            AddToCartModel.fromJson(value);
+                                        if (value["status"] == "success") {
+                                          showScaffold(
+                                            context: context,
+                                            message: addToCartModel.message ??
+                                                'Added To Cart',
+                                          );
+                                          setState(() {
+                                            _autocompleteProductKey =
+                                                GlobalKey();
+                                            quantityController.clear();
+                                            barcodeController.clear();
+                                            selectedProductIdController.clear();
+                                            unitPriceController.clear();
+                                          });
+                                          _focusTextField();
+                                          //  'Order Placed Successfully',
+                                        } else {
+                                          showScaffoldError(
+                                            context: context,
+                                            message: addToCartModel.message ??
+                                                "Error Occured ! Try Again",
+                                          );
+                                          //  'Added To Cart',
+                                        }
                                       });
-                                      _focusTextField();
-                                      //  'Order Placed Successfully',
-                                    } else {
-                                      showScaffoldError(
-                                        context: context,
-                                        message: addToCartModel.message ??
-                                            "Error Occured ! Try Again",
-                                      );
-                                      //  'Added To Cart',
+                                      _refetchCartData();
                                     }
-                                  });
-                                  _refetchCartData();
+                                  }
                                 }
                               },
                               size: size,
