@@ -558,6 +558,8 @@ class CartProvider with ChangeNotifier {
       if (status != null) "status": status,
     };
 
+    
+
     debugPrint("apiBodyData ${apiBodyData.toString()}");
 
     final url = Uri.parse(APPUrl.addToOrderUrl);
