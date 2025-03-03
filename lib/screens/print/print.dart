@@ -425,6 +425,7 @@ class _PrintPageState extends State<PrintPage> {
     // // Payment Values (dummy data)
     // bytes += generator.text('3000.00  | 0.00     | 0.00     | 46.00',
     //     styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.hr();
 
     // Savings Message
     bytes += generator.text('You Have Saved',
@@ -533,9 +534,7 @@ class _PrintPageState extends State<PrintPage> {
 
     // Terms & Conditions Text
     bytes += generator.text(
-        '* No product will be replaced/returned after 7 days',
-        styles: const PosStyles(align: PosAlign.left));
-    bytes += generator.text('  from the date of purchase.',
+        '* No product will be replaced/returned after 7 days from the date of purchase.',
         styles: const PosStyles(align: PosAlign.left));
     bytes += generator.text('* No product will be replaced without bill.',
         styles: const PosStyles(align: PosAlign.left));

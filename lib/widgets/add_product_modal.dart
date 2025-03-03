@@ -322,10 +322,25 @@ class _AddProductWithBarcodeModalState
 
               const SizedBox(height: 16),
 
-              // Close Button
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  // Close Button
+
+                  CustomRoundButton(
+                    title: "Close",
+                    isLoading: isLoading,
+                    fontSize: FontSize.s12,
+                    height: MediaQuery.of(context).size.height * .05,
+                    width: 120,
+                    textColor: Colors.blue,
+                    borderColor: Colors.blue,
+                    boxColor: Colors.white,
+                    fct: () async {
+                      Navigator.pop(context, null);
+                    },
+                  ),
+                  const SizedBox(width: 10),
                   // Add Product Button
                   CustomRoundButton(
                     title: "Add Product",
