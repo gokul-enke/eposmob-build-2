@@ -19,7 +19,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.16.0" # Adjust to match your Flutter version
+          flutter-version: "3.27.1" # Adjust to match your Flutter version
           channel: "stable"
 
       - name: Install Dependencies
@@ -40,7 +40,7 @@ jobs:
         run: iscc "${{ github.workspace }}/installers/github_action_windows_inno_script.iss"
 
       - name: Upload Installer Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: EposMachine-installer
           path: ${{ github.workspace }}/installers/EposMachine.exe
