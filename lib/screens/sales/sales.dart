@@ -1061,7 +1061,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                         formattedTotal:
                                                                             formattedTotal,
                                                                         orderDate:
-                                                                            DateHelper.formatISODate(orderDate),
+                                                                            orderDate,
                                                                         orderNumber: orderDetails
                                                                             .data!
                                                                             .orderNumber

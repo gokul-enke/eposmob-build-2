@@ -197,7 +197,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 storeName: storeName,
                 cartItems: cartItems!,
                 formattedTotal: formattedTotal,
-                orderDate: DateHelper.formatISODate(orderDate),
+                orderDate: orderDate,
                 orderNumber: orderNumber,
               ),
             ),

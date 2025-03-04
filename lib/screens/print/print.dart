@@ -4,6 +4,7 @@ import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platfor
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -296,7 +297,10 @@ class _PrintPageState extends State<PrintPage> {
 
     // Date and Time
     bytes += generator.text(
-        'Date: ${widget.orderDate}  Order#: ${widget.orderNumber}',
+        'Date: ${DateHelper.formatISODateToIST(widget.orderDate)}  Order#: ${widget.orderNumber}',
+        styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.text(
+        'Time: ${DateHelper.formatISODateToIST(widget.orderDate)}',
         styles: const PosStyles(align: PosAlign.center));
 
     // Separator

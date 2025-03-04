@@ -911,7 +911,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
         builder: (context) => PrintPage(
           cartItems: cartProductItems!,
           formattedTotal: formattedTotal,
-          orderDate: DateHelper.formatDate(DateTime.now()),
+          orderDate: DateTime.now().toString(),
           orderNumber: "#000000",
         ),
       ),

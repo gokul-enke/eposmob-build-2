@@ -2017,7 +2017,7 @@ class _BillingPageState extends State<BillingPage> {
                   storeName: storeName,
                   cartItems: orderDetails.data!.cart!.cartItems!,
                   formattedTotal: formattedTotal,
-                  orderDate: DateHelper.formatISODate(orderDate),
+                  orderDate: orderDate,
                   orderNumber: orderDetails.data!.orderNumber ?? "",
                 ),
               ),
