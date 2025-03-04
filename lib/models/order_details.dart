@@ -181,6 +181,7 @@ class OrderDetailsModelDataCartItem {
   final num? quantity;
   final String? productUnit;
   final String? unitPrice;
+  final String? mrp;
   final String? totalPrice; // Changed to int
   final String? currency;
   final DateTime? createdAt;
@@ -196,6 +197,7 @@ class OrderDetailsModelDataCartItem {
     this.quantity,
     this.productUnit,
     this.unitPrice,
+    this.mrp,
     this.totalPrice,
     this.currency,
     this.createdAt,
@@ -217,6 +219,7 @@ class OrderDetailsModelDataCartItem {
         quantity: num.tryParse(json["quantity"]),
         productUnit: json["product_unit"],
         unitPrice: json["unit_price"],
+        mrp: json["mrp"],
         totalPrice: json["total_price"],
         currency: json["currency"],
         createdAt: json["created_at"] == null
@@ -239,6 +242,7 @@ class OrderDetailsModelDataCartItem {
         "quantity": quantity,
         "product_unit": productUnit,
         "unit_price": unitPrice,
+        "mrp": mrp,
         "total_price": totalPrice,
         "currency": currency,
         "created_at": createdAt?.toIso8601String(),

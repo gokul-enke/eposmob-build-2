@@ -260,8 +260,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
         _buildTableCell(order.orderId.toString()),
         _buildTableCell(order.items.length.toString()),
         _buildTableCell(order.totalAmount),
-        _buildTableCell(DateHelper.formatISODate(order.createdAt.toString())),
         _buildTableCell(order.status.toString(), isStatusCell: true),
+        _buildTableCell(DateHelper.formatISODate(order.createdAt.toString())),
         TableCell(
             verticalAlignment: TableCellVerticalAlignment.middle,
             child: Padding(

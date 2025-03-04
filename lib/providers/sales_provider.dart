@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/list_sales_return.dart';
+import 'package:pos_machine/models/list_sales_return_items.dart';
 
 import '../models/list_sales_order.dart';
 import '../resources/app_url.dart';
@@ -11,10 +12,12 @@ import '../resources/app_url.dart';
 class SalesProvider with ChangeNotifier {
   List<ListOrderModelData> _orders = [];
   List<SalesReturnOrder> _salesReturnOrders = [];
+  List<SalesReturnCart> _salesReturnItems = [];
   int currentPage = 1;
   int totalPages = 1;
   List<ListOrderModelData> get orders => _orders;
   List<SalesReturnOrder> get salesReturnOrders => _salesReturnOrders;
+  List<SalesReturnCart> get salesReturnItems => _salesReturnItems;
 
   String _orderNumber = "";
   String _orderId = "";
@@ -204,6 +207,52 @@ class SalesProvider with ChangeNotifier {
     }
   }
 
+  Future<void> fetchSalesReturnItems({
+    required String accessToken,
+    required String orderId,
+    int? page,
+  }) async {
+    debugPrint("orderId $orderId");
+    final queryParameters = <String, String>{
+      'order_number': orderId.toString(),
+      if (page != null) 'page': page.toString(),
+    };
+
+    debugPrint(queryParameters.toString());
+
+    final uri = Uri.parse(APPUrl.listSalesReturnItems)
+        .replace(queryParameters: queryParameters);
+
+    try {
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      debugPrint(
+          'fetch Sales Return list response status code: ${response.statusCode}');
+      debugPrint('response.body ${response.body}');
+
+      final jsonData = json.decode(response.body);
+      try {
+        final salesReturnResponse = SalesReturnItemsResponse.fromJson(jsonData);
+        debugPrint(
+            'fetch Sales Return list response data: ${salesReturnResponse.data}');
+        _salesReturnItems = salesReturnResponse.data;
+        notifyListeners();
+        debugPrint('fetch Sales Return list response 2: $_salesReturnItems');
+      } catch (e) {
+        debugPrint('Error parsing JSON data: $e');
+      }
+    } catch (error) {
+      debugPrint('Error in fetchOrders: $error');
+      rethrow;
+    }
+  }
+
   Future<void> submitSalesReturn({
     required String accessToken,
     required int orderId,
@@ -266,6 +315,9 @@ class SalesProvider with ChangeNotifier {
         'return_order_id': returnOrderId,
       }),
     );
+
+    debugPrint("accessToken $accessToken");
+    debugPrint("returnOrderId $returnOrderId");
 
     if (response.statusCode == 200) {
       debugPrint('Sales return submitted successfully: ${response.body}');

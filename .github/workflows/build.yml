@@ -39,8 +39,12 @@ jobs:
       - name: Compile Inno Setup Installer
         run: iscc "${{ github.workspace }}/installers/github_action_windows_inno_script.iss"
 
-      - name: Upload Installer Artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload to GitHub Releases
+        uses: softprops/action-gh-release@v1
         with:
-          name: EposMachine-installer
-          path: ${{ github.workspace }}/installers/EposMachine.exe
+          token: ${{ secrets.GH_TOKEN }}
+          tag_name: latest
+          release_name: "Latest Release"
+          draft: false
+          prerelease: false
+          files: ${{ github.workspace }}/installers/EposMachine.exe

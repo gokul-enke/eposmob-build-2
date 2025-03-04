@@ -10,10 +10,11 @@ class SalesReturnResponse {
   });
 
   factory SalesReturnResponse.fromJson(Map<String, dynamic> json) {
+    final dataJson = json['data']; // Get the data map
     return SalesReturnResponse(
       status: json['status'],
       message: json['message'],
-      data: (json['data'] as List)
+      data: (dataJson['data'] as List) // Access the list of orders
           .map((order) => SalesReturnOrder.fromJson(order))
           .toList(),
     );

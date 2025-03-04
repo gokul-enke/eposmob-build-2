@@ -35,6 +35,8 @@ class APPUrl {
       '$baseURL/api/v1/order/executive/order-details';
   static String salesReturn = '$baseURL/api/v1/order/sales-return';
   static String listSalesReturn = '$baseURL/api/v1/order/list-return-orders';
+  static String listSalesReturnItems =
+      '$baseURL/api/v1/order/list-return-order-items';
   static String completeSalesReturn =
       '$baseURL/api/v1/order/complete-return-order';
 

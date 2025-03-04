@@ -4,7 +4,6 @@ import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platfor
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/models/list_sales_order.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -336,9 +335,13 @@ class _PrintPageState extends State<PrintPage> {
   List<int> _buildTableHeader(Generator generator) {
     return generator.row([
           PosColumn(text: 'Sl#', width: 1),
-          PosColumn(text: 'Item', width: 5),
+          PosColumn(text: 'Item', width: 3),
           PosColumn(
               text: 'Qty',
+              width: 2,
+              styles: const PosStyles(align: PosAlign.right)),
+          PosColumn(
+              text: 'MRP',
               width: 2,
               styles: const PosStyles(align: PosAlign.right)),
           PosColumn(
@@ -360,9 +363,13 @@ class _PrintPageState extends State<PrintPage> {
       var item = cartItems[i];
       bytes += generator.row([
         PosColumn(text: (i + 1).toString(), width: 1),
-        PosColumn(text: item.productName ?? '', width: 5),
+        PosColumn(text: item.productName ?? '', width: 3),
         PosColumn(
             text: item.quantity.toString(),
+            width: 2,
+            styles: const PosStyles(align: PosAlign.right)),
+        PosColumn(
+            text: item.mrp ?? item.unitPrice.toString(),
             width: 2,
             styles: const PosStyles(align: PosAlign.right)),
         PosColumn(
@@ -428,10 +435,10 @@ class _PrintPageState extends State<PrintPage> {
     bytes += generator.hr();
 
     // Savings Message
-    bytes += generator.text('You Have Saved',
+    bytes += generator.text('You Have Saved 0.00',
         styles: const PosStyles(bold: true, align: PosAlign.center));
-    bytes += generator.text('0.00',
-        styles: const PosStyles(bold: true, align: PosAlign.center));
+    // bytes += generator.text('0.00',
+    //     styles: const PosStyles(bold: true, align: PosAlign.center));
 
     // Separator
     bytes += generator.hr();

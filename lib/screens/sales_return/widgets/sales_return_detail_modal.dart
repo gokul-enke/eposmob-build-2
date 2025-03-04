@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 
@@ -71,8 +72,8 @@ class SalesReturnDetailModal extends StatelessWidget {
                     const SizedBox(height: 8),
                     _buildInfoRow("Customer", "Sales Executive"),
                     const SizedBox(height: 8),
-                    _buildInfoRow(
-                        "Date", DateTime.now().toString().split(' ')[0]),
+                    _buildInfoRow("Date",
+                        DateHelper.formatDate(order.createdAt).toString()),
                   ],
                 ),
               ),
