@@ -1135,7 +1135,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                         orderId: selectedOrderId.toString(),
                         cartItemId: item.cartItemId,
                         currency: '',
-                        totalPrice: item.returnedTotal.toString(),
+                        totalPrice: item.totalPrice.toString(),
                         quantity: item.quantity,
                       );
                     },
@@ -1151,6 +1151,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   }
 
   _buildCompleteReturnButton(Size size) {
+    final SideBarController sideBarController = Get.put(SideBarController());
+
     return CustomRoundButton(
       title: "Create Sales Return",
       fct: () async {
@@ -1164,7 +1166,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           await Provider.of<SalesProvider>(context, listen: false)
               .completeSalesReturn(
             accessToken: accessToken ?? '',
-            returnOrderId: 0,
+            returnOrderId: _salesReturnItems.first.returnOrderId,
           );
 
           showScaffold(
@@ -1172,7 +1174,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             message: 'Sales Return Created Successfully',
           );
 
-          Navigator.pop(context);
+          sideBarController.index.value = 50;
         } catch (error) {
           debugPrint('Error creating sales return: $error');
           showScaffoldError(

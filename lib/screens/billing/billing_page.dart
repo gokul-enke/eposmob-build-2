@@ -2007,6 +2007,9 @@ class _BillingPageState extends State<BillingPage> {
             String formattedTotal = AmountHelper.formatAmount(
               orderDetails.data?.cart?.priceSummary?.netTotal,
             );
+            String savedTotal = AmountHelper.formatAmount(
+              orderDetails.data?.cart?.priceSummary?.savedTotal,
+            );
             String storeName = orderDetails.data!.cart!.storeName ?? "";
             String orderDate = orderDetails.data!.orderDate ?? "";
 
@@ -2017,6 +2020,7 @@ class _BillingPageState extends State<BillingPage> {
                   storeName: storeName,
                   cartItems: orderDetails.data!.cart!.cartItems!,
                   formattedTotal: formattedTotal,
+                  savedTotal: savedTotal,
                   orderDate: orderDate,
                   orderNumber: orderDetails.data!.orderNumber ?? "",
                 ),

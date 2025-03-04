@@ -239,11 +239,8 @@ class SalesProvider with ChangeNotifier {
       final jsonData = json.decode(response.body);
       try {
         final salesReturnResponse = SalesReturnItemsResponse.fromJson(jsonData);
-        debugPrint(
-            'fetch Sales Return list response data: ${salesReturnResponse.data}');
         _salesReturnItems = salesReturnResponse.data;
         notifyListeners();
-        debugPrint('fetch Sales Return list response 2: $_salesReturnItems');
       } catch (e) {
         debugPrint('Error parsing JSON data: $e');
       }
@@ -279,14 +276,14 @@ class SalesProvider with ChangeNotifier {
       }),
     );
 
-    // debugPrint("accessToken $accessToken");
-    // debugPrint("orderId $orderId");
-    // debugPrint("price $price");
-    // debugPrint("quantity $quantity");
-    // debugPrint("cartItemId $cartItemId");
-    // debugPrint("reason $reason");
-    // debugPrint("response.statusCode ${response.statusCode}");
-    // debugPrint("response.body ${response.body}");
+    debugPrint("accessToken $accessToken");
+    debugPrint("orderId $orderId");
+    debugPrint("price $price");
+    debugPrint("quantity $quantity");
+    debugPrint("cartItemId $cartItemId");
+    debugPrint("reason $reason");
+    debugPrint("response.statusCode ${response.statusCode}");
+    debugPrint("response.body ${response.body}");
 
     if (response.statusCode == 200) {
       // debugPrint('Sales return submitted successfully: ${response.body}');

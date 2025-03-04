@@ -12,12 +12,14 @@ class PrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
   final String? storeName;
   final String formattedTotal;
+  final String? savedTotal;
   final String orderDate;
   final String orderNumber;
   const PrintPage({
     Key? key,
     required this.cartItems,
     required this.formattedTotal,
+    this.savedTotal,
     this.storeName,
     required this.orderDate,
     required this.orderNumber,
@@ -196,7 +198,7 @@ class _PrintPageState extends State<PrintPage> {
       // bytes += _buildOrderDetails(generator);
 
       // Store Name
-      bytes += _buildStoreName(generator, widget.storeName.toString());
+      // bytes += _buildStoreName(generator, widget.storeName.toString());
 
       // Item Table Header
       bytes += _buildTableHeader(generator);
@@ -297,10 +299,10 @@ class _PrintPageState extends State<PrintPage> {
 
     // Date and Time
     bytes += generator.text(
-        'Date: ${DateHelper.formatISODateToIST(widget.orderDate)}  Order#: ${widget.orderNumber}',
+        'Date: ${DateHelper.formatISODate(widget.orderDate)}  Order#: ${widget.orderNumber}',
         styles: const PosStyles(align: PosAlign.center));
     bytes += generator.text(
-        'Time: ${DateHelper.formatISODateToIST(widget.orderDate)}',
+        'Time: ${DateHelper.formatISODateToIST(widget.orderDate)} Store Name: ${widget.storeName}',
         styles: const PosStyles(align: PosAlign.center));
 
     // Separator
@@ -373,7 +375,7 @@ class _PrintPageState extends State<PrintPage> {
             width: 2,
             styles: const PosStyles(align: PosAlign.right)),
         PosColumn(
-            text: item.mrp ?? item.unitPrice.toString(),
+            text: item.mrp,
             width: 2,
             styles: const PosStyles(align: PosAlign.right)),
         PosColumn(
@@ -439,7 +441,7 @@ class _PrintPageState extends State<PrintPage> {
     bytes += generator.hr();
 
     // Savings Message
-    bytes += generator.text('You Have Saved 0.00',
+    bytes += generator.text('You Have Saved ${widget.savedTotal ?? "0.00"}',
         styles: const PosStyles(bold: true, align: PosAlign.center));
     // bytes += generator.text('0.00',
     //     styles: const PosStyles(bold: true, align: PosAlign.center));

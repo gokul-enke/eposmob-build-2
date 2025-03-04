@@ -25,6 +25,7 @@ class SalesReturnItemsResponse {
 // Model class for each item in the return order
 class SalesReturnCart {
   final int cartItemId;
+  final int returnOrderId;
   final String productName;
   final String quantity;
   final String unitPrice;
@@ -35,6 +36,7 @@ class SalesReturnCart {
 
   SalesReturnCart({
     required this.cartItemId,
+    required this.returnOrderId,
     required this.productName,
     required this.quantity,
     required this.unitPrice,
@@ -47,6 +49,7 @@ class SalesReturnCart {
   factory SalesReturnCart.fromJson(Map<String, dynamic> json) {
     return SalesReturnCart(
       cartItemId: json['cart_item_id'],
+      returnOrderId: json['return_order_id'] ?? 0,
       productName: json['product_name'],
       quantity: json['quantity'],
       unitPrice: json['unit_price'],

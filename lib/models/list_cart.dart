@@ -99,6 +99,7 @@ class ListCartModelDataCartItem {
   late final num? quantity;
   final String? productUnit;
   final String? unitPrice;
+  final String? mrp;
   final String? totalPrice;
   final String? taxRate; // Changed from int to String to match new response
   final String? taxAmount; // Changed from int to String to match new response
@@ -117,6 +118,7 @@ class ListCartModelDataCartItem {
     this.quantity,
     this.productUnit,
     this.unitPrice,
+    this.mrp,
     this.totalPrice,
     this.taxRate,
     this.taxAmount,
@@ -138,6 +140,7 @@ class ListCartModelDataCartItem {
         quantity: num.tryParse(json["quantity"]),
         productUnit: json["product_unit"],
         unitPrice: (json["unit_price"]),
+        mrp: json["mrp"],
         totalPrice: json["total_price"],
         taxRate: json["tax_rate"], // Now a String
         taxAmount: json["tax_amount"], // Now a String
@@ -159,6 +162,7 @@ class ListCartModelDataCartItem {
         "quantity": quantity,
         "product_unit": productUnit,
         "unit_price": unitPrice,
+        "mrp": mrp,
         "total_price": totalPrice,
         "tax_rate": taxRate,
         "tax_amount": taxAmount,

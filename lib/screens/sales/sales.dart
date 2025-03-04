@@ -540,10 +540,10 @@ class _SalesScreenState extends State<SalesScreen> {
                               width: size.width * 0.80,
                               child: Table(
                                 columnWidths: const {
-                                  0: FlexColumnWidth(2),
+                                  0: FlexColumnWidth(1),
                                   1: FlexColumnWidth(3),
-                                  2: FlexColumnWidth(3),
-                                  3: FlexColumnWidth(1),
+                                  2: FlexColumnWidth(2),
+                                  3: FlexColumnWidth(2),
                                   4: FlexColumnWidth(3),
                                   5: FlexColumnWidth(3),
                                   6: FlexColumnWidth(4),
@@ -626,7 +626,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                   const EdgeInsets.all(15.0),
                                               child: Center(
                                                   child: Text(
-                                                "Quantity",
+                                                "Item Count",
                                                 style: buildCustomStyle(
                                                   FontWeightManager.medium,
                                                   FontSize.s12,
@@ -1033,6 +1033,19 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                         ?.netTotal,
                                                                   );
                                                                   String
+                                                                      savedTotal =
+                                                                      AmountHelper
+                                                                          .formatAmount(
+                                                                    orderDetails
+                                                                        .data
+                                                                        ?.cart
+                                                                        ?.priceSummary
+                                                                        ?.savedTotal,
+                                                                  );
+
+                                                                  debugPrint(
+                                                                      "savedTotal: $savedTotal");
+                                                                  String
                                                                       storeName =
                                                                       orderDetails
                                                                               .data!
@@ -1060,6 +1073,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                 [],
                                                                         formattedTotal:
                                                                             formattedTotal,
+                                                                        savedTotal:
+                                                                            savedTotal,
                                                                         orderDate:
                                                                             orderDate,
                                                                         orderNumber: orderDetails

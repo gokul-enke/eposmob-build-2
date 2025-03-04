@@ -8,6 +8,7 @@ import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/sales/widgets/buid_order_details_widget.dart';
+import 'package:pos_machine/screens/sales/widgets/buid_order_return_details_widget.dart';
 import 'package:provider/provider.dart';
 import '../../../components/build_container_box.dart';
 import '../../../controllers/sidebar_controller.dart';
@@ -56,8 +57,13 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
           .listOrderDetails(context, ordersId, accessToken ?? "");
       if (response["status"] == "success") {
         setState(() {
-          OrderDetailsModel orderDetails = OrderDetailsModel.fromJson(response);
-          orderDetailsModelData = orderDetails.data;
+          OrderDetailsModel? orderDetails;
+          try {
+            orderDetails = OrderDetailsModel.fromJson(response);
+          } catch (e) {
+            debugPrint("Error parsing JSON data: $e");
+          }
+          orderDetailsModelData = orderDetails!.data;
           cart = orderDetailsModelData?.cart;
           priceSummary = cart?.priceSummary;
           customerDetails = orderDetailsModelData?.customerDetails;
@@ -127,6 +133,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                       const SizedBox(height: 10),
                       _buildOrderDetails(),
                       const SizedBox(height: 10),
+                      _buildOrderReturns(),
+                      const SizedBox(height: 10),
                       _buildPrintButton(size),
                     ],
                   ),
@@ -176,6 +184,19 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
     );
   }
 
+  Widget _buildOrderReturns() {
+    // Check if orderReturns is null or has no return items
+    if (orderDetailsModelData?.orderReturns == null ||
+        (orderDetailsModelData!.orderReturns!.returnItems?.isEmpty ?? true)) {
+      return const SizedBox(); // Return an empty SizedBox to hide the widget
+    }
+
+    // If there are return items, show the OrderReturnsWidget
+    return OrderReturnsWidget(
+      orderReturns: orderDetailsModelData!.orderReturns,
+    );
+  }
+
   Widget _buildPrintButton(Size size) {
     return Padding(
       padding: const EdgeInsets.only(top: 10),
@@ -187,6 +208,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
           String formattedTotal = AmountHelper.formatAmount(
             orderDetailsModelData?.cart?.priceSummary?.netTotal ?? 0.00,
           );
+          String savedTotal = AmountHelper.formatAmount(
+            orderDetailsModelData?.cart?.priceSummary?.savedTotal ?? 0.00,
+          );
           String storeName = orderDetailsModelData!.cart!.storeName ?? "";
           String orderDate = orderDetailsModelData!.orderDate ?? "";
 
@@ -197,6 +221,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 storeName: storeName,
                 cartItems: cartItems!,
                 formattedTotal: formattedTotal,
+                savedTotal: savedTotal,
                 orderDate: orderDate,
                 orderNumber: orderNumber,
               ),

@@ -45,6 +45,7 @@ class OrderDetailsModelData {
   final List<OrderDetailsModelDataOrderProp>? orderProps;
   final String? deliveryMethodId;
   final String? deliveryMethodName;
+  final OrderReturns? orderReturns;
 
   OrderDetailsModelData({
     this.ordersId,
@@ -62,6 +63,7 @@ class OrderDetailsModelData {
     this.orderProps,
     this.deliveryMethodId,
     this.deliveryMethodName,
+    this.orderReturns,
   });
 
   factory OrderDetailsModelData.fromJson(Map<String, dynamic> json) =>
@@ -95,6 +97,13 @@ class OrderDetailsModelData {
                 .map((x) => OrderDetailsModelDataOrderProp.fromJson(x))),
         deliveryMethodId: json["delivery_method_id"].toString(),
         deliveryMethodName: json["delivery_method_name"].toString(),
+        orderReturns: json["order_returns"] == null
+            ? null
+            : OrderReturns.fromJson(
+                json["order_returns"] is Map<String, dynamic>
+                    ? json["order_returns"]
+                    : {},
+              ),
       );
 
   Map<String, dynamic> toJson() => {
@@ -115,6 +124,7 @@ class OrderDetailsModelData {
             : List<dynamic>.from(orderProps!.map((x) => x.toJson())),
         "delivery_method_id": deliveryMethodId,
         "delivery_method_name": deliveryMethodName,
+        "order_returns": orderReturns?.toJson(), // Serialize orderReturns
       };
 }
 
@@ -308,6 +318,7 @@ class OrderDetailsModelDataPriceSummary {
   final num? subTotal;
   final num? totalTax;
   final num? netTotal;
+  final num? savedTotal;
   final num? discount;
   final num? netPayable;
 
@@ -315,6 +326,7 @@ class OrderDetailsModelDataPriceSummary {
     this.subTotal,
     this.totalTax,
     this.netTotal,
+    this.savedTotal,
     this.discount,
     this.netPayable,
   });
@@ -325,6 +337,7 @@ class OrderDetailsModelDataPriceSummary {
         subTotal: json["sub_total"] is num ? json["sub_total"] : null,
         totalTax: json["total_tax"] is num ? json["total_tax"] : null,
         netTotal: json["net_total"] is num ? json["net_total"] : null,
+        savedTotal: json["total_saved"] is num ? json["total_saved"] : null,
         discount: json["discount"] is num ? json["discount"] : null,
         netPayable: json["net_payable"] is num ? json["net_payable"] : null,
       );
@@ -333,6 +346,7 @@ class OrderDetailsModelDataPriceSummary {
         "sub_total": subTotal,
         "total_tax": totalTax,
         "net_total": netTotal,
+        "total_saved": savedTotal,
         "discount": discount,
         "net_payable": netPayable,
       };
@@ -429,5 +443,66 @@ class OrderDetailsModelDataPaymentDetails {
         "payment_status": paymentStatus,
         "transaction_id": transactionId,
         "payment_method": paymentMethod,
+      };
+}
+
+class OrderReturns {
+  final int? id;
+  final String? returnTotalAmount;
+  final List<OrderReturnItem>? returnItems; // This can be an empty list
+
+  OrderReturns({
+    this.id,
+    this.returnTotalAmount,
+    this.returnItems,
+  });
+
+  factory OrderReturns.fromJson(Map<String, dynamic> json) {
+    // Check if return_items is a List
+    return OrderReturns(
+      id: json["id"],
+      returnTotalAmount: json["return_total_amount"],
+      returnItems: json["return_items"] is List
+          ? List<OrderReturnItem>.from(
+              json["return_items"].map((x) => OrderReturnItem.fromJson(x)))
+          : [], // Default to empty list if not a List
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "return_total_amount": returnTotalAmount,
+        "return_items": returnItems == null
+            ? []
+            : List<dynamic>.from(returnItems!.map((x) => x.toJson())),
+      };
+}
+
+class OrderReturnItem {
+  final int? id;
+  final String? productName;
+  final int? quantity;
+  final String? reason;
+
+  OrderReturnItem({
+    this.id,
+    this.productName,
+    this.quantity,
+    this.reason,
+  });
+
+  factory OrderReturnItem.fromJson(Map<String, dynamic> json) =>
+      OrderReturnItem(
+        id: json["id"],
+        productName: json["product_name"],
+        quantity: json["quantity"],
+        reason: json["reason"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "product_name": productName,
+        "quantity": quantity,
+        "reason": reason,
       };
 }
