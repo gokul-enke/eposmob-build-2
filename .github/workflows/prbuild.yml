@@ -1,36 +1,35 @@
-# This is a basic workflow to help you get started with Actions
-
 name: Dev Build CI
-
 on:
   pull_request:
     branches: ["gokul-dev"]
   push:
     branches: ["gokul-dev"]
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-
   build-and-release-windows:
     runs-on: windows-latest
-
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2.12.0
         with:
           flutter-version: 3.27.1
           channel: stable
+
       - name: Install project dependencies
         run: flutter pub get
+
       - name: Build artifacts
-        run: flutter build windows --release
-      - name: Rename Release Directory Name to EposMachine # 为了解压缩后更好看一点
-        run: |
-          mv build/windows/x64/runner/Release build/windows/x64/runner/EposMachine
-      # 发布安装包
-      - name: Upload Artifact
+        run: flutter build windows --release -v
+
+      - name: Build Installer
+        run: iex ("& {0} {1} {2}" -f '"C:\Program Files (x86)\Inno Setup 6\iscc.exe"',"/DMyAppVersion='${{github.ref_name}}'", ".\inno_setup.iss")
+
+      - name: Upload Executable Artifact
         uses: actions/upload-artifact@v4
         with:
-          path: "build/windows/x64/runner/EposMachine"
-          name: EposMachine-pr-${{ github.event.pull_request.number }}-windows.zip
+          path: "Output/*.exe"
+          name: EposMachine-windows-${{github.ref_name}}.exe
+          retention-days: 5
+          # Explicitly specify that this is a single file
+          if-no-files-found: error
+          compression-level: 0
