@@ -307,7 +307,7 @@ class _PrintPageState extends State<PrintPage> {
 
     // Separator
     // bytes += generator.text("================================");
-    generator.hr();
+    bytes += generator.hr();
 
     return bytes;
   }
