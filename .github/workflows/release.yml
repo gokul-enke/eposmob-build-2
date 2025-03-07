@@ -24,6 +24,14 @@ jobs:
       - name: Build artifacts
         run: flutter build windows --release -v
 
+      - name: Copy DLLs to Release Folder
+        run: |
+          mkdir -p build/windows/x64/runner/Release
+          cp dependencies/*.dll build/windows/x64/runner/Release/
+
+      - name: Verify Files in Release Directory
+        run: dir build/windows/x64/runner/Release/
+
       - name: Build Installer
         run: iex ("& {0} {1} {2}" -f '"C:\Program Files (x86)\Inno Setup 6\iscc.exe"',"/DMyAppVersion='${{github.ref_name}}'", ".\inno_setup.iss")
 
