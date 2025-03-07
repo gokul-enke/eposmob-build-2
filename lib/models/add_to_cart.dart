@@ -92,7 +92,7 @@ class AddToCartCartItem {
 
   factory AddToCartCartItem.fromJson(Map<String, dynamic> json) =>
       AddToCartCartItem(
-        cartItemId: json["cart_item_id"],
+        cartItemId: json["cart_item_id"] ?? json["id"],
         cartId: json["cart_id"],
         productId: json["product_id"],
         customerId: json["customer_id"],
