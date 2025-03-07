@@ -26,7 +26,6 @@ jobs:
 
       - name: Copy DLLs to Release Folder
         run: |
-          mkdir -p build/windows/x64/runner/Release
           cp dependencies/*.dll build/windows/x64/runner/Release/
 
       - name: Verify Files in Release Directory
