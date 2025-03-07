@@ -405,7 +405,17 @@ class _BillingPageState extends State<BillingPage> {
                                                   customerId: userId!,
                                                   productId:
                                                       products.first.productId!,
-                                                  quantity: 1,
+                                                  quantity: products
+                                                              .first
+                                                              .weightInfo
+                                                              ?.isWeighted ==
+                                                          true
+                                                      ? products
+                                                              .first
+                                                              .weightInfo
+                                                              ?.weight ??
+                                                          1
+                                                      : 1,
                                                   unitPrice: products
                                                       .first.price?.price,
                                                   accessToken:

@@ -342,7 +342,7 @@ class GridSelectionProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-
+  
   //          *********************** FILTER PRODUCT BY BARCODE API ***************************************************
 
   Future<List<GetProduct>?> filterProductByBarcodeAPI({String? barCode}) async {
@@ -358,10 +358,10 @@ class GridSelectionProvider extends ChangeNotifier {
 
     try {
       final response = await http.get(url);
-      // debugPrint('Response Status Code: ${response.statusCode}');
+      debugPrint('Response Status Code: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        // debugPrint('Response Body: ${response.body.toString()}');
+        debugPrint('Response Body: ${response.body.toString()}');
 
         final jsonData = json.decode(response.body);
         GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
@@ -371,7 +371,7 @@ class GridSelectionProvider extends ChangeNotifier {
         mainProductList = getProductModel.product;
         categoryProductList = getProductModel.product;
 
-        // debugPrint("Pagination Info: ${getProductModel.meta?.toString()}");
+        debugPrint("Pagination Info: ${getProductModel.meta?.toString()}");
 
         currentPage = getProductModel.meta?.currentPage ?? 1;
         totalPages = getProductModel.meta?.lastPage ?? 1;

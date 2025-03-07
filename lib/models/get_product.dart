@@ -59,6 +59,7 @@ class GetProduct {
   bool isSelected = false;
   final dynamic names; // Change to dynamic
   final List<ProductProp>? productProps;
+  final WeightInfo? weightInfo;
 
   GetProduct({
     this.productId,
@@ -76,6 +77,7 @@ class GetProduct {
     this.attachment,
     this.names,
     this.productProps,
+    this.weightInfo,
   });
 
   factory GetProduct.fromJson(Map<String, dynamic> json) => GetProduct(
@@ -103,6 +105,9 @@ class GetProduct {
             ? []
             : List<ProductProp>.from(
                 json["product_props"]!.map((x) => ProductProp.fromJson(x))),
+        weightInfo: json["weight_info"] == null
+            ? null
+            : WeightInfo.fromJson(json["weight_info"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -126,6 +131,34 @@ class GetProduct {
         "product_props": productProps == null
             ? []
             : List<dynamic>.from(productProps!.map((x) => x.toJson())),
+        "weight_info": weightInfo?.toJson(),
+      };
+}
+
+class WeightInfo {
+  final double? weight; // Can be null
+  final double? totalPrice; // Can be null (but might come as a string)
+  final bool? isWeighted; // Can be null
+
+  WeightInfo({
+    this.weight,
+    this.totalPrice,
+    this.isWeighted,
+  });
+
+  factory WeightInfo.fromJson(Map<String, dynamic> json) => WeightInfo(
+        weight: json["weight"]?.toDouble(), // Convert to double if not null
+        totalPrice: json["total_price"] != null
+            ? double.tryParse(
+                json["total_price"].toString()) // Convert to double safely
+            : null,
+        isWeighted: json["is_weighted"], // No conversion needed for bool
+      );
+
+  Map<String, dynamic> toJson() => {
+        "weight": weight,
+        "total_price": totalPrice,
+        "is_weighted": isWeighted,
       };
 }
 
