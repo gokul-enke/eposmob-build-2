@@ -1,7 +1,7 @@
 class APPUrl {
-  // static String baseURL = "https://epos.enke.ae";
+  static String baseURL = "https://epos.enke.ae";
   // static String baseURL = "https://epos.mevcakes.com";
-  static String baseURL = "https://hypersouq.enke.in";
+  // static String baseURL = "https://hypersouq.enke.in";
   // static String baseURL = "http://localhost:8000";
   // static String baseURL = "https://three-places-cover.loca.lt";
   // static void setBaseUrl(String url) {
