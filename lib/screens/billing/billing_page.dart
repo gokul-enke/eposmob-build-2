@@ -24,6 +24,7 @@ import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -32,7 +33,10 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/compact_quantity_control.dart';
+import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
 import 'package:pos_machine/widgets/horizontal_product_view.dart';
+import 'package:pos_machine/widgets/horizontal_product_view_local.dart';
+import 'package:pos_machine/widgets/horizontal_saved_sales_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
@@ -222,88 +226,96 @@ class _BillingPageState extends State<BillingPage> {
               physics: const BouncingScrollPhysics(),
               child: Form(
                 key: _formKey,
-                child: BuildBoxShadowContainer(
-                  circleRadius: 10,
-                  margin: const EdgeInsets.only(
-                      left: 10, top: 10, bottom: 10, right: 10),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeader(),
-                        const Divider(thickness: 1),
-                        const HorizontalProductView(),
-                        const SizedBox(height: 10),
-                        _buildOrderHeader(
-                          size: size,
-                          barcodeController: barcodeController,
-                          quantityController: quantityController,
-                          unitPriceController: unitPriceController,
-                          selectedProductIdController:
-                              selectedProductIdController,
-                          productProvider: productProvider,
-                        ),
-                        const SizedBox(height: 5),
-                        _buildCartItemsTable(size),
-                        const SizedBox(height: 5),
-                        // _buildMobileNumberInput(size),
-                        // const SizedBox(height: 5),
-                        // _buildCouponInput(),
-                        const SizedBox(height: 10),
-                        // _buildPaymentSummary(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: HorizontalSalesView(),
+                    ),
+                    BuildBoxShadowContainer(
+                      circleRadius: 10,
+                      margin: const EdgeInsets.only(
+                          left: 10, top: 0, bottom: 10, right: 10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16.0, vertical: 10),
-                                child: Column(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    _buildMobileNumberInput(
-                                        size: size,
-                                        mobileNumberTextController:
-                                            mobileNumberTextController),
-                                    const SizedBox(height: 10),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                            _buildHeader(),
+                            const Divider(thickness: 1),
+                            const HorizontalProductViewLocal(),
+                            const SizedBox(height: 10),
+                            _buildOrderHeader(
+                              size: size,
+                              barcodeController: barcodeController,
+                              quantityController: quantityController,
+                              unitPriceController: unitPriceController,
+                              selectedProductIdController:
+                                  selectedProductIdController,
+                              productProvider: productProvider,
+                            ),
+                            const SizedBox(height: 5),
+                            _buildCartItemsTable(size),
+                            const SizedBox(height: 5),
+                            // _buildMobileNumberInput(size),
+                            // const SizedBox(height: 5),
+                            // _buildCouponInput(),
+                            const SizedBox(height: 10),
+                            // _buildPaymentSummary(),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16.0, vertical: 10),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceEvenly,
                                       children: [
-                                        _buildPaymentMethodSelection(),
+                                        _buildMobileNumberInput(
+                                            size: size,
+                                            mobileNumberTextController:
+                                                mobileNumberTextController),
                                         const SizedBox(height: 10),
-                                        _buildDeliveryMethodSelection(),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            _buildPaymentMethodSelection(),
+                                            const SizedBox(height: 10),
+                                            _buildDeliveryMethodSelection(),
+                                          ],
+                                        ),
                                       ],
                                     ),
-                                  ],
+                                  ),
                                 ),
-                              ),
+                                Expanded(
+                                    child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16.0, vertical: 10),
+                                  child: Column(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      _buildCouponInput(),
+                                      const SizedBox(height: 10),
+                                      _buildPaymentSummary(),
+                                    ],
+                                  ),
+                                )),
+                              ],
                             ),
-                            Expanded(
-                                child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16.0, vertical: 10),
-                              child: Column(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  _buildCouponInput(),
-                                  const SizedBox(height: 10),
-                                  _buildPaymentSummary(),
-                                ],
-                              ),
-                            )),
+                            const SizedBox(height: 10),
+                            _buildActionButtons(),
                           ],
                         ),
-                        const SizedBox(height: 10),
-                        _buildActionButtons(),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -379,152 +391,65 @@ class _BillingPageState extends State<BillingPage> {
                                   const Duration(milliseconds: 500),
                                   () async {
                                     if (query != null && query.length > 5) {
-                                      //     // Check if a dialog is already open
-                                      if (_isDialogOpen) return;
-                                      if (query.length > 5) {
-                                        List<GetProduct>? products;
-                                        products = await productProvider
-                                            .filterProductByBarcodeAPI(
-                                                barCode: query);
-                                        // debugPrint(products?.first.toString());
-
-                                        if (products!.length == 1) {
-                                          String? accessToken =
-                                              Provider.of<AuthModel>(context,
-                                                      listen: false)
-                                                  .token;
-                                          int? userId = Provider.of<AuthModel>(
+                                      // Call the local filter method
+                                      List<GetProduct> filteredProducts =
+                                          Provider.of<LocalProductProvider>(
                                                   context,
                                                   listen: false)
-                                              .userId;
-                                          debugPrint(
-                                              "accessToken From AuthModel $accessToken");
-                                          Provider.of<CartProvider>(context,
-                                                  listen: false)
-                                              .addToCartAPI(
-                                                  customerId: userId!,
-                                                  productId:
-                                                      products.first.productId!,
-                                                  quantity: products
-                                                              .first
-                                                              .weightInfo
-                                                              ?.isWeighted ==
-                                                          true
-                                                      ? products
-                                                              .first
-                                                              .weightInfo
-                                                              ?.weight ??
-                                                          1
-                                                      : 1,
-                                                  unitPrice: products
-                                                      .first.price?.price,
-                                                  accessToken:
-                                                      accessToken ?? "")
-                                              .then((value) {
-                                            AddToCartModel addToCartModel =
-                                                AddToCartModel.fromJson(value);
-                                            if (value["status"] == "success") {
-                                              showScaffold(
-                                                context: context,
-                                                message:
-                                                    addToCartModel.message ??
-                                                        'Added To Cart',
-                                              );
-                                              setState(() {
-                                                _autocompleteProductKey =
-                                                    GlobalKey();
-                                                quantityController.clear();
-                                                barcodeController.clear();
-                                                selectedProductIdController
-                                                    .clear();
-                                                unitPriceController.clear();
-                                              });
-                                              _focusTextField();
-                                              //  'Order Placed Successfully',
-                                            } else {
-                                              showScaffoldError(
-                                                context: context,
-                                                message: addToCartModel
-                                                        .message ??
-                                                    "Error Occured ! Try Again",
-                                              );
-                                              //  'Added To Cart',
-                                            }
-                                          });
-                                          _refetchCartData();
+                                              .filterProductByBarcode(
+                                                  barCode: query);
+                                      final localProductProvider =
+                                          Provider.of<LocalProductProvider>(
+                                              context,
+                                              listen: false);
+
+                                      if (filteredProducts.isNotEmpty) {
+                                        // Handle the case where products are found
+                                        // For example, you can update the UI or add to cart
+                                        // Example: add the first product to the cart
+                                        GetProduct product =
+                                            filteredProducts.first;
+
+                                        localProductProvider.addToCart(
+                                            product: product);
+
+                                        showScaffold(
+                                          context: context,
+                                          message: 'Added To Cart',
+                                        );
+
+                                        // Clear input fields if necessary
+                                        setState(() {
+                                          _autocompleteProductKey = GlobalKey();
+                                          quantityController.clear();
+                                          barcodeController.clear();
+                                          selectedProductIdController.clear();
+                                          unitPriceController.clear();
+                                        });
+                                        _focusTextField();
+                                      } else {
+                                        _isDialogOpen =
+                                            true; // Set dialog state to open
+                                        final result = await showDialog(
+                                          context: context,
+                                          builder: (context) =>
+                                              AddProductWithBarcodeModal(
+                                                  barcode: query),
+                                        );
+                                        _isDialogOpen =
+                                            false; // Reset dialog state
+                                        debugPrint("result $result");
+                                        if (result != null) {
+                                          localProductProvider.addToCart(
+                                              productId: result["id"],
+                                              price: double.tryParse(
+                                                  result["price"].toString()));
+                                          barcodeController.clear();
                                         } else {
-                                          _isDialogOpen =
-                                              true; // Set dialog state to open
-                                          final result = await showDialog(
-                                            context: context,
-                                            builder: (context) =>
-                                                AddProductWithBarcodeModal(
-                                                    barcode: query),
-                                          );
-                                          _isDialogOpen =
-                                              false; // Reset dialog state
-                                          debugPrint("result $result");
-                                          if (result != null) {
-                                            String? accessToken =
-                                                Provider.of<AuthModel>(context,
-                                                        listen: false)
-                                                    .token;
-                                            int? userId =
-                                                Provider.of<AuthModel>(context,
-                                                        listen: false)
-                                                    .userId;
-                                            debugPrint(
-                                                "accessToken From AuthModel $accessToken");
-                                            Provider.of<CartProvider>(context,
-                                                    listen: false)
-                                                .addToCartAPI(
-                                                    customerId: userId!,
-                                                    productId: result["id"],
-                                                    quantity: 1,
-                                                    unitPrice: result["price"]
-                                                        .toString(),
-                                                    accessToken:
-                                                        accessToken ?? "")
-                                                .then((value) {
-                                              AddToCartModel addToCartModel =
-                                                  AddToCartModel.fromJson(
-                                                      value);
-                                              if (value["status"] ==
-                                                  "success") {
-                                                showScaffold(
-                                                  context: context,
-                                                  message:
-                                                      addToCartModel.message ??
-                                                          'Added To Cart',
-                                                );
-                                                setState(() {
-                                                  _autocompleteProductKey =
-                                                      GlobalKey();
-                                                  quantityController.clear();
-                                                  barcodeController.clear();
-                                                  selectedProductIdController
-                                                      .clear();
-                                                  unitPriceController.clear();
-                                                });
-                                                _focusTextField();
-                                                //  'Order Placed Successfully',
-                                              } else {
-                                                showScaffoldError(
-                                                  context: context,
-                                                  message: addToCartModel
-                                                          .message ??
-                                                      "Error Occured ! Try Again",
-                                                );
-                                                //  'Added To Cart',
-                                              }
-                                            });
-                                            _refetchCartData();
-                                          } else {
-                                            setState(() {
-                                              barcodeController.clear();
-                                            });
-                                          }
+                                          barcodeController.clear();
                                         }
+                                        debugPrint(
+                                            "No products found for barcode: $query");
                                       }
                                     }
                                   },
@@ -627,55 +552,45 @@ class _BillingPageState extends State<BillingPage> {
                                   isLoadingAddItem = true; // Start loading
                                 });
                                 try {
-                                  String? accessToken = Provider.of<AuthModel>(
-                                          context,
-                                          listen: false)
-                                      .token;
-                                  int? customerId = Provider.of<AuthModel>(
-                                          context,
-                                          listen: false)
-                                      .userId;
-                                  debugPrint(
-                                      "accessToken From AuthModel $accessToken");
-                                  Provider.of<CartProvider>(context,
-                                          listen: false)
-                                      .addToCartAPI(
-                                    customerId: customerId!,
-                                    productId: int.parse(
-                                        selectedProductIdController.text),
-                                    quantity:
-                                        double.parse(quantityController.text),
-                                    unitPrice: unitPriceController.text,
-                                    accessToken: accessToken ?? "",
-                                  )
-                                      .then((value) {
-                                    AddToCartModel addToCartModel =
-                                        AddToCartModel.fromJson(value);
-                                    if (value["status"] == "success") {
-                                      showScaffold(
-                                        context: context,
-                                        message: addToCartModel.message ??
-                                            'Added To Cart',
-                                      );
-                                      setState(() {
-                                        _autocompleteProductKey = GlobalKey();
-                                        quantityController.clear();
-                                        barcodeController.clear();
-                                        selectedProductIdController.clear();
-                                        unitPriceController.clear();
-                                      });
-                                      _focusTextField();
-                                      //  'Order Placed Successfully',
-                                    } else {
-                                      showScaffoldError(
-                                        context: context,
-                                        message: addToCartModel.message ??
-                                            "Error Occured ! Try Again",
-                                      );
-                                      //  'Added To Cart',
-                                    }
-                                  });
-                                  _refetchCartData();
+                                  // Get the selected product from LocalProductProvider
+                                  final localProductProvider =
+                                      Provider.of<LocalProductProvider>(context,
+                                          listen: false);
+
+                                  final selectedProduct =
+                                      localProductProvider.selectedProduct;
+
+                                  if (selectedProduct != null) {
+                                    // Add the selected product to the local cart
+                                    localProductProvider.addToCart(
+                                        product: selectedProduct,
+                                        quantity: num.tryParse(
+                                          quantityController.text,
+                                        ),
+                                        price: double.tryParse(
+                                          unitPriceController.text,
+                                        ));
+
+                                    showScaffold(
+                                      context: context,
+                                      message: 'Added To Cart',
+                                    );
+
+                                    // Clear input fields if necessary
+                                    setState(() {
+                                      _autocompleteProductKey = GlobalKey();
+                                      quantityController.clear();
+                                      barcodeController.clear();
+                                      selectedProductIdController.clear();
+                                      unitPriceController.clear();
+                                    });
+                                    _focusTextField();
+                                  } else {
+                                    showScaffoldError(
+                                      context: context,
+                                      message: "No product selected!",
+                                    );
+                                  }
                                 } catch (e) {
                                   debugPrint('Error adding item: $e');
                                   showScaffoldError(
@@ -752,233 +667,176 @@ class _BillingPageState extends State<BillingPage> {
   }
 
   Widget _buildCartItemsTable(Size size) {
-    return Consumer<CartProvider>(
-      builder: (context, cartProvider, child) {
-        return StreamBuilder<List<ListCartModelData>>(
-          stream: cartProvider.cartStream,
-          builder: (context, snapshot) {
-            if (snapshot.hasData) {
-              List<ListCartModelDataCartItem>? cartItems =
-                  snapshot.data!.isEmpty ? [] : snapshot.data!.first.cartItems;
+    return Consumer<LocalProductProvider>(
+      builder: (context, localProductProvider, child) {
+        List<LocalCartItem> cartItems = localProductProvider.getCartItems();
 
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: ConstrainedBox(
-                      constraints:
-                          BoxConstraints(minWidth: constraints.maxWidth),
-                      child: DataTable(
-                        columnSpacing: 20,
-                        horizontalMargin: 16,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.transparent),
-                        ),
-                        headingRowColor: WidgetStateColor.resolveWith(
-                            (states) =>
-                                ColorManager.kPrimaryColor.withOpacity(0.1)),
-                        dataRowColor: WidgetStateColor.resolveWith((states) =>
-                            states.contains(WidgetState.selected)
-                                ? Colors.grey.shade100
-                                : Colors.white),
-                        dividerThickness: 0,
-                        columns: [
-                          DataColumn(
-                            label: Expanded(
-                              child: Text('Item Name',
-                                  textAlign: TextAlign.center,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      14,
-                                      0.21,
-                                      ColorManager.textColor)),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Expanded(
-                              child: Text('Unit',
-                                  textAlign: TextAlign.center,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      14,
-                                      0.21,
-                                      ColorManager.textColor)),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Expanded(
-                              child: Text('Quantity',
-                                  textAlign: TextAlign.center,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      14,
-                                      0.21,
-                                      ColorManager.textColor)),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Expanded(
-                              child: Text('Unit Price',
-                                  textAlign: TextAlign.center,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      14,
-                                      0.21,
-                                      ColorManager.textColor)),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Expanded(
-                              child: Text('Total Price',
-                                  textAlign: TextAlign.center,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      14,
-                                      0.21,
-                                      ColorManager.textColor)),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Expanded(
-                              child: Text('Actions',
-                                  textAlign: TextAlign.center,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      14,
-                                      0.21,
-                                      ColorManager.textColor)),
-                            ),
-                          ),
-                        ],
-                        rows: cartItems!.map((item) {
-                          return DataRow(
-                            cells: [
-                              DataCell(Align(
-                                alignment: Alignment.center,
-                                child: Text(
-                                  item.productName ?? 'Unknown',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      12,
-                                      0.21,
-                                      ColorManager.textColor),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                ),
-                              )),
-                              DataCell(Align(
-                                alignment: Alignment.center,
-                                child: Text(
-                                  item.productUnit ?? '-',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      12,
-                                      0.21,
-                                      ColorManager.textColor),
-                                  textAlign: TextAlign.center,
-                                ),
-                              )),
-                              DataCell(Center(
-                                child: CompactQuantityControl(
-                                  productId: item.productId!,
-                                  cartItemId: item.id!,
-                                  quantity: item.quantity!.toDouble(),
-                                  unitPrice: item.unitPrice.toString(),
-                                  productUnit: item.productUnit,
-                                ),
-                              )),
-                              DataCell(Center(
-                                child: SizedBox(
-                                  width: 80,
-                                  child: TextField(
-                                    textAlign: TextAlign.center,
-                                    controller: TextEditingController(
-                                        text: item.unitPrice.toString()),
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      hintText: 'Unit Price',
-                                      hintStyle: TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    onSubmitted: (newPrice) {
-                                      _updateItemPrice(context, item, newPrice);
-                                    },
-                                  ),
-                                ),
-                              )),
-                              DataCell(Center(
-                                child: SizedBox(
-                                  width: 80,
-                                  child: Text(item.totalPrice.toString()),
-                                ),
-                              )),
-                              DataCell(Center(
-                                child: IconButton(
-                                  icon: WebsafeSvg.asset(
-                                    ImageAssets.oderlistCloseIcon,
-                                    width: 15,
-                                  ),
-                                  onPressed: () {
-                                    _removeCartItem(context, item);
-                                  },
-                                ),
-                              )),
-                            ],
-                          );
-                        }).toList(),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            return ConstrainedBox(
+              constraints: BoxConstraints(
+                  minWidth: constraints.maxWidth, maxHeight: 200),
+              child: SingleChildScrollView(
+                child: DataTable(
+                  columnSpacing: 20,
+                  horizontalMargin: 16,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.transparent),
+                  ),
+                  headingRowColor: WidgetStateColor.resolveWith(
+                      (states) => ColorManager.kPrimaryColor.withOpacity(0.1)),
+                  dataRowColor: WidgetStateColor.resolveWith((states) =>
+                      states.contains(WidgetState.selected)
+                          ? Colors.grey.shade100
+                          : Colors.white),
+                  dividerThickness: 0,
+                  columns: [
+                    DataColumn(
+                      label: Expanded(
+                        child: Text('Item Name',
+                            textAlign: TextAlign.center,
+                            style: buildCustomStyle(FontWeightManager.bold, 14,
+                                0.21, ColorManager.textColor)),
                       ),
                     ),
-                  );
-                },
-              );
-            } else if (snapshot.hasError) {
-              return Text('Error: ${snapshot.error}');
-            } else {
-              return const Center(child: BuildCartListDesign());
-            }
+                    DataColumn(
+                      label: Expanded(
+                        child: Text('Unit',
+                            textAlign: TextAlign.center,
+                            style: buildCustomStyle(FontWeightManager.bold, 14,
+                                0.21, ColorManager.textColor)),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Expanded(
+                        child: Text('Quantity',
+                            textAlign: TextAlign.center,
+                            style: buildCustomStyle(FontWeightManager.bold, 14,
+                                0.21, ColorManager.textColor)),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Expanded(
+                        child: Text('Unit Price',
+                            textAlign: TextAlign.center,
+                            style: buildCustomStyle(FontWeightManager.bold, 14,
+                                0.21, ColorManager.textColor)),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Expanded(
+                        child: Text('Total Price',
+                            textAlign: TextAlign.center,
+                            style: buildCustomStyle(FontWeightManager.bold, 14,
+                                0.21, ColorManager.textColor)),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Expanded(
+                        child: Text('Actions',
+                            textAlign: TextAlign.center,
+                            style: buildCustomStyle(FontWeightManager.bold, 14,
+                                0.21, ColorManager.textColor)),
+                      ),
+                    ),
+                  ],
+                  rows: cartItems.map((item) {
+                    return DataRow(
+                      cells: [
+                        DataCell(Align(
+                          alignment: Alignment.center,
+                          child: Text(
+                            item.product.productName ?? 'Unknown',
+                            style: buildCustomStyle(FontWeightManager.regular,
+                                12, 0.21, ColorManager.textColor),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        )),
+                        DataCell(Align(
+                          alignment: Alignment.center,
+                          child: Text(
+                            item.product.unit ?? '-',
+                            style: buildCustomStyle(FontWeightManager.regular,
+                                12, 0.21, ColorManager.textColor),
+                            textAlign: TextAlign.center,
+                          ),
+                        )),
+                        DataCell(Center(
+                          child: CompactQuantityControlLocal(
+                            productId: item.product.productId!,
+                            quantity: item.quantity.toDouble(),
+                            unitPrice: item.price.toString(),
+                            productUnit: item.product.unit,
+                            product: item.product,
+                          ),
+                        )),
+                        DataCell(Center(
+                          child: SizedBox(
+                            width: 80,
+                            child: TextField(
+                              textAlign: TextAlign.center,
+                              controller: TextEditingController(
+                                  text: item.price.toString()),
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                hintText: 'Unit Price',
+                                hintStyle: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              onSubmitted: (newPrice) {
+                                localProductProvider.updateItemPrice(
+                                  item.product.productId!,
+                                  double.tryParse(newPrice) ?? item.price!,
+                                );
+                              },
+                            ),
+                          ),
+                        )),
+                        DataCell(
+                          Center(
+                            child: SizedBox(
+                              width: 80,
+                              child: Text(
+                                (item.price! * item.quantity)
+                                    .toStringAsFixed(2),
+                              ),
+                            ),
+                          ),
+                        ),
+                        DataCell(Center(
+                          child: IconButton(
+                            icon: WebsafeSvg.asset(
+                              ImageAssets.oderlistCloseIcon,
+                              width: 15,
+                            ),
+                            onPressed: () {
+                              localProductProvider
+                                  .removeFromCart(item.product.productId!);
+                            },
+                          ),
+                        )),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            );
           },
         );
       },
     );
   }
 
-  void _updateItemPrice(
-      BuildContext context, ListCartModelDataCartItem item, String newPrice) {
-    if (newPrice.isNotEmpty) {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
-
-      Provider.of<CartProvider>(context, listen: false).updateCartItemPrice(
-        accessToken: accessToken ?? "",
-        cartItemId: item.id ?? 0,
-        unitPrice: newPrice,
-        customerId: customerId!,
-      );
-
-      showScaffold(
-        context: context,
-        message: 'Price Updated Successfully',
-      );
-    }
-  }
-
-  void _removeCartItem(BuildContext context, ListCartModelDataCartItem item) {
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-
-    Provider.of<CartProvider>(context, listen: false).removeFromCartAPI(
-      accessToken: accessToken ?? "",
-      customerId: Provider.of<AuthModel>(context, listen: false).userId!,
-      productId: item.id!,
-      remove: "true",
-    );
-  }
-
   Widget _buildPaymentSummary() {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: true);
+
+    localProductProvider.cartTotal; // Call this to ensure priceSummary is set
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -998,7 +856,7 @@ class _BillingPageState extends State<BillingPage> {
         ),
         BuildPaymentRow(
           amount:
-              "INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.subTotal ?? 0.00)}",
+              "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal ?? 0.00)}",
           title: "Net amount",
           color: ColorManager.textColor,
         ),
@@ -1009,23 +867,18 @@ class _BillingPageState extends State<BillingPage> {
         ),
         BuildPaymentRow(
           amount:
-              "INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.discount ?? 0.00)}",
+              "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount ?? 0.00)}",
           title: "Discount",
           color: ColorManager.textColor,
         ),
         GestureDetector(
           child: BuildPaymentRow(
-            amount: "INR ${AmountHelper.formatAmount(
-              Provider.of<CartProvider>(context, listen: true)
-                      .priceSummary!
-                      .totalTax ??
-                  0.00,
-            )}",
+            amount:
+                "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax ?? 0.00)}",
             title: "GST",
             color: ColorManager.kPrimaryColor,
           ),
           onTap: () {
-            // debugPrint("Tax Details ${taxNames.toString()}");
             showDialog(
               context: context,
               builder: (context) {
@@ -1041,7 +894,7 @@ class _BillingPageState extends State<BillingPage> {
         const Divider(thickness: 2),
         BuildPaymentRow(
           amount:
-              "INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal ?? 0.00)}",
+              "INR ${AmountHelper.formatAmount(localProductProvider.cartTotal)}", // Use cartTotal from LocalProductProvider
           title: "Total Payable",
           secondRowTextStyle: buildCustomStyle(
             FontWeightManager.bold,
@@ -1778,19 +1631,20 @@ class _BillingPageState extends State<BillingPage> {
       isLoadingClearCart = true; // Indicate that loading has started
     });
     try {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      Provider.of<CartProvider>(context, listen: false).clearCartAPI(
-        accessToken: accessToken ?? "",
-        customerId: Provider.of<AuthModel>(context, listen: false).userId!,
-        productId: Provider.of<CartProvider>(context, listen: false)
-                .cartData[0]
-                .cartItems![0]
-                .id ??
-            1,
-        remove: "true",
-      );
-      _refetchCartData();
+      Provider.of<LocalProductProvider>(context, listen: false).clearCart();
+      // String? accessToken =
+      //     Provider.of<AuthModel>(context, listen: false).token;
+      // Provider.of<CartProvider>(context, listen: false).clearCartAPI(
+      //   accessToken: accessToken ?? "",
+      //   customerId: Provider.of<AuthModel>(context, listen: false).userId!,
+      //   productId: Provider.of<CartProvider>(context, listen: false)
+      //           .cartData[0]
+      //           .cartItems![0]
+      //           .id ??
+      //       1,
+      //   remove: "true",
+      // );
+      // _refetchCartData();
       setState(() {
         iconColor = 0;
         coupenCodeTextController.clear();
@@ -1863,12 +1717,35 @@ class _BillingPageState extends State<BillingPage> {
           paymentMethod = "UPI";
         }
 
+        final localProductProvider =
+            Provider.of<LocalProductProvider>(context, listen: false);
+        final cartItems = localProductProvider.cartItems;
+
+        if (localProductProvider.cartItems.isEmpty) {
+          showScaffoldError(
+            context: context,
+            message: "Please add items to cart",
+          );
+          return;
+        }
+
+        List<Map<String, dynamic>> items = [];
+
+        for (var item in cartItems) {
+          items.add({
+            'product_id': item.product.productId,
+            'quantity': item.quantity,
+            'unit_price': item.price,
+          });
+        }
+
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderAPI(
-          cartIds: cartId!,
+          items: items,
+          cartIds: cartId ?? 0,
           accessToken: accessToken ?? "",
           transactionId: _transactionNumberController.text,
-          totalPrice: Provider.of<CartProvider>(context, listen: false)
+          totalPrice: Provider.of<LocalProductProvider>(context, listen: false)
               .priceSummary!
               .netTotal
               .toString(),
@@ -1883,12 +1760,14 @@ class _BillingPageState extends State<BillingPage> {
           carNumber: _carNumberController.text,
         )
             .then((response) {
-          debugPrint("response ${response["order_number"]}");
-          if (response["order_number"] != null) {
+          debugPrint("response ${response["order_id"]}");
+          if (response["order_id"] != null) {
             showScaffold(
               context: context,
               message: "Order Saved Succesfully",
             );
+
+            localProductProvider.clearCart();
 
             // Clear the mobile number after successful save
             setState(() {
@@ -1974,12 +1853,35 @@ class _BillingPageState extends State<BillingPage> {
           paymentMethod = "UPI";
         }
 
+        final localProductProvider =
+            Provider.of<LocalProductProvider>(context, listen: false);
+        final cartItems = localProductProvider.cartItems;
+
+        if (localProductProvider.cartItems.isEmpty) {
+          showScaffoldError(
+            context: context,
+            message: "Please add items to cart",
+          );
+          return;
+        }
+
+        List<Map<String, dynamic>> items = [];
+
+        for (var item in cartItems) {
+          items.add({
+            'product_id': item.product.productId,
+            'quantity': item.quantity,
+            'unit_price': item.price,
+          });
+        }
+
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderAPI(
-          cartIds: cartId!,
+          items: items,
+          cartIds: cartId ?? 0,
           accessToken: accessToken ?? "",
           transactionId: _transactionNumberController.text,
-          totalPrice: Provider.of<CartProvider>(context, listen: false)
+          totalPrice: Provider.of<LocalProductProvider>(context, listen: false)
               .priceSummary!
               .netTotal
               .toString(),
@@ -1995,81 +1897,82 @@ class _BillingPageState extends State<BillingPage> {
           status: "confirmed",
         )
             .then((response) async {
-          // AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
-          // debugPrint("this is response of add to order $response");
-          // if (response["status"] == "success") {
-          showScaffold(
-            context: context,
-            message: "Order Confirmed Successfully",
-          );
-
-          try {
-            String ordersId = response["order_number"].toString();
-            String? accessToken =
-                Provider.of<AuthModel>(context, listen: false).token;
-
-            final OrderDetailsresponse = await SalesProvider()
-                .listOrderDetails(context, ordersId, accessToken ?? "");
-
-            OrderDetailsModel orderDetails =
-                OrderDetailsModel.fromJson(OrderDetailsresponse);
-
-            String formattedTotal = AmountHelper.formatAmount(
-              orderDetails.data?.cart?.priceSummary?.netTotal,
+          debugPrint("response ${response["order_id"]}");
+          if (response["order_id"] != null) {
+            showScaffold(
+              context: context,
+              message: "Order Confirmed Successfully",
             );
-            String savedTotal = AmountHelper.formatAmount(
-              orderDetails.data?.cart?.priceSummary?.savedTotal,
-            );
-            String storeName = orderDetails.data!.cart!.storeName ?? "";
-            String orderDate = orderDetails.data!.orderDate ?? "";
 
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PrintPage(
-                  storeName: storeName,
-                  cartItems: orderDetails.data!.cart!.cartItems!,
-                  formattedTotal: formattedTotal,
-                  savedTotal: savedTotal,
-                  orderDate: orderDate,
-                  orderNumber: orderDetails.data!.orderNumber ?? "",
+            localProductProvider.clearCart();
+
+            try {
+              String ordersId = response["order_id"].toString();
+              String? accessToken =
+                  Provider.of<AuthModel>(context, listen: false).token;
+
+              final OrderDetailsresponse = await SalesProvider()
+                  .listOrderDetails(context, ordersId, accessToken ?? "");
+
+              OrderDetailsModel orderDetails =
+                  OrderDetailsModel.fromJson(OrderDetailsresponse);
+
+              String formattedTotal = AmountHelper.formatAmount(
+                orderDetails.data?.cart?.priceSummary?.netTotal,
+              );
+              String savedTotal = AmountHelper.formatAmount(
+                orderDetails.data?.cart?.priceSummary?.savedTotal,
+              );
+              String storeName = orderDetails.data!.cart!.storeName ?? "";
+              String orderDate = orderDetails.data!.orderDate ?? "";
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PrintPage(
+                    storeName: storeName,
+                    cartItems: orderDetails.data!.cart!.cartItems!,
+                    formattedTotal: formattedTotal,
+                    savedTotal: savedTotal,
+                    orderDate: orderDate,
+                    orderNumber: orderDetails.data!.orderNumber ?? "",
+                  ),
                 ),
-              ),
-            );
-          } catch (error) {
-            debugPrint(error.toString());
-          }
+              );
+            } catch (error) {
+              debugPrint(error.toString());
+            }
 
-          // Clear the mobile number after successful save
-          setState(() {
-            mobileNumberText = ""; // Clear the variable
-            selectedCustomerID = null;
-            selectedCustomerPhone = null;
-            iconColor = 0;
-            mobileNumberTextController.clear();
-            quantityController.clear();
-            barcodeController.clear();
-            selectedProductIdController.clear();
-            unitPriceController.clear();
-            isCustomerFound = false;
-            selectedCustomer = null;
-            isCouponApplied = false;
-            coupenCodeTextController.clear();
-            _transactionNumberController.clear();
-            _paidAmountController.clear();
-            _balanceAmount = 0;
-            _carNumberController.clear();
-            _commentController.clear();
-            deliveryMethodId = "";
-            deliveryMethod = "";
-          });
-          resetAutocomplete();
-          // } else {
-          //   showScaffoldError(
-          //     context: context,
-          //     message: "${addToOrderModel.message}",
-          //   );
-          // }
+            // Clear the mobile number after successful save
+            setState(() {
+              mobileNumberText = ""; // Clear the variable
+              selectedCustomerID = null;
+              selectedCustomerPhone = null;
+              iconColor = 0;
+              mobileNumberTextController.clear();
+              quantityController.clear();
+              barcodeController.clear();
+              selectedProductIdController.clear();
+              unitPriceController.clear();
+              isCustomerFound = false;
+              selectedCustomer = null;
+              isCouponApplied = false;
+              coupenCodeTextController.clear();
+              _transactionNumberController.clear();
+              _paidAmountController.clear();
+              _balanceAmount = 0;
+              _carNumberController.clear();
+              _commentController.clear();
+              deliveryMethodId = "";
+              deliveryMethod = "";
+            });
+            resetAutocomplete();
+          } else {
+            showScaffoldError(
+              context: context,
+              message: "Failed to Confirm Order",
+            );
+          }
         });
       }
       _focusTextField();
@@ -2129,12 +2032,35 @@ class _BillingPageState extends State<BillingPage> {
           paymentMethod = "UPI";
         }
 
+        final localProductProvider =
+            Provider.of<LocalProductProvider>(context, listen: false);
+        final cartItems = localProductProvider.cartItems;
+
+        if (localProductProvider.cartItems.isEmpty) {
+          showScaffoldError(
+            context: context,
+            message: "Please add items to cart",
+          );
+          return;
+        }
+
+        List<Map<String, dynamic>> items = [];
+
+        for (var item in cartItems) {
+          items.add({
+            'product_id': item.product.productId,
+            'quantity': item.quantity,
+            'unit_price': item.price,
+          });
+        }
+
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderAPI(
-          cartIds: cartId!,
+          items: items,
+          cartIds: cartId ?? 0,
           accessToken: accessToken ?? "",
           transactionId: _transactionNumberController.text,
-          totalPrice: Provider.of<CartProvider>(context, listen: false)
+          totalPrice: Provider.of<LocalProductProvider>(context, listen: false)
               .priceSummary!
               .netTotal
               .toString(),
@@ -2150,44 +2076,45 @@ class _BillingPageState extends State<BillingPage> {
           status: "confirmed",
         )
             .then((response) {
-          AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
-          debugPrint("$response");
-          // if (response["status"] == "success") {
-          showScaffold(
-            context: context,
-            message: "Order Confirmed Successfully",
-          );
+          debugPrint("response ${response["order_id"]}");
+          if (response["order_id"] != null) {
+            showScaffold(
+              context: context,
+              message: "Order Confirmed Successfully",
+            );
 
-          // Clear the mobile number after successful save
-          setState(() {
-            mobileNumberText = ""; // Clear the variable
-            selectedCustomerID = null;
-            selectedCustomerPhone = null;
-            iconColor = 0;
-            mobileNumberTextController.clear();
-            quantityController.clear();
-            barcodeController.clear();
-            selectedProductIdController.clear();
-            unitPriceController.clear();
-            isCustomerFound = false;
-            selectedCustomer = null;
-            isCouponApplied = false;
-            coupenCodeTextController.clear();
-            _transactionNumberController.clear();
-            _paidAmountController.clear();
-            _balanceAmount = 0;
-            _carNumberController.clear();
-            _commentController.clear();
-            deliveryMethodId = "";
-            deliveryMethod = "";
-          });
-          resetAutocomplete();
-          // } else {
-          // showScaffoldError(
-          //   context: context,
-          //   message: "${addToOrderModel.message}",
-          // );
-          // }
+            localProductProvider.clearCart();
+
+            // Clear the mobile number after successful save
+            setState(() {
+              mobileNumberText = ""; // Clear the variable
+              selectedCustomerID = null;
+              selectedCustomerPhone = null;
+              iconColor = 0;
+              mobileNumberTextController.clear();
+              quantityController.clear();
+              barcodeController.clear();
+              selectedProductIdController.clear();
+              unitPriceController.clear();
+              isCustomerFound = false;
+              selectedCustomer = null;
+              isCouponApplied = false;
+              coupenCodeTextController.clear();
+              _transactionNumberController.clear();
+              _paidAmountController.clear();
+              _balanceAmount = 0;
+              _carNumberController.clear();
+              _commentController.clear();
+              deliveryMethodId = "";
+              deliveryMethod = "";
+            });
+            resetAutocomplete();
+          } else {
+            showScaffoldError(
+              context: context,
+              message: "Failed to Confirm Order",
+            );
+          }
         });
         _focusTextField();
       }
@@ -2203,7 +2130,7 @@ class _BillingPageState extends State<BillingPage> {
 
   void _getBalanceAmount() {
     // debugPrint(_paidAmountController.text);
-    num netTotal = Provider.of<CartProvider>(context, listen: false)
+    num netTotal = Provider.of<LocalProductProvider>(context, listen: false)
             .priceSummary!
             .netTotal ??
         0.00;
@@ -2219,9 +2146,10 @@ class _BillingPageState extends State<BillingPage> {
 
   Future<void> _applyCoupon() async {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    double? totalAmount = Provider.of<CartProvider>(context, listen: false)
-        .priceSummary!
-        .netTotal;
+    double? totalAmount =
+        Provider.of<LocalProductProvider>(context, listen: false)
+            .priceSummary!
+            .netTotal;
     String couponCode = coupenCodeTextController.text;
 
     if (accessToken != null) {

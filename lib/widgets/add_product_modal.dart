@@ -5,9 +5,11 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/category_list.dart';
+import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -374,8 +376,15 @@ class _AddProductWithBarcodeModalState
                             accessToken: accessToken ?? "",
                           )
                               .then((value) {
-                            debugPrint("value $value");
-
+                            try {
+                              GetProduct product =
+                                  GetProduct.fromJson(value['data']);
+                              Provider.of<LocalProductProvider>(context,
+                                      listen: false)
+                                  .addProduct(product);
+                            } catch (e) {
+                              debugPrint("Error parsing product: $e");
+                            }
                             Navigator.pop(context, {
                               'price': _productSellingPriceController.text,
                               'id': value["data"]['product_id'],

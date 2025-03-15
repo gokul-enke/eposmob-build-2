@@ -81,8 +81,12 @@ class GetProduct {
   });
 
   factory GetProduct.fromJson(Map<String, dynamic> json) => GetProduct(
-        productId: json["product_id"],
-        categoryId: json["category_id"],
+        productId: json["product_id"] is String
+            ? int.tryParse(json["product_id"])
+            : json["product_id"],
+        categoryId: json["category_id"] is String
+            ? int.tryParse(json["category_id"])
+            : json["category_id"],
         productName: json["product_name"],
         productSlug: json["product_slug"],
         barcode: json["barcode"],

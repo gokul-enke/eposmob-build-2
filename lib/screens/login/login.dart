@@ -4,6 +4,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/main_screen.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/screens/login/forgot_password.dart';
@@ -382,6 +383,13 @@ class _SignInScreenState extends State<SignInScreen> {
                                               context: context,
                                               message: '${value["message"]}',
                                             );
+
+                                            await Provider.of<
+                                                        LocalProductProvider>(
+                                                    context,
+                                                    listen: false)
+                                                .fetchProductsFromAPI();
+
                                             Navigator.pop(context);
 
                                             await Future.delayed(

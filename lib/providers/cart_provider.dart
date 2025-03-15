@@ -514,6 +514,7 @@ class CartProvider with ChangeNotifier {
   //          *********************** ADD TO ORDER API ***************************************************
 
   Future<dynamic> addToOrderAPI({
+    List<Map<String, dynamic>>? items,
     required int cartIds,
     required String accessToken,
     String? orderId,
@@ -544,6 +545,7 @@ class CartProvider with ChangeNotifier {
     Map<String, dynamic> apiBodyData = {};
 
     apiBodyData = {
+      "items": items,
       "phone": customerPhone,
       "transaction_number": transactionId,
       "payment_method": paymentMethod,
@@ -557,8 +559,6 @@ class CartProvider with ChangeNotifier {
       if (carNumber != null) "car_number": carNumber,
       if (status != null) "status": status,
     };
-
-    
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");
 

@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
+import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
@@ -191,8 +193,8 @@ class _PrintPageState extends State<PrintPage> {
       // bytes += _buildTitle(generator, 'EPOS Invoice');
 
       //Header
-      bytes += _buildHeader(
-          generator, 'EPOS Invoice', customerCareNumber, customerCareEmail);
+      bytes += _buildHeader(generator, '${widget.storeName}',
+          customerCareNumber, customerCareEmail);
 
       // Date and Order Number
       // bytes += _buildOrderDetails(generator);
@@ -222,11 +224,13 @@ class _PrintPageState extends State<PrintPage> {
       // bytes += _buildServiceDetails(generator);
 
       // Customer Care Details
-      bytes += _buildCustomerCareDetails(
-          generator, customerCareNumber, customerCareEmail);
+      // bytes += _buildCustomerCareDetails(
+      //     generator, customerCareNumber, customerCareEmail);
 
       // Thank You Message
       bytes += _buildThankYouMessage(generator);
+
+      bytes += _buildQRCode(generator, customerCareNumber);
 
       // Cut the receipt
       bytes += generator.cut();
@@ -237,6 +241,9 @@ class _PrintPageState extends State<PrintPage> {
 
       if (mounted) {
         showScaffold(context: context, message: "Print job sent successfully");
+        Navigator.pop(context);
+        SideBarController sideBarController = Get.put(SideBarController());
+        sideBarController.index.value = 46;
       }
     } catch (e) {
       if (mounted) {
@@ -280,6 +287,33 @@ class _PrintPageState extends State<PrintPage> {
     bytes += generator.text(title,
         styles: const PosStyles(
             align: PosAlign.center, bold: true, height: PosTextSize.size2));
+
+    bytes += generator.row([
+      PosColumn(
+        text: '', // Empty column on the left
+        width: 3,
+      ),
+      PosColumn(
+        text: title, // The main centered text
+        width: 6,
+        styles: const PosStyles(
+            align: PosAlign.center, bold: true, height: PosTextSize.size2),
+      ),
+      PosColumn(
+        text: '', // Empty column on the right
+        width: 3,
+      ),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(
+        text: title, // The main centered text
+        width: 12,
+        styles: const PosStyles(
+            align: PosAlign.center, bold: true, height: PosTextSize.size2),
+      ),
+    ]);
+
     // bytes += generator.text('Manjeri,Malappuram',
     //     styles: const PosStyles(align: PosAlign.center));
     bytes += generator.text('TEL: $customerCareNumber',
@@ -294,19 +328,32 @@ class _PrintPageState extends State<PrintPage> {
     //     styles: const PosStyles(align: PosAlign.center));
 
     // Invoice Title
-    bytes += generator.text('TAX INVOICE',
+    bytes += generator.text('INVOICE ${widget.orderNumber}',
         styles: const PosStyles(align: PosAlign.center, bold: true));
 
     // Date and Time
-    bytes += generator.text(
-        'Date: ${DateHelper.formatISODate(widget.orderDate)}  Order#: ${widget.orderNumber}',
-        styles: const PosStyles(align: PosAlign.center));
-    bytes += generator.text(
-        'Time: ${DateHelper.formatISODateToIST(widget.orderDate)} Store Name: ${widget.storeName}',
-        styles: const PosStyles(align: PosAlign.center));
+    // bytes += generator.text(
+    //     'Date: ${DateHelper.formatISODate(widget.orderDate)}  Order#: ${widget.orderNumber}',
+    //     styles: const PosStyles(align: PosAlign.center));
+    // bytes += generator.text(
+    //     'Time: ${DateHelper.formatISODateToIST(widget.orderDate)} Store Name: ${widget.storeName}',
+    //     styles: const PosStyles(align: PosAlign.center));
 
     // Separator
     // bytes += generator.text("================================");
+    bytes += generator.hr();
+    bytes += generator.row([
+      PosColumn(
+          text: DateHelper.formatISODate(widget.orderDate),
+          width: 6,
+          styles: const PosStyles(
+              align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+      PosColumn(
+          text: DateHelper.formatISODateToIST(widget.orderDate),
+          width: 6,
+          styles: const PosStyles(
+              align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+    ]);
     bytes += generator.hr();
 
     return bytes;
@@ -340,22 +387,22 @@ class _PrintPageState extends State<PrintPage> {
 
   List<int> _buildTableHeader(Generator generator) {
     return generator.row([
-          PosColumn(text: 'Sl#', width: 1),
-          PosColumn(text: 'Item', width: 3),
-          PosColumn(
-              text: 'Qty',
-              width: 2,
-              styles: const PosStyles(align: PosAlign.right)),
+          // PosColumn(text: 'Sl#', width: 1),
+          PosColumn(text: 'PARTICULARS', width: 4),
           PosColumn(
               text: 'MRP',
               width: 2,
               styles: const PosStyles(align: PosAlign.right)),
           PosColumn(
-              text: 'Price',
+              text: 'QTY',
               width: 2,
               styles: const PosStyles(align: PosAlign.right)),
           PosColumn(
-              text: 'Amount',
+              text: 'RATE',
+              width: 2,
+              styles: const PosStyles(align: PosAlign.right)),
+          PosColumn(
+              text: 'TOTAL',
               width: 2,
               styles: const PosStyles(align: PosAlign.right)),
         ]) +
@@ -368,14 +415,14 @@ class _PrintPageState extends State<PrintPage> {
     for (var i = 0; i < cartItems.length; i++) {
       var item = cartItems[i];
       bytes += generator.row([
-        PosColumn(text: (i + 1).toString(), width: 1),
-        PosColumn(text: item.productName ?? '', width: 3),
+        // PosColumn(text: (i + 1).toString(), width: 1),
+        PosColumn(text: item.productName ?? '', width: 4),
         PosColumn(
-            text: item.quantity.toString(),
+            text: item.mrp,
             width: 2,
             styles: const PosStyles(align: PosAlign.right)),
         PosColumn(
-            text: item.mrp,
+            text: item.quantity.toString(),
             width: 2,
             styles: const PosStyles(align: PosAlign.right)),
         PosColumn(
@@ -394,8 +441,50 @@ class _PrintPageState extends State<PrintPage> {
   List<int> _buildTotalAmount(Generator generator) {
     List<int> bytes = [];
 
+    bytes += generator.row([
+      // PosColumn(text: 'Sl#', width: 1),
+      PosColumn(text: 'DISCOUNT 0.00', width: 6),
+      // PosColumn(
+      //     text: 'MRP',
+      //     width: 2,
+      //     styles: const PosStyles(align: PosAlign.right)),
+      PosColumn(
+          text: widget.cartItems.length.toString(),
+          width: 2,
+          styles: const PosStyles(align: PosAlign.right)),
+      PosColumn(
+          text: '', width: 2, styles: const PosStyles(align: PosAlign.right)),
+      PosColumn(
+          text: widget.formattedTotal,
+          width: 2,
+          styles: const PosStyles(align: PosAlign.right)),
+    ]);
+
+    bytes += generator.hr();
+
+    bytes += generator.row([
+      PosColumn(
+          text: 'Net Amount',
+          width: 6,
+          styles: const PosStyles(
+              align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+      PosColumn(
+          text: widget.formattedTotal,
+          width: 6,
+          styles: const PosStyles(
+              align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+    ]);
+
+    bytes += generator.hr();
+
     List<Map<String, String>> items = [
-      {'label': 'Net Amount', 'value': widget.formattedTotal},
+      // {'label': 'Net Amount', 'value': widget.formattedTotal},
+      {
+        'label': 'Items ${widget.cartItems.length}',
+        'value':
+            "MRP TOTAL ${(double.parse(widget.savedTotal!) + double.parse(widget.formattedTotal))}"
+      },
+      {'label': 'You Save', 'value': widget.savedTotal ?? "0.00"},
       // {'label': 'E&OE Discount', 'value': '0.00'},
       // {'label': 'Sales Return', 'value': '0.00'},
       // {'label': 'RoundOff', 'value': '0.00'},
@@ -441,13 +530,13 @@ class _PrintPageState extends State<PrintPage> {
     bytes += generator.hr();
 
     // Savings Message
-    bytes += generator.text('You Have Saved ${widget.savedTotal ?? "0.00"}',
-        styles: const PosStyles(bold: true, align: PosAlign.center));
+    // bytes += generator.text('You Have Saved ${widget.savedTotal ?? "0.00"}',
+    //     styles: const PosStyles(bold: true, align: PosAlign.center));
     // bytes += generator.text('0.00',
     //     styles: const PosStyles(bold: true, align: PosAlign.center));
 
     // Separator
-    bytes += generator.hr();
+    // bytes += generator.hr();
 
     return bytes;
   }
@@ -542,19 +631,43 @@ class _PrintPageState extends State<PrintPage> {
     List<int> bytes = [];
 
     // Terms & Conditions Header
-    bytes += generator.text('Terms & Conditions',
-        styles: const PosStyles(bold: true, align: PosAlign.center));
+    // bytes += generator.text('Terms & Conditions',
+    //     styles: const PosStyles(bold: true, align: PosAlign.center));
 
     // Terms & Conditions Text
-    bytes += generator.text(
-        '* No product will be replaced/returned after 7 days from the date of purchase.',
-        styles: const PosStyles(align: PosAlign.left));
-    bytes += generator.text('* No product will be replaced without bill.',
-        styles: const PosStyles(align: PosAlign.left));
+    // bytes += generator.text(
+    //     '* No product will be replaced/returned after 7 days from the date of purchase.',
+    //     styles: const PosStyles(align: PosAlign.left));
+    // bytes += generator.text('* No product will be replaced without bill.',
+    //     styles: const PosStyles(align: PosAlign.left));
 
     // Thank You Message
-    bytes += generator.text('*** Thank You For Shopping With Us ***',
+    bytes += generator.text('Thank You... Visit Again ',
         styles: const PosStyles(bold: true, align: PosAlign.center));
+
+    // Separator
+    bytes += generator.hr();
+
+    return bytes;
+  }
+
+  List<int> _buildQRCode(Generator generator, String customerCareNumber) {
+    List<int> bytes = [];
+
+    // Add space before QR code
+    bytes += generator.emptyLines(1);
+
+    // Add QR Code - You can customize the data to whatever you need
+    // For example, a URL to your store website or a customer feedback form
+    bytes += generator.qrcode(
+      'upi://pay?pa=8921992747@okbizicici&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS',
+      size: QRSize.Size3,
+      align: PosAlign.center,
+    );
+
+    // Add a label for the QR code
+    bytes += generator.text('Scan this QR code to Pay',
+        styles: const PosStyles(align: PosAlign.center));
 
     // Separator
     bytes += generator.hr();
@@ -593,6 +706,8 @@ class _PrintPageState extends State<PrintPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
             Navigator.pop(context);
+            SideBarController sideBarController = Get.put(SideBarController());
+            sideBarController.index.value = 46;
           },
         ),
         elevation: 0,

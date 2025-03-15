@@ -1938,7 +1938,7 @@ class _EditOrderState extends State<EditOrder> {
               deliveryMethod = "";
             });
             resetAutocomplete();
-            sideBarController.index.value = 2;
+            sideBarController.index.value = 46;
           } else {
             showScaffoldError(
               context: context,
@@ -2188,7 +2188,7 @@ class _EditOrderState extends State<EditOrder> {
             context: context,
             message: "Order Confirmed Successfully",
           );
-          sideBarController.index.value = 2;
+          sideBarController.index.value = 46;
           // Clear the mobile number after successful save
           setState(() {
             mobileNumberText = ""; // Clear the variable

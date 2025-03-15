@@ -1120,8 +1120,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                 DataCell(Text(item.returnedTotal.toString())),
                 DataCell(
                   Icon(
-                    item.isReturned ? Icons.check_circle : Icons.cancel,
-                    color: item.isReturned ? Colors.green : Colors.red,
+                    item.isReturned ? Icons.pending : Icons.cancel,
+                    color: item.isReturned ? Colors.amber : Colors.red,
                     size: 20,
                   ),
                 ),

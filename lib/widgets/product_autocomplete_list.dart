@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/get_product.dart';
-import 'package:pos_machine/providers/grid_provider.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:provider/provider.dart';
@@ -33,28 +33,32 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
   @override
   Widget build(BuildContext context) {
     final productProvider =
-        Provider.of<GridSelectionProvider>(context, listen: false);
+        Provider.of<LocalProductProvider>(context, listen: false);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4.0),
       child: Column(
         children: [
           Autocomplete<GetProduct>(
             key: widget.autocompleteProductKey,
-            optionsBuilder: (TextEditingValue textEditingValue) async {
+            optionsBuilder: (TextEditingValue textEditingValue) {
               if (textEditingValue.text.isEmpty) {
                 return [];
               }
-              // debugPrint(textEditingValue.text);
-
-              await productProvider.listAllProducts(
+              productProvider.listAllProducts(
                   filterName: textEditingValue.text);
-
-              return productProvider.productList!;
+              return productProvider.filteredProducts;
             },
             displayStringForOption: (GetProduct product) =>
                 product.productName ?? '',
             onSelected: (GetProduct selectedProduct) {
+              // Call the onSelected function passed to the widget
               widget.onSelected(selectedProduct);
+
+              // Set the selected product in LocalProductProvider
+              final localProductProvider =
+                  Provider.of<LocalProductProvider>(context, listen: false);
+              localProductProvider
+                  .callProductDetails(selectedProduct.productId!);
               // debugPrint('Selected Product: ${selectedProduct.productName}');
             },
             fieldViewBuilder: (BuildContext context,
