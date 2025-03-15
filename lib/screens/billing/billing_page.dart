@@ -1981,7 +1981,7 @@ class _BillingPageState extends State<BillingPage> {
             localProductProvider.clearCart();
 
             try {
-              String ordersId = response["order_id"].toString();
+              String ordersId = response["order_number"].toString();
               String? accessToken =
                   Provider.of<AuthModel>(context, listen: false).token;
 

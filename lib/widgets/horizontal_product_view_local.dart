@@ -34,9 +34,7 @@ class _HorizontalProductViewLocalState
     final gridProvider =
         Provider.of<GridSelectionProvider>(context, listen: false);
     await gridProvider.listQuickAccessProducts();
-    setState(() {
-      products = gridProvider.quickAccessProductList ?? [];
-    });
+    products = gridProvider.quickAccessProductList ?? [];
   }
 
   @override

@@ -8,6 +8,8 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:provider/provider.dart';
 
 class PrintPage extends StatefulWidget {
@@ -47,6 +49,12 @@ class _PrintPageState extends State<PrintPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      Provider.of<PaymentGatewaysProvider>(context, listen: false)
+          .fetchPaymentGateways(accessToken: accessToken!);
+    });
   }
 
   @override
@@ -652,6 +660,10 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   List<int> _buildQRCode(Generator generator, String customerCareNumber) {
+    final paymentGatewaysProvider =
+        Provider.of<PaymentGatewaysProvider>(context, listen: false);
+    final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
+        .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY");
     List<int> bytes = [];
 
     // Add space before QR code
@@ -660,7 +672,7 @@ class _PrintPageState extends State<PrintPage> {
     // Add QR Code - You can customize the data to whatever you need
     // For example, a URL to your store website or a customer feedback form
     bytes += generator.qrcode(
-      'upi://pay?pa=8921992747@okbizicici&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS',
+      'upi://pay?pa=${manualPaymentGateway.link}&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS&t=c&st=1&se=1&sd=1',
       size: QRSize.Size3,
       align: PosAlign.center,
     );

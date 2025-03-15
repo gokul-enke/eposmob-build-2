@@ -14,6 +14,7 @@ import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/location_provider.dart';
+import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/providers/report_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:provider/provider.dart';
@@ -71,6 +72,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
         ChangeNotifierProvider(create: (_) => DeliveryMethodsProvider()),
         ChangeNotifierProvider(create: (_) => LocalProductProvider()),
+        ChangeNotifierProvider(create: (_) => PaymentGatewaysProvider()),
       ],
       child: GetMaterialApp(
         debugShowCheckedModeBanner: false,
