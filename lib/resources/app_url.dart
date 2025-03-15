@@ -132,4 +132,6 @@ class APPUrl {
 
   static String getDeliveryMethods =
       '$baseURL/api/v1/logistics/list-delivery-methods';
+  static String getPaymentGateways =
+      '$baseURL/api/v1/payment-gateway/list-payment-gateways';
 }

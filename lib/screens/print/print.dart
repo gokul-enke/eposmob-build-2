@@ -283,27 +283,27 @@ class _PrintPageState extends State<PrintPage> {
       String customerCareNumber, String customerCareEmail) {
     List<int> bytes = [];
 
-    // Store Details
-    bytes += generator.text(title,
-        styles: const PosStyles(
-            align: PosAlign.center, bold: true, height: PosTextSize.size2));
+    // // Store Details
+    // bytes += generator.text(title,
+    //     styles: const PosStyles(
+    //         align: PosAlign.center, bold: true, height: PosTextSize.size2));
 
-    bytes += generator.row([
-      PosColumn(
-        text: '', // Empty column on the left
-        width: 3,
-      ),
-      PosColumn(
-        text: title, // The main centered text
-        width: 6,
-        styles: const PosStyles(
-            align: PosAlign.center, bold: true, height: PosTextSize.size2),
-      ),
-      PosColumn(
-        text: '', // Empty column on the right
-        width: 3,
-      ),
-    ]);
+    // bytes += generator.row([
+    //   PosColumn(
+    //     text: '', // Empty column on the left
+    //     width: 3,
+    //   ),
+    //   PosColumn(
+    //     text: title, // The main centered text
+    //     width: 6,
+    //     styles: const PosStyles(
+    //         align: PosAlign.center, bold: true, height: PosTextSize.size2),
+    //   ),
+    //   PosColumn(
+    //     text: '', // Empty column on the right
+    //     width: 3,
+    //   ),
+    // ]);
 
     bytes += generator.row([
       PosColumn(
