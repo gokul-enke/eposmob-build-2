@@ -391,65 +391,139 @@ class _BillingPageState extends State<BillingPage> {
                                   const Duration(milliseconds: 500),
                                   () async {
                                     if (query != null && query.length > 5) {
-                                      // Call the local filter method
-                                      List<GetProduct> filteredProducts =
-                                          Provider.of<LocalProductProvider>(
-                                                  context,
-                                                  listen: false)
-                                              .filterProductByBarcode(
-                                                  barCode: query);
+                                      debugPrint("QUERY: ${query.length}");
                                       final localProductProvider =
                                           Provider.of<LocalProductProvider>(
                                               context,
                                               listen: false);
 
-                                      if (filteredProducts.isNotEmpty) {
-                                        // Handle the case where products are found
-                                        // For example, you can update the UI or add to cart
-                                        // Example: add the first product to the cart
-                                        GetProduct product =
-                                            filteredProducts.first;
+                                      List<GetProduct> filteredProducts = [];
+                                      try {
+                                        String prefix = query.substring(
+                                            0, 3); // First 3 digits
+                                        String productCode = query.substring(
+                                            3, 9); // Next 6 digits
+                                        String lastFive = query.substring(
+                                            9, 14); // Last 5 digits
 
-                                        localProductProvider.addToCart(
-                                            product: product);
-
-                                        showScaffold(
-                                          context: context,
-                                          message: 'Added To Cart',
-                                        );
-
-                                        // Clear input fields if necessary
-                                        setState(() {
-                                          _autocompleteProductKey = GlobalKey();
-                                          quantityController.clear();
-                                          barcodeController.clear();
-                                          selectedProductIdController.clear();
-                                          unitPriceController.clear();
-                                        });
-                                        _focusTextField();
-                                      } else {
-                                        _isDialogOpen =
-                                            true; // Set dialog state to open
-                                        final result = await showDialog(
-                                          context: context,
-                                          builder: (context) =>
-                                              AddProductWithBarcodeModal(
-                                                  barcode: query),
-                                        );
-                                        _isDialogOpen =
-                                            false; // Reset dialog state
-                                        debugPrint("result $result");
-                                        if (result != null) {
-                                          localProductProvider.addToCart(
-                                              productId: result["id"],
-                                              price: double.tryParse(
-                                                  result["price"].toString()));
-                                          barcodeController.clear();
+                                        if (prefix != '000' ||
+                                            query.length != 14) {
+                                          filteredProducts =
+                                              Provider.of<LocalProductProvider>(
+                                                      context,
+                                                      listen: false)
+                                                  .filterProductByBarcode(
+                                            barCode: query,
+                                          );
                                         } else {
-                                          barcodeController.clear();
+                                          filteredProducts =
+                                              Provider.of<LocalProductProvider>(
+                                                      context,
+                                                      listen: false)
+                                                  .filterProductByBarcode(
+                                            barCode: productCode,
+                                          );
                                         }
-                                        debugPrint(
-                                            "No products found for barcode: $query");
+
+                                        if (filteredProducts.isNotEmpty) {
+                                          // Handle the case where products are found
+                                          // For example, you can update the UI or add to cart
+                                          // Example: add the first product to the cart
+                                          GetProduct product =
+                                              filteredProducts.first;
+
+                                          if (product.unit == 'KGS' &&
+                                              prefix == '000' &&
+                                              query.length == 14) {
+                                            // Weight-based product
+                                            String weightKg =
+                                                lastFive.substring(0,
+                                                    2); // First 2 digits = KG
+                                            String weightGrams =
+                                                lastFive.substring(2,
+                                                    5); // Last 3 digits = Grams
+                                            double totalWeight =
+                                                double.parse(weightKg) +
+                                                    (double.parse(weightGrams) /
+                                                        1000);
+
+                                            localProductProvider.addToCart(
+                                              product: product,
+                                              quantity: totalWeight,
+                                            );
+
+                                            showScaffold(
+                                              context: context,
+                                              message: 'Added To Cart',
+                                            );
+                                          } else if (product.unit == 'PCS' &&
+                                              prefix == '000' &&
+                                              query.length == 14) {
+                                            // Count-based product
+                                            int quantity = int.parse(
+                                                lastFive); // Last 5 digits represent quantity
+
+                                            localProductProvider.addToCart(
+                                              product: product,
+                                              quantity: quantity,
+                                            );
+
+                                            showScaffold(
+                                              context: context,
+                                              message: 'Added To Cart',
+                                            );
+                                          } else {
+                                            localProductProvider.addToCart(
+                                                product: product);
+
+                                            showScaffold(
+                                              context: context,
+                                              message: 'Added To Cart',
+                                            );
+                                          }
+
+                                          // Clear input fields if necessary
+                                          setState(() {
+                                            _autocompleteProductKey =
+                                                GlobalKey();
+                                            quantityController.clear();
+                                            barcodeController.clear();
+                                            selectedProductIdController.clear();
+                                            unitPriceController.clear();
+                                          });
+                                          _focusTextField();
+                                        } else {
+                                          _isDialogOpen =
+                                              true; // Set dialog state to open
+                                          final result = await showDialog(
+                                            context: context,
+                                            builder: (context) =>
+                                                AddProductWithBarcodeModal(
+                                                    barcode: query),
+                                          );
+                                          _isDialogOpen =
+                                              false; // Reset dialog state
+                                          debugPrint("result $result");
+                                          if (result != null) {
+                                            localProductProvider.addToCart(
+                                                productId: result["id"],
+                                                price: double.tryParse(
+                                                    result["price"]
+                                                        .toString()));
+                                            barcodeController.clear();
+                                          } else {
+                                            barcodeController.clear();
+                                          }
+                                          debugPrint(
+                                              "No products found for barcode: $query");
+                                        }
+                                      } catch (e) {
+                                        debugPrint("Error adding item: $e");
+                                        showScaffoldError(
+                                          context: context,
+                                          message:
+                                              "Invalid Barcode. Please try again.",
+                                        );
                                       }
                                     }
                                   },
