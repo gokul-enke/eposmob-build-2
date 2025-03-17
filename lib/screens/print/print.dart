@@ -249,9 +249,9 @@ class _PrintPageState extends State<PrintPage> {
 
       if (mounted) {
         showScaffold(context: context, message: "Print job sent successfully");
-        Navigator.pop(context);
-        SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 46;
+        // Navigator.pop(context);
+        // SideBarController sideBarController = Get.put(SideBarController());
+        // sideBarController.index.value = 46;
       }
     } catch (e) {
       if (mounted) {
