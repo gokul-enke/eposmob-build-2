@@ -671,11 +671,11 @@ class _PrintPageState extends State<PrintPage> {
 
     // Add QR Code - You can customize the data to whatever you need
     // For example, a URL to your store website or a customer feedback form
-    bytes += generator.qrcode(
-      'upi://pay?pa=${manualPaymentGateway.link}&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS&t=c&st=1&se=1&sd=1',
-      size: QRSize.Size3,
-      align: PosAlign.center,
-    );
+    // bytes += generator.qrcode(
+    //   'upi://pay?pa=${manualPaymentGateway.link}&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS&t=c&st=1&se=1&sd=1',
+    //   size: QRSize.Size3,
+    //   align: PosAlign.center,
+    // );
 
     // Add a label for the QR code
     bytes += generator.text('Scan this QR code to Pay',
