@@ -249,9 +249,9 @@ class _PrintPageState extends State<PrintPage> {
 
       if (mounted) {
         showScaffold(context: context, message: "Print job sent successfully");
-        // Navigator.pop(context);
-        // SideBarController sideBarController = Get.put(SideBarController());
-        // sideBarController.index.value = 46;
+        Navigator.pop(context);
+        SideBarController sideBarController = Get.put(SideBarController());
+        sideBarController.index.value = 46;
       }
     } catch (e) {
       if (mounted) {
@@ -671,11 +671,14 @@ class _PrintPageState extends State<PrintPage> {
 
     // Add QR Code - You can customize the data to whatever you need
     // For example, a URL to your store website or a customer feedback form
-    // bytes += generator.qrcode(
-    //   'upi://pay?pa=${manualPaymentGateway.link}&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS&t=c&st=1&se=1&sd=1',
-    //   size: QRSize.Size3,
-    //   align: PosAlign.center,
-    // );
+    bytes += generator.qrcode(
+      'upi://pay?pa=${manualPaymentGateway.link}&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS&t=c&st=1&se=1&sd=1',
+      size: QRSize.Size5,
+      align: PosAlign.center,
+    );
+
+    // Add space after QR code
+    bytes += generator.emptyLines(1);
 
     // Add a label for the QR code
     bytes += generator.text('Scan this QR code to Pay',

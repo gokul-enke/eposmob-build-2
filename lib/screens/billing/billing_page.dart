@@ -390,7 +390,7 @@ class _BillingPageState extends State<BillingPage> {
                                 _debounce = Timer(
                                   const Duration(milliseconds: 500),
                                   () async {
-                                    if (query != null && query.length > 5) {
+                                    if (query != null) {
                                       debugPrint("QUERY: ${query.length}");
                                       final localProductProvider =
                                           Provider.of<LocalProductProvider>(
@@ -399,12 +399,14 @@ class _BillingPageState extends State<BillingPage> {
 
                                       List<GetProduct> filteredProducts = [];
                                       try {
-                                        String prefix = query.substring(
-                                            0, 3); // First 3 digits
-                                        String productCode = query.substring(
-                                            3, 9); // Next 6 digits
-                                        String lastFive = query.substring(
-                                            9, 14); // Last 5 digits
+                                        String? prefix;
+                                        String? productCode;
+                                        String? lastFive;
+
+                                        if (query.length > 2) {
+                                          prefix = query.substring(
+                                              0, 3); // First 3 digits;
+                                        }
 
                                         if (prefix != '000' ||
                                             query.length != 14) {
@@ -416,6 +418,10 @@ class _BillingPageState extends State<BillingPage> {
                                             barCode: query,
                                           );
                                         } else {
+                                          productCode = query.substring(
+                                              3, 9); // Next 6 digits
+                                          lastFive = query.substring(
+                                              9, 14); // Last 5 digits
                                           filteredProducts =
                                               Provider.of<LocalProductProvider>(
                                                       context,
@@ -436,8 +442,8 @@ class _BillingPageState extends State<BillingPage> {
                                               prefix == '000' &&
                                               query.length == 14) {
                                             // Weight-based product
-                                            String weightKg =
-                                                lastFive.substring(0,
+                                            String weightKg = lastFive!
+                                                .substring(0,
                                                     2); // First 2 digits = KG
                                             String weightGrams =
                                                 lastFive.substring(2,
@@ -461,7 +467,7 @@ class _BillingPageState extends State<BillingPage> {
                                               query.length == 14) {
                                             // Count-based product
                                             int quantity = int.parse(
-                                                lastFive); // Last 5 digits represent quantity
+                                                lastFive!); // Last 5 digits represent quantity
 
                                             localProductProvider.addToCart(
                                               product: product,
