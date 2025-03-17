@@ -1815,7 +1815,7 @@ class _BillingPageState extends State<BillingPage> {
           items.add({
             'product_id': item.product.productId,
             'quantity': item.quantity,
-            'unit_price': item.price,
+            'price': item.price,
           });
         }
 
@@ -1951,7 +1951,7 @@ class _BillingPageState extends State<BillingPage> {
           items.add({
             'product_id': item.product.productId,
             'quantity': item.quantity,
-            'unit_price': item.price,
+            'price': item.price,
           });
         }
 
@@ -2130,7 +2130,7 @@ class _BillingPageState extends State<BillingPage> {
           items.add({
             'product_id': item.product.productId,
             'quantity': item.quantity,
-            'unit_price': item.price,
+            'price': item.price,
           });
         }
 

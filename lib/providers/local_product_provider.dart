@@ -217,15 +217,17 @@ class LocalProductProvider extends ChangeNotifier {
     if (productId != null) {
       product = _products.firstWhere((p) => p.productId == productId);
     }
+
     int index = _cartItems
         .indexWhere((item) => item.product.productId == product!.productId);
+
     if (index != -1) {
       _cartItems[index].quantity +=
           quantity!; // Increment by the specified quantity
       if (price != null) {
         _cartItems[index].price = price; // Update the price if provided
       } else {
-        _cartItems[index].price =
+        _cartItems[index].price = _cartItems[index].price ??
             double.tryParse(product!.price?.price); // Use the product price
       }
     } else {

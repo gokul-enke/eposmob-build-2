@@ -673,7 +673,7 @@ class _PrintPageState extends State<PrintPage> {
     // For example, a URL to your store website or a customer feedback form
     bytes += generator.qrcode(
       'upi://pay?pa=${manualPaymentGateway.link}&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS&t=c&st=1&se=1&sd=1',
-      size: QRSize.Size5,
+      size: QRSize.Size4,
       align: PosAlign.center,
     );
 
