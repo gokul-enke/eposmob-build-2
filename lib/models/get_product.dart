@@ -246,32 +246,18 @@ class ProductPrice {
   final dynamic totalPrice;
 
   ProductPrice({
-    this.oldPrice = "0.00", // Default value for oldPrice
-    this.price = "0.00", // Default value for price
-    this.percentage = 0, // Default value for percentage
-    this.totalPrice = "0.00", // Default value for totalPrice
+    this.oldPrice,
+    this.price,
+    this.percentage,
+    this.totalPrice,
   });
 
-  factory ProductPrice.fromJson(Map<String, dynamic> json) {
-    // Check if 'price' is a map and extract values accordingly
-    var priceData = json["price"];
-    if (priceData is Map<String, dynamic>) {
-      return ProductPrice(
-        oldPrice: priceData["old_price"] ?? "0.00", // Default if null
-        price: priceData["base_price"] ?? "0.00", // Default if null
-        percentage: priceData["percentage"] ?? 0, // Default if null
-        totalPrice: priceData["total_price"] ?? "0.00", // Default if null
+  factory ProductPrice.fromJson(Map<String, dynamic> json) => ProductPrice(
+        oldPrice: json["old_price"],
+        price: json["base_price"],
+        percentage: json["percentage"],
+        totalPrice: json["total_price"],
       );
-    } else {
-      // Handle the case where 'price' is not a map (if applicable)
-      return ProductPrice(
-        oldPrice: json["old_price"] ?? "0.00", // Default if null
-        price: json["base_price"] ?? "0.00", // Default if null
-        percentage: json["percentage"] ?? 0, // Default if null
-        totalPrice: json["total_price"] ?? "0.00", // Default if null
-      );
-    }
-  }
 
   Map<String, dynamic> toJson() => {
         "old_price": oldPrice,
