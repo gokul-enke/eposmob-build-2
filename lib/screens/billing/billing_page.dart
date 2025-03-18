@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_cart_list_skelton.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -228,9 +229,44 @@ class _BillingPageState extends State<BillingPage> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: HorizontalSalesView(),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: HorizontalSavedOrdersView(
+                        onOrderSelected: (orderId) {
+                          // Get the local provider
+                          final localProductProvider =
+                              Provider.of<LocalProductProvider>(context,
+                                  listen: false);
+
+                          // If we're editing an order and there are items in the cart, update that order
+                          if (localProductProvider.currentOrder != null &&
+                              localProductProvider.cartItems.isNotEmpty) {
+                            try {
+                              // Update the current order being edited
+                              localProductProvider.updateSavedOrder(
+                                localProductProvider.currentOrder!.id,
+                                customerName: selectedCustomer?.name,
+                                customerPhone:
+                                    selectedCustomerPhone ?? mobileNumberText,
+                                comment: _commentController.text,
+                                deliveryMethod: deliveryMethod,
+                              );
+
+                              // Show quick feedback
+                              showScaffold(
+                                context: context,
+                                message:
+                                    "Current order updated before switching",
+                              );
+                            } catch (e) {
+                              debugPrint("Error updating current order: $e");
+                            }
+                          }
+
+                          // Now load the selected order
+                          _loadSavedOrderForEditing(orderId);
+                        },
+                      ),
                     ),
                     BuildBoxShadowContainer(
                       circleRadius: 10,
@@ -326,6 +362,10 @@ class _BillingPageState extends State<BillingPage> {
   }
 
   Widget _buildHeader() {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: true);
+    final bool isEditingOrder = localProductProvider.currentOrder != null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -333,14 +373,16 @@ class _BillingPageState extends State<BillingPage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'New Order',
+              isEditingOrder ? 'Edit Order' : 'New Order',
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
                   0.30, ColorManager.textColor),
             ),
           ],
         ),
         Text(
-          'Order No #00000',
+          isEditingOrder
+              ? 'Order No #${localProductProvider.currentOrder!.orderNumber}'
+              : 'Order No #00000',
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s12, 0.18,
               ColorManager.textColor),
         ),
@@ -1612,18 +1654,10 @@ class _BillingPageState extends State<BillingPage> {
         //     child: InkWell(
         //       onTap: () => {},
         //       child: Center(
-        //         child: Column(
-        //           mainAxisAlignment: MainAxisAlignment.center,
-        //           crossAxisAlignment: CrossAxisAlignment.center,
-        //           children: [
-        //             Center(
-        //               child: WebsafeSvg.asset(
-        //                 ImageAssets.oderlistCloseIcon,
-        //                 width: 27,
-        //                 color: ColorManager.kButtonRed,
-        //               ),
-        //             ),
-        //           ],
+        //         child: WebsafeSvg.asset(
+        //           ImageAssets.oderlistCloseIcon,
+        //           width: 27,
+        //           color: ColorManager.kButtonRed,
         //         ),
         //       ),
         //     ),
@@ -1763,132 +1797,213 @@ class _BillingPageState extends State<BillingPage> {
     });
     debugPrint("Save Order pressed");
     try {
-      if (selectedCustomerID == null && mobileNumberText == "") {
+      if (Provider.of<LocalProductProvider>(context, listen: false)
+          .cartItems
+          .isEmpty) {
         showScaffoldError(
           context: context,
-          message: "Please select a customer",
+          message: "Please add items to cart",
         );
-      } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
-        showScaffoldError(
-          context: context,
-          message: "Please chose a Payment Method",
+        return;
+      }
+
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      // Check if we're editing an existing order
+      SavedOrder? currentOrder = localProductProvider.currentOrder;
+
+      if (currentOrder != null) {
+        // Update existing order
+        localProductProvider.updateSavedOrder(
+          currentOrder.id,
+          customerName: selectedCustomer?.name,
+          customerPhone: selectedCustomerPhone ?? mobileNumberText,
+          comment: _commentController.text,
+          deliveryMethod: deliveryMethod,
         );
-      } else if (deliveryMethod == "Car Delivery" &&
-          _carNumberController.text == "") {
-        showScaffoldError(
+
+        showScaffold(
           context: context,
-          message: "Please enter Car Number",
+          message: "Order Updated Successfully",
         );
       } else {
-        String? accessToken =
-            Provider.of<AuthModel>(context, listen: false).token;
-        // debugPrint("accessToken From AuthModel $accessToken");
-        final provider = Provider.of<CartProvider>(context, listen: false);
-        int? cartId = provider.getCartIDForOrder;
-        // debugPrint("$cartId");
-
-        String paymentMethod = "";
-
-        if (iconColor == 1) {
-          paymentMethod = "CASH";
-        } else if (iconColor == 2) {
-          paymentMethod = "CARD";
-        } else if (iconColor == 3) {
-          paymentMethod = "UPI";
+        // Save as new order
+        // Get customer name if available
+        String? customerName;
+        if (selectedCustomer != null) {
+          customerName = selectedCustomer!.name;
         }
 
-        final localProductProvider =
-            Provider.of<LocalProductProvider>(context, listen: false);
-        final cartItems = localProductProvider.cartItems;
-
-        if (localProductProvider.cartItems.isEmpty) {
-          showScaffoldError(
-            context: context,
-            message: "Please add items to cart",
-          );
-          return;
-        }
-
-        List<Map<String, dynamic>> items = [];
-
-        for (var item in cartItems) {
-          items.add({
-            'product_id': item.product.productId,
-            'quantity': item.quantity,
-            'price': item.price,
-          });
-        }
-
-        await Provider.of<CartProvider>(context, listen: false)
-            .addToOrderAPI(
-          items: items,
-          cartIds: cartId ?? 0,
-          accessToken: accessToken ?? "",
-          transactionId: _transactionNumberController.text,
-          totalPrice: Provider.of<LocalProductProvider>(context, listen: false)
-              .priceSummary!
-              .netTotal
-              .toString(),
-          customerId: selectedCustomerID,
+        SavedOrder savedOrder = localProductProvider.saveCurrentCartAsOrder(
+          customerName: customerName,
           customerPhone: selectedCustomerPhone ?? mobileNumberText,
-          paymentMethod: paymentMethod,
-          paidAmount: _paidAmountController.text,
-          balanceAmount: _balanceAmount.toString(),
-          couponId: isCouponApplied ? coupenCodeTextController.text : null,
           comment: _commentController.text,
-          deliveryMethodId: deliveryMethodId,
-          carNumber: _carNumberController.text,
-        )
-            .then((response) {
-          debugPrint("response ${response["order_id"]}");
-          if (response["order_id"] != null) {
-            showScaffold(
-              context: context,
-              message: "Order Saved Succesfully",
-            );
+          deliveryMethod: deliveryMethod,
+        );
 
-            localProductProvider.clearCart();
-
-            // Clear the mobile number after successful save
-            setState(() {
-              mobileNumberText = ""; // Clear the variable
-              selectedCustomerID = null;
-              selectedCustomerPhone = null;
-              iconColor = 0;
-              mobileNumberTextController.clear();
-              quantityController.clear();
-              barcodeController.clear();
-              selectedProductIdController.clear();
-              unitPriceController.clear();
-              isCustomerFound = false;
-              selectedCustomer = null;
-              isCouponApplied = false;
-              coupenCodeTextController.clear();
-              _transactionNumberController.clear();
-              _paidAmountController.clear();
-              _balanceAmount = 0;
-              _carNumberController.clear();
-              _commentController.clear();
-              deliveryMethodId = "";
-              deliveryMethod = "";
-            });
-            resetAutocomplete();
-          } else {
-            showScaffoldError(
-              context: context,
-              message: "Failed to Save Order",
-              // message: "${addToOrderModel.message}",
-            );
-          }
-        });
+        showScaffold(
+          context: context,
+          message: "Order Saved Successfully",
+        );
       }
+
+      // Clear form fields
+      setState(() {
+        mobileNumberText = ""; // Clear the variable
+        selectedCustomerID = null;
+        selectedCustomerPhone = null;
+        iconColor = 0;
+        mobileNumberTextController.clear();
+        quantityController.clear();
+        barcodeController.clear();
+        selectedProductIdController.clear();
+        unitPriceController.clear();
+        isCustomerFound = false;
+        selectedCustomer = null;
+        isCouponApplied = false;
+        coupenCodeTextController.clear();
+        _transactionNumberController.clear();
+        _paidAmountController.clear();
+        _balanceAmount = 0;
+        _carNumberController.clear();
+        _commentController.clear();
+      });
+
+      // Clear the cart
+      localProductProvider.clearCart();
+      resetAutocomplete();
       _focusTextField();
     } catch (error) {
       debugPrint(error.toString());
+      showScaffoldError(
+        context: context,
+        message: "Failed to save order. Please try again.",
+      );
     } finally {
-      // Set loading to false at the end of the function
       setState(() {
         isLoadingSaveOrder = false; // Indicate that loading has finished
+      });
+    }
+  }
+
+  // Function to load a saved order for editing
+  void _loadSavedOrderForEditing(String orderId) {
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      // Load the order into the current cart
+      localProductProvider.loadOrderForEditing(orderId);
+
+      // Get the current order
+      SavedOrder? currentOrder = localProductProvider.currentOrder;
+
+      if (currentOrder != null) {
+        // Update UI with order details
+        setState(() {
+          mobileNumberText = currentOrder.customerPhone ?? "";
+          selectedCustomerPhone = currentOrder.customerPhone;
+
+          if (currentOrder.customerPhone != null &&
+              currentOrder.customerName != null) {
+            mobileNumberTextController.text =
+                "${currentOrder.customerName} ${currentOrder.customerPhone}";
+          }
+
+          // Set delivery method if available
+          if (currentOrder.deliveryMethod != null) {
+            deliveryMethod = currentOrder.deliveryMethod!;
+
+            // Find delivery method ID (you may need to adapt this based on your data)
+            if (currentOrder.deliveryMethod == "Store Takeaway") {
+              deliveryMethodId = "3";
+            } else if (currentOrder.deliveryMethod == "Car Delivery") {
+              deliveryMethodId = "2";
+            } else if (currentOrder.deliveryMethod == "Door Delivery") {
+              deliveryMethodId = "1";
+            }
+          }
+
+          // Set comment if available
+          if (currentOrder.comment != null) {
+            _commentController.text = currentOrder.comment!;
+          }
+
+          // Default to cash payment method
+          iconColor = 1;
+        });
+
+        showScaffold(
+          context: context,
+          message: "Order loaded for editing",
+        );
+      }
+    } catch (error) {
+      debugPrint("Error loading order: $error");
+      showScaffoldError(
+          context: context, message: "Failed to load order. Please try again.");
+    }
+  }
+
+  // Function to update an existing saved order
+  void _updateSavedOrder(String orderId) {
+    setState(() {
+      isLoadingSaveOrder = true;
+    });
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      // Update the order
+      localProductProvider.updateSavedOrder(
+        orderId,
+        customerName: selectedCustomer?.name,
+        customerPhone: selectedCustomerPhone ?? mobileNumberText,
+        comment: _commentController.text,
+        deliveryMethod: deliveryMethod,
+      );
+
+      showScaffold(
+        context: context,
+        message: "Order updated successfully",
+      );
+
+      // Clear form and cart
+      setState(() {
+        mobileNumberText = "";
+        selectedCustomerID = null;
+        selectedCustomerPhone = null;
+        iconColor = 0;
+        mobileNumberTextController.clear();
+        quantityController.clear();
+        barcodeController.clear();
+        selectedProductIdController.clear();
+        unitPriceController.clear();
+        isCustomerFound = false;
+        selectedCustomer = null;
+        isCouponApplied = false;
+        coupenCodeTextController.clear();
+        _transactionNumberController.clear();
+        _paidAmountController.clear();
+        _balanceAmount = 0;
+        _carNumberController.clear();
+        _commentController.clear();
+      });
+
+      localProductProvider.clearCart();
+      resetAutocomplete();
+      _focusTextField();
+    } catch (error) {
+      debugPrint("Error updating order: $error");
+      showScaffoldError(
+        context: context,
+        message: "Failed to update order. Please try again.",
+      );
+    } finally {
+      setState(() {
+        isLoadingSaveOrder = false;
       });
     }
   }
@@ -1974,53 +2089,22 @@ class _BillingPageState extends State<BillingPage> {
           comment: _commentController.text,
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
-          status: "confirmed",
         )
-            .then((response) async {
+            .then((response) {
           debugPrint("response ${response["order_id"]}");
           if (response["order_id"] != null) {
             showScaffold(
               context: context,
-              message: "Order Confirmed Successfully",
+              message: "Order Saved Successfully",
             );
 
-            localProductProvider.clearCart();
-
-            try {
-              String ordersId = response["order_number"].toString();
-              String? accessToken =
-                  Provider.of<AuthModel>(context, listen: false).token;
-
-              final OrderDetailsresponse = await SalesProvider()
-                  .listOrderDetails(context, ordersId, accessToken ?? "");
-
-              OrderDetailsModel orderDetails =
-                  OrderDetailsModel.fromJson(OrderDetailsresponse);
-
-              String? formattedTotal =
-                  orderDetails.data?.cart?.priceSummary?.netTotal.toString();
-              String? savedTotal =
-                  orderDetails.data?.cart?.priceSummary?.savedTotal.toString();
-
-              String storeName = orderDetails.data!.cart!.storeName ?? "";
-              String orderDate = orderDetails.data!.orderDate ?? "";
-
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PrintPage(
-                    storeName: storeName,
-                    cartItems: orderDetails.data!.cart!.cartItems!,
-                    formattedTotal: formattedTotal!,
-                    savedTotal: savedTotal!,
-                    orderDate: orderDate,
-                    orderNumber: orderDetails.data!.orderNumber ?? "",
-                  ),
-                ),
-              );
-            } catch (error) {
-              debugPrint(error.toString());
+            // Delete the current order if it exists in local storage
+            if (localProductProvider.currentOrder != null) {
+              localProductProvider
+                  .deleteSavedOrder(localProductProvider.currentOrder!.id);
             }
+
+            localProductProvider.clearCart();
 
             // Clear the mobile number after successful save
             setState(() {
@@ -2042,27 +2126,20 @@ class _BillingPageState extends State<BillingPage> {
               _balanceAmount = 0;
               _carNumberController.clear();
               _commentController.clear();
-              deliveryMethodId = "";
-              deliveryMethod = "";
             });
             resetAutocomplete();
           } else {
             showScaffoldError(
               context: context,
-              message: "Failed to Confirm Order",
+              message: "Failed to Save Order",
+              // message: "${addToOrderModel.message}",
             );
           }
         });
       }
       _focusTextField();
     } catch (error) {
-      // Handle any errors that occur during the API call
-      debugPrint("Error creating order: $error");
-      showScaffoldError(
-        context: context,
-        message:
-            "An error occurred while creating the order. Please try again.",
-      );
+      debugPrint(error.toString());
     } finally {
       // Set loading to false at the end of the function
       setState(() {
@@ -2162,6 +2239,12 @@ class _BillingPageState extends State<BillingPage> {
               message: "Order Confirmed Successfully",
             );
 
+            // Delete the current order if it exists in local storage
+            if (localProductProvider.currentOrder != null) {
+              localProductProvider
+                  .deleteSavedOrder(localProductProvider.currentOrder!.id);
+            }
+
             localProductProvider.clearCart();
 
             // Clear the mobile number after successful save
@@ -2184,8 +2267,6 @@ class _BillingPageState extends State<BillingPage> {
               _balanceAmount = 0;
               _carNumberController.clear();
               _commentController.clear();
-              deliveryMethodId = "";
-              deliveryMethod = "";
             });
             resetAutocomplete();
           } else {
@@ -2291,5 +2372,207 @@ class _BillingPageState extends State<BillingPage> {
       deliveryMethod = "Store Takeaway";
       iconColor = 1;
     });
+  }
+}
+
+/// A widget to display saved orders in a horizontal scrollable list
+class HorizontalSavedOrdersView extends StatelessWidget {
+  final Function(String) onOrderSelected;
+
+  const HorizontalSavedOrdersView({
+    Key? key,
+    required this.onOrderSelected,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<LocalProductProvider>(
+      builder: (context, provider, child) {
+        if (provider.savedOrders.isEmpty) {
+          return SizedBox(
+            height: 60,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _buildNewOrderButton(context, provider),
+              ],
+            ),
+          );
+        }
+
+        return SizedBox(
+          height: 60,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount:
+                provider.savedOrders.length + 1, // +1 for the new order button
+            itemBuilder: (context, index) {
+              // First item is the new order button
+              if (index == 0) {
+                return _buildNewOrderButton(context, provider);
+              }
+
+              // Adjust index for actual order items
+              final orderIndex = index - 1;
+              final order = provider.savedOrders[orderIndex];
+              // Format time from ISO date string to 12-hour format with AM/PM
+              String time = _formatTimeWith12Hour(order.createdAt);
+
+              return GestureDetector(
+                onTap: () => onOrderSelected(order.id),
+                child: Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        spreadRadius: 1,
+                        blurRadius: 5,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            order.orderNumber,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(
+                            width: 10,
+                          ),
+                          Text(
+                            "₹${order.total.toStringAsFixed(2)}",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Items: ${order.items.length}",
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(
+                            width: 10,
+                          ),
+                          Text(
+                            time,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNewOrderButton(
+      BuildContext context, LocalProductProvider provider) {
+    return GestureDetector(
+      onTap: () {
+        // If currently editing an order and cart has items, update it
+        if (provider.currentOrder != null && provider.cartItems.isNotEmpty) {
+          provider.updateSavedOrder(
+            provider.currentOrder!.id,
+            customerName: null, // Get these from context if needed
+            customerPhone: null,
+            comment: null,
+            deliveryMethod: null,
+          );
+        }
+
+        // If cart has items, save as new order
+        else if (provider.cartItems.isNotEmpty) {
+          try {
+            provider.saveCurrentCartAsOrder();
+
+            // Show feedback
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Order saved'),
+                duration: Duration(seconds: 1),
+              ),
+            );
+          } catch (e) {
+            // Swallow exception if cart is empty
+          }
+        }
+
+        // Clear cart and reset current order
+        provider.clearCart();
+        // Reset current order using proper method
+        if (provider.currentOrder != null) {
+          // Create a temporary order ID before clearing
+          String orderId = provider.currentOrder!.id;
+          // Need to manually clear the current order reference
+          provider.loadOrderForEditing(orderId);
+          provider.clearCart();
+        }
+        provider.notifyListeners();
+
+        // Update UI
+        (context as Element).markNeedsBuild();
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              spreadRadius: 1,
+              blurRadius: 5,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: Icon(
+            Icons.add,
+            color: ColorManager.textColor,
+            size: 30,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatTimeWith12Hour(String isoDate) {
+    // Convert ISO date string to DateTime
+    DateTime dateTime = DateTime.parse(isoDate);
+
+    // Format time in 12-hour format with AM/PM
+    String formattedTime = DateFormat('h:mm a').format(dateTime);
+
+    return formattedTime;
   }
 }

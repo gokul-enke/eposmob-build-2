@@ -18,6 +18,31 @@ class LocalCartItem {
   });
 }
 
+/// Represents a saved order stored locally
+class SavedOrder {
+  final String id; // Unique identifier for the order
+  final String orderNumber; // Display order number (ORD-1, ORD-2, etc.)
+  final List<LocalCartItem> items;
+  final String? customerName;
+  final String? customerPhone;
+  final String? comment;
+  final String createdAt;
+  final double total;
+  final String? deliveryMethod;
+  
+  SavedOrder({
+    required this.id,
+    required this.orderNumber,
+    required this.items,
+    this.customerName,
+    this.customerPhone,
+    this.comment,
+    required this.createdAt,
+    required this.total,
+    this.deliveryMethod,
+  });
+}
+
 class PriceSummary {
   double discount;
   double netPayable;
@@ -60,6 +85,14 @@ class LocalProductProvider extends ChangeNotifier {
   final List<LocalCartItem> _cartItems = [];
   List<LocalCartItem> get cartItems => _cartItems;
   bool isLoading = false;
+
+  // List of saved orders
+  final List<SavedOrder> _savedOrders = [];
+  List<SavedOrder> get savedOrders => _savedOrders;
+  
+  // Currently loaded order (for editing)
+  SavedOrder? _currentOrder;
+  SavedOrder? get currentOrder => _currentOrder;
 
   PriceSummary? priceSummary; // Add this line
 
@@ -227,16 +260,25 @@ class LocalProductProvider extends ChangeNotifier {
       if (price != null) {
         _cartItems[index].price = price; // Update the price if provided
       } else {
+        // Safely handle null product price
         _cartItems[index].price = _cartItems[index].price ??
-            double.tryParse(product!.price?.price); // Use the product price
+            (product!.price?.price != null 
+              ? double.tryParse(product.price!.price!) 
+              : 0.0);
       }
     } else {
+      // Safely handle null product price when adding new cart item
+      double productPrice = 0.0;
+      if (price != null) {
+        productPrice = price;
+      } else if (product!.price?.price != null) {
+        productPrice = double.tryParse(product.price!.price!) ?? 0.0;
+      }
+      
       _cartItems.add(LocalCartItem(
         product: product!,
         quantity: quantity!,
-        price: price ??
-            double.tryParse(product
-                .price?.price), // Use the specified price or product price
+        price: productPrice,
       ));
     }
     resetSelectedProduct();
@@ -341,6 +383,163 @@ class LocalProductProvider extends ChangeNotifier {
       debugPrint("No product found for barcode: $barCode");
     }
     return filteredProducts;
+  }
+
+  /// Saves the current cart as an order
+  SavedOrder saveCurrentCartAsOrder({
+    String? customerName,
+    String? customerPhone,
+    String? comment,
+    String? deliveryMethod,
+  }) {
+    if (_cartItems.isEmpty) {
+      throw Exception("Cannot save an empty cart as order");
+    }
+    
+    // Generate a unique ID for the order (timestamp-based)
+    final String orderId = DateTime.now().millisecondsSinceEpoch.toString();
+    
+    // Calculate total
+    double total = cartTotal;
+    
+    // Create a deep copy of cart items to prevent modification
+    List<LocalCartItem> orderItems = _cartItems.map((item) => LocalCartItem(
+      product: item.product,
+      quantity: item.quantity,
+      price: item.price,
+    )).toList();
+    
+    // Generate sequential order number
+    String orderNumber = generateOrderNumber();
+    
+    // Create the saved order
+    final SavedOrder order = SavedOrder(
+      id: orderId,
+      orderNumber: orderNumber,
+      items: orderItems,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      comment: comment,
+      createdAt: DateTime.now().toIso8601String(),
+      total: total,
+      deliveryMethod: deliveryMethod,
+    );
+    
+    // Add to saved orders list
+    _savedOrders.add(order);
+    notifyListeners();
+    
+    return order;
+  }
+
+  /// Generates sequential order numbers in format ORD-1, ORD-2, etc.
+  String generateOrderNumber() {
+    // Find the highest existing order number
+    int highestNumber = 0;
+    
+    for (var order in _savedOrders) {
+      // Extract the number part from the orderNumber (e.g., "ORD-5" -> 5)
+      String numPart = order.orderNumber.split('-')[1];
+      int orderNum = int.tryParse(numPart) ?? 0;
+      
+      if (orderNum > highestNumber) {
+        highestNumber = orderNum;
+      }
+    }
+    
+    // Return next number in sequence
+    return 'ORD-${highestNumber + 1}';
+  }
+  
+  /// Finds a saved order by its ID
+  SavedOrder? findOrderById(String orderId) {
+    try {
+      return _savedOrders.firstWhere((order) => order.id == orderId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Loads a saved order into the current cart for editing
+  void loadOrderForEditing(String orderId) {
+    try {
+      // Find the order
+      final SavedOrder order = _savedOrders.firstWhere((o) => o.id == orderId);
+      
+      // Clear current cart
+      _cartItems.clear();
+      
+      // Add items from the saved order to the cart
+      for (var item in order.items) {
+        _cartItems.add(LocalCartItem(
+          product: item.product,
+          quantity: item.quantity,
+          price: item.price,
+        ));
+      }
+      
+      // Set current order
+      _currentOrder = order;
+      
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error loading order: $e");
+    }
+  }
+  
+  /// Updates an existing saved order
+  void updateSavedOrder(String orderId, {
+    String? customerName,
+    String? customerPhone,
+    String? comment,
+    String? deliveryMethod,
+  }) {
+    int index = _savedOrders.indexWhere((o) => o.id == orderId);
+    
+    if (index != -1) {
+      // Get current cart total
+      double total = cartTotal;
+      
+      // Create a copy of current cart items
+      List<LocalCartItem> orderItems = _cartItems.map((item) => LocalCartItem(
+        product: item.product,
+        quantity: item.quantity,
+        price: item.price,
+      )).toList();
+      
+      // Create updated order
+      SavedOrder updatedOrder = SavedOrder(
+        id: orderId,
+        orderNumber: _savedOrders[index].orderNumber,
+        items: orderItems,
+        customerName: customerName ?? _savedOrders[index].customerName,
+        customerPhone: customerPhone ?? _savedOrders[index].customerPhone,
+        comment: comment ?? _savedOrders[index].comment,
+        createdAt: _savedOrders[index].createdAt, // Keep original creation date
+        total: total,
+        deliveryMethod: deliveryMethod ?? _savedOrders[index].deliveryMethod,
+      );
+      
+      // Update in list
+      _savedOrders[index] = updatedOrder;
+      
+      // Clear current order reference
+      _currentOrder = null;
+      
+      notifyListeners();
+    }
+  }
+  
+  /// Deletes a saved order
+  void deleteSavedOrder(String orderId) {
+    _savedOrders.removeWhere((o) => o.id == orderId);
+    
+    // If current order is deleted, clear reference
+    if (_currentOrder != null && _currentOrder!.id == orderId) {
+      _currentOrder = null;
+    }
+    
+    notifyListeners();
   }
 
   // End of LocalProductProvider
