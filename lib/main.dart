@@ -2,6 +2,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
@@ -24,8 +27,22 @@ import 'providers/purchase_provider.dart';
 import 'screens/login/login.dart';
 import 'screens/base_url_wrapper.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Hive
+  await Hive.initFlutter();
+  
+  // Register adapters
+  Hive.registerAdapter(HiveStringValueAdapter());
+  Hive.registerAdapter(HiveLocalCartItemAdapter());
+  Hive.registerAdapter(HiveSavedOrderAdapter());
+  Hive.registerAdapter(HiveProductAdapter());
+  
+  // Open boxes
+  await Hive.openBox<HiveProduct>('products');
+  await Hive.openBox<HiveLocalCartItem>('cart_items');
+  await Hive.openBox<HiveSavedOrder>('saved_orders');
 
   Get.put(SideBarController());
 

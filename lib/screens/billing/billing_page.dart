@@ -1900,40 +1900,6 @@ class _BillingPageState extends State<BillingPage> {
       SavedOrder? currentOrder = localProductProvider.currentOrder;
 
       if (currentOrder != null) {
-        // Update UI with order details
-        setState(() {
-          mobileNumberText = currentOrder.customerPhone ?? "";
-          selectedCustomerPhone = currentOrder.customerPhone;
-
-          if (currentOrder.customerPhone != null &&
-              currentOrder.customerName != null) {
-            mobileNumberTextController.text =
-                "${currentOrder.customerName} ${currentOrder.customerPhone}";
-          }
-
-          // Set delivery method if available
-          if (currentOrder.deliveryMethod != null) {
-            deliveryMethod = currentOrder.deliveryMethod!;
-
-            // Find delivery method ID (you may need to adapt this based on your data)
-            if (currentOrder.deliveryMethod == "Store Takeaway") {
-              deliveryMethodId = "3";
-            } else if (currentOrder.deliveryMethod == "Car Delivery") {
-              deliveryMethodId = "2";
-            } else if (currentOrder.deliveryMethod == "Door Delivery") {
-              deliveryMethodId = "1";
-            }
-          }
-
-          // Set comment if available
-          if (currentOrder.comment != null) {
-            _commentController.text = currentOrder.comment!;
-          }
-
-          // Default to cash payment method
-          iconColor = 1;
-        });
-
         showScaffold(
           context: context,
           message: "Order loaded for editing",
@@ -1943,68 +1909,6 @@ class _BillingPageState extends State<BillingPage> {
       debugPrint("Error loading order: $error");
       showScaffoldError(
           context: context, message: "Failed to load order. Please try again.");
-    }
-  }
-
-  // Function to update an existing saved order
-  void _updateSavedOrder(String orderId) {
-    setState(() {
-      isLoadingSaveOrder = true;
-    });
-
-    try {
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-
-      // Update the order
-      localProductProvider.updateSavedOrder(
-        orderId,
-        customerName: selectedCustomer?.name,
-        customerPhone: selectedCustomerPhone ?? mobileNumberText,
-        comment: _commentController.text,
-        deliveryMethod: deliveryMethod,
-      );
-
-      showScaffold(
-        context: context,
-        message: "Order updated successfully",
-      );
-
-      // Clear form and cart
-      setState(() {
-        mobileNumberText = "";
-        selectedCustomerID = null;
-        selectedCustomerPhone = null;
-        iconColor = 0;
-        mobileNumberTextController.clear();
-        quantityController.clear();
-        barcodeController.clear();
-        selectedProductIdController.clear();
-        unitPriceController.clear();
-        isCustomerFound = false;
-        selectedCustomer = null;
-        isCouponApplied = false;
-        coupenCodeTextController.clear();
-        _transactionNumberController.clear();
-        _paidAmountController.clear();
-        _balanceAmount = 0;
-        _carNumberController.clear();
-        _commentController.clear();
-      });
-
-      localProductProvider.clearCart();
-      resetAutocomplete();
-      _focusTextField();
-    } catch (error) {
-      debugPrint("Error updating order: $error");
-      showScaffoldError(
-        context: context,
-        message: "Failed to update order. Please try again.",
-      );
-    } finally {
-      setState(() {
-        isLoadingSaveOrder = false;
-      });
     }
   }
 
@@ -2089,8 +1993,9 @@ class _BillingPageState extends State<BillingPage> {
           comment: _commentController.text,
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
+          status: "confirmed",
         )
-            .then((response) {
+            .then((response) async {
           debugPrint("response ${response["order_id"]}");
           if (response["order_id"] != null) {
             showScaffold(
@@ -2105,6 +2010,42 @@ class _BillingPageState extends State<BillingPage> {
             }
 
             localProductProvider.clearCart();
+
+            try {
+              String ordersId = response["order_number"].toString();
+              String? accessToken =
+                  Provider.of<AuthModel>(context, listen: false).token;
+
+              final OrderDetailsresponse = await SalesProvider()
+                  .listOrderDetails(context, ordersId, accessToken ?? "");
+
+              OrderDetailsModel orderDetails =
+                  OrderDetailsModel.fromJson(OrderDetailsresponse);
+
+              String? formattedTotal =
+                  orderDetails.data?.cart?.priceSummary?.netTotal.toString();
+              String? savedTotal =
+                  orderDetails.data?.cart?.priceSummary?.savedTotal.toString();
+
+              String storeName = orderDetails.data!.cart!.storeName ?? "";
+              String orderDate = orderDetails.data!.orderDate ?? "";
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PrintPage(
+                    storeName: storeName,
+                    cartItems: orderDetails.data!.cart!.cartItems!,
+                    formattedTotal: formattedTotal!,
+                    savedTotal: savedTotal!,
+                    orderDate: orderDate,
+                    orderNumber: orderDetails.data!.orderNumber ?? "",
+                  ),
+                ),
+              );
+            } catch (error) {
+              debugPrint(error.toString());
+            }
 
             // Clear the mobile number after successful save
             setState(() {
@@ -2514,11 +2455,9 @@ class HorizontalSavedOrdersView extends StatelessWidget {
             provider.saveCurrentCartAsOrder();
 
             // Show feedback
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Order saved'),
-                duration: Duration(seconds: 1),
-              ),
+            showScaffold(
+              context: context,
+              message: "Order Saved Successfully",
             );
           } catch (e) {
             // Swallow exception if cart is empty

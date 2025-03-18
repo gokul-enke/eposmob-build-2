@@ -130,8 +130,7 @@ class GetProduct {
         "attachment": attachment == null
             ? []
             : List<dynamic>.from(attachment!.map((x) => x.toJson())),
-        "names":
-            names is Map ? (names as Names).toJson() : null, // Handle toJson
+        "names": names, // Don't try to cast or convert, just pass it as is
         "product_props": productProps == null
             ? []
             : List<dynamic>.from(productProps!.map((x) => x.toJson())),
