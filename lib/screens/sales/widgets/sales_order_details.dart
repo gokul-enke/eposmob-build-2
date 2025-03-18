@@ -205,12 +205,10 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         boxColor: Colors.white,
         textColor: ColorManager.kPrimaryColor,
         fct: () async {
-          String formattedTotal = AmountHelper.formatAmount(
-            orderDetailsModelData?.cart?.priceSummary?.netTotal ?? 0.00,
-          );
-          String savedTotal = AmountHelper.formatAmount(
-            orderDetailsModelData?.cart?.priceSummary?.savedTotal ?? 0.00,
-          );
+          String? formattedTotal =
+              orderDetailsModelData?.cart?.priceSummary?.netTotal.toString();
+          String? savedTotal =
+              orderDetailsModelData?.cart?.priceSummary?.savedTotal.toString();
           String storeName = orderDetailsModelData!.cart!.storeName ?? "";
           String orderDate = orderDetailsModelData!.orderDate ?? "";
 
@@ -220,7 +218,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               builder: (context) => PrintPage(
                 storeName: storeName,
                 cartItems: cartItems!,
-                formattedTotal: formattedTotal,
+                formattedTotal: formattedTotal!,
                 savedTotal: savedTotal,
                 orderDate: orderDate,
                 orderNumber: orderNumber,

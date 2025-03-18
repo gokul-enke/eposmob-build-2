@@ -1022,26 +1022,22 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                           .fromJson(
                                                                               OrderDetailsresponse);
 
-                                                                  String
+                                                                  String?
                                                                       formattedTotal =
-                                                                      AmountHelper
-                                                                          .formatAmount(
-                                                                    orderDetails
-                                                                        .data
-                                                                        ?.cart
-                                                                        ?.priceSummary
-                                                                        ?.netTotal,
-                                                                  );
-                                                                  String
+                                                                      orderDetails
+                                                                          .data
+                                                                          ?.cart
+                                                                          ?.priceSummary
+                                                                          ?.netTotal
+                                                                          .toString();
+                                                                  String?
                                                                       savedTotal =
-                                                                      AmountHelper
-                                                                          .formatAmount(
-                                                                    orderDetails
-                                                                        .data
-                                                                        ?.cart
-                                                                        ?.priceSummary
-                                                                        ?.savedTotal,
-                                                                  );
+                                                                      orderDetails
+                                                                          .data
+                                                                          ?.cart
+                                                                          ?.priceSummary
+                                                                          ?.savedTotal
+                                                                          .toString();
 
                                                                   debugPrint(
                                                                       "savedTotal: $savedTotal");
@@ -1072,9 +1068,9 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                             orderDetails.data?.cart?.cartItems ??
                                                                                 [],
                                                                         formattedTotal:
-                                                                            formattedTotal,
+                                                                            formattedTotal!,
                                                                         savedTotal:
-                                                                            savedTotal,
+                                                                            savedTotal!,
                                                                         orderDate:
                                                                             orderDate,
                                                                         orderNumber: orderDetails

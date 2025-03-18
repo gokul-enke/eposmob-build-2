@@ -57,7 +57,7 @@ class LocalProductProvider extends ChangeNotifier {
   GetProduct? get selectedProduct => _selectedProduct;
 
   // Local offline cart state.
-  List<LocalCartItem> _cartItems = [];
+  final List<LocalCartItem> _cartItems = [];
   List<LocalCartItem> get cartItems => _cartItems;
   bool isLoading = false;
 
