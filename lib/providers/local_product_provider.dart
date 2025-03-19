@@ -455,6 +455,7 @@ class LocalProductProvider extends ChangeNotifier {
         .indexWhere((item) => item.product.productId == product!.productId);
 
     if (index != -1) {
+      // If the product already exists in cart, just update the quantity and price
       _cartItems[index].quantity +=
           quantity!; // Increment by the specified quantity
       if (price != null) {
@@ -466,6 +467,10 @@ class LocalProductProvider extends ChangeNotifier {
                 ? double.tryParse(product.price!.price!)
                 : 0.0);
       }
+      
+      // Move this item to the beginning of the array
+      final cartItem = _cartItems.removeAt(index);
+      _cartItems.insert(0, cartItem);
     } else {
       // Safely handle null product price when adding new cart item
       double productPrice = 0.0;
@@ -475,7 +480,8 @@ class LocalProductProvider extends ChangeNotifier {
         productPrice = double.tryParse(product.price!.price!) ?? 0.0;
       }
 
-      _cartItems.add(LocalCartItem(
+      // Insert at the beginning of the array instead of appending
+      _cartItems.insert(0, LocalCartItem(
         product: product!,
         quantity: quantity!,
         price: productPrice,

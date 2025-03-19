@@ -4,6 +4,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/responsive.dart';
+import 'package:pos_machine/screens/kiosk/kiosk.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
@@ -163,17 +164,17 @@ class SideMenu extends StatelessWidget {
           //   size: size,
           //   iconPath: ImageAssets.homeIcon,
           // ),
-          // Obx(
-          //   () => DrawerListTile(
-          //     iconPath: ImageAssets.homeIcon,
-          //     title: 'Home',
-          //     onTap: () {
-          //       // debugPrint(" 'Home',${sideBarController.index.value}");
-          //       sideBarController.index.value = 0;
-          //     },
-          //     selected: sideBarController.index.value == 0,
-          //   ),
-          // ),
+          Obx(
+            () => DrawerListTile(
+              iconPath: ImageAssets.homeIcon,
+              title: 'Demo Home',
+              onTap: () {
+                // debugPrint(" 'Home',${sideBarController.index.value}");
+                sideBarController.index.value = 0;
+              },
+              selected: sideBarController.index.value == 0,
+            ),
+          ),
 
           Obx(
             () => DrawerListTile(
@@ -208,16 +209,16 @@ class SideMenu extends StatelessWidget {
           //     selected: sideBarController.index.value == 46,
           //   ),
           // ),
-          // Obx(
-          //   () => DrawerListTile(
-          //     iconPath: ImageAssets.homeIcon,
-          //     title: 'Kiosk',
-          //     onTap: () {
-          //       Get.to(() => const KioskScreen());
-          //     },
-          //     selected: sideBarController.index.value == 900,
-          //   ),
-          // ),
+          Obx(
+            () => DrawerListTile(
+              iconPath: ImageAssets.homeIcon,
+              title: 'Kiosk',
+              onTap: () {
+                Get.to(() => const KioskScreen());
+              },
+              selected: sideBarController.index.value == 900,
+            ),
+          ),
 
           Obx(
             () => DrawerListTile(
@@ -410,10 +411,13 @@ class SideMenu extends StatelessWidget {
               iconPath: ImageAssets.cardIcon,
               title: 'Suppliers',
               onTap: () {
-                sideBarController.index.value = 52; // New index for supplier screen
+                sideBarController.index.value =
+                    52; // New index for supplier screen
                 // Load supplier data when selected
-                final supplierProvider = Provider.of<SupplierProvider>(context, listen: false);
-                String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+                final supplierProvider =
+                    Provider.of<SupplierProvider>(context, listen: false);
+                String? accessToken =
+                    Provider.of<AuthModel>(context, listen: false).token;
                 supplierProvider.fetchSuppliers(accessToken: accessToken ?? '');
               },
               selected: sideBarController.index.value == 52,

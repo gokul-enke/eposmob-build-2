@@ -845,6 +845,14 @@ class _BillingPageState extends State<BillingPage> {
                                 0.21, ColorManager.textColor)),
                       ),
                     ),
+                    // DataColumn(
+                    //   label: Expanded(
+                    //     child: Text('MRP',
+                    //         textAlign: TextAlign.center,
+                    //         style: buildCustomStyle(FontWeightManager.bold, 14,
+                    //             0.21, ColorManager.textColor)),
+                    //   ),
+                    // ),
                     DataColumn(
                       label: Expanded(
                         child: Text('Total Price',
@@ -919,6 +927,16 @@ class _BillingPageState extends State<BillingPage> {
                             ),
                           ),
                         )),
+                        // DataCell(
+                        //   Center(
+                        //     child: SizedBox(
+                        //       width: 30,
+                        //       child: Text(
+                        //         (item.price.toString()),
+                        //       ),
+                        //     ),
+                        //   ),
+                        // ),
                         DataCell(
                           Center(
                             child: SizedBox(

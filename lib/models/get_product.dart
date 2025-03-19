@@ -243,12 +243,14 @@ class ProductPrice {
   final dynamic price;
   final dynamic percentage;
   final dynamic totalPrice;
+  final dynamic mrp;
 
   ProductPrice({
     this.oldPrice,
     this.price,
     this.percentage,
     this.totalPrice,
+    this.mrp,
   });
 
   factory ProductPrice.fromJson(Map<String, dynamic> json) => ProductPrice(
