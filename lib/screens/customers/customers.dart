@@ -267,34 +267,34 @@ class _CustomersScreenState extends State<CustomersScreen> {
                               ],
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 10.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Age Range",
-                                    style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      FontSize.s14,
-                                      0.27,
-                                      Colors.black.withOpacity(0.6),
-                                    ),
-                                  ),
-                                ),
-                                buildColumnWidgetForTextFields(
-                                  height: 45,
-                                  width: 120,
-                                  onchanged: (value) {},
-                                  controller: customerAgeRangeController,
-                                  size: size,
-                                  hintText: 'Age Range',
-                                ),
-                              ],
-                            ),
-                          ),
+                          // Padding(
+                          //   padding: const EdgeInsets.only(left: 10.0),
+                          //   child: Column(
+                          //     crossAxisAlignment: CrossAxisAlignment.start,
+                          //     children: [
+                          //       Padding(
+                          //         padding: const EdgeInsets.all(8.0),
+                          //         child: Text(
+                          //           "Age Range",
+                          //           style: buildCustomStyle(
+                          //             FontWeightManager.regular,
+                          //             FontSize.s14,
+                          //             0.27,
+                          //             Colors.black.withOpacity(0.6),
+                          //           ),
+                          //         ),
+                          //       ),
+                          //       buildColumnWidgetForTextFields(
+                          //         height: 45,
+                          //         width: 120,
+                          //         onchanged: (value) {},
+                          //         controller: customerAgeRangeController,
+                          //         size: size,
+                          //         hintText: 'Age Range',
+                          //       ),
+                          //     ],
+                          //   ),
+                          // ),
                           Padding(
                             padding: const EdgeInsets.only(left: 10.0, top: 30),
                             child: CustomRoundButton(
@@ -588,6 +588,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                               // Handle pagination if needed
                             },
                           ),
+                          const SizedBox(height: 25),
                         ],
                       ),
                     ),

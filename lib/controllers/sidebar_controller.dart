@@ -52,6 +52,7 @@ import '../screens/product/widgets/add_product_stock.dart';
 import '../screens/product/widgets/stock_details.dart';
 import '../screens/sales/widgets/sales_order_details.dart';
 import '../widgets/category_list.dart';
+import 'package:pos_machine/screens/suppliers/supplier_list.dart';
 
 class SideBarController extends GetxController {
   RxInt index = 46.obs;
@@ -109,9 +110,10 @@ class SideBarController extends GetxController {
     CategoryList(), //45 Home Old
     BillingPage(), //46 Billing Page
     ReceiptListScreen(), //47 Receipt List
-    ViewReceiptDetailsWidget(), //48 Voucher Details
+    ViewReceiptDetailsWidget(), //48 Receipt Details
     SalesReturnScreen(), //49 Sales Return
     SalesReturnPage(), //50 Sales Return List
     EditOrder(), // 51 Edit Order
+    SupplierListScreen(), // 52 Suppliers List
   ];
 }

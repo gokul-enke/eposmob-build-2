@@ -1,32 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/components/build_pagination_control.dart';
-import 'package:pos_machine/models/list_receipt.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_dialog_box.dart';
+import '../../components/build_pagination_control.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
+import '../../models/supplier.dart';
 import '../../providers/auth_model.dart';
-import '../../providers/invoice_provider.dart';
+import '../../providers/supplier_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 
-class ReceiptListScreen extends StatefulWidget {
-  const ReceiptListScreen({super.key});
+class SupplierListScreen extends StatefulWidget {
+  const SupplierListScreen({super.key});
 
   @override
-  State<ReceiptListScreen> createState() => _ReceiptListScreenState();
+  State<SupplierListScreen> createState() => _SupplierListScreenState();
 }
 
-class _ReceiptListScreenState extends State<ReceiptListScreen> {
+class _SupplierListScreenState extends State<SupplierListScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
   final TextEditingController searchTextController = TextEditingController();
   bool initLoading = false;
-  List<Receipt>? receiptList = [];
-  ReceiptData? receiptData;
 
   @override
   void initState() {
@@ -35,7 +33,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
   }
 
   void loadInitData() async {
-    debugPrint("📌 loadInitData started");
+    debugPrint("📌 loadInitData started for Suppliers");
     try {
       setState(() {
         initLoading = true;
@@ -44,31 +42,20 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
           Provider.of<AuthModel>(context, listen: false).token;
       debugPrint("📌 Access token length: ${accessToken?.length ?? 0}");
 
-      InvoiceProvider invoiceProvider =
-          Provider.of<InvoiceProvider>(context, listen: false);
+      SupplierProvider supplierProvider =
+          Provider.of<SupplierProvider>(context, listen: false);
 
-      debugPrint("📌 Calling invoiceProvider.listAllReceipts");
-      final value = await invoiceProvider.listAllReceipts(
-          accessToken: accessToken ?? "", page: 1);
+      debugPrint("📌 Calling supplierProvider.fetchSuppliers");
+      await supplierProvider.fetchSuppliers(
+        accessToken: accessToken ?? "",
+        supplierName: null, // No filter when loading initial data
+      );
 
       debugPrint(
-          "📌 API response received: ${value != null ? 'not null' : 'null'}");
-
-      if (value != null && value['status'] == 'success') {
-        debugPrint("📌 Response status: success");
-        ReceiptResponse receiptResponse = ReceiptResponse.fromJson(value);
-        setState(() {
-          receiptData = receiptResponse.data;
-          receiptList = receiptResponse.data.data;
-          debugPrint("📌 Loaded ${receiptList?.length ?? 0} receipts");
-        });
-      } else {
-        debugPrint("📌 Response status: not success, value: $value");
-        showScaffold(context: context, message: "Data Not Found");
-      }
+          "📌 Loaded ${supplierProvider.supplierList?.length ?? 0} suppliers");
     } catch (error) {
-      debugPrint("❌ Receipt listing error: ${error.toString()}");
-      showScaffold(context: context, message: "Error fetching receipts");
+      debugPrint("❌ Supplier listing error: ${error.toString()}");
+      showScaffold(context: context, message: "Error fetching suppliers");
     } finally {
       setState(() {
         initLoading = false;
@@ -77,62 +64,44 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     }
   }
 
-  Future<void> searchReceipts(int page) async {
-    debugPrint("📌 searchReceipts started with page: $page");
+  Future<void> refreshData() async {
+    setState(() {
+      searchTextController.clear();
+    });
+    loadInitData();
+  }
+
+  Future<void> searchSuppliers() async {
     try {
       setState(() {
         initLoading = true;
       });
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      InvoiceProvider invoiceProvider =
-          Provider.of<InvoiceProvider>(context, listen: false);
 
-      debugPrint("📌 Calling invoiceProvider.listAllReceipts");
-      final value = await invoiceProvider.listAllReceipts(
-          accessToken: accessToken ?? "", page: page);
+      SupplierProvider supplierProvider =
+          Provider.of<SupplierProvider>(context, listen: false);
 
-      debugPrint(
-          "📌 API response received: ${value != null ? 'not null' : 'null'}");
-
-      if (value != null && value['status'] == 'success') {
-        debugPrint("📌 Response status: success");
-        ReceiptResponse receiptResponse = ReceiptResponse.fromJson(value);
-        setState(() {
-          receiptData = receiptResponse.data;
-          receiptList = receiptResponse.data.data;
-          debugPrint("📌 Loaded ${receiptList?.length ?? 0} receipts");
-        });
-      } else {
-        debugPrint("📌 Response status: not success, value: $value");
-        showScaffold(context: context, message: "Data Not Found");
-      }
+      String searchText = searchTextController.text.trim();
+      await supplierProvider.fetchSuppliers(
+        accessToken: accessToken ?? "",
+        supplierName: searchText,
+      );
     } catch (error) {
-      debugPrint("❌ Receipt listing error: ${error.toString()}");
-      showScaffold(context: context, message: "Error fetching receipts");
+      debugPrint("❌ Supplier search error: ${error.toString()}");
+      showScaffold(context: context, message: "Error searching suppliers");
     } finally {
       setState(() {
         initLoading = false;
       });
-      debugPrint("📌 searchReceipts finished");
     }
-  }
-
-  void resetSearch() {
-    setState(() {
-      searchTextController.clear();
-      loadInitData();
-    });
-  }
-
-  Future<void> refreshData() async {
-    resetSearch();
-    loadInitData();
   }
 
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    final supplierProvider = Provider.of<SupplierProvider>(context);
+    final suppliers = supplierProvider.supplierList ?? [];
 
     return SafeArea(
       child: RefreshIndicator(
@@ -160,9 +129,22 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                 const SizedBox(height: 15),
                 _buildSearchBar(size),
                 const SizedBox(height: 15),
-                _buildReceiptTable(),
-                const SizedBox(height: 15),
-                _buildPaginationControls(),
+                supplierProvider.isLoading
+                    ? _buildLoadingIndicator()
+                    : suppliers.isEmpty
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20.0),
+                              child: Text(
+                                "No suppliers found",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          )
+                        : _buildSupplierTable(suppliers),
               ],
             ),
           ),
@@ -176,20 +158,33 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Receipt List",
+          "Supplier List",
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
-        CustomRoundButton(
-          title: "Create New Receipt",
-          fct: () {
-            sideBarController.index.value =
-                25; // Navigate to create receipt screen
-          },
-          fontSize: 12,
-          height: 45,
-          width: 200,
-        ),
+        // CustomRoundButton(
+        //   title: "Add New Supplier",
+        //   fct: () {
+        //     // Navigate to add supplier screen
+        //     // This would be implemented in a future feature
+        //     showDialog(
+        //       context: context,
+        //       builder: (context) => AlertDialog(
+        //         title: const Text("Coming Soon"),
+        //         content: const Text("Add Supplier functionality coming soon."),
+        //         actions: [
+        //           TextButton(
+        //             onPressed: () => Navigator.pop(context),
+        //             child: const Text("OK"),
+        //           ),
+        //         ],
+        //       ),
+        //     );
+        //   },
+        //   fontSize: 12,
+        //   height: 45,
+        //   width: 200,
+        // ),
       ],
     );
   }
@@ -204,9 +199,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
             padding: const EdgeInsets.only(left: 10.0, top: 30),
             child: CustomRoundButton(
               title: "Search",
-              fct: () {
-                searchReceipts(1); // Start search from page 1
-              },
+              fct: searchSuppliers,
               height: 45,
               width: size.width * 0.09,
               fontSize: FontSize.s12,
@@ -218,7 +211,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
               title: "Reset",
               boxColor: Colors.white,
               textColor: ColorManager.kPrimaryColor,
-              fct: resetSearch,
+              fct: refreshData,
               height: 45,
               width: size.width * 0.09,
               fontSize: FontSize.s12,
@@ -253,6 +246,10 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                   // Update state if needed
                 });
               },
+              onFieldSubmitted: (value) {
+                // Trigger search when Enter key is pressed
+                searchSuppliers();
+              },
               cursorColor: ColorManager.kPrimaryColor,
               cursorHeight: 13,
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
@@ -270,7 +267,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     );
   }
 
-  Widget _buildReceiptTable() {
+  Widget _buildSupplierTable(List<Supplier> suppliers) {
     return BuildBoxShadowContainer(
       margin: const EdgeInsets.only(top: 20),
       circleRadius: 7,
@@ -278,12 +275,10 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       child: Table(
         columnWidths: const {
           0: FractionColumnWidth(0.2),
-          1: FractionColumnWidth(0.1),
-          2: FractionColumnWidth(0.15),
-          3: FractionColumnWidth(0.2),
-          4: FractionColumnWidth(0.15),
-          5: FractionColumnWidth(0.1),
-          6: FractionColumnWidth(0.1),
+          1: FractionColumnWidth(0.2),
+          2: FractionColumnWidth(0.2),
+          3: FractionColumnWidth(0.3),
+          4: FractionColumnWidth(0.1),
         },
         border: const TableBorder.symmetric(
           outside: BorderSide(color: ColorManager.tableBOrderColor, width: 0.3),
@@ -292,7 +287,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
         defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         children: [
           _buildTableHeader(),
-          ..._buildTableRows(),
+          ...suppliers.map((supplier) => _buildSupplierRow(supplier)).toList(),
         ],
       ),
     );
@@ -302,13 +297,23 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     return TableRow(
       decoration: const BoxDecoration(color: ColorManager.tableBGColor),
       children: [
-        _buildTableCell("Customer Name"),
-        _buildTableCell("Receipt Number"),
-        _buildTableCell("Amount"),
-        _buildTableCell("Payment Reference"),
-        _buildTableCell("Status"),
-        _buildTableCell("Payment Method"),
+        _buildTableCell("Name"),
+        _buildTableCell("Email"),
+        _buildTableCell("Phone"),
+        _buildTableCell("Address"),
         _buildTableCell("Action"),
+      ],
+    );
+  }
+
+  TableRow _buildSupplierRow(Supplier supplier) {
+    return TableRow(
+      children: [
+        _buildSupplierCell(supplier.name),
+        _buildSupplierCell(supplier.email),
+        _buildSupplierCell(supplier.phone),
+        _buildSupplierCell(supplier.address),
+        _buildActionCell(supplier),
       ],
     );
   }
@@ -333,23 +338,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     );
   }
 
-  List<TableRow> _buildTableRows() {
-    return receiptList!.map((receipt) {
-      return TableRow(
-        children: [
-          _buildReceiptCell(receipt.customer.user.name.toString()),
-          _buildReceiptCell(receipt.receiptNumber),
-          _buildReceiptCell(receipt.amount),
-          _buildReceiptCell(receipt.paymentReference),
-          _buildReceiptCell(receipt.receiptStatus),
-          _buildReceiptCell(receipt.paymentMethod),
-          _buildActionCell(receipt),
-        ],
-      );
-    }).toList();
-  }
-
-  TableCell _buildReceiptCell(String content) {
+  TableCell _buildSupplierCell(String content) {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: Padding(
@@ -369,13 +358,14 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     );
   }
 
-  TableCell _buildActionCell(Receipt receipt) {
+  TableCell _buildActionCell(Supplier supplier) {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: Padding(
         padding: const EdgeInsets.all(15.0),
         child: Center(
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               BuildBoxShadowContainer(
                 margin: const EdgeInsets.only(left: 5, right: 5),
@@ -387,13 +377,35 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                     color: ColorManager.kPrimaryColor.withOpacity(0.9),
                   ),
                   onPressed: () {
-                    String? token =
-                        Provider.of<AuthModel>(context, listen: false).token;
-                    InvoiceProvider invoiceProvider =
-                        Provider.of<InvoiceProvider>(context, listen: false);
-                    invoiceProvider.callDetailsOfReceipt(
-                        id: receipt.id, accessToken: token ?? "");
-                    sideBarController.index.value = 48;
+                    // View supplier details
+                    // This would be implemented in a future feature
+                    final supplierProvider =
+                        Provider.of<SupplierProvider>(context, listen: false);
+                    supplierProvider.selectSupplier(supplier);
+
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text(supplier.name),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Email: ${supplier.email}"),
+                            Text("Phone: ${supplier.phone}"),
+                            Text("Address: ${supplier.address}"),
+                            Text(
+                                "Product Categories: ${supplier.productCategories}"),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text("Close"),
+                          ),
+                        ],
+                      ),
+                    );
                   },
                 ),
               ),
@@ -404,13 +416,22 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     );
   }
 
-  Widget _buildPaginationControls() {
-    return PaginationControl(
-      currentPage: receiptData?.currentPage ?? 1,
-      totalPages: receiptData?.lastPage ?? 1,
-      onPageChanged: (int page) {
-        searchReceipts(page);
-      },
+  Widget _buildLoadingIndicator() {
+    return const BuildBoxShadowContainer(
+      margin: EdgeInsets.only(top: 20),
+      circleRadius: 7,
+      offsetValue: Offset(1, 1),
+      child: SizedBox(
+        height: 200,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

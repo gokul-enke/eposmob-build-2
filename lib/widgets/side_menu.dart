@@ -4,7 +4,6 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/responsive.dart';
-import 'package:pos_machine/screens/kiosk/kiosk.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
@@ -14,6 +13,7 @@ import '../providers/authentication_providers.dart';
 
 import '../providers/sales_provider.dart';
 import '../providers/shared_preferences.dart';
+import '../providers/supplier_provider.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
@@ -291,11 +291,11 @@ class SideMenu extends StatelessWidget {
                 onTapTitle1: () {
                   sideBarController.index.value = 14;
                 },
-                onTapTitle2: () {
-                  sideBarController.index.value = 15;
-                },
+                // onTapTitle2: () {
+                //   sideBarController.index.value = 15;
+                // },
                 listTitle1: "Product",
-                listTitle2: "Stock",
+                // listTitle2: "Stock",
                 iconPath: ImageAssets.allCategoryIcon,
                 title: 'Product',
                 onTap: () async {
@@ -377,6 +377,7 @@ class SideMenu extends StatelessWidget {
                   sideBarController.index.value == 23 ||
                   sideBarController.index.value == 24 ||
                   sideBarController.index.value == 25 ||
+                  sideBarController.index.value == 48 ||
                   sideBarController.index.value == 47,
             ),
           ),
@@ -402,6 +403,20 @@ class SideMenu extends StatelessWidget {
               selected: sideBarController.index.value == 5 ||
                   sideBarController.index.value == 9 ||
                   sideBarController.index.value == 38,
+            ),
+          ),
+          Obx(
+            () => DrawerListTile(
+              iconPath: ImageAssets.cardIcon,
+              title: 'Suppliers',
+              onTap: () {
+                sideBarController.index.value = 52; // New index for supplier screen
+                // Load supplier data when selected
+                final supplierProvider = Provider.of<SupplierProvider>(context, listen: false);
+                String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+                supplierProvider.fetchSuppliers(accessToken: accessToken ?? '');
+              },
+              selected: sideBarController.index.value == 52,
             ),
           ),
           // Obx(
@@ -458,20 +473,20 @@ class SideMenu extends StatelessWidget {
           //       },
           //       selected: sideBarController.index.value == 43),
           // ),
-          const SizedBox(
-            height: 15,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 45.0),
-            child: Text(
-              'Other',
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s13,
-                  0.16, ColorManager.textColor),
-            ),
-          ),
-          const SizedBox(
-            height: 15,
-          ),
+          // const SizedBox(
+          //   height: 15,
+          // ),
+          // Padding(
+          //   padding: const EdgeInsets.only(left: 45.0),
+          //   child: Text(
+          //     'Other',
+          //     style: buildCustomStyle(FontWeightManager.medium, FontSize.s13,
+          //         0.16, ColorManager.textColor),
+          //   ),
+          // ),
+          // const SizedBox(
+          //   height: 15,
+          // ),
           // Obx(
           //   () => DrawerListTile(
           //     iconPath: ImageAssets.notificationIcon,
@@ -544,13 +559,13 @@ class SideMenu extends StatelessWidget {
             height: 10,
           ),
           Container(
-            height: 170,
+            height: 100,
             width: 180,
             margin: ResponsiveWidget.isTablet(context)
                 ? const EdgeInsets.only(
                     left: 20, top: 20, bottom: 10, right: 10)
                 : const EdgeInsets.only(left: 30, top: 20, bottom: 10),
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(17),
                 boxShadow: const [
@@ -561,54 +576,41 @@ class SideMenu extends StatelessWidget {
                   ),
                 ],
                 color: Colors.white),
-            child: Column(
-              children: [
-                const SizedBox(
-                  height: 5,
-                ),
-                const CircleAvatar(
-                  backgroundImage: AssetImage(ImageAssets.profilePhotoIcon),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                FutureBuilder<String>(
-                  future: SharedPreferenceProvider().getCustomerName(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.done) {
-                      return Text(
-                        snapshot.data ?? 'Default Name',
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s14, 0.21, ColorManager.textColor),
-                      );
-                    } else {
-                      return const CircularProgressIndicator(); // Or any loading widget
-                    }
-                  },
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                InkWell(
-                  onTap: () {
-                    sideBarController.index.value = 10;
-                  },
-                  child: Container(
-                      height: 30,
-                      width: 130,
-                      alignment: Alignment.center,
-                      margin: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: ColorManager.containerShadowColor1,
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Text(
-                        'Open profile',
-                        style: buildCustomStyle(FontWeightManager.medium,
-                            FontSize.s12, 0.16, ColorManager.textColor),
-                      )),
-                ),
-              ],
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    height: 5,
+                  ),
+                  const CircleAvatar(
+                    backgroundImage: AssetImage(ImageAssets.profilePhotoIcon),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  FutureBuilder<String>(
+                    future: SharedPreferenceProvider().getCustomerName(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done) {
+                        return Text(
+                          snapshot.data ?? 'Default Name',
+                          style: buildCustomStyle(FontWeightManager.semiBold,
+                              FontSize.s14, 0.21, ColorManager.textColor),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        );
+                      } else {
+                        return const CircularProgressIndicator();
+                      }
+                    },
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(

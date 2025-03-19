@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -364,19 +365,24 @@ class InvoiceProvider extends ChangeNotifier {
   //          *********************** LIST ALL RECEIPT API ***************************************************
   Future<dynamic> listAllReceipts({
     required String accessToken,
+    int page = 1,
   }) async {
+    debugPrint("🔍 Calling listAllReceipts with page: $page");
     final url = Uri.parse(
-        APPUrl.listAllReceipts); // Update the URL to point to receipts
+        "${APPUrl.listAllReceipts}?page=$page"); // Update the URL to point to receipts with pagination
+    debugPrint("🔍 URL: $url");
     try {
+      debugPrint("🔍 Token: ${accessToken.substring(0, min(10, accessToken.length))}...");
       final response = await http.get(
         url,
         headers: {
           'Authorization': 'Bearer $accessToken',
         },
       );
-      // debugPrint('inside ${response.statusCode}');
+      debugPrint("🔍 Response status: ${response.statusCode}");
+      
       if (response.statusCode == 200) {
-        // debugPrint(json.decode(response.body).toString());
+        debugPrint("🔍 Response body preview: ${response.body.substring(0, min(100, response.body.length))}...");
         final jsonData = json.decode(response.body);
         ReceiptResponse receiptResponse = ReceiptResponse.fromJson(jsonData);
 
@@ -385,12 +391,13 @@ class InvoiceProvider extends ChangeNotifier {
         notifyListeners();
         return json.decode(response.body);
       } else {
-        // debugPrint("Error fetching receipts: ${response.reasonPhrase}");
-        // Handle error responses accordingly
+        debugPrint("❌ Error fetching receipts: ${response.reasonPhrase}");
+        debugPrint("❌ Error body: ${response.body}");
+        return {'status': 'error', 'message': 'Failed to fetch receipts'};
       }
     } catch (e) {
-      // debugPrint("Exception occurred: $e");
-      // Handle exceptions accordingly
+      debugPrint("❌ Exception in listAllReceipts: $e");
+      return {'status': 'error', 'message': e.toString()};
     }
   }
 

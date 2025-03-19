@@ -73,11 +73,10 @@ class APPUrl {
   static String listFilesForImageUrl = '$baseURL/api/v1/file/list-files';
 
   static String getStores = '$baseURL/api/v1/stores/get-stores?store_name';
-  static String getSuppliers =
-      '$baseURL/api/v1/suppliers/get-suppliers?supplier_name';
+  static String getSuppliers = '$baseURL/api/v1/get-suppliers';
   // static String listPurchases =
   //     '$baseURL/api/v1/purchases/list-purchase-order';
-  static String listPurchases = '$baseURL/api/v1/purchases/purchase-searchbar';
+  static String listPurchases = '$baseURL/api/v1/purchases/list-purchase-order';
   static String listPurchaseVoucher =
       '$baseURL/api/v1/purchases/voucher-searchbar';
   static String addToPurchaseItem =

@@ -181,15 +181,15 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
-        CustomRoundButton(
-          title: "Create New Invoice",
-          fct: () {
-            sideBarController.index.value = 24;
-          },
-          fontSize: 12,
-          height: 45,
-          width: 200,
-        ),
+        // CustomRoundButton(
+        //   title: "Create New Invoice",
+        //   fct: () {
+        //     sideBarController.index.value = 24;
+        //   },
+        //   fontSize: 12,
+        //   height: 45,
+        //   width: 200,
+        // ),
       ],
     );
   }

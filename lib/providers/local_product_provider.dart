@@ -105,6 +105,16 @@ class LocalProductProvider extends ChangeNotifier {
 
   PriceSummary? priceSummary;
 
+  // Add pagination properties
+  int _currentPage = 1;
+  int _totalPages = 1;
+  int _itemsPerPage = 10;
+
+  // Getters for pagination
+  int get currentPage => _currentPage;
+  int get totalPages => _totalPages;
+  int get itemsPerPage => _itemsPerPage;
+
   // Constructor - Load data from Hive on initialization
   LocalProductProvider() {
     _loadProductsFromHive();
@@ -298,10 +308,51 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
-  /// Filters the locally stored products by an optional [categoryId] and/or [filterName].
-  /// Mimics the [listAllProducts] function from GridSelectionProvider, but operates locally.
+  /// Updates pagination info based on filtered products
+  void _updatePagination() {
+    _totalPages = (_filteredProducts.length / _itemsPerPage).ceil();
+    if (_totalPages < 1) _totalPages = 1;
+    if (_currentPage > _totalPages) _currentPage = _totalPages;
+  }
 
-  void listAllProducts({int? categoryId, String? filterName}) {
+  /// Gets paginated products based on current page
+  List<GetProduct> get paginatedProducts {
+    final startIndex = (_currentPage - 1) * _itemsPerPage;
+    final endIndex = startIndex + _itemsPerPage;
+    return _filteredProducts.sublist(
+      startIndex,
+      endIndex > _filteredProducts.length ? _filteredProducts.length : endIndex,
+    );
+  }
+
+  /// Sets the current page
+  void setPage(int page) {
+    if (page >= 1 && page <= _totalPages) {
+      _currentPage = page;
+      notifyListeners();
+    }
+  }
+
+  /// Updates items per page
+  void setItemsPerPage(int items) {
+    if (items > 0) {
+      _itemsPerPage = items;
+      _updatePagination();
+      notifyListeners();
+    }
+  }
+
+  /// Modified listAllProducts to handle pagination
+  void listAllProducts({
+    int? categoryId,
+    String? filterName,
+    String? filterPrice,
+    String? filterCreatedBy,
+    String? filterProperties,
+    String? filterStore,
+    String? filterSupplier,
+    int page = 1,
+  }) {
     List<GetProduct> result = List.from(_products);
 
     if (categoryId != null && categoryId != 0) {
@@ -316,7 +367,20 @@ class LocalProductProvider extends ChangeNotifier {
           .toList();
     }
 
+    if (filterPrice != null && filterPrice.isNotEmpty) {
+      result = result.where((p) {
+        final price = double.tryParse(p.price?.price ?? '0') ?? 0;
+        final filterPriceValue = double.tryParse(filterPrice) ?? 0;
+        return price == filterPriceValue;
+      }).toList();
+    }
+
+    // Note: createdBy, properties, store, and supplier filters are not available in the GetProduct model
+    // These filters are kept for API compatibility but won't affect the results
+
     _filteredProducts = result;
+    _updatePagination();
+    setPage(page);
     notifyListeners();
   }
 

@@ -28,7 +28,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
   // State variables
   bool initLoading = false;
   List<VoucherDetail>? voucherDetailsList = [];
-  List<PurchaseItem>? purchaseDetailsList = [];
+  List<PurchaseItem> purchaseDetailsList = [];
   final TextEditingController searchTextController = TextEditingController();
   final TextEditingController purchaserNameController = TextEditingController();
   final TextEditingController productNameController = TextEditingController();
@@ -49,21 +49,66 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
 
   // Load initial data
   Future<void> loadInitData() async {
+    debugPrint("loadInitData called");
     setState(() {
       initLoading = true;
     });
 
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    PurchaseProvider purchaseProvider =
-        Provider.of<PurchaseProvider>(context, listen: false);
-    await purchaseProvider.listPurchase(
-        accessToken: accessToken ?? "", page: 1);
+    try {
+      String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint("AccessToken: ${accessToken != null}");
+      
+      // Directly obtain purchase provider
+      PurchaseProvider? purchaseProvider;
+      try {
+        purchaseProvider = Provider.of<PurchaseProvider>(context, listen: false);
+        debugPrint("PurchaseProvider obtained: ${purchaseProvider != null}");
+      } catch (e) {
+        debugPrint("Error getting PurchaseProvider: $e");
+        setState(() {
+          initLoading = false;
+        });
+        return;
+      }
 
-    purchaseDetailsList = purchaseProvider.getPurchaseDetailsList;
-    // debugPrint("Purchase Details List ${purchaseDetailsList!.length}");
-    setState(() {
-      initLoading = false;
-    });
+      if (purchaseProvider == null) {
+        debugPrint("PurchaseProvider is null, cannot proceed");
+        setState(() {
+          initLoading = false;
+        });
+        return;
+      }
+      
+      debugPrint("Before calling listPurchase in loadInitData");
+      await purchaseProvider.listPurchase(
+          accessToken: accessToken ?? "", page: 1);
+      debugPrint("After calling listPurchase in loadInitData");
+
+      try {
+        debugPrint("Attempting to get purchase details from provider");
+        var details = purchaseProvider.getPurchaseDetailsList;
+        debugPrint("Purchase details in loadInitData: $details");
+        debugPrint("Purchase details type: ${details.runtimeType}");
+        debugPrint("Purchase details length: ${details.length}");
+        setState(() {
+          purchaseDetailsList = details;
+        });
+      } catch (e) {
+        debugPrint("Error getting purchase details: $e");
+        setState(() {
+          purchaseDetailsList = [];
+        });
+      }
+    } catch (e) {
+      debugPrint("Overall error in loadInitData: $e");
+      setState(() {
+        purchaseDetailsList = [];
+      });
+    } finally {
+      setState(() {
+        initLoading = false;
+      });
+    }
   }
 
   // Search purchases
@@ -78,20 +123,34 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
           Provider.of<AuthModel>(context, listen: false).token;
       PurchaseProvider purchaseProvider =
           Provider.of<PurchaseProvider>(context, listen: false);
-
+      
+      debugPrint("Before calling listPurchase in searchPurchase");
       await purchaseProvider.listPurchase(
         accessToken: accessToken ?? "",
         filterName: purchaserNameController.text,
         filterStore: storeController.text,
         page: page,
       );
+      debugPrint("After calling listPurchase in searchPurchase");
 
       // debugPrint("Purchase Details List ${purchaseDetailsList!.length}");
-      setState(() {
-        purchaseDetailsList = purchaseProvider.getPurchaseDetailsList;
-      });
+      try {
+        var details = purchaseProvider.getPurchaseDetailsList;
+        debugPrint("Purchase details in searchPurchase: $details");
+        setState(() {
+          purchaseDetailsList = details;
+        });
+      } catch (e) {
+        debugPrint("Error getting purchase details in searchPurchase: $e");
+        setState(() {
+          purchaseDetailsList = [];
+        });
+      }
     } catch (error) {
-      // debugPrint(error.toString());
+      debugPrint("Error in searchPurchase: $error");
+      setState(() {
+        purchaseDetailsList = [];
+      });
     } finally {
       setState(() {
         initLoading = false;
@@ -116,13 +175,33 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
   // Build UI
   @override
   Widget build(BuildContext context) {
+    debugPrint("PurchaseScreen build method called");
     Size size = MediaQuery.of(context).size;
-    PurchaseProvider purchaseProvider =
-        Provider.of<PurchaseProvider>(context, listen: true);
+    PurchaseProvider? purchaseProvider;
+    try {
+      purchaseProvider = Provider.of<PurchaseProvider>(context, listen: true);
+      debugPrint("PurchaseProvider obtained in build method: ${purchaseProvider != null}");
+    } catch (e) {
+      debugPrint("Error getting PurchaseProvider: $e");
+    }
+    
+    if (purchaseProvider == null) {
+      debugPrint("PurchaseProvider is null");
+      return const SafeArea(
+        child: Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+    
     SideBarController sideBarController = Get.put(SideBarController());
     List<GetStoreModelData>? storeList = purchaseProvider.getStoreList;
     List<GetSuppliersModelData>? supplierList =
         purchaseProvider.getSupplierList;
+    
+    debugPrint("PurchaseScreen build - before return");
 
     return SafeArea(
       child: Container(
@@ -157,16 +236,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
               _buildPurchaseList(size, purchaseProvider),
 
               // Pagination
-              PaginationControl(
-                currentPage:
-                    Provider.of<PurchaseProvider>(context, listen: true)
-                        .currentPage,
-                totalPages: Provider.of<PurchaseProvider>(context, listen: true)
-                    .totalPages,
-                onPageChanged: (int page) {
-                  searchPurchase(page);
-                },
-              ),
+              _buildPagination(context),
             ],
           ),
         ),
@@ -473,13 +543,25 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
 
   // Build the purchase list table
   Widget _buildPurchaseList(Size size, PurchaseProvider purchaseProvider) {
-    return BuildBoxShadowContainer(
-      margin: const EdgeInsets.only(top: 20),
-      circleRadius: 7,
-      child: initLoading
-          ? _buildLoadingTable()
-          : _buildDataTable(size, purchaseProvider),
-    );
+    debugPrint("_buildPurchaseList called");
+    
+    try {
+      return BuildBoxShadowContainer(
+        margin: const EdgeInsets.only(top: 20),
+        circleRadius: 7,
+        child: initLoading
+            ? _buildLoadingTable()
+            : _buildDataTable(size, purchaseProvider),
+      );
+    } catch (e) {
+      debugPrint("Error in _buildPurchaseList: $e");
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(30.0),
+          child: Text("Error loading purchase list"),
+        ),
+      );
+    }
   }
 
   // Loading table placeholder
@@ -495,27 +577,79 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
 
   // Data Table building logic
   Widget _buildDataTable(Size size, PurchaseProvider purchaseProvider) {
-    debugPrint(
-        "Data Table :- ${purchaseProvider.purchaseItemListAllPurchase!.length}");
-    return Table(
-      columnWidths: const {
-        0: FractionColumnWidth(0.01),
-        1: FractionColumnWidth(0.06),
-        2: FractionColumnWidth(0.06),
-        3: FractionColumnWidth(0.06),
-      },
-      border: const TableBorder.symmetric(
-        outside: BorderSide(color: ColorManager.tableBOrderColor, width: 0.3),
-        inside: BorderSide(color: ColorManager.tableBOrderColor, width: 0.8),
-      ),
-      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-      children: [
-        _buildTableHeader(),
-        ...purchaseDetailsList!.asMap().entries.map((entry) {
-          return _buildTableRow(entry.key, entry.value, purchaseProvider);
-        }).toList(),
-      ],
-    );
+    debugPrint("Building data table");
+    debugPrint("PURCHASE DETAILS LIST before access: $purchaseDetailsList");
+    debugPrint("purchaseProvider: $purchaseProvider");
+    
+    try {
+      debugPrint("purchaseDetailsList length: ${purchaseDetailsList.length}");
+      debugPrint("purchaseDetailsList type: ${purchaseDetailsList.runtimeType}");
+
+      // Attempt to directly get the list from provider
+      try {
+        var providerList = purchaseProvider.getPurchaseDetailsList;
+        debugPrint("Provider list: $providerList");
+        if (providerList.isNotEmpty) {
+          debugPrint("Using provider list");
+          purchaseDetailsList = providerList;
+        }
+      } catch (e) {
+        debugPrint("Error getting list from provider: $e");
+        // Ensure we have an empty list if there's an error
+        purchaseDetailsList = [];
+      }
+      
+      return Table(
+        columnWidths: const {
+          0: FractionColumnWidth(0.01),
+          1: FractionColumnWidth(0.06),
+          2: FractionColumnWidth(0.06),
+          3: FractionColumnWidth(0.06),
+        },
+        border: const TableBorder.symmetric(
+          outside: BorderSide(color: ColorManager.tableBOrderColor, width: 0.3),
+          inside: BorderSide(color: ColorManager.tableBOrderColor, width: 0.8),
+        ),
+        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+        children: [
+          _buildTableHeader(),
+          if (purchaseDetailsList.isNotEmpty)
+            ...purchaseDetailsList.asMap().entries.map((entry) {
+              return _buildTableRow(entry.key, entry.value, purchaseProvider);
+            }).toList()
+          else
+            TableRow(children: [
+              TableCell(
+                child: Padding(
+                  padding: const EdgeInsets.all(15.0),
+                  child: Center(
+                    child: Text(
+                      "No data available",
+                      style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
+                          0.18, ColorManager.textColor),
+                    ),
+                  ),
+                ),
+              ),
+              TableCell(child: Container()),
+              TableCell(child: Container()),
+              TableCell(child: Container()),
+            ]),
+        ],
+      );
+    } catch (e) {
+      debugPrint("Error in _buildDataTable: $e");
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(15.0),
+          child: Text(
+            "Error building table: $e",
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
+                0.18, ColorManager.textColor),
+          ),
+        ),
+      );
+    }
   }
 
   // Table Header
@@ -551,12 +685,15 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
   // Building rows of the data table
   TableRow _buildTableRow(
       int index, PurchaseItem purchase, PurchaseProvider purchaseProvider) {
-    // debugPrint("voucher.amountTotal ${purchase.unitPrice}");
+    // Handle possible null values in the purchase item
+    final unitPrice = purchase.unitPrice ?? 0;
+    final quantity = purchase.quantity?.toInt() ?? 0;
+    
     return TableRow(
       children: [
         _buildTableCell((index + 1).toString()),
         _buildTableCell("Sales Executive"),
-        _buildTableCell("${purchase.unitPrice! * purchase.quantity!.toInt()}"),
+        _buildTableCell("${unitPrice * quantity}"),
         _buildActionCell(purchase, purchaseProvider)
       ],
     );
@@ -596,5 +733,29 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
         ),
       ),
     );
+  }
+
+  // Pagination
+  Widget _buildPagination(BuildContext context) {
+    debugPrint("_buildPagination called");
+    try {
+      debugPrint("Setting up pagination control");
+      final currentPage = Provider.of<PurchaseProvider>(context, listen: true).currentPage;
+      final totalPages = Provider.of<PurchaseProvider>(context, listen: true).totalPages;
+      
+      debugPrint("Pagination: currentPage=$currentPage, totalPages=$totalPages");
+      
+      return PaginationControl(
+        currentPage: currentPage,
+        totalPages: totalPages,
+        onPageChanged: (int page) {
+          debugPrint("Page changed to: $page");
+          searchPurchase(page);
+        },
+      );
+    } catch (e) {
+      debugPrint("Error setting up pagination: $e");
+      return const SizedBox.shrink(); // Empty widget if pagination fails
+    }
   }
 }

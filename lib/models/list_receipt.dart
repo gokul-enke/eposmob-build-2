@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 // Main Response Class
 class ReceiptResponse {
   String status;
@@ -11,9 +13,14 @@ class ReceiptResponse {
   });
 
   factory ReceiptResponse.fromJson(Map<String, dynamic> json) {
+    debugPrint("🔍 ReceiptResponse.fromJson called with: ${json.toString()}");
+    debugPrint("🔍 Status: ${json['status']}");
+    debugPrint("🔍 Message: ${json['message']}");
+    debugPrint("🔍 Data: ${json['data']}");
+    
     return ReceiptResponse(
-      status: json['status'],
-      message: json['message'],
+      status: json['status'] ?? '',
+      message: json['message'] ?? '',
       data: ReceiptData.fromJson(json['data']),
     );
   }
@@ -52,6 +59,7 @@ class ReceiptData {
   });
 
   factory ReceiptData.fromJson(Map<String, dynamic> json) {
+    debugPrint("🔍 ReceiptData.fromJson called with: ${json.toString()}");
     var list = json['data'] as List;
     List<Receipt> receiptsList =
         list.map((receipt) => Receipt.fromJson(receipt)).toList();
@@ -61,19 +69,19 @@ class ReceiptData {
         linksList.map((link) => PageLink.fromJson(link)).toList();
 
     return ReceiptData(
-      currentPage: json['current_page'],
+      currentPage: json['current_page'] ?? 1,
       data: receiptsList,
-      firstPageUrl: json['first_page_url'],
-      from: json['from'],
-      lastPage: json['last_page'],
-      lastPageUrl: json['last_page_url'],
+      firstPageUrl: json['first_page_url'] ?? '',
+      from: json['from'] ?? 1,
+      lastPage: json['last_page'] ?? 1,
+      lastPageUrl: json['last_page_url'] ?? '',
       links: links,
       nextPageUrl: json['next_page_url'],
-      path: json['path'],
-      perPage: json['per_page'],
+      path: json['path'] ?? '',
+      perPage: json['per_page'] ?? 20,
       prevPageUrl: json['prev_page_url'],
-      to: json['to'],
-      total: json['total'],
+      to: json['to'] ?? 0,
+      total: json['total'] ?? 0,
     );
   }
 }
@@ -111,20 +119,21 @@ class Receipt {
   });
 
   factory Receipt.fromJson(Map<String, dynamic> json) {
+    debugPrint("🔍 Receipt.fromJson called with: ${json.toString()}");
     return Receipt(
-      id: json['id'],
-      receiptNumber: json['receipt_number'],
-      amount: json['amount'],
-      receiptStatus: json['receipt_status'],
-      paymentReference: json['payment_reference'],
-      paymentMethod: json['payment_method'],
+      id: json['id'] ?? 0,
+      receiptNumber: json['receipt_number'] ?? '',
+      amount: json['amount'] ?? '0',
+      receiptStatus: json['receipt_status'] ?? '',
+      paymentReference: json['payment_reference'] ?? '',
+      paymentMethod: json['payment_method'] ?? '',
       userId: json['user_id'],
-      customerId: json['customer_id'],
-      companyId: json['company_id'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
-      company: Company.fromJson(json['company']),
-      customer: Customer.fromJson(json['customer']),
+      customerId: json['customer_id'] ?? 0,
+      companyId: json['company_id'] ?? 0,
+      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
+      company: Company.fromJson(json['company'] ?? {}),
+      customer: Customer.fromJson(json['customer'] ?? {}),
     );
   }
 }
@@ -154,15 +163,16 @@ class Company {
   });
 
   factory Company.fromJson(Map<String, dynamic> json) {
+    debugPrint("🔍 Company.fromJson called with: ${json.toString()}");
     return Company(
-      id: json['id'],
-      name: json['name'],
-      code: json['code'],
-      webUrl: json['web_url'],
-      verified: json['verified'],
-      status: json['status'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
+      code: json['code'] ?? '',
+      webUrl: json['web_url'] ?? '',
+      verified: json['verified'] ?? 0,
+      status: json['status'] ?? '',
+      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
       deletedAt: json['deleted_at'],
     );
   }
@@ -197,8 +207,9 @@ class Customer {
   });
 
   factory Customer.fromJson(Map<String, dynamic> json) {
+    debugPrint("🔍 Customer.fromJson called with: ${json.toString()}");
     return Customer(
-      id: json['id'],
+      id: json['id'] ?? 0,
       dob: json['dob'],
       gender: json['gender'],
       userId: json['user_id'],
@@ -206,9 +217,9 @@ class Customer {
       profileImage: json['profile_image'],
       storeId: json['store_id'],
       deletedAt: json['deleted_at'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
-      user: User.fromJson(json['user']),
+      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
+      user: User.fromJson(json['user'] ?? {}),
     );
   }
 }
@@ -238,16 +249,17 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    debugPrint("🔍 User.fromJson called with: ${json.toString()}");
     return User(
-      id: json['id'],
-      name: json['name'],
-      email: json['email'],
-      phone: json['phone'],
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? '',
       emailVerifiedAt: json['email_verified_at'],
-      phoneVerified: json['phone_verified'],
+      phoneVerified: json['phone_verified'] ?? 0,
       companyId: json['company_id'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 }
