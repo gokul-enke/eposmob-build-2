@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
@@ -54,9 +55,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     } catch (error) {
       // Handle error (e.g., show a snackbar)
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load graph data: $error')),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text('Failed to load graph data: $error')),
+      // );
     } finally {
       setState(() {
         isLoading = false;
@@ -95,28 +96,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    return isInitLoading
-        ? SizedBox(
-            height: size.height,
-            child: const Center(child: CircularProgressIndicator.adaptive()))
-        : Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(size),
-                  const SizedBox(height: 20),
-                  _buildTodaysSales(),
-                  _buildSalesCards(),
-                  const SizedBox(height: 10),
-                  _buildSalesOverview(),
-                  _buildQuickAccess(),
-                ],
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: isInitLoading
+          ? SizedBox(
+              width: size.width,
+              height: size.height,
+              child: const Center(child: CircularProgressIndicator.adaptive()))
+          : Container(
+              width: size.width,
+              height: size.height,
+              padding:
+                  const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildHeader(size),
+                    const SizedBox(height: 20),
+                    _buildTodaysSales(),
+                    _buildSalesCards(),
+                    const SizedBox(height: 10),
+                    // _buildSalesOverview(),
+                    // _buildQuickAccess(),
+                  ],
+                ),
               ),
             ),
-          );
+    );
   }
 
   Widget _buildHeader(Size size) {
@@ -136,20 +144,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           Row(
             children: [
-              CustomRoundButtonWithIcon(
-                title: "Download Report",
-                fct: () {},
-                fontSize: 12,
-                height: 50,
-                width: 180,
-                size: size,
-                icon: const Icon(
-                  Icons.download_outlined,
-                  size: 16,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 12),
+              // CustomRoundButtonWithIcon(
+              //   title: "Download Report",
+              //   fct: () {},
+              //   fontSize: 12,
+              //   height: 50,
+              //   width: 180,
+              //   size: size,
+              //   icon: const Icon(
+              //     Icons.download_outlined,
+              //     size: 16,
+              //     color: Colors.white,
+              //   ),
+              // ),
+              // const SizedBox(width: 12),
               BuildBoxShadowContainer(
                 padding: const EdgeInsets.all(12),
                 height: 50,
@@ -172,11 +180,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ColorManager.textColor,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    const Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 16,
-                    ),
+                    // const SizedBox(width: 8),
+                    // const Icon(
+                    //   Icons.keyboard_arrow_down,
+                    //   size: 16,
+                    // ),
                   ],
                 ),
               ),
@@ -191,13 +199,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          "Today's Sales",
-          style: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s15,
-            0.23,
-            ColorManager.textColor,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Text(
+            "Sales",
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s15,
+              0.23,
+              ColorManager.textColor,
+            ),
           ),
         ),
         BuildBoxShadowContainer(
@@ -214,19 +225,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     newValue?.toLowerCase() ?? "today"; // Update selected value
               });
             },
+            dropdownColor:
+                Colors.white, // Set dropdown menu background color to white
+            menuMaxHeight: 200,
+            elevation: 2,
+            padding: EdgeInsets.zero,
             items:
                 <String>['Today', 'Week', 'Month', 'Year'].map((String value) {
               return DropdownMenuItem<String>(
                 value: value.toLowerCase(), // Use lowercase for consistency
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: SizedBox(
+                  width: double.infinity,
                   child: Text(
                     value,
+                    textAlign: TextAlign.center,
                     style: buildCustomStyle(
-                      FontWeightManager.medium,
+                      FontWeightManager.bold,
                       FontSize.s12,
                       0.10,
-                      ColorManager.textColor,
+                      ColorManager.kPrimaryColor,
                     ),
                   ),
                 ),
@@ -277,39 +294,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Expanded(
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  shrinkWrap: true,
-                  children: [
-                    _buildSalesCard("Count", ColorManager.kPrimaryColor),
-                    _buildSalesCard("Amount", ColorManager.kMagentha),
-                    _buildSalesCard("Customers", ColorManager.kOrange),
-                  ],
+                child: Center(
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    shrinkWrap: true,
+                    children: [
+                      _buildSalesCard("Count", ColorManager.kPrimaryColor),
+                      _buildSalesCard("Amount", ColorManager.kMagentha),
+                      _buildSalesCard("Customers", ColorManager.kOrange),
+                      _buildSalesCard("Products", ColorManager.kBlue),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          height: 165,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  shrinkWrap: true,
-                  children: [
-                    _buildSalesCard("Products", ColorManager.kBlue),
-                    _buildSalesCard(
-                        "New Customers", ColorManager.kSuccessColor),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+        // Container(
+        //   padding: const EdgeInsets.symmetric(horizontal: 8),
+        //   height: 165,
+        //   child: Row(
+        //     mainAxisAlignment: MainAxisAlignment.start,
+        //     children: [
+        //       Expanded(
+        //         child: ListView(
+        //           scrollDirection: Axis.horizontal,
+        //           shrinkWrap: true,
+        //           children: [
+        //             _buildSalesCard("Products", ColorManager.kBlue),
+        //             _buildSalesCard(
+        //                 "New Customers", ColorManager.kSuccessColor),
+        //           ],
+        //         ),
+        //       ),
+        //     ],
+        //   ),
+        // ),
       ],
     );
   }
@@ -650,31 +670,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ColorManager.textColor,
                 ),
               ),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: ColorManager.kGreenWithOpacity,
-                    ),
-                    child: const Icon(
-                      Icons.arrow_forward,
-                      size: 15,
-                      color: ColorManager.kGreen,
-                    ),
-                  ),
-                  Text(
-                    "+ 0 %",
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s15,
-                      0.23,
-                      ColorManager.kGreen,
-                    ),
-                  ),
-                ],
-              ),
+              // Row(
+              //   children: [
+              //     Container(
+              //       padding: const EdgeInsets.all(3),
+              //       decoration: const BoxDecoration(
+              //         shape: BoxShape.circle,
+              //         color: ColorManager.kGreenWithOpacity,
+              //       ),
+              //       child: const Icon(
+              //         Icons.arrow_forward,
+              //         size: 15,
+              //         color: ColorManager.kGreen,
+              //       ),
+              //     ),
+              //     Text(
+              //       "+ 0 %",
+              //       style: buildCustomStyle(
+              //         FontWeightManager.medium,
+              //         FontSize.s15,
+              //         0.23,
+              //         ColorManager.kGreen,
+              //       ),
+              //     ),
+              //   ],
+              // ),
             ],
           ),
         ],
@@ -712,6 +732,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return periodStats.totalAmount?.toStringAsFixed(2) ?? "0";
       case "Customers":
         return periodStats.totalCustomers?.toString() ?? "0";
+      case "Products":
+        return Provider.of<LocalProductProvider>(context, listen: false)
+            .products
+            .length
+            .toString();
       default:
         return "0";
     }

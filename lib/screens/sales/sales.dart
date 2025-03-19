@@ -59,38 +59,94 @@ class _SalesScreenState extends State<SalesScreen> {
 
   Future<void> downloadFile(String orderNumber) async {
     try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
+      );
+
       // URL of the PDF file
-      final url = 'https://epos.enke.ae/download-invoice/$orderNumber';
+      final url = 'https://hypersouq.enke.in/download-invoice/$orderNumber';
+      debugPrint('Attempting to download from: $url');
 
       // Get the application directory
       final directory = await getApplicationDocumentsDirectory();
 
       // Create a file path for the PDF
-      final filePath = '${directory.path}/invoice.pdf';
+      final filePath = '${directory.path}/invoice_$orderNumber.pdf';
+
+      // Configure Dio with options
+      final dio = Dio();
+      dio.options.validateStatus =
+          (status) => status! < 500; // Don't throw on 4xx errors
 
       // Use Dio to download the file
-      final response = await Dio().download(url, filePath);
+      final response = await dio.download(url, filePath,
+          onReceiveProgress: (received, total) {
+        if (total != -1) {
+          debugPrint(
+              'Download progress: ${(received / total * 100).toStringAsFixed(0)}%');
+        }
+      });
+
+      // Close loading dialog
+      Navigator.of(context, rootNavigator: true).pop();
 
       if (response.statusCode == 200) {
         showScaffold(
           context: context,
-          message: 'File downloaded successfully',
+          message: 'Invoice downloaded successfully to ${directory.path}',
         );
-        // debugPrint('File downloaded successfully to $filePath');
-        // You can use a package like open_file to open the PDF if needed
+        debugPrint('File downloaded successfully to $filePath');
+      } else if (response.statusCode == 404) {
+        showScaffoldError(
+          context: context,
+          message:
+              'Invoice not found. The order may not have a generated invoice.',
+        );
+        debugPrint('Invoice not found: ${response.statusCode}');
       } else {
         showScaffoldError(
           context: context,
-          message: 'Failed to download file',
+          message: 'Failed to download invoice: Error ${response.statusCode}',
         );
-        // debugPrint('Failed to download file: ${response.statusCode}');
+        debugPrint('Failed to download file: ${response.statusCode}');
       }
     } catch (e) {
+      // Close loading dialog if still showing
+      if (Navigator.canPop(context)) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      // More detailed error message based on error type
+      String errorMessage = 'Error downloading file';
+      if (e is DioException) {
+        if (e.type == DioExceptionType.connectionTimeout) {
+          errorMessage =
+              'Connection timeout. Please check your internet connection.';
+        } else if (e.type == DioExceptionType.connectionError) {
+          errorMessage =
+              'Connection error. Please check your internet connection.';
+        } else if (e.response?.statusCode == 500) {
+          errorMessage =
+              'Server error. The invoice generation service may be unavailable.';
+        } else {
+          errorMessage = 'Download error: ${e.message}';
+        }
+      } else {
+        errorMessage = 'Error downloading file: ${e.toString()}';
+      }
+
       showScaffoldError(
         context: context,
-        message: 'Error downloading file',
+        message: errorMessage,
       );
-      // debugPrint('Error downloading file: $e');
+      debugPrint('Error downloading file: $e');
     }
   }
 
@@ -546,7 +602,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                   3: FlexColumnWidth(2),
                                   4: FlexColumnWidth(3),
                                   5: FlexColumnWidth(3),
-                                  6: FlexColumnWidth(4),
+                                  6: FlexColumnWidth(2),
                                 },
                                 border: const TableBorder.symmetric(
                                     outside: BorderSide(
@@ -1086,26 +1142,26 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                     .toString());
                                                               }
                                                             })),
-                                                    BuildBoxShadowContainer(
-                                                        margin: const EdgeInsets
-                                                            .only(
-                                                            left: 5, right: 5),
-                                                        color: ColorManager
-                                                            .kPrimaryColor
-                                                            .withOpacity(0.9),
-                                                        circleRadius: 5,
-                                                        child: IconButton(
-                                                          icon: const Icon(
-                                                            Icons.download,
-                                                            size: 18,
-                                                            color: Colors.white,
-                                                          ),
-                                                          onPressed: () async {
-                                                            await downloadFile(
-                                                                order.orderNumber ??
-                                                                    "0");
-                                                          },
-                                                        )),
+                                                    // BuildBoxShadowContainer(
+                                                    //     margin: const EdgeInsets
+                                                    //         .only(
+                                                    //         left: 5, right: 5),
+                                                    //     color: ColorManager
+                                                    //         .kPrimaryColor
+                                                    //         .withOpacity(0.9),
+                                                    //     circleRadius: 5,
+                                                    //     child: IconButton(
+                                                    //       icon: const Icon(
+                                                    //         Icons.download,
+                                                    //         size: 18,
+                                                    //         color: Colors.white,
+                                                    //       ),
+                                                    //       onPressed: () async {
+                                                    //         await downloadFile(
+                                                    //             order.orderNumber ??
+                                                    //                 "0");
+                                                    //       },
+                                                    //     )),
                                                   ],
                                                 ),
                                               ),

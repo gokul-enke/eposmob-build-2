@@ -295,16 +295,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 height: size.height * .07,
                                 width: size.width / 3,
                                 child: DropdownButtonFormField<Category>(
+                                  isExpanded: true,
                                   decoration: const InputDecoration(
-                                    border: InputBorder
-                                        .none, // Remove the underline
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
                                   ),
-                                  value:
-                                      categoryProvider.selectedCategoryIndex >=
-                                              0
-                                          ? categoryList![categoryProvider
-                                              .selectedCategoryIndex]
-                                          : null,
+                                  value: categoryProvider.selectedCategoryIndex >= 0
+                                      ? categoryList![categoryProvider.selectedCategoryIndex]
+                                      : null,
                                   hint: Text(
                                     'Select Category',
                                     style: buildCustomStyle(
@@ -313,43 +311,27 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                       0.27,
                                       ColorManager.textColor.withOpacity(.5),
                                     ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  items: categoryList!
-                                      .map((Category category) {
-                                        return DropdownMenuItem<Category>(
-                                            value: category,
-                                            child: category.categoryName ==
-                                                    "ALL"
-                                                ? Text(
-                                                    ' Please Select',
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager.medium,
-                                                      FontSize.s12,
-                                                      0.27,
-                                                      ColorManager.textColor
-                                                          .withOpacity(.5),
-                                                    ),
-                                                  )
-                                                : Text(
-                                                    category.categoryName ?? '',
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager.medium,
-                                                      FontSize.s12,
-                                                      0.27,
-                                                      ColorManager.textColor
-                                                          .withOpacity(.5),
-                                                    ),
-                                                  ));
-                                      })
-                                      .toSet()
-                                      .toList(),
-                                  onChanged:
-                                      (Category? selectedCategory) async {
+                                  items: categoryList!.map((Category category) {
+                                    return DropdownMenuItem<Category>(
+                                      value: category,
+                                      child: Text(
+                                        category.categoryName == "ALL" ? 'Please Select' : category.categoryName ?? '',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s12,
+                                          0.27,
+                                          ColorManager.textColor.withOpacity(.5),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    );
+                                  }).toSet().toList(),
+                                  onChanged: (Category? selectedCategory) async {
                                     if (selectedCategory != null) {
                                       setState(() {
-                                        selectedCategoryId = selectedCategory
-                                            .categoryId
-                                            .toString();
+                                        selectedCategoryId = selectedCategory.categoryId.toString();
                                       });
                                     }
                                   },

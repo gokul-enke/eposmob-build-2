@@ -174,9 +174,10 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                               height: size.height * .07,
                               width: size.width / 3,
                               child: DropdownButtonFormField<Category>(
+                                isExpanded: true,
                                 decoration: const InputDecoration(
-                                  border:
-                                      InputBorder.none, // Remove the underline
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.zero,
                                 ),
                                 value: categoryProvider.selectedCategoryIndex >=
                                         0
@@ -196,27 +197,18 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                                     .map((Category category) {
                                       return DropdownMenuItem<Category>(
                                           value: category,
-                                          child: category.categoryName == "ALL"
-                                              ? Text(
-                                                  ' Please Select',
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.27,
-                                                    ColorManager.textColor
-                                                        .withOpacity(.5),
-                                                  ),
-                                                )
-                                              : Text(
-                                                  category.categoryName ?? '',
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.27,
-                                                    ColorManager.textColor
-                                                        .withOpacity(.5),
-                                                  ),
-                                                ));
+                                          child: Text(
+                                            category.categoryName == "ALL"
+                                                ? 'Please Select'
+                                                : category.categoryName ?? '',
+                                            style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s12,
+                                              0.27,
+                                              ColorManager.textColor.withOpacity(.5),
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ));
                                     })
                                     .toSet()
                                     .toList(),
@@ -264,9 +256,10 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                                 height: size.height * .07,
                                 width: size.width / 3,
                                 child: DropdownButtonFormField<Category>(
+                                  isExpanded: true,
                                   decoration: const InputDecoration(
-                                    border: InputBorder
-                                        .none, // Remove the underline
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
                                   ),
                                   value:
                                       categoryProvider.selectedCategoryIndex >=
@@ -287,28 +280,18 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                                       .map((Category category) {
                                         return DropdownMenuItem<Category>(
                                             value: category,
-                                            child: category.categoryName ==
-                                                    "ALL"
-                                                ? Text(
-                                                    ' Please Select',
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager.medium,
-                                                      FontSize.s12,
-                                                      0.27,
-                                                      ColorManager.textColor
-                                                          .withOpacity(.5),
-                                                    ),
-                                                  )
-                                                : Text(
-                                                    category.categoryName ?? '',
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager.medium,
-                                                      FontSize.s12,
-                                                      0.27,
-                                                      ColorManager.textColor
-                                                          .withOpacity(.5),
-                                                    ),
-                                                  ));
+                                            child: Text(
+                                              category.categoryName == "ALL"
+                                                  ? 'Please Select'
+                                                  : category.categoryName ?? '',
+                                              style: buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.27,
+                                                ColorManager.textColor.withOpacity(.5),
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ));
                                       })
                                       .toSet()
                                       .toList(),
@@ -386,7 +369,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
             ColorManager.textColor,
           ),
         ),
-        Row(
+        const Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             // SizedBox(
@@ -421,15 +404,15 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
             //   ),
             // ),
             // const SizedBox(width: 10),
-            CustomRoundButton(
-              title: "Create New Category",
-              fct: () {
-                sideBarController.index.value = 16;
-              },
-              fontSize: 12,
-              height: 45,
-              width: 200,
-            ),
+            // CustomRoundButton(
+            //   title: "Create New Category",
+            //   fct: () {
+            //     sideBarController.index.value = 16;
+            //   },
+            //   fontSize: 12,
+            //   height: 45,
+            //   width: 200,
+            // ),
           ],
         ),
       ],

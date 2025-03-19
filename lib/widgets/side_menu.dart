@@ -208,16 +208,16 @@ class SideMenu extends StatelessWidget {
           //     selected: sideBarController.index.value == 46,
           //   ),
           // ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.homeIcon,
-              title: 'Kiosk',
-              onTap: () {
-                Get.to(() => const KioskScreen());
-              },
-              selected: sideBarController.index.value == 900,
-            ),
-          ),
+          // Obx(
+          //   () => DrawerListTile(
+          //     iconPath: ImageAssets.homeIcon,
+          //     title: 'Kiosk',
+          //     onTap: () {
+          //       Get.to(() => const KioskScreen());
+          //     },
+          //     selected: sideBarController.index.value == 900,
+          //   ),
+          // ),
 
           Obx(
             () => DrawerListTile(
@@ -310,29 +310,29 @@ class SideMenu extends StatelessWidget {
                     sideBarController.index.value == 33 ||
                     sideBarController.index.value == 35),
           ),
-          Obx(
-            () => DrawerListTileExpandableColumn(
-                onTapTitle1: () {
-                  sideBarController.index.value = 19;
-                },
-                onTapTitle2: () {
-                  sideBarController.index.value = 26;
-                },
-                listTitle1: "Purchase",
-                listTitle2: "Purchase Voucher",
-                iconPath: ImageAssets.cardIcon,
-                title: 'Purchase',
-                onTap: () async {
-                  sideBarController.index.value = 19;
-                  // debugPrint(" 'Purchase',${sideBarController.index.value}");
-                },
-                selected: sideBarController.index.value == 19 ||
-                    sideBarController.index.value == 29 ||
-                    sideBarController.index.value == 20 ||
-                    sideBarController.index.value == 26 ||
-                    sideBarController.index.value == 37 ||
-                    sideBarController.index.value == 36),
-          ),
+          // Obx(
+          //   () => DrawerListTileExpandableColumn(
+          //       onTapTitle1: () {
+          //         sideBarController.index.value = 19;
+          //       },
+          //       onTapTitle2: () {
+          //         sideBarController.index.value = 26;
+          //       },
+          //       listTitle1: "Purchase",
+          //       listTitle2: "Purchase Voucher",
+          //       iconPath: ImageAssets.cardIcon,
+          //       title: 'Purchase',
+          //       onTap: () async {
+          //         sideBarController.index.value = 19;
+          //         // debugPrint(" 'Purchase',${sideBarController.index.value}");
+          //       },
+          //       selected: sideBarController.index.value == 19 ||
+          //           sideBarController.index.value == 29 ||
+          //           sideBarController.index.value == 20 ||
+          //           sideBarController.index.value == 26 ||
+          //           sideBarController.index.value == 37 ||
+          //           sideBarController.index.value == 36),
+          // ),
           // Obx(
           //   () => DrawerListTile(
           //     iconPath: ImageAssets.cartIcon,
@@ -404,60 +404,60 @@ class SideMenu extends StatelessWidget {
                   sideBarController.index.value == 38,
             ),
           ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.cardIcon,
-              title: 'Loyalty Card',
-              onTap: () {
-                sideBarController.index.value = 6;
-                // debugPrint(" 'Loyality Card',${sideBarController.index.value}");
-              },
-              selected: sideBarController.index.value == 6,
-            ),
-          ),
-          Obx(
-            () => DrawerListTileExpandableColumn(
-                onTapTitle1: () {
-                  sideBarController.index.value = 39;
-                },
-                onTapTitle2: () {
-                  sideBarController.index.value = 40;
-                },
-                onTapTitle3: () {
-                  sideBarController.index.value = 41;
-                },
-                onTapTitle4: () {
-                  sideBarController.index.value = 42;
-                },
-                listTitle1: "Account Book",
-                listTitle2: "Product Sales Report",
-                listTitle3: "Sales Report",
-                listTitle4: "Supplier Sales Report",
-                icon: Icons.bar_chart,
-                title: 'Reports',
-                onTap: () {
-                  sideBarController.index.value = 39;
-                  // debugPrint(" 'Reports',${sideBarController.index.value}");
-                },
-                selected: sideBarController.index.value == 39 ||
-                    sideBarController.index.value == 40 ||
-                    sideBarController.index.value == 41 ||
-                    sideBarController.index.value == 42),
-          ),
-          Obx(
-            () => DrawerListTileExpandableColumn(
-                onTapTitle1: () {
-                  sideBarController.index.value = 43;
-                },
-                listTitle1: "Location Management",
-                icon: Icons.settings,
-                title: 'Settings',
-                onTap: () {
-                  sideBarController.index.value = 43;
-                  // debugPrint(" 'Settings',${sideBarController.index.value}");
-                },
-                selected: sideBarController.index.value == 43),
-          ),
+          // Obx(
+          //   () => DrawerListTile(
+          //     iconPath: ImageAssets.cardIcon,
+          //     title: 'Loyalty Card',
+          //     onTap: () {
+          //       sideBarController.index.value = 6;
+          //       // debugPrint(" 'Loyality Card',${sideBarController.index.value}");
+          //     },
+          //     selected: sideBarController.index.value == 6,
+          //   ),
+          // ),
+          // Obx(
+          //   () => DrawerListTileExpandableColumn(
+          //       onTapTitle1: () {
+          //         sideBarController.index.value = 39;
+          //       },
+          //       onTapTitle2: () {
+          //         sideBarController.index.value = 40;
+          //       },
+          //       onTapTitle3: () {
+          //         sideBarController.index.value = 41;
+          //       },
+          //       onTapTitle4: () {
+          //         sideBarController.index.value = 42;
+          //       },
+          //       listTitle1: "Account Book",
+          //       listTitle2: "Product Sales Report",
+          //       listTitle3: "Sales Report",
+          //       listTitle4: "Supplier Sales Report",
+          //       icon: Icons.bar_chart,
+          //       title: 'Reports',
+          //       onTap: () {
+          //         sideBarController.index.value = 39;
+          //         // debugPrint(" 'Reports',${sideBarController.index.value}");
+          //       },
+          //       selected: sideBarController.index.value == 39 ||
+          //           sideBarController.index.value == 40 ||
+          //           sideBarController.index.value == 41 ||
+          //           sideBarController.index.value == 42),
+          // ),
+          // Obx(
+          //   () => DrawerListTileExpandableColumn(
+          //       onTapTitle1: () {
+          //         sideBarController.index.value = 43;
+          //       },
+          //       listTitle1: "Location Management",
+          //       icon: Icons.settings,
+          //       title: 'Settings',
+          //       onTap: () {
+          //         sideBarController.index.value = 43;
+          //         // debugPrint(" 'Settings',${sideBarController.index.value}");
+          //       },
+          //       selected: sideBarController.index.value == 43),
+          // ),
           const SizedBox(
             height: 15,
           ),
@@ -472,30 +472,30 @@ class SideMenu extends StatelessWidget {
           const SizedBox(
             height: 15,
           ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.notificationIcon,
-              title: 'Notifications',
-              items: 3,
-              onTap: () {
-                sideBarController.index.value = 7;
-                // debugPrint(" 'Notifications',${sideBarController.index.value}");
-              },
-              selected: sideBarController.index.value == 7,
-            ),
-          ),
+          // Obx(
+          //   () => DrawerListTile(
+          //     iconPath: ImageAssets.notificationIcon,
+          //     title: 'Notifications',
+          //     items: 3,
+          //     onTap: () {
+          //       sideBarController.index.value = 7;
+          //       // debugPrint(" 'Notifications',${sideBarController.index.value}");
+          //     },
+          //     selected: sideBarController.index.value == 7,
+          //   ),
+          // ),
 
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.supportIcon,
-              title: 'Support',
-              onTap: () {
-                sideBarController.index.value = 8;
-                // debugPrint(" 'Support',${sideBarController.index.value}");
-              },
-              selected: sideBarController.index.value == 8,
-            ),
-          ),
+          // Obx(
+          //   () => DrawerListTile(
+          //     iconPath: ImageAssets.supportIcon,
+          //     title: 'Support',
+          //     onTap: () {
+          //       sideBarController.index.value = 8;
+          //       // debugPrint(" 'Support',${sideBarController.index.value}");
+          //     },
+          //     selected: sideBarController.index.value == 8,
+          //   ),
+          // ),
 
           DrawerListTile(
             iconPath: ImageAssets.logoutIcon,
@@ -616,7 +616,7 @@ class SideMenu extends StatelessWidget {
           ),
           Center(
             child: Text(
-              '2022 SmartPOP App',
+              '2025 SmartPOS App',
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
                   0.16, ColorManager.textColor),
             ),
