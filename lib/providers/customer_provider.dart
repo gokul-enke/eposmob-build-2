@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -39,7 +40,7 @@ class CustomerProvider extends ChangeNotifier {
     bool sortAscending = false,
     int page = 1,
   }) async {
-    // debugPrint("listCustomer");
+    debugPrint("listCustomer API called");
 
     final queryParameters = <String, String>{
       'page': page.toString(),
@@ -62,26 +63,43 @@ class CustomerProvider extends ChangeNotifier {
     final url = Uri.parse(APPUrl.customerListUrl)
         .replace(queryParameters: queryParameters);
     try {
+      debugPrint("Making API call to ${url.toString()}");
+      debugPrint("Using token: ${accessToken.substring(0, min(accessToken.length, 10))}...");
+      
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json'
       });
-      // debugPrint('inside ${response.body.toString()}');
+      debugPrint('API response status code: ${response.statusCode}');
+      debugPrint('API response body: ${response.body.substring(0, min(response.body.length, 100))}...');
+      
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         CustomerListModel customerListModel =
             CustomerListModel.fromJson(jsonData);
         customerList = customerListModel.data;
         notifyListeners();
-        // debugPrint(json.decode(response.body).toString());
         return jsonData;
-      } else if (response.statusCode > 400) {
-        throw const HttpException("Customers Not Found.Try Again!");
+      } else if (response.statusCode >= 400) {
+        debugPrint("API error in listCustomer: ${response.reasonPhrase}");
+        if (response.body.isNotEmpty) {
+          try {
+            final errorJson = json.decode(response.body);
+            debugPrint("Error response: $errorJson");
+            // Return the error response instead of throwing an exception
+            return {"status": "error", "message": "Customers Not Found.Try Again!", "errors": errorJson};
+          } catch (e) {
+            debugPrint("Could not parse error response: $e");
+          }
+        }
+        return {"status": "error", "message": "Customers Not Found.Try Again!"};
       } else {
-        throw const HttpException('Failed to load data ,Try Again Later!');
+        debugPrint("Unexpected status code: ${response.statusCode}");
+        return {"status": "error", "message": "Failed to load data, Try Again Later!"};
       }
     } catch (error) {
-      rethrow;
+      debugPrint("Exception in listCustomer: $error");
+      return {"status": "error", "message": error.toString()};
     } finally {}
   }
 
@@ -99,7 +117,7 @@ class CustomerProvider extends ChangeNotifier {
       String state,
       String country,
       BuildContext context) async {
-    // debugPrint("listCustomer");
+    debugPrint("addCustomer API called");
     final Map<String, dynamic> apiBodyData = {
       'phone': phone,
       'name': name,
@@ -111,27 +129,130 @@ class CustomerProvider extends ChangeNotifier {
       'state': state,
       'country': country,
     };
-    // debugPrint("add customer apiBodyData ${apiBodyData.toString()}");
+    debugPrint("API request body: ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.addCustomerUrl);
     try {
+      debugPrint("Making API call to ${url.toString()}");
       final response = await http.post(url,
           body: json.encode(apiBodyData),
           headers: {
             'Authorization': 'Bearer $accessToken',
             'Content-Type': 'application/json'
           });
-      // debugPrint('inside ${response.statusCode}');
+      debugPrint('API response status code: ${response.statusCode}');
+      debugPrint('API response body: ${response.body}');
+      
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // debugPrint(json.decode(response.body).toString());
+        debugPrint("Customer added successfully");
         return json.decode(response.body);
-      } else if (response.statusCode > 400) {
-        throw const HttpException("Customers Not Found.Try Again!");
       } else {
-        throw const HttpException('Failed to load data ,Try Again Later!');
+        debugPrint("API error: ${response.reasonPhrase}");
+        // Parse the error response
+        if (response.body.isNotEmpty) {
+          try {
+            final errorJson = json.decode(response.body);
+            debugPrint("Error response JSON: $errorJson");
+            // Return the error response instead of throwing an exception
+            return errorJson;
+          } catch (e) {
+            debugPrint("Could not parse error response: $e");
+            return {
+              "status": "error",
+              "message": "Failed to add customer: ${response.reasonPhrase}",
+              "errors": {"general": ["Error processing your request"]}
+            };
+          }
+        } else {
+          return {
+            "status": "error",
+            "message": "Failed to add customer: ${response.reasonPhrase}",
+            "errors": {"general": ["Error processing your request"]}
+          };
+        }
       }
     } catch (error) {
-      rethrow;
-    } finally {}
+      debugPrint("Exception in addCustomer: $error");
+      return {
+        "status": "error",
+        "message": "Failed to connect to server",
+        "errors": {"connection": [error.toString()]}
+      };
+    }
+  }
+
+  Future<dynamic> updateCustomer(
+      String accessToken,
+      String phone,
+      String name,
+      String email,
+      String address,
+      String pincode,
+      String city,
+      String state,
+      String country,
+      int customerId,
+      BuildContext context) async {
+    debugPrint("updateCustomer API called");
+    final Map<String, dynamic> apiBodyData = {
+      'phone': phone,
+      'name': name,
+      'email': email,
+      'address': address,
+      'pin_code': pincode,
+      'city': city,
+      'state': state,
+      'country': country,
+      'customer_id': customerId,
+    };
+    debugPrint("API request body: ${apiBodyData.toString()}");
+    final url = Uri.parse(APPUrl.updateCustomerUrl);
+    try {
+      debugPrint("Making API call to ${url.toString()}");
+      final response = await http.post(url,
+          body: json.encode(apiBodyData),
+          headers: {
+            'Authorization': 'Bearer $accessToken',
+            'Content-Type': 'application/json'
+          });
+      debugPrint('API response status code: ${response.statusCode}');
+      debugPrint('API response body: ${response.body}');
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        debugPrint("Customer updated successfully");
+        return json.decode(response.body);
+      } else {
+        debugPrint("API error: ${response.reasonPhrase}");
+        // Parse the error response
+        if (response.body.isNotEmpty) {
+          try {
+            final errorJson = json.decode(response.body);
+            debugPrint("Error response JSON: $errorJson");
+            // Return the error response instead of throwing an exception
+            return errorJson;
+          } catch (e) {
+            debugPrint("Could not parse error response: $e");
+            return {
+              "status": "error",
+              "message": "Failed to update customer: ${response.reasonPhrase}",
+              "errors": {"general": ["Error processing your request"]}
+            };
+          }
+        } else {
+          return {
+            "status": "error",
+            "message": "Failed to update customer: ${response.reasonPhrase}",
+            "errors": {"general": ["Error processing your request"]}
+          };
+        }
+      }
+    } catch (error) {
+      debugPrint("Exception in updateCustomer: $error");
+      return {
+        "status": "error",
+        "message": "Failed to connect to server",
+        "errors": {"connection": [error.toString()]}
+      };
+    }
   }
 
 // *********************** FIND CUSTOMER BY PHONE API ***************************************************

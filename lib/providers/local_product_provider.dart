@@ -440,6 +440,7 @@ class LocalProductProvider extends ChangeNotifier {
     num? quantity = 1,
     double? price,
     int? productId,
+    bool? isIncreamentUsingCompactQuantityControl = false,
   }) {
     debugPrint("addToCart");
     debugPrint(product.toString());
@@ -467,10 +468,12 @@ class LocalProductProvider extends ChangeNotifier {
                 ? double.tryParse(product.price!.price!)
                 : 0.0);
       }
-      
-      // Move this item to the beginning of the array
-      final cartItem = _cartItems.removeAt(index);
-      _cartItems.insert(0, cartItem);
+
+      if (!isIncreamentUsingCompactQuantityControl!) {
+        // Move this item to the beginning of the array
+        final cartItem = _cartItems.removeAt(index);
+        _cartItems.insert(0, cartItem);
+      }
     } else {
       // Safely handle null product price when adding new cart item
       double productPrice = 0.0;
@@ -481,11 +484,13 @@ class LocalProductProvider extends ChangeNotifier {
       }
 
       // Insert at the beginning of the array instead of appending
-      _cartItems.insert(0, LocalCartItem(
-        product: product!,
-        quantity: quantity!,
-        price: productPrice,
-      ));
+      _cartItems.insert(
+          0,
+          LocalCartItem(
+            product: product!,
+            quantity: quantity!,
+            price: productPrice,
+          ));
     }
     resetSelectedProduct();
     _saveCartToHive();

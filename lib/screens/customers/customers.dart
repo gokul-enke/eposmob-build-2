@@ -43,24 +43,34 @@ class _CustomersScreenState extends State<CustomersScreen> {
       });
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      // debugPrint("accessToken From AuthModel $accessToken");
-      CustomerProvider()
-          .listCustomer(
+      debugPrint("Getting customer details with token: ${accessToken?.substring(0, 10)}...");
+      
+      var response = await CustomerProvider().listCustomer(
         accessToken: accessToken ?? "",
         page: 1,
-      )
-          .then((response) {
-        if (response["status"] == "success") {
-          CustomerListModel customerListModel =
-              CustomerListModel.fromJson(response);
+      );
+      
+      debugPrint("Customer list API response: $response");
+      if (response["status"] == "success") {
+        CustomerListModel customerListModel =
+            CustomerListModel.fromJson(response);
 
-          setState(() {
-            customerList = customerListModel.data;
-          });
-        } else {}
-      });
+        setState(() {
+          customerList = customerListModel.data;
+        });
+        debugPrint("Successfully loaded ${customerList?.length ?? 0} customers");
+      } else {
+        debugPrint("Error loading customers: ${response["message"]}");
+        // Show the error message to the user
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response["message"] ?? "Failed to load customers")),
+        );
+      }
     } catch (error) {
-      // debugPrint(error.toString());
+      debugPrint("Exception in getCustomersDetails: $error");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $error")),
+      );
     } finally {
       setState(() {
         isInitLoading = false;
@@ -69,34 +79,47 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 
   void searchCustomer(page) async {
-    // debugPrint("category search called");
+    debugPrint("searchCustomer called with page: $page");
     try {
       setState(() {
         initLoading = true;
       });
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      // debugPrint("accessToken From AuthModel $accessToken");
-      CustomerProvider()
-          .listCustomer(
+      debugPrint("Searching customers with filters - Name: ${customerNameController.text}, Email: ${customerEmailController.text}, Phone: ${customerPhoneController.text}");
+      
+      var response = await CustomerProvider().listCustomer(
         accessToken: accessToken ?? "",
-        page: 1,
+        page: page,
         filterName: customerNameController.text,
         filterEmail: customerEmailController.text,
         filterPhone: customerPhoneController.text,
-      )
-          .then((response) {
-        if (response["status"] == "success") {
-          CustomerListModel customerListModel =
-              CustomerListModel.fromJson(response);
+      );
+      
+      debugPrint("Search response: $response");
+      if (response["status"] == "success") {
+        CustomerListModel customerListModel =
+            CustomerListModel.fromJson(response);
 
-          setState(() {
-            customerList = customerListModel.data;
-          });
-        }
-      });
+        setState(() {
+          customerList = customerListModel.data;
+        });
+        debugPrint("Search found ${customerList?.length ?? 0} customers");
+      } else {
+        debugPrint("Search error: ${response["message"]}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response["message"] ?? "Search failed")),
+        );
+        // If there are no customers found, set an empty list
+        setState(() {
+          customerList = [];
+        });
+      }
     } catch (error) {
-      // debugPrint(error.toString());
+      debugPrint("Exception in searchCustomer: $error");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $error")),
+      );
     } finally {
       setState(() {
         initLoading = false;

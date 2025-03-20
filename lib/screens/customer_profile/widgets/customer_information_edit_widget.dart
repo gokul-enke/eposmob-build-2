@@ -6,6 +6,10 @@ import '../../../components/build_title.dart';
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
 import '../../../resources/style_manager.dart';
+import 'package:provider/provider.dart';
+import '../../../providers/auth_model.dart';
+import '../../../providers/customer_provider.dart';
+import '../../../components/build_dialog_box.dart';
 
 class CustomerInformationEditWidget extends StatefulWidget {
   final Size size;
@@ -282,8 +286,121 @@ class _CustomerInformationEditWidgetState
                   ],
                 ),
                 const SizedBox(height: 10),
-                RoundButton(
-                    radius: 14, title: "Edit Profile", fct: () {}, size: size),
+                CustomRoundButton(
+                    radius: 14,
+                    title: "Edit Profile",
+                    fct: () async {
+                      debugPrint("Edit Profile button pressed");
+                      
+                      // Get the access token
+                      String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+                      if (accessToken == null) {
+                        debugPrint("No access token found");
+                        showScaffoldError(
+                          context: context,
+                          message: "Please login again"
+                        );
+                        return;
+                      }
+
+                      // Show loading indicator
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => const Center(child: CircularProgressIndicator.adaptive()),
+                      );
+
+                      try {
+                        // Get the customer provider
+                        final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
+                        
+                        // Get the customer ID
+                        int customerId = widget.customer?.id ?? 0;
+                        if (customerId == 0) {
+                          throw Exception("Invalid customer ID");
+                        }
+
+                        // Extract state and district from address if available
+                        String state = ""; // You'll need to implement state selection
+                        String city = ""; // You'll need to implement district selection
+                        String country = ""; // You'll need to implement country input
+                        String pincode = ""; // You'll need to implement pincode input
+                        String address = addressTextController.text;
+
+                        debugPrint("Preparing to update customer with ID: $customerId");
+                        debugPrint("Name: ${firstNameTextController.text} ${lastNameTextController.text}");
+                        debugPrint("Email: ${emailTextController.text}");
+                        debugPrint("Phone: ${phoneNumberController.text}");
+                        debugPrint("Address: $address");
+
+                        final response = await customerProvider.updateCustomer(
+                          accessToken,
+                          phoneNumberController.text,
+                          "${firstNameTextController.text} ${lastNameTextController.text}",
+                          emailTextController.text,
+                          address,
+                          pincode,
+                          city,
+                          state,
+                          country,
+                          customerId,
+                          context,
+                        );
+
+                        // Close loading dialog
+                        Navigator.pop(context);
+
+                        if (response["status"] == "success") {
+                          debugPrint("Customer updated successfully");
+                          showScaffold(
+                            context: context,
+                            message: response["message"] ?? "Customer updated successfully"
+                          );
+                          
+                          // Refresh customer data
+                          await customerProvider.fetchUserById(accessToken, customerId, context);
+                        } else {
+                          String errorMessage = "";
+                          
+                          if (response.containsKey("errors")) {
+                            Map<String, dynamic> errors = response["errors"];
+                            List<String> errorMessages = [];
+                            
+                            errors.forEach((field, messages) {
+                              if (messages is List) {
+                                for (var message in messages) {
+                                  errorMessages.add("$field: $message");
+                                }
+                              } else {
+                                errorMessages.add("$field: $messages");
+                              }
+                            });
+                            
+                            errorMessage = errorMessages.join("\n");
+                            debugPrint("Validation errors: $errorMessage");
+                          } else {
+                            errorMessage = response["message"] ?? "Failed to update customer";
+                            debugPrint("Error message: $errorMessage");
+                          }
+                          
+                          showScaffoldError(
+                            context: context,
+                            message: errorMessage
+                          );
+                        }
+                      } catch (error) {
+                        debugPrint("Exception occurred during update: $error");
+                        Navigator.pop(context); // Close loading dialog
+                        showScaffoldError(
+                          context: context,
+                          message: 'Error: $error'
+                        );
+                      }
+                    },
+                    height: 50,
+                    width: size.width * 0.19,
+                    fontSize: FontSize.s12,
+                ),
                 const SizedBox(height: 10),
               ],
             ),

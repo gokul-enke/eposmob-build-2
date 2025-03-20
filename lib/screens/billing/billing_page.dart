@@ -100,6 +100,7 @@ class _BillingPageState extends State<BillingPage> {
 
   bool _isDialogOpen = false;
   Timer? _debounce;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -129,6 +130,7 @@ class _BillingPageState extends State<BillingPage> {
     _focusNode.dispose();
     _barcodeNode.dispose();
     _debounce?.cancel();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -905,25 +907,51 @@ class _BillingPageState extends State<BillingPage> {
                         DataCell(Center(
                           child: SizedBox(
                             width: 80,
-                            child: TextField(
-                              textAlign: TextAlign.center,
-                              controller: TextEditingController(
-                                  text: item.price.toString()),
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                hintText: 'Unit Price',
-                                hintStyle: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              onSubmitted: (newPrice) {
-                                localProductProvider.updateItemPrice(
-                                  item.product.productId!,
-                                  double.tryParse(newPrice) ?? item.price!,
+                            child: Builder(
+                              builder: (context) {
+                                // Create a controller that we can actually reference
+                                final TextEditingController controller = 
+                                    TextEditingController(text: item.price.toString());
+                                final FocusNode focusNode = FocusNode();
+                                
+                                // Add listener to focus node to select all text when focused
+                                focusNode.addListener(() {
+                                  if (focusNode.hasFocus) {
+                                    controller.selection = TextSelection(
+                                      baseOffset: 0,
+                                      extentOffset: controller.text.length,
+                                    );
+                                  } else {
+                                    // When focus is lost, update the price
+                                    localProductProvider.updateItemPrice(
+                                      item.product.productId!,
+                                      double.tryParse(controller.text) ?? item.price!,
+                                    );
+                                  }
+                                });
+                                
+                                return TextField(
+                                  textAlign: TextAlign.center,
+                                  controller: controller,
+                                  focusNode: focusNode,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    hintText: 'Unit Price',
+                                    hintStyle: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  onSubmitted: (newPrice) {
+                                    // Update when user presses enter
+                                    localProductProvider.updateItemPrice(
+                                      item.product.productId!,
+                                      double.tryParse(newPrice) ?? item.price!,
+                                    );
+                                  },
                                 );
-                              },
+                              }
                             ),
                           ),
                         )),
@@ -1764,19 +1792,6 @@ class _BillingPageState extends State<BillingPage> {
     });
     try {
       Provider.of<LocalProductProvider>(context, listen: false).clearCart();
-      // String? accessToken =
-      //     Provider.of<AuthModel>(context, listen: false).token;
-      // Provider.of<CartProvider>(context, listen: false).clearCartAPI(
-      //   accessToken: accessToken ?? "",
-      //   customerId: Provider.of<AuthModel>(context, listen: false).userId!,
-      //   productId: Provider.of<CartProvider>(context, listen: false)
-      //           .cartData[0]
-      //           .cartItems![0]
-      //           .id ??
-      //       1,
-      //   remove: "true",
-      // );
-      // _refetchCartData();
       setState(() {
         iconColor = 0;
         coupenCodeTextController.clear();
@@ -1794,8 +1809,8 @@ class _BillingPageState extends State<BillingPage> {
         context: context,
         message: "Cart Cleared Succesfully",
       );
-      _focusTextField();
       resetAutocomplete();
+      _focusTextField();
     } catch (e) {
       debugPrint("Error clearing cart: $e");
       showScaffoldError(

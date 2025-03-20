@@ -311,6 +311,23 @@ class SideMenu extends StatelessWidget {
                     sideBarController.index.value == 33 ||
                     sideBarController.index.value == 35),
           ),
+          Obx(
+            () => DrawerListTile(
+              iconPath: ImageAssets.cardIcon,
+              title: 'Suppliers',
+              onTap: () {
+                sideBarController.index.value =
+                    52; // New index for supplier screen
+                // Load supplier data when selected
+                final supplierProvider =
+                    Provider.of<SupplierProvider>(context, listen: false);
+                String? accessToken =
+                    Provider.of<AuthModel>(context, listen: false).token;
+                supplierProvider.fetchSuppliers(accessToken: accessToken ?? '');
+              },
+              selected: sideBarController.index.value == 52,
+            ),
+          ),
           // Obx(
           //   () => DrawerListTileExpandableColumn(
           //       onTapTitle1: () {
@@ -404,23 +421,6 @@ class SideMenu extends StatelessWidget {
               selected: sideBarController.index.value == 5 ||
                   sideBarController.index.value == 9 ||
                   sideBarController.index.value == 38,
-            ),
-          ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.cardIcon,
-              title: 'Suppliers',
-              onTap: () {
-                sideBarController.index.value =
-                    52; // New index for supplier screen
-                // Load supplier data when selected
-                final supplierProvider =
-                    Provider.of<SupplierProvider>(context, listen: false);
-                String? accessToken =
-                    Provider.of<AuthModel>(context, listen: false).token;
-                supplierProvider.fetchSuppliers(accessToken: accessToken ?? '');
-              },
-              selected: sideBarController.index.value == 52,
             ),
           ),
           // Obx(

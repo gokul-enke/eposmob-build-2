@@ -112,6 +112,7 @@ class _CompactQuantityControlLocalState
         localProductProvider.addToCart(
           product: widget.product!,
           quantity: difference,
+          isIncreamentUsingCompactQuantityControl: true,
         ); // Pass the difference
       } else if (newQuantity < widget.quantity) {
         // Calculate difference for decrements too
@@ -146,27 +147,47 @@ class _CompactQuantityControlLocalState
         ),
         SizedBox(
           width: 40,
-          child: TextField(
-            controller: _controller,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              if (widget.productUnit == 'KG' || widget.productUnit == 'LT')
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
-              if (widget.productUnit != 'LT' && widget.productUnit != 'KG')
-                FilteringTextInputFormatter.digitsOnly,
-            ],
-            textAlign: TextAlign.center,
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(vertical: 5),
-            ),
-            onSubmitted: (value) {
-              num? newQuantity = num.tryParse(value);
-              if (newQuantity != null) {
-                _handleQuantityChange(newQuantity);
+          child: Builder(builder: (context) {
+            final FocusNode focusNode = FocusNode();
+
+            // Add listener to focus node to select all text when focused
+            focusNode.addListener(() {
+              if (focusNode.hasFocus) {
+                _controller.selection = TextSelection(
+                  baseOffset: 0,
+                  extentOffset: _controller.text.length,
+                );
+              } else {
+                num? newQuantity = num.tryParse(_controller.text);
+                if (newQuantity != null) {
+                  _handleQuantityChange(newQuantity);
+                }
               }
-            },
-          ),
+            });
+
+            return TextField(
+              controller: _controller,
+              keyboardType: TextInputType.number,
+              focusNode: focusNode,
+              inputFormatters: [
+                if (widget.productUnit == 'KG' || widget.productUnit == 'LT')
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+                if (widget.productUnit != 'LT' && widget.productUnit != 'KG')
+                  FilteringTextInputFormatter.digitsOnly,
+              ],
+              textAlign: TextAlign.center,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 5),
+              ),
+              onSubmitted: (value) {
+                num? newQuantity = num.tryParse(value);
+                if (newQuantity != null) {
+                  _handleQuantityChange(newQuantity);
+                }
+              },
+            );
+          }),
         ),
         InkWell(
           onTap: () => _handleQuantityChange(_currentQuantity + 1),

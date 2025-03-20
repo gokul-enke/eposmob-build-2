@@ -327,9 +327,10 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
       child: CustomRoundButton(
         title: "Submit",
         fct: () async {
-          // debugPrint("Add New Customer");
+          debugPrint("Submit button pressed - attempting to add new customer");
           if (_formKey.currentState!.validate()) {
             // Validate the form
+            debugPrint("Form validation passed");
             showDialog(
               context: context,
               barrierDismissible: false,
@@ -351,9 +352,14 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
                     orElse: () => const MapEntry("unknown", "Unknown District"),
                   )
                   .value;
+                  
+              debugPrint("Preparing API call with data:");
+              debugPrint("Phone: ${phoneNumberController.text.replaceAll("-", "")}");
+              debugPrint("Name: ${firstNameTextController.text} ${lastNameTextController.text}");
+              debugPrint("Email: ${emailTextController.text}");
+              debugPrint("State: $stateName, District: $districtName");
 
-              await CustomerProvider()
-                  .addCustomer(
+              final response = await CustomerProvider().addCustomer(
                 accessToken ?? "",
                 phoneNumberController.text.replaceAll("-", ""),
                 "1",
@@ -361,33 +367,70 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
                 emailTextController.text,
                 addressTextController.text,
                 pincodeTextController.text,
+                districtName, // Note: API expects district in city field
                 stateName,
-                districtName,
                 countryTextController.text,
                 context,
-              )
-                  .then((value) {
-                if (value["status"] == "success") {
-                  showScaffold(
-                      context: context, message: '${value["message"]}');
-                  Navigator.pop(context);
-                  _clearFields();
-                } else {
-                  Map<String, dynamic> errorResponse = value['errors'];
-                  debugPrint(
-                      errorResponse.values.map((e) => e.join('')).join('\n'));
-                  showScaffold(
-                      context: context,
-                      message: errorResponse.values
-                          .map((e) => e.join(''))
-                          .join('\n'));
-                  Navigator.pop(context);
-                }
-              });
-            } catch (error) {
-              // debugPrint("Error: $error");
+              );
+              
+              debugPrint("API response received: $response");
+              
+              // Close loading dialog
               Navigator.pop(context);
+              
+              if (response["status"] == "success") {
+                debugPrint("Customer added successfully: ${response["message"]}");
+                showScaffold(
+                  context: context, 
+                  message: response["message"] ?? "Customer added successfully"
+                );
+                _clearFields();
+              } else {
+                // Handle error case
+                String errorMessage = "";
+                
+                if (response.containsKey("errors")) {
+                  // Extract error messages from API response
+                  Map<String, dynamic> errors = response["errors"];
+                  List<String> errorMessages = [];
+                  
+                  errors.forEach((field, messages) {
+                    if (messages is List) {
+                      for (var message in messages) {
+                        errorMessages.add("$field: $message");
+                      }
+                    } else {
+                      errorMessages.add("$field: $messages");
+                    }
+                  });
+                  
+                  errorMessage = errorMessages.join("\n");
+                  debugPrint("Validation errors: $errorMessage");
+                } else {
+                  errorMessage = response["message"] ?? "Failed to add customer";
+                  debugPrint("Error message: $errorMessage");
+                }
+                
+                // Show error to user
+                showScaffoldError(
+                  context: context,
+                  message: errorMessage
+                );
+              }
+            } catch (error) {
+              debugPrint("Exception occurred during API call: $error");
+              Navigator.pop(context); // Close loading dialog
+              showScaffoldError(
+                context: context, 
+                message: 'Error: $error'
+              );
             }
+          } else {
+            debugPrint("Form validation failed");
+            showScaffoldError(
+              context: context,
+              message: "Please fill all required fields correctly"
+            );
           }
         },
         height: 50,

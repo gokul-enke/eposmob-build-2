@@ -378,33 +378,13 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                   ),
                   onPressed: () {
                     // View supplier details
-                    // This would be implemented in a future feature
                     final supplierProvider =
                         Provider.of<SupplierProvider>(context, listen: false);
                     supplierProvider.selectSupplier(supplier);
 
                     showDialog(
                       context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text(supplier.name),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("Email: ${supplier.email}"),
-                            Text("Phone: ${supplier.phone}"),
-                            Text("Address: ${supplier.address}"),
-                            Text(
-                                "Product Categories: ${supplier.productCategories}"),
-                          ],
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text("Close"),
-                          ),
-                        ],
-                      ),
+                      builder: (context) => SupplierDetailModal(supplier: supplier),
                     );
                   },
                 ),
@@ -432,6 +412,138 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class SupplierDetailModal extends StatelessWidget {
+  final Supplier supplier;
+
+  const SupplierDetailModal({Key? key, required this.supplier})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      elevation: 8,
+      backgroundColor: Colors.white,
+      child: Container(
+        constraints: BoxConstraints(
+            maxWidth: 600, maxHeight: MediaQuery.of(context).size.height * 0.8),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header with close button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Supplier Details",
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s20,
+                    0.30,
+                    ColorManager.textColor,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.black),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Supplier Information Card
+            Card(
+              elevation: 2,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.grey[300]!),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Supplier Information",
+                      style: buildCustomStyle(
+                        FontWeightManager.bold,
+                        FontSize.s16,
+                        0.30,
+                        ColorManager.textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildInfoRow("Name", supplier.name),
+                    const SizedBox(height: 8),
+                    _buildInfoRow("Email", supplier.email),
+                    const SizedBox(height: 8),
+                    _buildInfoRow("Phone", supplier.phone),
+                    const SizedBox(height: 8),
+                    _buildInfoRow("Address", supplier.address),
+                    const SizedBox(height: 8),
+                    _buildInfoRow("Product Categories", supplier.productCategories),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Action Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                CustomRoundButton(
+                  fct: () => Navigator.of(context).pop(),
+                  title: "Close",
+                  fontSize: FontSize.s12,
+                  height: MediaQuery.of(context).size.height * .05,
+                  width: 60,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 150,
+          child: Text(
+            "$label: ",
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.30,
+              Colors.black54,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s12,
+              0.30,
+              Colors.black,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

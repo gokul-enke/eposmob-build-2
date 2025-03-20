@@ -48,6 +48,7 @@ class APPUrl {
   static String dashBoardUrl = '$baseURL/api/v1/dashboard';
   static String dashBoardGraphUrl = '$baseURL/api/v1/dashboard/orders';
   static String addCustomerUrl = '$baseURL/api/v1/customer/add-customer';
+  static String updateCustomerUrl = '$baseURL/api/v1/customer/update-customer';
   // static String customerListUrl = '$baseURL/api/v1/sales/list-customer';
   static String customerListUrl = '$baseURL/api/v1/customer/customer-searchbar';
   static String userDetailsUrl = '$baseURL/api/v1/user/get-user-details';
