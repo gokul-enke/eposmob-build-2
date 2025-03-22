@@ -317,7 +317,15 @@ class LocalProductProvider extends ChangeNotifier {
 
   /// Gets paginated products based on current page
   List<GetProduct> get paginatedProducts {
+    if (_filteredProducts.isEmpty) {
+      return [];
+    }
+    
     final startIndex = (_currentPage - 1) * _itemsPerPage;
+    if (startIndex >= _filteredProducts.length) {
+      return [];
+    }
+    
     final endIndex = startIndex + _itemsPerPage;
     return _filteredProducts.sublist(
       startIndex,

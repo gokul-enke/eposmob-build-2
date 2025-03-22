@@ -35,17 +35,21 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
 
   void loadInitData() async {
     try {
-      setState(() {
-        initLoading = true;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = true;
+        });
+      }
       // String? accessToken =
       //     Provider.of<AuthModel>(context, listen: false).token;
 
       CategoryProvider categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
-      setState(() {
-        categoryList = categoryProvider.category;
-      });
+      if (mounted) {
+        setState(() {
+          categoryList = categoryProvider.category;
+        });
+      }
       await categoryProvider.searchAllCategory(
         // accessToken: accessToken ?? "",
         page: 1,
@@ -53,18 +57,22 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     } catch (error) {
       // debugPrint(error.toString());
     } finally {
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = false;
+        });
+      }
     }
   }
 
   void searchCategory(page) async {
     // debugPrint("category search called");
     try {
-      setState(() {
-        initLoading = true;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = true;
+        });
+      }
       CategoryProvider categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
 
@@ -76,9 +84,11 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     } catch (error) {
       // debugPrint(error.toString());
     } finally {
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = false;
+        });
+      }
     }
   }
 
@@ -89,10 +99,12 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
       // accessToken: accessToken ?? "",
       page: 1,
     );
-    setState(() {
-      selectedCategoryId = null; // Reset selected category ID
-      selectedParentCategoryId = null; // Reset selected parent category ID
-    });
+    if (mounted) {
+      setState(() {
+        selectedCategoryId = null; // Reset selected category ID
+        selectedParentCategoryId = null; // Reset selected parent category ID
+      });
+    }
   }
 
   Future<void> refreshData() async {
@@ -179,8 +191,13 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                                   border: InputBorder.none,
                                   contentPadding: EdgeInsets.zero,
                                 ),
-                                value: categoryProvider.selectedCategoryIndex >=
-                                        0
+                                value: (categoryProvider
+                                                .selectedCategoryIndex >=
+                                            0 &&
+                                        categoryList != null &&
+                                        categoryList!.isNotEmpty &&
+                                        categoryProvider.selectedCategoryIndex <
+                                            categoryList!.length)
                                     ? categoryList![
                                         categoryProvider.selectedCategoryIndex]
                                     : null,
@@ -193,25 +210,30 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                                     ColorManager.textColor.withOpacity(.5),
                                   ),
                                 ),
-                                items: categoryList!
-                                    .map((Category category) {
-                                      return DropdownMenuItem<Category>(
-                                          value: category,
-                                          child: Text(
-                                            category.categoryName == "ALL"
-                                                ? 'Please Select'
-                                                : category.categoryName ?? '',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.27,
-                                              ColorManager.textColor.withOpacity(.5),
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ));
-                                    })
-                                    .toSet()
-                                    .toList(),
+                                items: categoryList != null &&
+                                        categoryList!.isNotEmpty
+                                    ? categoryList!
+                                        .map((Category category) {
+                                          return DropdownMenuItem<Category>(
+                                              value: category,
+                                              child: Text(
+                                                category.categoryName == "ALL"
+                                                    ? 'Please Select'
+                                                    : category.categoryName ??
+                                                        '',
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.medium,
+                                                  FontSize.s12,
+                                                  0.27,
+                                                  ColorManager.textColor
+                                                      .withOpacity(.5),
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ));
+                                        })
+                                        .toSet()
+                                        .toList()
+                                    : [],
                                 onChanged: (Category? selectedCategory) async {
                                   if (selectedCategory != null) {
                                     setState(() {
@@ -262,8 +284,13 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                                     contentPadding: EdgeInsets.zero,
                                   ),
                                   value:
-                                      categoryProvider.selectedCategoryIndex >=
-                                              0
+                                      (categoryProvider.selectedCategoryIndex >=
+                                                  0 &&
+                                              categoryList != null &&
+                                              categoryList!.isNotEmpty &&
+                                              categoryProvider
+                                                      .selectedCategoryIndex <
+                                                  categoryList!.length)
                                           ? categoryList![categoryProvider
                                               .selectedCategoryIndex]
                                           : null,
@@ -276,25 +303,31 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                                       ColorManager.textColor.withOpacity(.5),
                                     ),
                                   ),
-                                  items: categoryList!
-                                      .map((Category category) {
-                                        return DropdownMenuItem<Category>(
-                                            value: category,
-                                            child: Text(
-                                              category.categoryName == "ALL"
-                                                  ? 'Please Select'
-                                                  : category.categoryName ?? '',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.27,
-                                                ColorManager.textColor.withOpacity(.5),
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ));
-                                      })
-                                      .toSet()
-                                      .toList(),
+                                  items: categoryList != null &&
+                                          categoryList!.isNotEmpty
+                                      ? categoryList!
+                                          .map((Category category) {
+                                            return DropdownMenuItem<Category>(
+                                                value: category,
+                                                child: Text(
+                                                  category.categoryName == "ALL"
+                                                      ? 'Please Select'
+                                                      : category.categoryName ??
+                                                          '',
+                                                  style: buildCustomStyle(
+                                                    FontWeightManager.medium,
+                                                    FontSize.s12,
+                                                    0.27,
+                                                    ColorManager.textColor
+                                                        .withOpacity(.5),
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ));
+                                          })
+                                          .toSet()
+                                          .toList()
+                                      : [],
                                   onChanged:
                                       (Category? selectedCategory) async {
                                     if (selectedCategory != null) {
@@ -339,12 +372,8 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                 ),
                 const SizedBox(height: 20),
                 Expanded(
-                  child: BuildBoxShadowContainer(
-                    circleRadius: 7,
-                    offsetValue: const Offset(1, 1),
-                    child: _buildCategoryTable(
-                        categoryProvider, sideBarController),
-                  ),
+                  child:
+                      _buildCategoryTable(categoryProvider, sideBarController),
                 ),
                 _buildPaginationControls(categoryProvider),
               ],
@@ -425,39 +454,69 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            child: Table(
-              border: const TableBorder.symmetric(
-                outside: BorderSide(
-                    color: ColorManager.tableBOrderColor, width: 0.3),
-                inside: BorderSide(
-                    color: ColorManager.tableBOrderColor, width: 0.8),
-              ),
-              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-              columnWidths: const {
-                0: FlexColumnWidth(1),
-                1: FlexColumnWidth(3),
-                2: FlexColumnWidth(3),
-                3: FlexColumnWidth(2),
-              },
-              children: [
-                _buildTableHeader(),
-                if (categoryProvider.searchCategory != null)
-                  ...categoryProvider.searchCategory!
-                      .skip(1)
-                      .toList()
-                      .asMap()
-                      .entries
-                      .map((entry) {
-                    Category category = entry.value;
-                    int index = entry.key;
-                    return _buildTableRow(
-                        category, index, sideBarController, categoryProvider);
-                  }).toList(),
-              ],
-            ),
+            child: categoryProvider.searchCategory!
+                    .skip(1)
+                    .toList()
+                    .asMap()
+                    .entries
+                    .isEmpty
+                ? BuildBoxShadowContainer(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(top: 20),
+                    circleRadius: 7,
+                    offsetValue: const Offset(1, 1),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 50.0),
+                      child: Center(
+                        child: Text(
+                          "No categories found",
+                          style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            FontSize.s16,
+                            0.18,
+                            Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : BuildBoxShadowContainer(
+                    circleRadius: 7,
+                    offsetValue: const Offset(1, 1),
+                    child: Table(
+                      border: const TableBorder.symmetric(
+                        outside: BorderSide(
+                            color: ColorManager.tableBOrderColor, width: 0.3),
+                        inside: BorderSide(
+                            color: ColorManager.tableBOrderColor, width: 0.8),
+                      ),
+                      defaultVerticalAlignment:
+                          TableCellVerticalAlignment.middle,
+                      columnWidths: const {
+                        0: FlexColumnWidth(1),
+                        1: FlexColumnWidth(3),
+                        2: FlexColumnWidth(3),
+                        3: FlexColumnWidth(2),
+                      },
+                      children: [
+                        _buildTableHeader(),
+                        ...categoryProvider.searchCategory!
+                            .skip(1)
+                            .toList()
+                            .asMap()
+                            .entries
+                            .map((entry) {
+                          Category category = entry.value;
+                          int index = entry.key;
+                          return _buildTableRow(category, index,
+                              sideBarController, categoryProvider);
+                        }).toList(),
+                      ],
+                    ),
+                  ),
           ),
         ),
-        // const SizedBox(height: 20),
       ],
     );
   }

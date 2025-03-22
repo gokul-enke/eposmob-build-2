@@ -93,19 +93,21 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
       categoryNameController.text = viewCategory?.name ?? '';
       categoryNameArabicController.text = viewCategory?.names?.ar ?? '';
       categoryNameHindiController.text = viewCategory?.names?.hi ?? '';
-      categorySlugController.text = viewCategory!.name!
-          .toLowerCase() // Convert to lowercase
-          .replaceAll(RegExp(r'\s+'), '-') // Replace spaces with hyphens
-          .replaceAll(RegExp(r'[^a-z0-9-]'),
-              ''); // Remove non-alphanumeric characters except hyphens
-      categoryIDController.text = viewCategory.id?.toString() ?? '';
-      imageFilePathController.text = viewCategory.categoryImage.toString();
-      iconFilePathController.text = viewCategory.categoryIcon.toString();
+      categorySlugController.text = viewCategory?.name != null 
+          ? viewCategory!.name!
+              .toLowerCase() // Convert to lowercase
+              .replaceAll(RegExp(r'\s+'), '-') // Replace spaces with hyphens
+              .replaceAll(RegExp(r'[^a-z0-9-]'),
+                  '') // Remove non-alphanumeric characters except hyphens
+          : '';
+      categoryIDController.text = viewCategory?.id?.toString() ?? '';
+      imageFilePathController.text = viewCategory?.categoryImage?.toString() ?? '';
+      iconFilePathController.text = viewCategory?.categoryIcon?.toString() ?? '';
       // selectedIconIndex = int.parse(viewCategory.categoryIcon!);
       // selectedImageIndex = int.parse(viewCategory.categoryImage!);
 
-      if (viewCategory.parentId != null) {
-        String parentCategory = viewCategory.parentId.toString();
+      if (viewCategory?.parentId != null) {
+        String parentCategory = viewCategory!.parentId.toString();
         categoryProvider.setParentCategory(parentCategory);
         int? categoryIndex = categoryProvider.category?.indexWhere(
             (category) => category.categoryId == viewCategory.parentId);

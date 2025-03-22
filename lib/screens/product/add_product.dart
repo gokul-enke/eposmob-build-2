@@ -158,7 +158,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
       child: RefreshIndicator(
         onRefresh: refreshData,
         child: Container(
-          margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
+          margin:
+              const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
@@ -174,7 +175,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
             children: [
               // Fixed Header Section
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 20.0, horizontal: 20.0),
                 child: Column(
                   children: [
                     Row(
@@ -266,50 +268,55 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                         border: InputBorder.none,
                                         contentPadding: EdgeInsets.zero,
                                       ),
-                                      value:
-                                          categoryProvider.selectedCategoryIndex >=
-                                                  0
-                                              ? categoryList![categoryProvider
-                                                  .selectedCategoryIndex]
-                                              : null,
+                                      value: categoryProvider
+                                                  .selectedCategoryIndex >=
+                                              0
+                                          ? (categoryList != null && categoryList.isNotEmpty && categoryProvider.selectedCategoryIndex < categoryList.length)
+                                              ? categoryList[categoryProvider.selectedCategoryIndex]
+                                              : null
+                                          : null,
                                       hint: Text(
                                         'Select Category',
                                         style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s12,
                                           0.27,
-                                          ColorManager.textColor.withOpacity(.5),
+                                          ColorManager.textColor
+                                              .withOpacity(.5),
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      items: categoryList!
-                                          .map((Category category) {
-                                            return DropdownMenuItem<Category>(
-                                              value: category,
-                                              child: Text(
-                                                category.categoryName == "ALL"
-                                                    ? 'Please Select'
-                                                    : category.categoryName ?? '',
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s12,
-                                                  0.27,
-                                                  ColorManager.textColor
-                                                      .withOpacity(.5),
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            );
-                                          })
-                                          .toSet()
-                                          .toList(),
+                                      items: categoryList != null && categoryList.isNotEmpty
+                                          ? categoryList
+                                              .map((Category category) {
+                                                return DropdownMenuItem<Category>(
+                                                  value: category,
+                                                  child: Text(
+                                                    category.categoryName == "ALL"
+                                                        ? 'Please Select'
+                                                        : category.categoryName ??
+                                                            '',
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s12,
+                                                      0.27,
+                                                      ColorManager.textColor
+                                                          .withOpacity(.5),
+                                                    ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                );
+                                              })
+                                              .toSet()
+                                              .toList()
+                                          : [],
                                       onChanged:
                                           (Category? selectedCategory) async {
                                         if (selectedCategory != null) {
                                           setState(() {
-                                            selectedCategoryId = selectedCategory
-                                                .categoryId
-                                                .toString();
+                                            selectedCategoryId =
+                                                selectedCategory.categoryId
+                                                    .toString();
                                           });
                                         }
                                       },
@@ -390,8 +397,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                     ],
                                   ),
                                   child: Padding(
-                                    padding:
-                                        const EdgeInsets.symmetric(horizontal: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12),
                                     child: DropdownButtonHideUnderline(
                                       child: DropdownButton<String>(
                                         value: selectedProperty,
@@ -401,10 +408,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                             FontWeightManager.medium,
                                             FontSize.s12,
                                             0.27,
-                                            ColorManager.textColor.withOpacity(.5),
+                                            ColorManager.textColor
+                                                .withOpacity(.5),
                                           ),
                                         ),
-                                        items: propertyList.map((String property) {
+                                        items:
+                                            propertyList.map((String property) {
                                           return DropdownMenuItem<String>(
                                             value: property,
                                             child: Text(
@@ -412,8 +421,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                               style: TextStyle(
                                                 fontWeight: FontWeight.w500,
                                                 fontSize: 12,
-                                                color:
-                                                    Colors.black.withOpacity(0.5),
+                                                color: Colors.black
+                                                    .withOpacity(0.5),
                                               ),
                                             ),
                                           );
@@ -462,8 +471,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                     padding: const EdgeInsets.only(left: 15),
                                     height: size.height * .07,
                                     width: size.width / 4.5,
-                                    child:
-                                        DropdownButtonFormField<GetStoreModelData>(
+                                    child: DropdownButtonFormField<
+                                        GetStoreModelData>(
                                       decoration: const InputDecoration(
                                         border: InputBorder
                                             .none, // Remove the underline
@@ -475,24 +484,28 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                           FontWeightManager.medium,
                                           FontSize.s12,
                                           0.27,
-                                          ColorManager.textColor.withOpacity(.5),
+                                          ColorManager.textColor
+                                              .withOpacity(.5),
                                         ),
                                       ),
-                                      items:
-                                          storeList!.map((GetStoreModelData store) {
-                                        return DropdownMenuItem<GetStoreModelData>(
-                                            value: store,
-                                            child: Text(
-                                              store.name ?? '',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.27,
-                                                ColorManager.textColor
-                                                    .withOpacity(.5),
-                                              ),
-                                            ));
-                                      }).toList(),
+                                      items: storeList != null && storeList.isNotEmpty
+                                          ? storeList
+                                              .map((GetStoreModelData store) {
+                                                return DropdownMenuItem<
+                                                        GetStoreModelData>(
+                                                    value: store,
+                                                    child: Text(
+                                                      store.name ?? '',
+                                                      style: buildCustomStyle(
+                                                        FontWeightManager.medium,
+                                                        FontSize.s12,
+                                                        0.27,
+                                                        ColorManager.textColor
+                                                            .withOpacity(.5),
+                                                      ),
+                                                    ));
+                                              }).toList()
+                                          : [],
                                       onChanged:
                                           (GetStoreModelData? storeModelData) {
                                         if (storeModelData != null) {
@@ -553,25 +566,28 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                           FontWeightManager.medium,
                                           FontSize.s12,
                                           0.27,
-                                          ColorManager.textColor.withOpacity(.5),
+                                          ColorManager.textColor
+                                              .withOpacity(.5),
                                         ),
                                       ),
-                                      items: supplierList!
-                                          .map((GetSuppliersModelData supplier) {
-                                        return DropdownMenuItem<
-                                                GetSuppliersModelData>(
-                                            value: supplier,
-                                            child: Text(
-                                              supplier.name ?? '',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.27,
-                                                ColorManager.textColor
-                                                    .withOpacity(.5),
-                                              ),
-                                            ));
-                                      }).toList(),
+                                      items: supplierList != null && supplierList.isNotEmpty
+                                          ? supplierList.map(
+                                              (GetSuppliersModelData supplier) {
+                                                return DropdownMenuItem<
+                                                        GetSuppliersModelData>(
+                                                    value: supplier,
+                                                    child: Text(
+                                                      supplier.name ?? '',
+                                                      style: buildCustomStyle(
+                                                        FontWeightManager.medium,
+                                                        FontSize.s12,
+                                                        0.27,
+                                                        ColorManager.textColor
+                                                            .withOpacity(.5),
+                                                      ),
+                                                    ));
+                                              }).toList()
+                                          : [],
                                       onChanged: (GetSuppliersModelData?
                                           suppliersModelData) {
                                         debugPrint(
@@ -635,250 +651,308 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 child: SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: BuildBoxShadowContainer(
-                      margin: const EdgeInsets.only(top: 20),
-                      circleRadius: 7,
-                      offsetValue: const Offset(1, 1),
-                      child: Consumer<LocalProductProvider>(
-                        builder: (context, productProvider, child) {
-                          List<GetProduct>? productList = productProvider.paginatedProducts;
-                          return Table(
-                            columnWidths: const {
-                              0: FractionColumnWidth(0.1),
-                              1: FractionColumnWidth(0.25),
-                              2: FractionColumnWidth(0.2),
-                              3: FractionColumnWidth(0.25),
-                              4: FractionColumnWidth(0.1),
-                            },
-                            border: const TableBorder.symmetric(
-                                outside: BorderSide(
-                                    color: ColorManager.tableBOrderColor,
-                                    width: 0.3),
-                                inside: BorderSide(
-                                    color: ColorManager.tableBOrderColor,
-                                    width: 0.8)),
-                            defaultVerticalAlignment:
-                                TableCellVerticalAlignment.middle,
-                            children: [
-                              TableRow(
-                                  decoration: const BoxDecoration(
-                                      color: ColorManager.tableBGColor),
-                                  children: [
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                              child: Text(
-                                            "No",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.18,
-                                              ColorManager.kPrimaryColor,
-                                            ),
-                                          )),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                              child: Text(
-                                            "Product Name",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.18,
-                                              ColorManager.kPrimaryColor,
-                                            ),
-                                          )),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                              child: Text(
-                                            "Category Name",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.18,
-                                              ColorManager.kPrimaryColor,
-                                            ),
-                                          )),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                              child: Text(
-                                            "Slug",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.18,
-                                              ColorManager.kPrimaryColor,
-                                            ),
-                                          )),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                              child: Text(
-                                            "Action",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.18,
-                                              ColorManager.kPrimaryColor,
-                                            ),
-                                          )),
-                                        )),
-                                  ]),
+                    child: Consumer<LocalProductProvider>(
+                      builder: (context, productProvider, child) {
+                        List<GetProduct> productList =
+                            productProvider.paginatedProducts;
 
-                              // Map your order data to table rows here
-                              ...productList!.asMap().entries.map((entry) {
-                                int index = entry.key; // This is the index
-                                var products = entry.value; // This is the product
-                                // Assuming each product has a list of categories and you want the name of the first category
-                                String categoryName = products.category != null
-                                    ? products.category!.name ??
-                                        'Unknown' // Directly access the name property
-                                    : 'No Category';
-
-                                return TableRow(
-                                  children: [
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                            child: Text(
-                                              "${index + 1}",
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s9,
-                                                0.13,
-                                                Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                            child: Text(
-                                              "${products.productName}",
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s9,
-                                                0.13,
-                                                Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                            child: Text(
-                                              categoryName,
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s9,
-                                                0.13,
-                                                Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                            child: Text(
-                                              "${products.productSlug}",
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s9,
-                                                0.13,
-                                                Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                            child: Row(
-                                              children: [
-                                                BuildBoxShadowContainer(
-                                                    margin: const EdgeInsets.only(
-                                                        left: 5, right: 5),
-                                                    circleRadius: 5,
-                                                    child: IconButton(
-                                                      icon: Icon(
-                                                        Icons.visibility,
-                                                        size: 18,
-                                                        color: ColorManager
-                                                            .kPrimaryColor
-                                                            .withOpacity(0.9),
-                                                      ),
-                                                      onPressed: () {
-                                                        productProvider
-                                                            .callProductDetails(
-                                                                products.productId ??
-                                                                    1);
-                                                        sideBarController
-                                                            .index.value = 28;
-                                                      },
-                                                    )),
-                                              ],
-                                            ),
-                                          ),
-                                        )),
-                                  ],
-                                );
-                              }).toList(),
-                            ],
+                        if (productList.isEmpty) {
+                          return BuildBoxShadowContainer(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(top: 20),
+                            circleRadius: 7,
+                            offsetValue: const Offset(1, 1),
+                            child: Container(
+                              width: double.infinity,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 50.0),
+                              child: Center(
+                                child: Text(
+                                  "No products found",
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s16,
+                                    0.18,
+                                    Colors.black,
+                                  ),
+                                ),
+                              ),
+                            ),
                           );
-                        },
-                      ),
+                        }
+
+                        return Column(
+                          children: [
+                            BuildBoxShadowContainer(
+                              margin: const EdgeInsets.symmetric(horizontal: 10),
+                              width: double.infinity,
+                              circleRadius: 7,
+                              offsetValue: const Offset(1, 1),
+                              child: Table(
+                                columnWidths: const {
+                                  0: FractionColumnWidth(0.1),
+                                  1: FractionColumnWidth(0.25),
+                                  2: FractionColumnWidth(0.2),
+                                  3: FractionColumnWidth(0.25),
+                                  4: FractionColumnWidth(0.1),
+                                },
+                                border: const TableBorder.symmetric(
+                                    outside: BorderSide(
+                                        color: ColorManager.tableBOrderColor,
+                                        width: 0.3),
+                                    inside: BorderSide(
+                                        color: ColorManager.tableBOrderColor,
+                                        width: 0.8)),
+                                defaultVerticalAlignment:
+                                    TableCellVerticalAlignment.middle,
+                                children: [
+                                  TableRow(
+                                      decoration: const BoxDecoration(
+                                          color: ColorManager.tableBGColor),
+                                      children: [
+                                        TableCell(
+                                            verticalAlignment:
+                                                TableCellVerticalAlignment
+                                                    .middle,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(15.0),
+                                              child: Center(
+                                                  child: Text(
+                                                "No",
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.medium,
+                                                  FontSize.s12,
+                                                  0.18,
+                                                  ColorManager.kPrimaryColor,
+                                                ),
+                                              )),
+                                            )),
+                                        TableCell(
+                                            verticalAlignment:
+                                                TableCellVerticalAlignment
+                                                    .middle,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(15.0),
+                                              child: Center(
+                                                  child: Text(
+                                                "Product Name",
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.medium,
+                                                  FontSize.s12,
+                                                  0.18,
+                                                  ColorManager.kPrimaryColor,
+                                                ),
+                                              )),
+                                            )),
+                                        TableCell(
+                                            verticalAlignment:
+                                                TableCellVerticalAlignment
+                                                    .middle,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(15.0),
+                                              child: Center(
+                                                  child: Text(
+                                                "Category Name",
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.medium,
+                                                  FontSize.s12,
+                                                  0.18,
+                                                  ColorManager.kPrimaryColor,
+                                                ),
+                                              )),
+                                            )),
+                                        TableCell(
+                                            verticalAlignment:
+                                                TableCellVerticalAlignment
+                                                    .middle,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(15.0),
+                                              child: Center(
+                                                  child: Text(
+                                                "Slug",
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.medium,
+                                                  FontSize.s12,
+                                                  0.18,
+                                                  ColorManager.kPrimaryColor,
+                                                ),
+                                              )),
+                                            )),
+                                        TableCell(
+                                            verticalAlignment:
+                                                TableCellVerticalAlignment
+                                                    .middle,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(15.0),
+                                              child: Center(
+                                                  child: Text(
+                                                "Action",
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.medium,
+                                                  FontSize.s12,
+                                                  0.18,
+                                                  ColorManager.kPrimaryColor,
+                                                ),
+                                              )),
+                                            )),
+                                      ]),
+
+                                  // Map your order data to table rows here
+                                  ...productList.asMap().entries.map((entry) {
+                                    int index = entry.key; // This is the index
+                                    var products =
+                                        entry.value; // This is the product
+                                    // Assuming each product has a list of categories and you want the name of the first category
+                                    String categoryName = products.category !=
+                                            null
+                                        ? products.category!.name ??
+                                            'Unknown' // Directly access the name property
+                                        : 'No Category';
+
+                                    return TableRow(
+                                      children: [
+                                        TableCell(
+                                            verticalAlignment:
+                                                TableCellVerticalAlignment
+                                                    .middle,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(15.0),
+                                              child: Center(
+                                                child: Text(
+                                                  "${index + 1}",
+                                                  style: buildCustomStyle(
+                                                    FontWeightManager.medium,
+                                                    FontSize.s9,
+                                                    0.13,
+                                                    Colors.black,
+                                                  ),
+                                                ),
+                                              ),
+                                            )),
+                                        TableCell(
+                                            verticalAlignment:
+                                                TableCellVerticalAlignment
+                                                    .middle,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(15.0),
+                                              child: Center(
+                                                child: Text(
+                                                  "${products.productName}",
+                                                  style: buildCustomStyle(
+                                                    FontWeightManager.medium,
+                                                    FontSize.s9,
+                                                    0.13,
+                                                    Colors.black,
+                                                  ),
+                                                ),
+                                              ),
+                                            )),
+                                        TableCell(
+                                            verticalAlignment:
+                                                TableCellVerticalAlignment
+                                                    .middle,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(15.0),
+                                              child: Center(
+                                                child: Text(
+                                                  categoryName,
+                                                  style: buildCustomStyle(
+                                                    FontWeightManager.medium,
+                                                    FontSize.s9,
+                                                    0.13,
+                                                    Colors.black,
+                                                  ),
+                                                ),
+                                              ),
+                                            )),
+                                        TableCell(
+                                            verticalAlignment:
+                                                TableCellVerticalAlignment
+                                                    .middle,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(15.0),
+                                              child: Center(
+                                                child: Text(
+                                                  "${products.productSlug}",
+                                                  style: buildCustomStyle(
+                                                    FontWeightManager.medium,
+                                                    FontSize.s9,
+                                                    0.13,
+                                                    Colors.black,
+                                                  ),
+                                                ),
+                                              ),
+                                            )),
+                                        TableCell(
+                                            verticalAlignment:
+                                                TableCellVerticalAlignment
+                                                    .middle,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(15.0),
+                                              child: Center(
+                                                child: Row(
+                                                  children: [
+                                                    BuildBoxShadowContainer(
+                                                        margin: const EdgeInsets
+                                                            .only(
+                                                            left: 5, right: 5),
+                                                        circleRadius: 5,
+                                                        child: IconButton(
+                                                          icon: Icon(
+                                                            Icons.visibility,
+                                                            size: 18,
+                                                            color: ColorManager
+                                                                .kPrimaryColor
+                                                                .withOpacity(
+                                                                    0.9),
+                                                          ),
+                                                          onPressed: () {
+                                                            productProvider
+                                                                .callProductDetails(
+                                                                    products.productId ??
+                                                                        1);
+                                                            sideBarController
+                                                                .index
+                                                                .value = 28;
+                                                          },
+                                                        )),
+                                                  ],
+                                                ),
+                                              ),
+                                            )),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ],
+                              ),
+                            ),
+                            // Pagination Control (only shown when there are products)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 20.0),
+                              child: PaginationControl(
+                                currentPage: productProvider.currentPage,
+                                totalPages: productProvider.totalPages,
+                                onPageChanged: (int page) {
+                                  searchProducts(page);
+                                },
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
-                ),
-              ),
-              // Fixed Pagination Section
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-                child: PaginationControl(
-                  currentPage: localProductProvider.currentPage,
-                  totalPages: localProductProvider.totalPages,
-                  onPageChanged: (int page) {
-                    searchProducts(page);
-                  },
                 ),
               ),
             ],

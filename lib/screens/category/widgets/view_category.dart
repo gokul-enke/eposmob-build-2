@@ -134,10 +134,10 @@ class ViewCategoryWidget extends StatelessWidget {
                                   circleRadius: 5,
                                   height: 100,
                                   width: 150,
-                                  child: Image.network(
-                                    viewCategory!.categoryImageFullPath!,
+                                  child: viewCategory != null ? Image.network(
+                                    viewCategory.categoryImageFullPath ?? 'https://via.placeholder.com/150',
                                     fit: BoxFit.cover,
-                                  )),
+                                  ) : const Center(child: Text('No image available'))),
                             ],
                           ),
                         ),
@@ -151,10 +151,10 @@ class ViewCategoryWidget extends StatelessWidget {
                                   circleRadius: 5,
                                   height: 100,
                                   width: 150,
-                                  child: Image.network(
-                                    viewCategory.categoryIconFullPath!,
+                                  child: viewCategory != null ? Image.network(
+                                    viewCategory.categoryIconFullPath ?? 'https://via.placeholder.com/150',
                                     fit: BoxFit.cover,
-                                  )),
+                                  ) : const Center(child: Text('No icon available'))),
                             ],
                           ),
                         ),
