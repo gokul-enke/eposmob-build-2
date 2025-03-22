@@ -56,6 +56,19 @@ class _BillingNewPageState extends State<BillingNewPage> {
   GlobalKey _autocompletePhoneKey = GlobalKey();
   GlobalKey _autocompleteProductKey = GlobalKey();
 
+  // Add a variable to track the currently focused text controller
+  TextEditingController? _focusedTextController;
+
+  // Add focus nodes for all controllers
+  final FocusNode _mobileNumberFocusNode = FocusNode();
+  final FocusNode _coupenCodeFocusNode = FocusNode();
+  final FocusNode _transactionNumberFocusNode = FocusNode();
+  final FocusNode _paidAmountFocusNode = FocusNode();
+  final FocusNode _commentFocusNode = FocusNode();
+  final FocusNode _carNumberFocusNode = FocusNode();
+  final FocusNode _quantityFocusNode = FocusNode();
+  final FocusNode _unitPriceFocusNode = FocusNode();
+
   String? mobileNumberText = "";
   String? salesExecutivemobileNumberText = "";
   int? selectedCustomerID;
@@ -108,6 +121,69 @@ class _BillingNewPageState extends State<BillingNewPage> {
     deliveryMethod = "Store Takeaway";
     iconColor = 1;
     _fetchCustomers();
+
+    // Set up focus listeners for all text fields to track the focused controller
+    _coupenCodeFocusNode.addListener(() {
+      if (_coupenCodeFocusNode.hasFocus) {
+        _focusedTextController = coupenCodeTextController;
+      }
+    });
+
+    _mobileNumberFocusNode.addListener(() {
+      if (_mobileNumberFocusNode.hasFocus) {
+        _focusedTextController = mobileNumberTextController;
+      }
+    });
+
+    _transactionNumberFocusNode.addListener(() {
+      if (_transactionNumberFocusNode.hasFocus) {
+        _focusedTextController = _transactionNumberController;
+      }
+    });
+
+    _paidAmountFocusNode.addListener(() {
+      if (_paidAmountFocusNode.hasFocus) {
+        _focusedTextController = _paidAmountController;
+      }
+    });
+
+    _commentFocusNode.addListener(() {
+      if (_commentFocusNode.hasFocus) {
+        _focusedTextController = _commentController;
+      }
+    });
+
+    _carNumberFocusNode.addListener(() {
+      if (_carNumberFocusNode.hasFocus) {
+        _focusedTextController = _carNumberController;
+      }
+    });
+
+    _quantityFocusNode.addListener(() {
+      if (_quantityFocusNode.hasFocus) {
+        quantityController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: quantityController.text.length,
+        );
+        _focusedTextController = quantityController;
+      }
+    });
+
+    _unitPriceFocusNode.addListener(() {
+      if (_unitPriceFocusNode.hasFocus) {
+        unitPriceController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: unitPriceController.text.length,
+        );
+        _focusedTextController = unitPriceController;
+      }
+    });
+
+    _barcodeNode.addListener(() {
+      if (_barcodeNode.hasFocus) {
+        _focusedTextController = barcodeController;
+      }
+    });
   }
 
   @override
@@ -122,6 +198,17 @@ class _BillingNewPageState extends State<BillingNewPage> {
     selectedProductIdController.dispose();
     _focusNode.dispose();
     _barcodeNode.dispose();
+
+    // Dispose all the focus nodes
+    _mobileNumberFocusNode.dispose();
+    _coupenCodeFocusNode.dispose();
+    _transactionNumberFocusNode.dispose();
+    _paidAmountFocusNode.dispose();
+    _commentFocusNode.dispose();
+    _carNumberFocusNode.dispose();
+    _quantityFocusNode.dispose();
+    _unitPriceFocusNode.dispose();
+
     _debounce?.cancel();
     _debounceTimer?.cancel();
     super.dispose();
@@ -334,7 +421,6 @@ class _BillingNewPageState extends State<BillingNewPage> {
                             const SizedBox(height: 5),
                             // _buildMobileNumberInput(size),
                             // const SizedBox(height: 5),
-                            // _buildCouponInput(),
                             const SizedBox(height: 10),
                             // _buildPaymentSummary(),
                             Row(
@@ -376,6 +462,9 @@ class _BillingNewPageState extends State<BillingNewPage> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       _buildCouponInput(),
+                                      // Add number pad below the coupon input
+                                      const SizedBox(height: 15),
+                                      _buildNumberPad(),
                                     ],
                                   ),
                                 )),
@@ -655,6 +744,7 @@ class _BillingNewPageState extends State<BillingNewPage> {
                 flex: 1,
                 child: buildColumnWidgetForTextFields(
                   controller: quantityController,
+                  focusNode: _quantityFocusNode,
                   onchanged: (query) {},
                   size: size,
                   hintText: 'Quantity',
@@ -675,6 +765,7 @@ class _BillingNewPageState extends State<BillingNewPage> {
                 flex: 1,
                 child: buildColumnWidgetForTextFields(
                   controller: unitPriceController,
+                  focusNode: _unitPriceFocusNode,
                   onchanged: (query) {},
                   size: size,
                   hintText: 'Unit Price',
@@ -1200,6 +1291,7 @@ class _BillingNewPageState extends State<BillingNewPage> {
                             padding: const EdgeInsets.only(top: 10),
                             child: buildColumnWidgetForTextFields(
                               controller: _transactionNumberController,
+                              focusNode: _transactionNumberFocusNode,
                               size: size,
                               height: size.height * .06,
                               hintText: 'Transaction Reference No:',
@@ -1209,6 +1301,7 @@ class _BillingNewPageState extends State<BillingNewPage> {
                             padding: const EdgeInsets.only(top: 10),
                             child: buildColumnWidgetForTextFields(
                               controller: _paidAmountController,
+                              focusNode: _paidAmountFocusNode,
                               size: size,
                               onchanged: (value) {
                                 _getBalanceAmount();
@@ -1326,6 +1419,7 @@ class _BillingNewPageState extends State<BillingNewPage> {
                   children: [
                     buildColumnWidgetForTextFields(
                       controller: _carNumberController,
+                      focusNode: _carNumberFocusNode,
                       size: size,
                       margin: const EdgeInsets.all(0),
                       height: size.height * .06,
@@ -1362,6 +1456,7 @@ class _BillingNewPageState extends State<BillingNewPage> {
             // const SizedBox(height: 10),
             buildColumnWidgetForTextFields(
               controller: _commentController,
+              focusNode: _commentFocusNode,
               margin: const EdgeInsets.all(0),
               size: size,
               height: size.height * .06,
@@ -1550,6 +1645,13 @@ class _BillingNewPageState extends State<BillingNewPage> {
                         TextEditingController mobileNumberTextController,
                         FocusNode focusNode,
                         VoidCallback onFieldSubmitted) {
+                      // Link the autocomplete's focus node to our system
+                      focusNode.addListener(() {
+                        if (focusNode.hasFocus) {
+                          _focusedTextController = mobileNumberTextController;
+                        }
+                      });
+
                       return TextField(
                         controller: mobileNumberTextController,
                         focusNode: focusNode,
@@ -1562,6 +1664,15 @@ class _BillingNewPageState extends State<BillingNewPage> {
                             Colors.grey.withOpacity(.5),
                           ),
                           border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: 15.0),
+                          suffixIcon:
+                              (isCustomerFound || selectedCustomerID != null)
+                                  ? const Icon(
+                                      Icons.check_circle,
+                                      color: ColorManager.kButtonGreen,
+                                      size: 30, // Increase from size: 1
+                                    )
+                                  : null,
                         ),
                         onChanged: (value) {
                           setState(() {
@@ -1647,40 +1758,31 @@ class _BillingNewPageState extends State<BillingNewPage> {
           height: size.height * .07,
           width: 50,
           circleRadius: 5,
-          child: (isCustomerFound || selectedCustomerID != null)
-              ? InkWell(
-                  onTap: () => {},
-                  child: const Icon(
-                    Icons.check_circle,
-                    color: ColorManager.kButtonGreen,
-                    size: 30,
-                  ),
-                )
-              : InkWell(
-                  onTap: () => {
-                    setState(() {
-                      _autocompletePhoneKey = GlobalKey();
-                      mobileNumberTextController.clear();
-                      mobileNumberText = "";
-                      selectedCustomerID = null;
-                      selectedCustomerPhone = null;
-                      selectedCustomer = null;
-                      isCustomerFound = false;
-                      salesExecutivemobileNumberText = "";
-                    }),
-                    showScaffold(
-                      context: context,
-                      message: 'Customer Details Cleared Successfully',
-                    )
-                  },
-                  child: Center(
-                    child: WebsafeSvg.asset(
-                      ImageAssets.oderlistCloseIcon,
-                      width: 27,
-                      color: ColorManager.kButtonRed,
-                    ),
-                  ),
-                ),
+          child: InkWell(
+            onTap: () => {
+              setState(() {
+                _autocompletePhoneKey = GlobalKey();
+                mobileNumberTextController.clear();
+                mobileNumberText = "";
+                selectedCustomerID = null;
+                selectedCustomerPhone = null;
+                selectedCustomer = null;
+                isCustomerFound = false;
+                salesExecutivemobileNumberText = "";
+              }),
+              showScaffold(
+                context: context,
+                message: 'Customer Details Cleared Successfully',
+              )
+            },
+            child: Center(
+              child: WebsafeSvg.asset(
+                ImageAssets.oderlistCloseIcon,
+                width: 27,
+                color: ColorManager.kButtonRed,
+              ),
+            ),
+          ),
         ),
         // if (selectedCustomerID == null || !isCustomerFound) ...[
         //   const SizedBox(width: 10),
@@ -1719,6 +1821,7 @@ class _BillingNewPageState extends State<BillingNewPage> {
             width: MediaQuery.of(context).size.width / 3,
             child: TextField(
               controller: coupenCodeTextController,
+              focusNode: _coupenCodeFocusNode,
               enabled: !isCouponApplied,
               decoration: InputDecoration(
                 hintText: 'Apply Coupon',
@@ -1773,6 +1876,194 @@ class _BillingNewPageState extends State<BillingNewPage> {
             width: 100,
           ),
       ],
+    );
+  }
+
+  // Modified number pad buttons to work with any focused text field
+  Widget _buildNumberPad() {
+    return BuildBoxShadowContainer(
+      circleRadius: 7,
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        children: [
+          // First row - 1, 2, 3
+          _buildNumberRow(['1', '2', '3']),
+          const SizedBox(height: 8),
+
+          // Second row - 4, 5, 6
+          _buildNumberRow(['4', '5', '6']),
+          const SizedBox(height: 8),
+
+          // Third row - 7, 8, 9
+          _buildNumberRow(['7', '8', '9']),
+          const SizedBox(height: 8),
+
+          // Fourth row - ., 0, backspace
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildNumberButton('.'),
+              _buildNumberButton('0'),
+              _buildBackspaceButton(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to build a row of number buttons
+  Widget _buildNumberRow(List<String> numbers) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: numbers.map((number) => _buildNumberButton(number)).toList(),
+    );
+  }
+
+  // Helper method to build a single number button
+  Widget _buildNumberButton(String number) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: InkWell(
+          onTap: () {
+            // Check if there's a focused text controller
+            if (_focusedTextController != null &&
+                !isCouponApplied &&
+                (_focusedTextController == quantityController ||
+                    _focusedTextController == unitPriceController ||
+                    _focusedTextController == mobileNumberTextController ||
+                    _focusedTextController == _transactionNumberController ||
+                    _focusedTextController == _paidAmountController)) {
+              setState(() {
+                // Insert the number at the current cursor position
+                final currentText = _focusedTextController!.text;
+                final selection = _focusedTextController!.selection;
+
+                final newText = selection.isValid
+                    ? currentText.replaceRange(
+                        selection.start, selection.end, number)
+                    : currentText + number;
+
+                _focusedTextController!.text = newText;
+
+                // Update the cursor position
+                final newPosition = selection.isValid
+                    ? selection.start + number.length
+                    : newText.length;
+
+                _focusedTextController!.selection = TextSelection.fromPosition(
+                  TextPosition(offset: newPosition),
+                );
+
+                // If updating the paid amount field, recalculate balance
+                if (_focusedTextController == _paidAmountController) {
+                  _getBalanceAmount();
+                }
+
+                // If updating the mobile number field, trigger customer search
+                if (_focusedTextController == mobileNumberTextController) {
+                  mobileNumberText = newText;
+                  selectedCustomerID = null;
+                  selectedCustomerPhone = null;
+                  selectedCustomer = null;
+
+                  // Reset the autocomplete key to force refresh if needed
+                  if (newText.length == 10) {
+                    // If exactly 10 digits, this may be a complete phone number
+                    _autocompletePhoneKey = GlobalKey();
+                  }
+                }
+              });
+            }
+          },
+          child: Container(
+            height: 45,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(
+                  color: ColorManager.kPrimaryColor.withOpacity(0.3)),
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  FontSize.s18,
+                  0.27,
+                  ColorManager.textColor,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper method to build the backspace button
+  Widget _buildBackspaceButton() {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: InkWell(
+          onTap: () {
+            // Check if there's a focused text controller
+            if (_focusedTextController != null &&
+                _focusedTextController!.text.isNotEmpty) {
+              setState(() {
+                final currentText = _focusedTextController!.text;
+                final selection = _focusedTextController!.selection;
+
+                // Handle backspace based on cursor position
+                if (selection.isValid && selection.start > 0) {
+                  // If there's a selection, delete the selected text
+                  if (selection.start != selection.end) {
+                    final newText = currentText.replaceRange(
+                        selection.start, selection.end, '');
+                    _focusedTextController!.text = newText;
+                    _focusedTextController!.selection =
+                        TextSelection.collapsed(offset: selection.start);
+                  } else {
+                    // Delete the character before the cursor
+                    final newText = currentText.replaceRange(
+                        selection.start - 1, selection.start, '');
+                    _focusedTextController!.text = newText;
+                    _focusedTextController!.selection =
+                        TextSelection.collapsed(offset: selection.start - 1);
+                  }
+                } else {
+                  // If no valid selection, delete from end
+                  _focusedTextController!.text =
+                      currentText.substring(0, currentText.length - 1);
+                }
+
+                // If updating the paid amount field, recalculate balance
+                if (_focusedTextController == _paidAmountController) {
+                  _getBalanceAmount();
+                }
+              });
+            }
+          },
+          child: Container(
+            height: 45,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(
+                  color: ColorManager.kPrimaryColor.withOpacity(0.3)),
+            ),
+            child: Center(
+              child: Icon(
+                Icons.backspace_outlined,
+                color: ColorManager.textColor,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 

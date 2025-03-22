@@ -80,6 +80,10 @@ class _BillingPageState extends State<BillingPage> {
 
   final TextEditingController _commentController = TextEditingController();
   final TextEditingController _carNumberController = TextEditingController();
+
+  final FocusNode _quantityFocusNode = FocusNode();
+  final FocusNode _unitPriceFocusNode = FocusNode();
+
   bool isCustomerFound = false;
   bool isCouponApplied = false;
   final FocusNode _focusNode = FocusNode();
@@ -108,6 +112,24 @@ class _BillingPageState extends State<BillingPage> {
     deliveryMethod = "Store Takeaway";
     iconColor = 1;
     _fetchCustomers();
+
+    _quantityFocusNode.addListener(() {
+      if (_quantityFocusNode.hasFocus) {
+        quantityController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: quantityController.text.length,
+        );
+      }
+    });
+
+    _unitPriceFocusNode.addListener(() {
+      if (_unitPriceFocusNode.hasFocus) {
+        unitPriceController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: unitPriceController.text.length,
+        );
+      }
+    });
   }
 
   @override
@@ -122,6 +144,11 @@ class _BillingPageState extends State<BillingPage> {
     selectedProductIdController.dispose();
     _focusNode.dispose();
     _barcodeNode.dispose();
+
+    // Dispose all the focus nodes
+    _quantityFocusNode.dispose();
+    _unitPriceFocusNode.dispose();
+
     _debounce?.cancel();
     _debounceTimer?.cancel();
     super.dispose();
@@ -627,6 +654,7 @@ class _BillingPageState extends State<BillingPage> {
                         onchanged: (query) {},
                         size: size,
                         hintText: 'Quantity',
+                        focusNode: _quantityFocusNode,
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           if (unitPriceController.text == 'KG' ||
@@ -648,6 +676,7 @@ class _BillingPageState extends State<BillingPage> {
                         controller: unitPriceController,
                         onchanged: (query) {},
                         size: size,
+                        focusNode: _unitPriceFocusNode,
                         hintText: 'Unit Price',
                       ),
                     ),
@@ -1557,6 +1586,14 @@ class _BillingPageState extends State<BillingPage> {
                             Colors.grey.withOpacity(.5),
                           ),
                           border: InputBorder.none,
+                          suffixIcon:
+                              (isCustomerFound || selectedCustomerID != null)
+                                  ? const Icon(
+                                      Icons.check_circle,
+                                      color: ColorManager.kButtonGreen,
+                                      size: 25, // Increase from size: 1
+                                    )
+                                  : null,
                         ),
                         onChanged: (value) {
                           setState(() {
@@ -1642,48 +1679,39 @@ class _BillingPageState extends State<BillingPage> {
           height: size.height * .07,
           width: 50,
           circleRadius: 5,
-          child: (isCustomerFound || selectedCustomerID != null)
-              ? InkWell(
-                  onTap: () => {},
-                  child: const Icon(
-                    Icons.check_circle,
-                    color: ColorManager.kButtonGreen,
-                    size: 30,
-                  ),
-                )
-              : InkWell(
-                  onTap: () => {
-                    setState(() {
-                      _autocompletePhoneKey = GlobalKey();
-                      mobileNumberTextController.clear();
-                      mobileNumberText = "";
-                      selectedCustomerID = null;
-                      selectedCustomerPhone = null;
-                      selectedCustomer = null;
-                      isCustomerFound = false;
-                      salesExecutivemobileNumberText = "";
-                    }),
-                    showScaffold(
-                      context: context,
-                      message: 'Customer Details Cleared Successfully',
-                    )
-                  },
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Center(
-                          child: WebsafeSvg.asset(
-                            ImageAssets.oderlistCloseIcon,
-                            width: 27,
-                            color: ColorManager.kButtonRed,
-                          ),
-                        ),
-                      ],
+          child: InkWell(
+            onTap: () => {
+              setState(() {
+                _autocompletePhoneKey = GlobalKey();
+                mobileNumberTextController.clear();
+                mobileNumberText = "";
+                selectedCustomerID = null;
+                selectedCustomerPhone = null;
+                selectedCustomer = null;
+                isCustomerFound = false;
+                salesExecutivemobileNumberText = "";
+              }),
+              showScaffold(
+                context: context,
+                message: 'Customer Details Cleared Successfully',
+              )
+            },
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Center(
+                    child: WebsafeSvg.asset(
+                      ImageAssets.oderlistCloseIcon,
+                      width: 27,
+                      color: ColorManager.kButtonRed,
                     ),
                   ),
-                ),
+                ],
+              ),
+            ),
+          ),
         ),
         // if (selectedCustomerID == null || !isCustomerFound) ...[
         //   const SizedBox(width: 10),
