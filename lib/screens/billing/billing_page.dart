@@ -563,6 +563,7 @@ class _BillingPageState extends State<BillingPage> {
                                             barcodeController.clear();
                                           } else {
                                             barcodeController.clear();
+                                            _focusTextField();
                                           }
                                           debugPrint(
                                               "No products found for barcode: $query");
@@ -907,52 +908,52 @@ class _BillingPageState extends State<BillingPage> {
                         DataCell(Center(
                           child: SizedBox(
                             width: 80,
-                            child: Builder(
-                              builder: (context) {
-                                // Create a controller that we can actually reference
-                                final TextEditingController controller = 
-                                    TextEditingController(text: item.price.toString());
-                                final FocusNode focusNode = FocusNode();
-                                
-                                // Add listener to focus node to select all text when focused
-                                focusNode.addListener(() {
-                                  if (focusNode.hasFocus) {
-                                    controller.selection = TextSelection(
-                                      baseOffset: 0,
-                                      extentOffset: controller.text.length,
-                                    );
-                                  } else {
-                                    // When focus is lost, update the price
-                                    localProductProvider.updateItemPrice(
-                                      item.product.productId!,
-                                      double.tryParse(controller.text) ?? item.price!,
-                                    );
-                                  }
-                                });
-                                
-                                return TextField(
-                                  textAlign: TextAlign.center,
-                                  controller: controller,
-                                  focusNode: focusNode,
-                                  keyboardType: TextInputType.number,
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    hintText: 'Unit Price',
-                                    hintStyle: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 12,
-                                    ),
+                            child: Builder(builder: (context) {
+                              // Create a controller that we can actually reference
+                              final TextEditingController controller =
+                                  TextEditingController(
+                                      text: item.price.toString());
+                              final FocusNode focusNode = FocusNode();
+
+                              // Add listener to focus node to select all text when focused
+                              focusNode.addListener(() {
+                                if (focusNode.hasFocus) {
+                                  controller.selection = TextSelection(
+                                    baseOffset: 0,
+                                    extentOffset: controller.text.length,
+                                  );
+                                } else {
+                                  // When focus is lost, update the price
+                                  localProductProvider.updateItemPrice(
+                                    item.product.productId!,
+                                    double.tryParse(controller.text) ??
+                                        item.price!,
+                                  );
+                                }
+                              });
+
+                              return TextField(
+                                textAlign: TextAlign.center,
+                                controller: controller,
+                                focusNode: focusNode,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: 'Unit Price',
+                                  hintStyle: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 12,
                                   ),
-                                  onSubmitted: (newPrice) {
-                                    // Update when user presses enter
-                                    localProductProvider.updateItemPrice(
-                                      item.product.productId!,
-                                      double.tryParse(newPrice) ?? item.price!,
-                                    );
-                                  },
-                                );
-                              }
-                            ),
+                                ),
+                                onSubmitted: (newPrice) {
+                                  // Update when user presses enter
+                                  localProductProvider.updateItemPrice(
+                                    item.product.productId!,
+                                    double.tryParse(newPrice) ?? item.price!,
+                                  );
+                                },
+                              );
+                            }),
                           ),
                         )),
                         // DataCell(
