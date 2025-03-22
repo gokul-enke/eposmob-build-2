@@ -35,14 +35,14 @@ import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
-class BillingPage extends StatefulWidget {
-  const BillingPage({super.key});
+class BillingNewPage extends StatefulWidget {
+  const BillingNewPage({super.key});
 
   @override
-  State<BillingPage> createState() => _BillingPageState();
+  State<BillingNewPage> createState() => _BillingNewPageState();
 }
 
-class _BillingPageState extends State<BillingPage> {
+class _BillingNewPageState extends State<BillingNewPage> {
   final TextEditingController mobileNumberTextController =
       TextEditingController();
   final TextEditingController coupenCodeTextController =
@@ -277,15 +277,58 @@ class _BillingPageState extends State<BillingPage> {
                             const Divider(thickness: 1),
                             const HorizontalProductViewLocal(),
                             const SizedBox(height: 10),
-                            _buildOrderHeader(
-                              size: size,
-                              barcodeController: barcodeController,
-                              quantityController: quantityController,
-                              unitPriceController: unitPriceController,
-                              selectedProductIdController:
-                                  selectedProductIdController,
-                              productProvider: productProvider,
+
+                            // Create a two-column layout structure
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Left column - Order inputs
+                                Expanded(
+                                  flex: 1,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _buildOrderHeader(
+                                        size: size,
+                                        barcodeController: barcodeController,
+                                        quantityController: quantityController,
+                                        unitPriceController:
+                                            unitPriceController,
+                                        selectedProductIdController:
+                                            selectedProductIdController,
+                                        productProvider: productProvider,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(
+                                    width: 20), // Space between columns
+                                // Right column - Payment summary
+                                Expanded(
+                                  flex: 1,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _buildPaymentSummary(),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
+
+                            const SizedBox(height: 10),
+
+                            // _buildOrderHeader(
+                            //   size: size,
+                            //   barcodeController: barcodeController,
+                            //   quantityController: quantityController,
+                            //   unitPriceController: unitPriceController,
+                            //   selectedProductIdController:
+                            //       selectedProductIdController,
+                            //   productProvider: productProvider,
+                            // ),
                             const SizedBox(height: 5),
                             _buildCartItemsTable(size),
                             const SizedBox(height: 5),
@@ -333,8 +376,6 @@ class _BillingPageState extends State<BillingPage> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       _buildCouponInput(),
-                                      const SizedBox(height: 10),
-                                      _buildPaymentSummary(),
                                     ],
                                   ),
                                 )),
@@ -398,301 +439,122 @@ class _BillingPageState extends State<BillingPage> {
       if (appSettingsProvider.appSettings == null) {
         return Container();
       }
-      return SizedBox(
-        height: size.height * 0.10,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Flexible(
-              child: Row(
-                children: [
-                  appSettingsProvider.appSettings!.barcodeSales
-                      ? Expanded(
-                          flex: 2,
-                          child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 4.0),
-                            child: buildColumnWidgetForTextFields(
-                              autofocus:
-                                  appSettingsProvider.appSettings!.barcodeSales,
-                              controller: barcodeController,
-                              focusNode: _barcodeNode,
-                              readOnly:
-                                  selectedProductNameController.text.isNotEmpty,
-                              onchanged: (query) async {
-                                if (_debounce?.isActive ?? false) {
-                                  _debounce!.cancel();
-                                }
-                                _debounce = Timer(
-                                  const Duration(milliseconds: 500),
-                                  () async {
-                                    if (query != null) {
-                                      debugPrint("QUERY: ${query.length}");
-                                      final localProductProvider =
-                                          Provider.of<LocalProductProvider>(
-                                              context,
-                                              listen: false);
-
-                                      List<GetProduct> filteredProducts = [];
-                                      try {
-                                        String? prefix;
-                                        String? productCode;
-                                        String? lastFive;
-
-                                        if (query.length > 2) {
-                                          prefix = query.substring(
-                                              0, 3); // First 3 digits;
-                                        }
-
-                                        if (prefix != '000' ||
-                                            query.length != 14) {
-                                          filteredProducts =
-                                              Provider.of<LocalProductProvider>(
-                                                      context,
-                                                      listen: false)
-                                                  .filterProductByBarcode(
-                                            barCode: query,
-                                          );
-                                        } else {
-                                          productCode = query.substring(
-                                              3, 9); // Next 6 digits
-                                          lastFive = query.substring(
-                                              9, 14); // Last 5 digits
-                                          filteredProducts =
-                                              Provider.of<LocalProductProvider>(
-                                                      context,
-                                                      listen: false)
-                                                  .filterProductByBarcode(
-                                            barCode: productCode,
-                                          );
-                                        }
-
-                                        if (filteredProducts.isNotEmpty) {
-                                          // Handle the case where products are found
-                                          // For example, you can update the UI or add to cart
-                                          // Example: add the first product to the cart
-                                          GetProduct product =
-                                              filteredProducts.first;
-
-                                          if (product.unit == 'KGS' &&
-                                              prefix == '000' &&
-                                              query.length == 14) {
-                                            // Weight-based product
-                                            String weightKg = lastFive!
-                                                .substring(0,
-                                                    2); // First 2 digits = KG
-                                            String weightGrams =
-                                                lastFive.substring(2,
-                                                    5); // Last 3 digits = Grams
-                                            double totalWeight =
-                                                double.parse(weightKg) +
-                                                    (double.parse(weightGrams) /
-                                                        1000);
-
-                                            localProductProvider.addToCart(
-                                              product: product,
-                                              quantity: totalWeight,
-                                            );
-
-                                            showScaffold(
-                                              context: context,
-                                              message: 'Added To Cart',
-                                            );
-                                          } else if (product.unit == 'PCS' &&
-                                              prefix == '000' &&
-                                              query.length == 14) {
-                                            // Count-based product
-                                            int quantity = int.parse(
-                                                lastFive!); // Last 5 digits represent quantity
-
-                                            localProductProvider.addToCart(
-                                              product: product,
-                                              quantity: quantity,
-                                            );
-
-                                            showScaffold(
-                                              context: context,
-                                              message: 'Added To Cart',
-                                            );
-                                          } else {
-                                            localProductProvider.addToCart(
-                                                product: product);
-
-                                            showScaffold(
-                                              context: context,
-                                              message: 'Added To Cart',
-                                            );
-                                          }
-
-                                          // Clear input fields if necessary
-                                          setState(() {
-                                            _autocompleteProductKey =
-                                                GlobalKey();
-                                            quantityController.clear();
-                                            barcodeController.clear();
-                                            selectedProductIdController.clear();
-                                            unitPriceController.clear();
-                                          });
-                                          _focusTextField();
-                                        } else {
-                                          _isDialogOpen =
-                                              true; // Set dialog state to open
-                                          final result = await showDialog(
-                                            context: context,
-                                            builder: (context) =>
-                                                AddProductWithBarcodeModal(
-                                                    barcode: query),
-                                          );
-                                          _isDialogOpen =
-                                              false; // Reset dialog state
-                                          debugPrint("result $result");
-                                          if (result != null) {
-                                            localProductProvider.addToCart(
-                                                productId: result["id"],
-                                                price: double.tryParse(
-                                                    result["price"]
-                                                        .toString()));
-                                            barcodeController.clear();
-                                          } else {
-                                            barcodeController.clear();
-                                            _focusTextField();
-                                          }
-                                          debugPrint(
-                                              "No products found for barcode: $query");
-                                        }
-                                      } catch (e) {
-                                        debugPrint("Error adding item: $e");
-                                        showScaffoldError(
-                                          context: context,
-                                          message:
-                                              "Invalid Barcode. Please try again.",
-                                        );
-                                      }
-                                    }
-                                  },
-                                );
-                              },
-                              size: size,
-                              hintText: 'Barcode',
-                            ),
-                          ),
-                        )
-                      : Container(),
-                  appSettingsProvider.appSettings!.barcodeSales &&
-                          selectedProductNameController.text.isNotEmpty
-                      ? Expanded(
-                          flex: 2,
-                          child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 4.0),
-                            child: buildColumnWidgetForTextFields(
-                              readOnly: true,
-                              controller: selectedProductNameController,
-                              onchanged: (query) {},
-                              size: size,
-                              hintText: 'Quantity',
-                            ),
-                          ),
-                        )
-                      : Expanded(
-                          flex: 4,
-                          child: ProductAutocomplete(
-                            autocompleteProductKey: _autocompleteProductKey,
-                            autofocus:
-                                !appSettingsProvider.appSettings!.barcodeSales,
-                            size: size,
-                            onSelected: (GetProduct selectedProduct) {
-                              setState(() {
-                                selectedProductIdController.text =
-                                    selectedProduct.productId.toString();
-                                unitPriceController.text =
-                                    selectedProduct.price?.price ?? '';
-                                quantityController.text = '1';
-                                selectedProductNameController.text =
-                                    selectedProduct.productName ?? '';
-                                barcodeController.text =
-                                    selectedProduct.barcode ?? '';
-                              });
-                            },
-                            productList: productProvider.productList!,
-                          ),
-                        ),
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // First row - Barcode & Product search
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              appSettingsProvider.appSettings!.barcodeSales
+                  ? Expanded(
+                      flex: 1,
                       child: buildColumnWidgetForTextFields(
-                        controller: quantityController,
-                        onchanged: (query) {},
-                        size: size,
-                        hintText: 'Quantity',
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          if (unitPriceController.text == 'KG' ||
-                              unitPriceController.text == 'LT')
-                            FilteringTextInputFormatter.allow(
-                                RegExp(r'^\d*\.?\d{0,2}$')),
-                          if (unitPriceController.text != 'LT' &&
-                              unitPriceController.text != 'KG')
-                            FilteringTextInputFormatter.digitsOnly,
-                        ],
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: buildColumnWidgetForTextFields(
-                        controller: unitPriceController,
-                        onchanged: (query) {},
-                        size: size,
-                        hintText: 'Unit Price',
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: Center(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CustomRoundButton(
-                              title: "Add Item",
-                              boxColor: ColorManager.kButtonGreen,
-                              borderColor: ColorManager.kButtonGreen,
-                              isLoading: isLoadingAddItem,
-                              fct: () {
-                                setState(() {
-                                  isLoadingAddItem = true; // Start loading
-                                });
+                        autofocus:
+                            appSettingsProvider.appSettings!.barcodeSales,
+                        controller: barcodeController,
+                        focusNode: _barcodeNode,
+                        readOnly: selectedProductNameController.text.isNotEmpty,
+                        onchanged: (query) async {
+                          if (_debounce?.isActive ?? false) {
+                            _debounce!.cancel();
+                          }
+                          _debounce = Timer(
+                            const Duration(milliseconds: 500),
+                            () async {
+                              if (query != null) {
+                                debugPrint("QUERY: ${query.length}");
+                                final localProductProvider =
+                                    Provider.of<LocalProductProvider>(context,
+                                        listen: false);
+
+                                List<GetProduct> filteredProducts = [];
                                 try {
-                                  // Get the selected product from LocalProductProvider
-                                  final localProductProvider =
-                                      Provider.of<LocalProductProvider>(context,
-                                          listen: false);
+                                  String? prefix;
+                                  String? productCode;
+                                  String? lastFive;
 
-                                  final selectedProduct =
-                                      localProductProvider.selectedProduct;
+                                  if (query.length > 2) {
+                                    prefix = query.substring(
+                                        0, 3); // First 3 digits;
+                                  }
 
-                                  if (selectedProduct != null) {
-                                    // Add the selected product to the local cart
-                                    localProductProvider.addToCart(
-                                        product: selectedProduct,
-                                        quantity: num.tryParse(
-                                          quantityController.text,
-                                        ),
-                                        price: double.tryParse(
-                                          unitPriceController.text,
-                                        ));
-
-                                    showScaffold(
-                                      context: context,
-                                      message: 'Added To Cart',
+                                  if (prefix != '000' || query.length != 14) {
+                                    filteredProducts =
+                                        Provider.of<LocalProductProvider>(
+                                                context,
+                                                listen: false)
+                                            .filterProductByBarcode(
+                                      barCode: query,
                                     );
+                                  } else {
+                                    productCode =
+                                        query.substring(3, 9); // Next 6 digits
+                                    lastFive =
+                                        query.substring(9, 14); // Last 5 digits
+                                    filteredProducts =
+                                        Provider.of<LocalProductProvider>(
+                                                context,
+                                                listen: false)
+                                            .filterProductByBarcode(
+                                      barCode: productCode,
+                                    );
+                                  }
+
+                                  if (filteredProducts.isNotEmpty) {
+                                    // Handle the case where products are found
+                                    // For example, you can update the UI or add to cart
+                                    // Example: add the first product to the cart
+                                    GetProduct product = filteredProducts.first;
+
+                                    if (product.unit == 'KGS' &&
+                                        prefix == '000' &&
+                                        query.length == 14) {
+                                      // Weight-based product
+                                      String weightKg = lastFive!.substring(
+                                          0, 2); // First 2 digits = KG
+                                      String weightGrams = lastFive.substring(
+                                          2, 5); // Last 3 digits = Grams
+                                      double totalWeight =
+                                          double.parse(weightKg) +
+                                              (double.parse(weightGrams) /
+                                                  1000);
+
+                                      localProductProvider.addToCart(
+                                        product: product,
+                                        quantity: totalWeight,
+                                      );
+
+                                      showScaffold(
+                                        context: context,
+                                        message: 'Added To Cart',
+                                      );
+                                    } else if (product.unit == 'PCS' &&
+                                        prefix == '000' &&
+                                        query.length == 14) {
+                                      // Count-based product
+                                      int quantity = int.parse(
+                                          lastFive!); // Last 5 digits represent quantity
+
+                                      localProductProvider.addToCart(
+                                        product: product,
+                                        quantity: quantity,
+                                      );
+
+                                      showScaffold(
+                                        context: context,
+                                        message: 'Added To Cart',
+                                      );
+                                    } else {
+                                      localProductProvider.addToCart(
+                                          product: product);
+
+                                      showScaffold(
+                                        context: context,
+                                        message: 'Added To Cart',
+                                      );
+                                    }
 
                                     // Clear input fields if necessary
                                     setState(() {
@@ -704,82 +566,225 @@ class _BillingPageState extends State<BillingPage> {
                                     });
                                     _focusTextField();
                                   } else {
-                                    showScaffoldError(
+                                    _isDialogOpen =
+                                        true; // Set dialog state to open
+                                    final result = await showDialog(
                                       context: context,
-                                      message: "No product selected!",
+                                      builder: (context) =>
+                                          AddProductWithBarcodeModal(
+                                              barcode: query),
                                     );
+                                    _isDialogOpen = false; // Reset dialog state
+                                    debugPrint("result $result");
+                                    if (result != null) {
+                                      localProductProvider.addToCart(
+                                          productId: result["id"],
+                                          price: double.tryParse(
+                                              result["price"].toString()));
+                                      barcodeController.clear();
+                                    } else {
+                                      barcodeController.clear();
+                                      _focusTextField();
+                                    }
+                                    debugPrint(
+                                        "No products found for barcode: $query");
                                   }
                                 } catch (e) {
-                                  debugPrint('Error adding item: $e');
+                                  debugPrint("Error adding item: $e");
                                   showScaffoldError(
                                     context: context,
                                     message:
-                                        "Failed to add item. Please try again.",
+                                        "Invalid Barcode. Please try again.",
                                   );
-                                } finally {
-                                  debugPrint('Finally adding item');
-                                  setState(() {
-                                    isLoadingAddItem = false; // End loading
-                                  });
                                 }
-                              },
-                              fontSize: FontSize.s14,
-                              height: size.height * .07,
-                              width: size.width / 3,
-                            ),
-                          ],
+                              }
+                            },
+                          );
+                        },
+                        size: size,
+                        hintText: 'Barcode',
+                      ),
+                    )
+                  : Container(),
+              appSettingsProvider.appSettings!.barcodeSales &&
+                      selectedProductNameController.text.isNotEmpty
+                  ? Expanded(
+                      flex: 1,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        child: buildColumnWidgetForTextFields(
+                          readOnly: true,
+                          controller: selectedProductNameController,
+                          onchanged: (query) {},
+                          size: size,
+                          hintText: 'Selected Product',
                         ),
                       ),
+                    )
+                  : Expanded(
+                      flex: 1,
+                      child: ProductAutocomplete(
+                        autocompleteProductKey: _autocompleteProductKey,
+                        autofocus:
+                            !appSettingsProvider.appSettings!.barcodeSales,
+                        size: size,
+                        onSelected: (GetProduct selectedProduct) {
+                          setState(() {
+                            selectedProductIdController.text =
+                                selectedProduct.productId.toString();
+                            unitPriceController.text =
+                                selectedProduct.price?.price ?? '';
+                            quantityController.text = '1';
+                            selectedProductNameController.text =
+                                selectedProduct.productName ?? '';
+                            barcodeController.text =
+                                selectedProduct.barcode ?? '';
+                          });
+                        },
+                        productList: productProvider.productList!,
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    flex: 1,
-                    child: Column(
-                      children: [
-                        BuildBoxShadowContainer(
-                          height: size.height * .07,
-                          width: 50,
-                          circleRadius: 5,
-                          child: InkWell(
-                            onTap: () => {
-                              setState(() {
-                                _autocompleteProductKey = GlobalKey();
-                                quantityController.clear();
-                                barcodeController.clear();
-                                selectedProductIdController.clear();
-                                unitPriceController.clear();
-                              }),
-                              _focusTextField(),
-                              showScaffold(
-                                context: context,
-                                message: 'Product Details Cleared Successfully',
-                              )
-                            },
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Center(
-                                    child: WebsafeSvg.asset(
-                                      ImageAssets.oderlistCloseIcon,
-                                      width: 27,
-                                      color: ColorManager.kButtonRed,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Second row - Quantity, Unit Price, Add Item, Clear
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                flex: 1,
+                child: buildColumnWidgetForTextFields(
+                  controller: quantityController,
+                  onchanged: (query) {},
+                  size: size,
+                  hintText: 'Quantity',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    if (unitPriceController.text == 'KG' ||
+                        unitPriceController.text == 'LT')
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,2}$')),
+                    if (unitPriceController.text != 'LT' &&
+                        unitPriceController.text != 'KG')
+                      FilteringTextInputFormatter.digitsOnly,
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 1,
+                child: buildColumnWidgetForTextFields(
+                  controller: unitPriceController,
+                  onchanged: (query) {},
+                  size: size,
+                  hintText: 'Unit Price',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 1,
+                child: Center(
+                  child: CustomRoundButton(
+                    title: "Add Item",
+                    boxColor: ColorManager.kButtonGreen,
+                    borderColor: ColorManager.kButtonGreen,
+                    isLoading: isLoadingAddItem,
+                    fct: () {
+                      setState(() {
+                        isLoadingAddItem = true; // Start loading
+                      });
+                      try {
+                        // Get the selected product from LocalProductProvider
+                        final localProductProvider =
+                            Provider.of<LocalProductProvider>(context,
+                                listen: false);
+
+                        final selectedProduct =
+                            localProductProvider.selectedProduct;
+
+                        if (selectedProduct != null) {
+                          // Add the selected product to the local cart
+                          localProductProvider.addToCart(
+                              product: selectedProduct,
+                              quantity: num.tryParse(
+                                quantityController.text,
+                              ),
+                              price: double.tryParse(
+                                unitPriceController.text,
+                              ));
+
+                          showScaffold(
+                            context: context,
+                            message: 'Added To Cart',
+                          );
+
+                          // Clear input fields if necessary
+                          setState(() {
+                            _autocompleteProductKey = GlobalKey();
+                            quantityController.clear();
+                            barcodeController.clear();
+                            selectedProductIdController.clear();
+                            unitPriceController.clear();
+                          });
+                          _focusTextField();
+                        } else {
+                          showScaffoldError(
+                            context: context,
+                            message: "No product selected!",
+                          );
+                        }
+                      } catch (e) {
+                        debugPrint('Error adding item: $e');
+                        showScaffoldError(
+                          context: context,
+                          message: "Failed to add item. Please try again.",
+                        );
+                      } finally {
+                        debugPrint('Finally adding item');
+                        setState(() {
+                          isLoadingAddItem = false; // End loading
+                        });
+                      }
+                    },
+                    fontSize: FontSize.s14,
+                    height: size.height * .07,
+                    width: double.infinity,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              BuildBoxShadowContainer(
+                height: size.height * .07,
+                width: 50,
+                circleRadius: 5,
+                child: InkWell(
+                  onTap: () => {
+                    setState(() {
+                      _autocompleteProductKey = GlobalKey();
+                      quantityController.clear();
+                      barcodeController.clear();
+                      selectedProductIdController.clear();
+                      unitPriceController.clear();
+                    }),
+                    _focusTextField(),
+                    showScaffold(
+                      context: context,
+                      message: 'Product Details Cleared Successfully',
+                    )
+                  },
+                  child: Center(
+                    child: WebsafeSvg.asset(
+                      ImageAssets.oderlistCloseIcon,
+                      width: 27,
+                      color: ColorManager.kButtonRed,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+        ],
       );
     });
   }
@@ -1669,18 +1674,10 @@ class _BillingPageState extends State<BillingPage> {
                     )
                   },
                   child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Center(
-                          child: WebsafeSvg.asset(
-                            ImageAssets.oderlistCloseIcon,
-                            width: 27,
-                            color: ColorManager.kButtonRed,
-                          ),
-                        ),
-                      ],
+                    child: WebsafeSvg.asset(
+                      ImageAssets.oderlistCloseIcon,
+                      width: 27,
+                      color: ColorManager.kButtonRed,
                     ),
                   ),
                 ),

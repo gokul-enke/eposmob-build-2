@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
 import 'package:pos_machine/screens/billing/billing_page.dart';
+import 'package:pos_machine/screens/billing/billing_page_refactored.dart';
+import 'package:pos_machine/screens/billing_new/billing_new.dart';
 import 'package:pos_machine/screens/category/add_category.dart';
 import 'package:pos_machine/screens/category/add_category_properties.dart';
 import 'package:pos_machine/screens/category/add_category_screen.dart';
@@ -115,5 +117,7 @@ class SideBarController extends GetxController {
     SalesReturnPage(), //50 Sales Return List
     EditOrder(), // 51 Edit Order
     SupplierListScreen(), // 52 Suppliers List
+    BillingPageRefactored(), // 53 Billing Page
+    BillingNewPage(), // 54 Billing New Page
   ];
 }
