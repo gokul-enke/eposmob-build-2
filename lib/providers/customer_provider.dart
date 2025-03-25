@@ -64,15 +64,17 @@ class CustomerProvider extends ChangeNotifier {
         .replace(queryParameters: queryParameters);
     try {
       debugPrint("Making API call to ${url.toString()}");
-      debugPrint("Using token: ${accessToken.substring(0, min(accessToken.length, 10))}...");
-      
+      debugPrint(
+          "Using token: ${accessToken.substring(0, min(accessToken.length, 10))}...");
+
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json'
       });
       debugPrint('API response status code: ${response.statusCode}');
-      debugPrint('API response body: ${response.body.substring(0, min(response.body.length, 100))}...');
-      
+      debugPrint(
+          'API response body: ${response.body.substring(0, min(response.body.length, 100))}...');
+
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         CustomerListModel customerListModel =
@@ -87,7 +89,11 @@ class CustomerProvider extends ChangeNotifier {
             final errorJson = json.decode(response.body);
             debugPrint("Error response: $errorJson");
             // Return the error response instead of throwing an exception
-            return {"status": "error", "message": "Customers Not Found.Try Again!", "errors": errorJson};
+            return {
+              "status": "error",
+              "message": "Customers Not Found.Try Again!",
+              "errors": errorJson
+            };
           } catch (e) {
             debugPrint("Could not parse error response: $e");
           }
@@ -95,7 +101,10 @@ class CustomerProvider extends ChangeNotifier {
         return {"status": "error", "message": "Customers Not Found.Try Again!"};
       } else {
         debugPrint("Unexpected status code: ${response.statusCode}");
-        return {"status": "error", "message": "Failed to load data, Try Again Later!"};
+        return {
+          "status": "error",
+          "message": "Failed to load data, Try Again Later!"
+        };
       }
     } catch (error) {
       debugPrint("Exception in listCustomer: $error");
@@ -141,7 +150,7 @@ class CustomerProvider extends ChangeNotifier {
           });
       debugPrint('API response status code: ${response.statusCode}');
       debugPrint('API response body: ${response.body}');
-      
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         debugPrint("Customer added successfully");
         return json.decode(response.body);
@@ -159,14 +168,18 @@ class CustomerProvider extends ChangeNotifier {
             return {
               "status": "error",
               "message": "Failed to add customer: ${response.reasonPhrase}",
-              "errors": {"general": ["Error processing your request"]}
+              "errors": {
+                "general": ["Error processing your request"]
+              }
             };
           }
         } else {
           return {
             "status": "error",
             "message": "Failed to add customer: ${response.reasonPhrase}",
-            "errors": {"general": ["Error processing your request"]}
+            "errors": {
+              "general": ["Error processing your request"]
+            }
           };
         }
       }
@@ -175,7 +188,9 @@ class CustomerProvider extends ChangeNotifier {
       return {
         "status": "error",
         "message": "Failed to connect to server",
-        "errors": {"connection": [error.toString()]}
+        "errors": {
+          "connection": [error.toString()]
+        }
       };
     }
   }
@@ -216,7 +231,7 @@ class CustomerProvider extends ChangeNotifier {
           });
       debugPrint('API response status code: ${response.statusCode}');
       debugPrint('API response body: ${response.body}');
-      
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         debugPrint("Customer updated successfully");
         return json.decode(response.body);
@@ -234,14 +249,18 @@ class CustomerProvider extends ChangeNotifier {
             return {
               "status": "error",
               "message": "Failed to update customer: ${response.reasonPhrase}",
-              "errors": {"general": ["Error processing your request"]}
+              "errors": {
+                "general": ["Error processing your request"]
+              }
             };
           }
         } else {
           return {
             "status": "error",
             "message": "Failed to update customer: ${response.reasonPhrase}",
-            "errors": {"general": ["Error processing your request"]}
+            "errors": {
+              "general": ["Error processing your request"]
+            }
           };
         }
       }
@@ -250,7 +269,9 @@ class CustomerProvider extends ChangeNotifier {
       return {
         "status": "error",
         "message": "Failed to connect to server",
-        "errors": {"connection": [error.toString()]}
+        "errors": {
+          "connection": [error.toString()]
+        }
       };
     }
   }
@@ -261,6 +282,40 @@ class CustomerProvider extends ChangeNotifier {
       String accessToken, String phoneNumber, BuildContext context) async {
     final url =
         Uri.parse('${APPUrl.customerListUrl}?filter_phone=$phoneNumber');
+
+    try {
+      // debugPrint('accessToken: $accessToken');
+      // debugPrint('phoneNumber: $phoneNumber');
+
+      final response = await http.get(url, headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json'
+      });
+
+      // debugPrint('response: ${response.toString()}');
+      // debugPrint('response status: ${response.statusCode}');
+      // debugPrint('response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        // debugPrint('Decoded response: ${json.decode(response.body)}');
+        return json.decode(response.body);
+      } else if (response.statusCode > 400) {
+        throw const HttpException("Customer Not Found. Try Again!");
+      } else {
+        throw const HttpException('Failed to load data, Try Again Later!');
+      }
+    } catch (error) {
+      // debugPrint('Error: ${error.toString()}');
+      rethrow;
+    }
+  }
+
+// *********************** FIND CUSTOMER BY PHONE API ***************************************************
+
+  Future<dynamic> findCustomerByName(
+      String accessToken, String customerName, BuildContext context) async {
+    final url =
+        Uri.parse('${APPUrl.customerListUrl}?filter_name=$customerName');
 
     try {
       // debugPrint('accessToken: $accessToken');

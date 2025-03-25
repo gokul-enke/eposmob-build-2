@@ -1518,9 +1518,17 @@ class _BillingPageState extends State<BillingPage> {
                       // debugPrint(mobileNumberTextController.text);
 
                       try {
-                        final response = await CustomerProvider()
-                            .findCustomerByPhone(accessToken ?? "",
-                                mobileNumberTextController.text, context);
+                        final response;
+                        if (RegExp(r'^[0-9]+$')
+                            .hasMatch(mobileNumberTextController.text)) {
+                          response = await CustomerProvider()
+                              .findCustomerByPhone(accessToken ?? "",
+                                  mobileNumberTextController.text, context);
+                        } else {
+                          response = await CustomerProvider()
+                              .findCustomerByName(accessToken ?? "",
+                                  mobileNumberTextController.text, context);
+                        }
 
                         if (response["status"] == "success") {
                           CustomerListModel customerListModel =
@@ -1587,12 +1595,21 @@ class _BillingPageState extends State<BillingPage> {
                             Colors.grey.withOpacity(.5),
                           ),
                           border: InputBorder.none,
+                          isDense: true, // Makes the field more compact
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 10.0),
+                          suffixIconConstraints: const BoxConstraints(
+                              maxHeight: 25,
+                              maxWidth: 30), // Constrains the suffix icon size
                           suffixIcon:
                               (isCustomerFound || selectedCustomerID != null)
-                                  ? const Icon(
-                                      Icons.check_circle,
-                                      color: ColorManager.kButtonGreen,
-                                      size: 25, // Increase from size: 1
+                                  ? const Padding(
+                                      padding: EdgeInsets.only(right: 8.0),
+                                      child: Icon(
+                                        Icons.check_circle,
+                                        color: ColorManager.kButtonGreen,
+                                        size: 25,
+                                      ),
                                     )
                                   : null,
                         ),
