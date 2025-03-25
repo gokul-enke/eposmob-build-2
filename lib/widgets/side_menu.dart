@@ -477,20 +477,31 @@ class SideMenu extends StatelessWidget {
           //       },
           //       selected: sideBarController.index.value == 43),
           // ),
-          // const SizedBox(
-          //   height: 15,
-          // ),
-          // Padding(
-          //   padding: const EdgeInsets.only(left: 45.0),
-          //   child: Text(
-          //     'Other',
-          //     style: buildCustomStyle(FontWeightManager.medium, FontSize.s13,
-          //         0.16, ColorManager.textColor),
-          //   ),
-          // ),
-          // const SizedBox(
-          //   height: 15,
-          // ),
+          const SizedBox(
+            height: 15,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 45.0),
+            child: Text(
+              'Other',
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s13,
+                  0.16, ColorManager.textColor),
+            ),
+          ),
+          const SizedBox(
+            height: 15,
+          ),
+          Obx(
+            () => DrawerListTile(
+              iconPath: ImageAssets.printIcon,
+              title: 'Printer',
+              onTap: () {
+                sideBarController.index.value = 55;
+              },
+              selected: sideBarController.index.value == 55,
+            ),
+          ),
+
           // Obx(
           //   () => DrawerListTile(
           //     iconPath: ImageAssets.notificationIcon,

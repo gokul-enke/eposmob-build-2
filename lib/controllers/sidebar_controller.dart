@@ -17,6 +17,7 @@ import 'package:pos_machine/screens/homenew/home_new.dart';
 
 import 'package:pos_machine/screens/loyality_card/loyality.dart';
 import 'package:pos_machine/screens/notifications/notifications.dart';
+import 'package:pos_machine/screens/print/printer_settings.dart';
 import 'package:pos_machine/screens/product/add_product.dart';
 import 'package:pos_machine/screens/product/tabbar_for_edit_product.dart';
 import 'package:pos_machine/screens/product/widgets/view_product.dart';
@@ -119,5 +120,6 @@ class SideBarController extends GetxController {
     SupplierListScreen(), // 52 Suppliers List
     BillingPageRefactored(), // 53 Billing Page
     BillingNewPage(), // 54 Billing New Page
+    PrinterSettings(), // 55 Printer Settings
   ];
 }

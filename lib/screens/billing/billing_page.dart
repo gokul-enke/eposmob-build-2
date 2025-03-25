@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1890,7 +1891,7 @@ class _BillingPageState extends State<BillingPage> {
           customerName = selectedCustomer!.name;
         }
 
-        SavedOrder savedOrder = localProductProvider.saveCurrentCartAsOrder(
+        localProductProvider.saveCurrentCartAsOrder(
           customerName: customerName,
           customerPhone: selectedCustomerPhone ?? mobileNumberText,
           comment: _commentController.text,
@@ -1902,6 +1903,8 @@ class _BillingPageState extends State<BillingPage> {
           message: "Order Saved Successfully",
         );
       }
+
+      localProductProvider.clearCart();
 
       // Clear form fields
       setState(() {
@@ -1925,8 +1928,6 @@ class _BillingPageState extends State<BillingPage> {
         _commentController.clear();
       });
 
-      // Clear the cart
-      localProductProvider.clearCart();
       resetAutocomplete();
       _focusTextField();
     } catch (error) {
@@ -2369,6 +2370,54 @@ class _BillingPageState extends State<BillingPage> {
       iconColor = 1;
     });
   }
+
+  void printFromSavedOrder(SavedOrder savedOrder) {
+    try {
+      // Extract cart items from the saved order
+      List<Map<String, dynamic>> cartItems = [];
+
+      // Convert SavedOrder items to the format expected by PrintPage
+      for (var item in savedOrder.items) {
+        cartItems.add({
+          'productName': item.product.productName ?? 'Unknown',
+          'mrp': (item.product.price?.mrp?.toString() ?? '0.00'),
+          'quantity': item.quantity.toString(),
+          'unitPrice': (item.price?.toString() ??
+              item.product.price?.price?.toString() ??
+              '0.00'),
+          'totalPrice': ((item.price ?? (item.product.price?.price ?? 0.0)) *
+                  item.quantity)
+              .toString(),
+        });
+      }
+
+      // Debug - check what's being sent
+      debugPrint("Sending ${cartItems.length} items to PrintPage");
+      debugPrint(
+          "Sample item: ${cartItems.isNotEmpty ? json.encode(cartItems[0]) : 'No items'}");
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PrintPage(
+            storeName: savedOrder.customerName ?? "",
+            cartItems: cartItems,
+            formattedTotal: savedOrder.total.toString(),
+            savedTotal: "0.00", // Adjust if you track discounts
+            orderDate: savedOrder.createdAt,
+            orderNumber: savedOrder.orderNumber,
+            isFromLocalStorage: true,
+          ),
+        ),
+      );
+    } catch (error) {
+      debugPrint("Error printing saved order: ${error.toString()}");
+      showScaffoldError(
+        context: context,
+        message: "Failed to print saved order. Please try again.",
+      );
+    }
+  }
 }
 
 /// A widget to display saved orders in a horizontal scrollable list
@@ -2467,13 +2516,35 @@ class HorizontalSavedOrdersView extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(
-                            width: 10,
+                            width: 5,
                           ),
                           Text(
                             time,
                             style: const TextStyle(
                               fontSize: 14,
                               color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(
+                            width: 5,
+                          ),
+                          // Add a print button
+                          GestureDetector(
+                            onTap: () {
+                              // Use the printFromSavedOrder function from the parent
+                              if (context.findAncestorStateOfType<
+                                      _BillingPageState>() !=
+                                  null) {
+                                context
+                                    .findAncestorStateOfType<
+                                        _BillingPageState>()!
+                                    .printFromSavedOrder(order);
+                              }
+                            },
+                            child: const Icon(
+                              Icons.print,
+                              size: 16,
+                              color: Colors.blue,
                             ),
                           ),
                         ],

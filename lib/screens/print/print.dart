@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
@@ -11,6 +12,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
@@ -19,6 +21,8 @@ class PrintPage extends StatefulWidget {
   final String? savedTotal;
   final String orderDate;
   final String orderNumber;
+  final bool isFromLocalStorage;
+  
   const PrintPage({
     Key? key,
     required this.cartItems,
@@ -27,6 +31,7 @@ class PrintPage extends StatefulWidget {
     this.storeName,
     required this.orderDate,
     required this.orderNumber,
+    this.isFromLocalStorage = false,
   }) : super(key: key);
 
   @override
@@ -39,6 +44,7 @@ class _PrintPageState extends State<PrintPage> {
   StreamSubscription<PrinterDevice>? _subscription;
   BluetoothPrinter? selectedPrinter;
   bool _isScanning = false;
+  bool _isLoading = true;
 
   static const Color primaryColor = Color(0XFF3C92F5);
   static const Color accentColor = Color(0xFF4CAF50);
@@ -54,6 +60,7 @@ class _PrintPageState extends State<PrintPage> {
           Provider.of<AuthModel>(context, listen: false).token;
       Provider.of<PaymentGatewaysProvider>(context, listen: false)
           .fetchPaymentGateways(accessToken: accessToken!);
+      _loadDefaultPrinter();
     });
   }
 
@@ -156,6 +163,52 @@ class _PrintPageState extends State<PrintPage> {
     }
   }
 
+  Future<void> _loadDefaultPrinter() async {
+    final prefs = await SharedPreferences.getInstance();
+    final defaultPrinterJson = prefs.getString('default_printer');
+
+    if (defaultPrinterJson != null) {
+      final Map<String, dynamic> printerData = json.decode(defaultPrinterJson);
+      setState(() {
+        selectedPrinter = BluetoothPrinter(
+          deviceName: printerData['deviceName'],
+          address: printerData['address'],
+          vendorId: printerData['vendorId'],
+          productId: printerData['productId'],
+          typePrinter: PrinterType.values.firstWhere(
+            (e) => e.toString() == printerData['typePrinter'],
+          ),
+        );
+        _isLoading = false;
+      });
+
+      // If we have a default printer, automatically print
+      if (selectedPrinter != null) {
+        final appSettingsProvider =
+            Provider.of<AppSettingsProvider>(context, listen: false);
+        final appSettings = appSettingsProvider.appSettings;
+        printReceipt(
+            appSettings!.customerCarePhone, appSettings.customerCareEmail);
+      }
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _saveDefaultPrinter(BluetoothPrinter printer) async {
+    final prefs = await SharedPreferences.getInstance();
+    final printerData = {
+      'deviceName': printer.deviceName,
+      'address': printer.address,
+      'vendorId': printer.vendorId,
+      'productId': printer.productId,
+      'typePrinter': printer.typePrinter.toString(),
+    };
+    await prefs.setString('default_printer', json.encode(printerData));
+  }
+
   void selectPrinter(BluetoothPrinter printer) {
     // debugPrint('Selecting printer:');
     // debugPrint('Device Name: ${printer.deviceName}');
@@ -167,6 +220,9 @@ class _PrintPageState extends State<PrintPage> {
     setState(() {
       selectedPrinter = printer;
     });
+
+    // Save the selected printer as default
+    _saveDefaultPrinter(printer);
 
     if (mounted) {
       showScaffold(
@@ -254,9 +310,10 @@ class _PrintPageState extends State<PrintPage> {
         sideBarController.index.value = 46;
       }
     } catch (e) {
-      if (mounted) {
-        showScaffoldError(context: context, message: 'Error: ${e.toString()}');
-      }
+      debugPrint(e.toString());
+      // if (mounted) {
+      //   showScaffoldError(context: context, message: 'Error: ${e.toString()}');
+      // }
     } finally {
       await _disconnectPrinter();
     }
@@ -420,25 +477,63 @@ class _PrintPageState extends State<PrintPage> {
 
   List<int> _buildCartItems(Generator generator, List<dynamic> cartItems) {
     List<int> bytes = [];
+    
+    debugPrint("Building cart items, count: ${cartItems.length}");
+    debugPrint("Is from local storage: ${widget.isFromLocalStorage}");
+    
     for (var i = 0; i < cartItems.length; i++) {
       var item = cartItems[i];
+      
+      // Debug the item structure
+      if (i == 0) {
+        debugPrint("First item type: ${item.runtimeType}");
+        if (widget.isFromLocalStorage) {
+          debugPrint("Item keys: ${item.keys.toList()}");
+        }
+      }
+      
+      // Handle different models based on data source
+      String productName = '';
+      String mrp = '';
+      String quantity = '';
+      String unitPrice = '';
+      String totalPrice = '';
+      
+      // Adapt the model based on whether it's from local storage or current cart
+      if (widget.isFromLocalStorage) {
+        // Handle saved order item format (Map format)
+        productName = item['productName'] ?? '';
+        mrp = item['mrp'] ?? '0.00';
+        quantity = item['quantity'] ?? '0';
+        unitPrice = item['unitPrice'] ?? '0.00';
+        totalPrice = item['totalPrice'] ?? '0.00';
+        
+        debugPrint("From storage - Product: $productName, Qty: $quantity, Price: $unitPrice");
+      } else {
+        // Handle current cart item format (Object format)
+        productName = item.productName ?? '';
+        mrp = item.mrp ?? '0.00';
+        quantity = item.quantity?.toString() ?? '0';
+        unitPrice = item.unitPrice?.toString() ?? '0.00';
+        totalPrice = item.totalPrice?.toString() ?? '0.00';
+      }
+      
       bytes += generator.row([
-        // PosColumn(text: (i + 1).toString(), width: 1),
-        PosColumn(text: item.productName ?? '', width: 4),
+        PosColumn(text: productName, width: 4),
         PosColumn(
-            text: item.mrp,
+            text: mrp,
             width: 2,
             styles: const PosStyles(align: PosAlign.right)),
         PosColumn(
-            text: item.quantity.toString(),
+            text: quantity,
             width: 2,
             styles: const PosStyles(align: PosAlign.right)),
         PosColumn(
-            text: item.unitPrice.toString(),
+            text: unitPrice,
             width: 2,
             styles: const PosStyles(align: PosAlign.right)),
         PosColumn(
-            text: item.totalPrice.toString(),
+            text: totalPrice,
             width: 2,
             styles: const PosStyles(align: PosAlign.right)),
       ]);
@@ -703,6 +798,14 @@ class _PrintPageState extends State<PrintPage> {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final appSettings = appSettingsProvider.appSettings;
+
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
     debugPrint("appSettings!.customerCareEmail.toString()");
     debugPrint(appSettings!.customerCareEmail.toString());
