@@ -142,9 +142,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                           ],
                         ),
                         CustomRoundButton(
-                          fct: () => {
-                            selectedPrinter != null ? clearDefaultPrinter : null
-                          },
+                          fct: () => {clearDefaultPrinter()},
                           title: 'Clear Default Printer',
                           height: 40,
                           width: 200,
