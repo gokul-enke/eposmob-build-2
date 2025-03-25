@@ -246,60 +246,21 @@ class _BillingPageState extends State<BillingPage> {
         onKeyEvent: _handleKeyPress,
         child: Scaffold(
           body: Center(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: HorizontalSavedOrdersView(
-                        onOrderSelected: (orderId) {
-                          // Get the local provider
-                          final localProductProvider =
-                              Provider.of<LocalProductProvider>(context,
-                                  listen: false);
-
-                          // If we're editing an order and there are items in the cart, update that order
-                          if (localProductProvider.currentOrder != null &&
-                              localProductProvider.cartItems.isNotEmpty) {
-                            try {
-                              // Update the current order being edited
-                              localProductProvider.updateSavedOrder(
-                                localProductProvider.currentOrder!.id,
-                                customerName: selectedCustomer?.name,
-                                customerPhone:
-                                    selectedCustomerPhone ?? mobileNumberText,
-                                comment: _commentController.text,
-                                deliveryMethod: deliveryMethod,
-                              );
-
-                              // Show quick feedback
-                              showScaffold(
-                                context: context,
-                                message:
-                                    "Current order updated before switching",
-                              );
-                            } catch (e) {
-                              debugPrint("Error updating current order: $e");
-                            }
-                          }
-
-                          // Now load the selected order
-                          _loadSavedOrderForEditing(orderId);
-                        },
-                      ),
-                    ),
-                    BuildBoxShadowContainer(
-                      circleRadius: 10,
-                      margin: const EdgeInsets.only(
-                          left: 10, top: 0, bottom: 10, right: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Main content area
+                Expanded(
+                  flex: 5,
+                  child: BuildBoxShadowContainer(
+                    circleRadius: 10,
+                    margin: const EdgeInsets.only(
+                        left: 10, top: 10, bottom: 10, right: 10),
+                    child: Form(
+                      key: _formKey,
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildHeader(),
                             const Divider(thickness: 1),
@@ -314,69 +275,124 @@ class _BillingPageState extends State<BillingPage> {
                                   selectedProductIdController,
                               productProvider: productProvider,
                             ),
-                            const SizedBox(height: 5),
-                            _buildCartItemsTable(size),
-                            const SizedBox(height: 5),
-                            // _buildMobileNumberInput(size),
-                            // const SizedBox(height: 5),
-                            // _buildCouponInput(),
-                            const SizedBox(height: 10),
-                            // _buildPaymentSummary(),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16.0, vertical: 10),
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceEvenly,
-                                      children: [
-                                        _buildMobileNumberInput(
-                                            size: size,
-                                            mobileNumberTextController:
-                                                mobileNumberTextController),
-                                        const SizedBox(height: 10),
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            _buildPaymentMethodSelection(),
-                                            const SizedBox(height: 10),
-                                            _buildDeliveryMethodSelection(),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: _buildCartItemsTable(size),
                                   ),
-                                ),
-                                Expanded(
-                                    child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16.0, vertical: 10),
-                                  child: Column(
+                                  const SizedBox(height: 5),
+                                  Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      _buildCouponInput(),
-                                      const SizedBox(height: 10),
-                                      _buildPaymentSummary(),
+                                      Expanded(
+                                        flex: 3,
+                                        child: Container(
+                                          color: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 16.0, vertical: 10),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.start,
+                                            children: [
+                                              _buildMobileNumberInput(
+                                                  size: size,
+                                                  mobileNumberTextController:
+                                                      mobileNumberTextController),
+                                              const SizedBox(height: 10),
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  _buildPaymentMethodSelection(),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: _buildDeliveryMethodSelection(),
+                                      ),
+                                      Expanded(
+                                          flex: 3,
+                                          child: Container(
+                                            color: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16.0, vertical: 10),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.start,
+                                              children: [
+                                                _buildCouponInput(),
+                                                const SizedBox(height: 10),
+                                                _buildPaymentSummary(),
+                                              ],
+                                            ),
+                                          )),
                                     ],
                                   ),
-                                )),
-                              ],
+                                  const SizedBox(height: 10),
+                                  _buildActionButtons(),
+                                ],
+                              ),
                             ),
-                            const SizedBox(height: 10),
-                            _buildActionButtons(),
                           ],
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+
+                // Saved orders on the right side
+                Expanded(
+                  flex: 1,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: VerticalSavedOrdersView(
+                      onOrderSelected: (orderId) {
+                        // Get the local provider
+                        final localProductProvider =
+                            Provider.of<LocalProductProvider>(context,
+                                listen: false);
+
+                        // If we're editing an order and there are items in the cart, update that order
+                        if (localProductProvider.currentOrder != null &&
+                            localProductProvider.cartItems.isNotEmpty) {
+                          try {
+                            // Update the current order being edited
+                            localProductProvider.updateSavedOrder(
+                              localProductProvider.currentOrder!.id,
+                              customerName: selectedCustomer?.name,
+                              customerPhone:
+                                  selectedCustomerPhone ?? mobileNumberText,
+                              comment: _commentController.text,
+                              deliveryMethod: deliveryMethod,
+                            );
+
+                            // Show quick feedback
+                            showScaffold(
+                              context: context,
+                              message: "Current order updated before switching",
+                            );
+                          } catch (e) {
+                            debugPrint("Error updating current order: $e");
+                          }
+                        }
+
+                        // Now load the selected order
+                        _loadSavedOrderForEditing(orderId);
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -400,14 +416,14 @@ class _BillingPageState extends State<BillingPage> {
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
                   0.30, ColorManager.textColor),
             ),
+            Text(
+              isEditingOrder
+                  ? 'Order No #${localProductProvider.currentOrder!.orderNumber}'
+                  : 'Order No #00000',
+              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s14,
+                  0.18, ColorManager.textColor),
+            ),
           ],
-        ),
-        Text(
-          isEditingOrder
-              ? 'Order No #${localProductProvider.currentOrder!.orderNumber}'
-              : 'Order No #00000',
-          style: buildCustomStyle(FontWeightManager.regular, FontSize.s12, 0.18,
-              ColorManager.textColor),
         ),
       ],
     );
@@ -821,200 +837,188 @@ class _BillingPageState extends State<BillingPage> {
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            return ConstrainedBox(
-              constraints: BoxConstraints(
-                  minWidth: constraints.maxWidth, maxHeight: 200),
+            return Container(
+              width: constraints.maxWidth,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.transparent),
+              ),
               child: SingleChildScrollView(
-                child: DataTable(
-                  columnSpacing: 20,
-                  horizontalMargin: 16,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.transparent),
-                  ),
-                  headingRowColor: WidgetStateColor.resolveWith(
-                      (states) => ColorManager.kPrimaryColor.withOpacity(0.1)),
-                  dataRowColor: WidgetStateColor.resolveWith((states) =>
-                      states.contains(WidgetState.selected)
-                          ? Colors.grey.shade100
-                          : Colors.white),
-                  dividerThickness: 0,
-                  columns: [
-                    DataColumn(
-                      label: Expanded(
-                        child: Text('Item Name',
-                            textAlign: TextAlign.center,
-                            style: buildCustomStyle(FontWeightManager.bold, 14,
-                                0.21, ColorManager.textColor)),
-                      ),
+                scrollDirection: Axis.vertical,
+                child: SizedBox(
+                  width: constraints.maxWidth,
+                  child: DataTable(
+                    columnSpacing: 20,
+                    horizontalMargin: 16,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.transparent),
                     ),
-                    DataColumn(
-                      label: Expanded(
-                        child: Text('Unit',
-                            textAlign: TextAlign.center,
-                            style: buildCustomStyle(FontWeightManager.bold, 14,
-                                0.21, ColorManager.textColor)),
+                    headingRowColor: WidgetStateColor.resolveWith(
+                        (states) => ColorManager.kPrimaryColor.withOpacity(0.1)),
+                    dataRowColor: WidgetStateColor.resolveWith((states) =>
+                        states.contains(WidgetState.selected)
+                            ? Colors.grey.shade100
+                            : Colors.white),
+                    dividerThickness: 0,
+                    columns: [
+                      DataColumn(
+                        label: Expanded(
+                          child: Text('Item Name',
+                              textAlign: TextAlign.center,
+                              style: buildCustomStyle(FontWeightManager.bold, 14,
+                                  0.21, ColorManager.textColor)),
+                        ),
                       ),
-                    ),
-                    DataColumn(
-                      label: Expanded(
-                        child: Text('Quantity',
-                            textAlign: TextAlign.center,
-                            style: buildCustomStyle(FontWeightManager.bold, 14,
-                                0.21, ColorManager.textColor)),
+                      DataColumn(
+                        label: Expanded(
+                          child: Text('Unit',
+                              textAlign: TextAlign.center,
+                              style: buildCustomStyle(FontWeightManager.bold, 14,
+                                  0.21, ColorManager.textColor)),
+                        ),
                       ),
-                    ),
-                    DataColumn(
-                      label: Expanded(
-                        child: Text('Unit Price',
-                            textAlign: TextAlign.center,
-                            style: buildCustomStyle(FontWeightManager.bold, 14,
-                                0.21, ColorManager.textColor)),
+                      DataColumn(
+                        label: Expanded(
+                          child: Text('Quantity',
+                              textAlign: TextAlign.center,
+                              style: buildCustomStyle(FontWeightManager.bold, 14,
+                                  0.21, ColorManager.textColor)),
+                        ),
                       ),
-                    ),
-                    // DataColumn(
-                    //   label: Expanded(
-                    //     child: Text('MRP',
-                    //         textAlign: TextAlign.center,
-                    //         style: buildCustomStyle(FontWeightManager.bold, 14,
-                    //             0.21, ColorManager.textColor)),
-                    //   ),
-                    // ),
-                    DataColumn(
-                      label: Expanded(
-                        child: Text('Total Price',
-                            textAlign: TextAlign.center,
-                            style: buildCustomStyle(FontWeightManager.bold, 14,
-                                0.21, ColorManager.textColor)),
+                      DataColumn(
+                        label: Expanded(
+                          child: Text('Unit Price',
+                              textAlign: TextAlign.center,
+                              style: buildCustomStyle(FontWeightManager.bold, 14,
+                                  0.21, ColorManager.textColor)),
+                        ),
                       ),
-                    ),
-                    DataColumn(
-                      label: Expanded(
-                        child: Text('Actions',
-                            textAlign: TextAlign.center,
-                            style: buildCustomStyle(FontWeightManager.bold, 14,
-                                0.21, ColorManager.textColor)),
+                      DataColumn(
+                        label: Expanded(
+                          child: Text('Total Price',
+                              textAlign: TextAlign.center,
+                              style: buildCustomStyle(FontWeightManager.bold, 14,
+                                  0.21, ColorManager.textColor)),
+                        ),
                       ),
-                    ),
-                  ],
-                  rows: cartItems.map((item) {
-                    return DataRow(
-                      cells: [
-                        DataCell(Align(
-                          alignment: Alignment.center,
-                          child: Text(
-                            item.product.productName ?? 'Unknown',
-                            style: buildCustomStyle(FontWeightManager.regular,
-                                12, 0.21, ColorManager.textColor),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                          ),
-                        )),
-                        DataCell(Align(
-                          alignment: Alignment.center,
-                          child: Text(
-                            item.product.unit ?? '-',
-                            style: buildCustomStyle(FontWeightManager.regular,
-                                12, 0.21, ColorManager.textColor),
-                            textAlign: TextAlign.center,
-                          ),
-                        )),
-                        DataCell(Center(
-                          child: CompactQuantityControlLocal(
-                            productId: item.product.productId!,
-                            quantity: item.quantity.toDouble(),
-                            unitPrice: item.price.toString(),
-                            productUnit: item.product.unit,
-                            product: item.product,
-                          ),
-                        )),
-                        DataCell(Center(
-                          child: SizedBox(
-                            width: 80,
-                            child: Builder(builder: (context) {
-                              // Create a controller that we can actually reference
-                              final TextEditingController controller =
-                                  TextEditingController(
-                                      text: item.price.toString());
-                              final FocusNode focusNode = FocusNode();
-
-                              // Add listener to focus node to select all text when focused
-                              focusNode.addListener(() {
-                                if (focusNode.hasFocus) {
-                                  controller.selection = TextSelection(
-                                    baseOffset: 0,
-                                    extentOffset: controller.text.length,
-                                  );
-                                } else {
-                                  // When focus is lost, update the price
-                                  localProductProvider.updateItemPrice(
-                                    item.product.productId!,
-                                    double.tryParse(controller.text) ??
-                                        item.price!,
-                                  );
-                                }
-                              });
-
-                              return TextField(
-                                textAlign: TextAlign.center,
-                                controller: controller,
-                                focusNode: focusNode,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  hintText: 'Unit Price',
-                                  hintStyle: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                onSubmitted: (newPrice) {
-                                  // Update when user presses enter
-                                  localProductProvider.updateItemPrice(
-                                    item.product.productId!,
-                                    double.tryParse(newPrice) ?? item.price!,
-                                  );
-                                },
-                              );
-                            }),
-                          ),
-                        )),
-                        // DataCell(
-                        //   Center(
-                        //     child: SizedBox(
-                        //       width: 30,
-                        //       child: Text(
-                        //         (item.price.toString()),
-                        //       ),
-                        //     ),
-                        //   ),
-                        // ),
-                        DataCell(
-                          Center(
+                      DataColumn(
+                        label: Expanded(
+                          child: Text('Actions',
+                              textAlign: TextAlign.center,
+                              style: buildCustomStyle(FontWeightManager.bold, 14,
+                                  0.21, ColorManager.textColor)),
+                        ),
+                      ),
+                    ],
+                    rows: cartItems.map((item) {
+                      return DataRow(
+                        cells: [
+                          DataCell(Align(
+                            alignment: Alignment.center,
+                            child: Text(
+                              item.product.productName ?? 'Unknown',
+                              style: buildCustomStyle(FontWeightManager.regular,
+                                  12, 0.21, ColorManager.textColor),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
+                          )),
+                          DataCell(Align(
+                            alignment: Alignment.center,
+                            child: Text(
+                              item.product.unit ?? '-',
+                              style: buildCustomStyle(FontWeightManager.regular,
+                                  12, 0.21, ColorManager.textColor),
+                              textAlign: TextAlign.center,
+                            ),
+                          )),
+                          DataCell(Center(
+                            child: CompactQuantityControlLocal(
+                              productId: item.product.productId!,
+                              quantity: item.quantity.toDouble(),
+                              unitPrice: item.price.toString(),
+                              productUnit: item.product.unit,
+                              product: item.product,
+                            ),
+                          )),
+                          DataCell(Center(
                             child: SizedBox(
                               width: 80,
-                              child: Text(
-                                (item.price! * item.quantity)
-                                    .toStringAsFixed(2),
+                              child: Builder(builder: (context) {
+                                // Create a controller that we can actually reference
+                                final TextEditingController controller =
+                                    TextEditingController(
+                                        text: item.price.toString());
+                                final FocusNode focusNode = FocusNode();
+
+                                // Add listener to focus node to select all text when focused
+                                focusNode.addListener(() {
+                                  if (focusNode.hasFocus) {
+                                    controller.selection = TextSelection(
+                                      baseOffset: 0,
+                                      extentOffset: controller.text.length,
+                                    );
+                                  } else {
+                                    // When focus is lost, update the price
+                                    localProductProvider.updateItemPrice(
+                                      item.product.productId!,
+                                      double.tryParse(controller.text) ??
+                                          item.price!,
+                                    );
+                                  }
+                                });
+
+                                return TextField(
+                                  textAlign: TextAlign.center,
+                                  controller: controller,
+                                  focusNode: focusNode,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    hintText: 'Unit Price',
+                                    hintStyle: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  onSubmitted: (newPrice) {
+                                    // Update when user presses enter
+                                    localProductProvider.updateItemPrice(
+                                      item.product.productId!,
+                                      double.tryParse(newPrice) ?? item.price!,
+                                    );
+                                  },
+                                );
+                              }),
+                            ),
+                          )),
+                          DataCell(
+                            Center(
+                              child: SizedBox(
+                                width: 80,
+                                child: Text(
+                                  (item.price! * item.quantity)
+                                      .toStringAsFixed(2),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        DataCell(Center(
-                          child: IconButton(
-                            icon: WebsafeSvg.asset(
-                              ImageAssets.oderlistCloseIcon,
-                              width: 15,
+                          DataCell(Center(
+                            child: IconButton(
+                              icon: WebsafeSvg.asset(
+                                ImageAssets.oderlistCloseIcon,
+                                width: 15,
+                              ),
+                              onPressed: () {
+                                localProductProvider
+                                    .removeFromCart(item.product.productId!);
+                              },
                             ),
-                            onPressed: () {
-                              localProductProvider
-                                  .removeFromCart(item.product.productId!);
-                            },
-                          ),
-                        )),
-                      ],
-                    );
-                  }).toList(),
+                          )),
+                        ],
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
             );
@@ -1030,7 +1034,8 @@ class _BillingPageState extends State<BillingPage> {
 
     localProductProvider.cartTotal; // Call this to ensure priceSummary is set
     return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.start,
       children: [
         BuildPaymentRow(
           amount: "",
@@ -1142,6 +1147,8 @@ class _BillingPageState extends State<BillingPage> {
                   children: [
                     WebsafeSvg.asset(
                       ImageAssets.cashIcon,
+                      width: 15,
+                      height: 15,
                       color: Colors.black,
                       fit: BoxFit.none,
                     ),
@@ -1173,6 +1180,8 @@ class _BillingPageState extends State<BillingPage> {
                   children: [
                     WebsafeSvg.asset(
                       ImageAssets.creditCardIcon,
+                      width: 15,
+                      height: 15,
                       color: Colors.black,
                       fit: BoxFit.none,
                     ),
@@ -1204,6 +1213,8 @@ class _BillingPageState extends State<BillingPage> {
                   children: [
                     WebsafeSvg.asset(
                       ImageAssets.creditCardIcon,
+                      width: 15,
+                      height: 15,
                       color: Colors.black,
                       fit: BoxFit.none,
                     ),
@@ -1278,122 +1289,120 @@ class _BillingPageState extends State<BillingPage> {
           return Container();
         }
 
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            BuildPaymentRow(
-              amount: "",
-              title: "Delivery Method",
-              firstRowTextStyle: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s14,
-                0.21,
-                ColorManager.kPrimaryColor,
-              ),
-              color: ColorManager.kPrimaryColor,
-            ),
-            const SizedBox(height: 10),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: provider.deliveryMethods.map((DeliveryMethod method) {
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      deliveryMethod = method.name;
-                      deliveryMethodId = method.id;
-                    });
-                  },
-                  child: BuildBoxShadowContainer(
-                    border: deliveryMethod == method.name
-                        ? Border.all(color: ColorManager.kPrimaryColor)
-                        : null,
-                    margin: const EdgeInsets.only(right: 10),
-                    padding: const EdgeInsets.all(8),
-                    blurRadius: 4,
-                    circleRadius: 5,
-                    child: Column(
-                      children: [
-                        Icon(
-                          method.name == "Store Takeaway"
-                              ? Icons.store
-                              : method.name == "Car Delivery"
-                                  ? Icons.car_rental
-                                  : method.name == "Door Delivery"
-                                      ? Icons.doorbell_outlined
-                                      : Icons
-                                          .local_shipping, // Default icon for other methods
-                          size: 16,
-                          color: Colors.black,
+        // Group delivery methods into pairs for 2 items per row
+        List<List<DeliveryMethod>> groupedMethods = [];
+        for (int i = 0; i < provider.deliveryMethods.length; i += 2) {
+          if (i + 1 < provider.deliveryMethods.length) {
+            // Add a pair
+            groupedMethods.add(
+                [provider.deliveryMethods[i], provider.deliveryMethods[i + 1]]);
+          } else {
+            // Add the last item if there's an odd number
+            groupedMethods.add([provider.deliveryMethods[i]]);
+          }
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          color: Colors.white,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Column of rows, each with max 2 delivery methods
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: groupedMethods.map((row) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: row.map((method) {
+                            return Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 5, left: 5),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      deliveryMethod = method.name;
+                                      deliveryMethodId = method.id;
+                                    });
+                                  },
+                                  child: BuildBoxShadowContainer(
+                                    border: deliveryMethod == method.name
+                                        ? Border.all(
+                                            color: ColorManager.kPrimaryColor)
+                                        : null,
+                                    padding: const EdgeInsets.all(8),
+                                    blurRadius: 4,
+                                    circleRadius: 5,
+                                    child: Column(
+                                      children: [
+                                        Icon(
+                                          method.name == "Store Takeaway"
+                                              ? Icons.store
+                                              : method.name == "Car Delivery"
+                                                  ? Icons.car_rental
+                                                  : method.name == "Door Delivery"
+                                                      ? Icons.doorbell_outlined
+                                                      : Icons.local_shipping,
+                                          size: 16,
+                                          color: Colors.black,
+                                        ),
+                                        Text(
+                                          method.name,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s10,
+                                            0.12,
+                                            Colors.black,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
                         ),
-                        Text(
-                          method.name,
-                          style: buildCustomStyle(
-                            FontWeightManager.medium,
-                            FontSize.s10,
-                            0.12,
-                            Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    }).toList(),
                   ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 10),
-            if (deliveryMethod == "Car Delivery")
-              SizedBox(
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5.0),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
+                    if (deliveryMethod == "Car Delivery")
+                      buildColumnWidgetForTextFields(
+                        controller: _carNumberController,
+                        size: size,
+                        margin: const EdgeInsets.all(0),
+                        height: size.height * .06,
+                        hintText: 'Car Number:',
+                      ),
+                    if (deliveryMethod == "Car Delivery")
+                      const SizedBox(height: 10),
                     buildColumnWidgetForTextFields(
-                      controller: _carNumberController,
-                      size: size,
+                      controller: _commentController,
                       margin: const EdgeInsets.all(0),
+                      size: size,
                       height: size.height * .06,
-                      hintText: 'Car Number:',
+                      hintText: 'Comment:',
                     ),
-                    const SizedBox(height: 10),
                   ],
                 ),
               ),
-            // if (deliveryMethod == "Door Delivery")
-            //   SizedBox(
-            //     child: Column(
-            //       mainAxisAlignment: MainAxisAlignment.start,
-            //       crossAxisAlignment: CrossAxisAlignment.start,
-            //       children: [
-            //         buildColumnWidgetForTextFields(
-            //           controller: _transactionNumberController,
-            //           size: size,
-            //           height: size.height * .06,
-            //           margin: const EdgeInsets.all(0),
-            //           hintText: 'Address:',
-            //         ),
-            //         const SizedBox(height: 10),
-            //         buildColumnWidgetForTextFields(
-            //           controller: _transactionNumberController,
-            //           size: size,
-            //           margin: const EdgeInsets.all(0),
-            //           height: size.height * .06,
-            //           hintText: 'Pincode:',
-            //         ),
-            //       ],
-            //     ),
-            //   ),
-            // const SizedBox(height: 10),
-            buildColumnWidgetForTextFields(
-              controller: _commentController,
-              margin: const EdgeInsets.all(0),
-              size: size,
-              height: size.height * .06,
-              hintText: 'Comment:',
-            ),
-            const SizedBox(height: 10),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -1596,8 +1605,8 @@ class _BillingPageState extends State<BillingPage> {
                           ),
                           border: InputBorder.none,
                           isDense: true, // Makes the field more compact
-                          contentPadding: const EdgeInsets.symmetric(
-                              vertical: 10.0),
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 10.0),
                           suffixIconConstraints: const BoxConstraints(
                               maxHeight: 25,
                               maxWidth: 30), // Constrains the suffix icon size
@@ -2437,11 +2446,11 @@ class _BillingPageState extends State<BillingPage> {
   }
 }
 
-/// A widget to display saved orders in a horizontal scrollable list
-class HorizontalSavedOrdersView extends StatelessWidget {
+/// A widget to display saved orders in a vertical scrollable list
+class VerticalSavedOrdersView extends StatelessWidget {
   final Function(String) onOrderSelected;
 
-  const HorizontalSavedOrdersView({
+  const VerticalSavedOrdersView({
     Key? key,
     required this.onOrderSelected,
   }) : super(key: key);
@@ -2450,127 +2459,126 @@ class HorizontalSavedOrdersView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<LocalProductProvider>(
       builder: (context, provider, child) {
-        if (provider.savedOrders.isEmpty) {
-          return SizedBox(
-            height: 60,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                _buildNewOrderButton(context, provider),
-              ],
-            ),
-          );
-        }
-
-        return SizedBox(
-          height: 60,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount:
-                provider.savedOrders.length + 1, // +1 for the new order button
-            itemBuilder: (context, index) {
-              // First item is the new order button
-              if (index == 0) {
-                return _buildNewOrderButton(context, provider);
-              }
-
-              // Adjust index for actual order items
-              final orderIndex = index - 1;
-              final order = provider.savedOrders[orderIndex];
-              // Format time from ISO date string to 12-hour format with AM/PM
-              String time = _formatTimeWith12Hour(order.createdAt);
-
-              return GestureDetector(
-                onTap: () => onOrderSelected(order.id),
-                child: Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
-                        spreadRadius: 1,
-                        blurRadius: 5,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            order.orderNumber,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(
-                            width: 10,
-                          ),
-                          Text(
-                            "₹${order.total.toStringAsFixed(2)}",
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Items: ${order.items.length}",
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(
-                            width: 5,
-                          ),
-                          Text(
-                            time,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(
-                            width: 5,
-                          ),
-                          // Add a print button
-                          GestureDetector(
-                            onTap: () {
-                              // Use the printFromSavedOrder function from the parent
-                              if (context.findAncestorStateOfType<
-                                      _BillingPageState>() !=
-                                  null) {
-                                context
-                                    .findAncestorStateOfType<
-                                        _BillingPageState>()!
-                                    .printFromSavedOrder(order);
-                              }
-                            },
-                            child: const Icon(
-                              Icons.print,
-                              size: 16,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+        return BuildBoxShadowContainer(
+          circleRadius: 7,
+          color: Colors.white,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  "Saved Orders",
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s16,
+                    0.21,
+                    ColorManager.kPrimaryColor,
                   ),
                 ),
-              );
-            },
+              ),
+
+              // New order button
+              _buildNewOrderButton(context, provider),
+
+              // Orders list
+              Expanded(
+                child: provider.savedOrders.isEmpty
+                    ? const Center(
+                        child: Text("No saved orders"),
+                      )
+                    : ListView.builder(
+                        itemCount: provider.savedOrders.length,
+                        itemBuilder: (context, index) {
+                          final order = provider.savedOrders[index];
+                          String time = _formatTimeWith12Hour(order.createdAt);
+
+                          return BuildBoxShadowContainer(
+                            circleRadius: 7,
+                            color: Colors.white,
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            child: InkWell(
+                              onTap: () => onOrderSelected(order.id),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          order.orderNumber,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        Text(
+                                          "₹${order.total.toStringAsFixed(2)}",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "Items: ${order.items.length}",
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                        Text(
+                                          time,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () {
+                                            if (context.findAncestorStateOfType<
+                                                    _BillingPageState>() !=
+                                                null) {
+                                              context
+                                                  .findAncestorStateOfType<
+                                                      _BillingPageState>()!
+                                                  .printFromSavedOrder(order);
+                                            }
+                                          },
+                                          child: const Icon(
+                                            Icons.print,
+                                            size: 16,
+                                            color: Colors.blue,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
         );
       },
@@ -2579,69 +2587,70 @@ class HorizontalSavedOrdersView extends StatelessWidget {
 
   Widget _buildNewOrderButton(
       BuildContext context, LocalProductProvider provider) {
-    return GestureDetector(
-      onTap: () {
-        // If currently editing an order and cart has items, update it
-        if (provider.currentOrder != null && provider.cartItems.isNotEmpty) {
-          provider.updateSavedOrder(
-            provider.currentOrder!.id,
-            customerName: null, // Get these from context if needed
-            customerPhone: null,
-            comment: null,
-            deliveryMethod: null,
-          );
-        }
-
-        // If cart has items, save as new order
-        else if (provider.cartItems.isNotEmpty) {
-          try {
-            provider.saveCurrentCartAsOrder();
-
-            // Show feedback
-            showScaffold(
-              context: context,
-              message: "Order Saved Successfully",
+    return BuildBoxShadowContainer(
+      circleRadius: 7,
+      color: Colors.white,
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: InkWell(
+        onTap: () {
+          // If currently editing an order and cart has items, update it
+          if (provider.currentOrder != null && provider.cartItems.isNotEmpty) {
+            provider.updateSavedOrder(
+              provider.currentOrder!.id,
+              customerName: null, // Get these from context if needed
+              customerPhone: null,
+              comment: null,
+              deliveryMethod: null,
             );
-          } catch (e) {
-            // Swallow exception if cart is empty
           }
-        }
 
-        // Clear cart and reset current order
-        provider.clearCart();
-        // Reset current order using proper method
-        if (provider.currentOrder != null) {
-          // Create a temporary order ID before clearing
-          String orderId = provider.currentOrder!.id;
-          // Need to manually clear the current order reference
-          provider.loadOrderForEditing(orderId);
+          // If cart has items, save as new order
+          else if (provider.cartItems.isNotEmpty) {
+            try {
+              provider.saveCurrentCartAsOrder();
+
+              // Show feedback
+              showScaffold(
+                context: context,
+                message: "Order Saved Successfully",
+              );
+            } catch (e) {
+              // Swallow exception if cart is empty
+            }
+          }
+
+          // Clear cart and reset current order
           provider.clearCart();
-        }
-        provider.notifyListeners();
+          // Reset current order using proper method
+          if (provider.currentOrder != null) {
+            // Create a temporary order ID before clearing
+            String orderId = provider.currentOrder!.id;
+            // Need to manually clear the current order reference
+            provider.loadOrderForEditing(orderId);
+            provider.clearCart();
+          }
+          provider.notifyListeners();
 
-        // Update UI
-        (context as Element).markNeedsBuild();
-      },
-      child: Container(
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.add,
-            color: ColorManager.textColor,
-            size: 30,
+          // Update UI
+          (context as Element).markNeedsBuild();
+        },
+        child: const Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Icon(
+                Icons.add_circle,
+                color: ColorManager.kPrimaryColor,
+              ),
+              SizedBox(width: 8),
+              Text(
+                "New Order",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: ColorManager.kPrimaryColor,
+                ),
+              ),
+            ],
           ),
         ),
       ),
