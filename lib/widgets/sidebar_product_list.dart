@@ -148,6 +148,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                 index == categoryProvider.selectedCategoryIndex;
 
                             return GestureDetector(
+                              behavior: HitTestBehavior.opaque,
                               onTap: () {
                                 categoryProvider.selectCategory(
                                   index,
@@ -413,20 +414,14 @@ class _SideBarProductListState extends State<SideBarProductList> {
                           ],
                         ),
                       )
-                    : GridView.builder(
+                    : GridView.count(
                         padding: const EdgeInsets.only(
                             top: 16, left: 16, right: 16, bottom: 16),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 0.8,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                        ),
-                        key: ValueKey<int>(
-                            DateTime.now().millisecondsSinceEpoch),
-                        itemCount: products.length,
-                        itemBuilder: (context, index) {
+                        crossAxisCount: 3,
+                        childAspectRatio: 0.8,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                        children: List.generate(products.length, (index) {
                           final product = products[index];
                           final isSelected =
                               product == productProvider.selectedProduct;
@@ -449,11 +444,12 @@ class _SideBarProductListState extends State<SideBarProductList> {
                           }
 
                           return GestureDetector(
+                            behavior: HitTestBehavior.opaque,
                             onTap: () {
+                              debugPrint("Product: $product");
                               if (widget.onProductSelected != null) {
                                 widget.onProductSelected!(product);
                               } else {
-                                // Add product to cart directly instead of showing dialog
                                 _addToCart(context, product, customerId);
                               }
                             },
@@ -569,7 +565,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                               ),
                             ),
                           );
-                        },
+                        }),
                       );
               },
             ),

@@ -164,17 +164,17 @@ class SideMenu extends StatelessWidget {
           //   size: size,
           //   iconPath: ImageAssets.homeIcon,
           // ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.homeIcon,
-              title: 'Demo Home',
-              onTap: () {
-                // debugPrint(" 'Home',${sideBarController.index.value}");
-                sideBarController.index.value = 0;
-              },
-              selected: sideBarController.index.value == 0,
-            ),
-          ),
+          // Obx(
+          //   () => DrawerListTile(
+          //     iconPath: ImageAssets.homeIcon,
+          //     title: 'Demo Home',
+          //     onTap: () {
+          //       // debugPrint(" 'Home',${sideBarController.index.value}");
+          //       sideBarController.index.value = 0;
+          //     },
+          //     selected: sideBarController.index.value == 0,
+          //   ),
+          // ),
 
           Obx(
             () => DrawerListTile(
@@ -209,16 +209,16 @@ class SideMenu extends StatelessWidget {
               selected: sideBarController.index.value == 54,
             ),
           ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.homeIcon,
-              title: 'Kiosk',
-              onTap: () {
-                Get.to(() => const KioskScreen());
-              },
-              selected: sideBarController.index.value == 900,
-            ),
-          ),
+          // Obx(
+          //   () => DrawerListTile(
+          //     iconPath: ImageAssets.homeIcon,
+          //     title: 'Kiosk',
+          //     onTap: () {
+          //       Get.to(() => const KioskScreen());
+          //     },
+          //     selected: sideBarController.index.value == 900,
+          //   ),
+          // ),
 
           Obx(
             () => DrawerListTile(
