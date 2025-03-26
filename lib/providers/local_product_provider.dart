@@ -394,7 +394,12 @@ class LocalProductProvider extends ChangeNotifier {
     _filteredProducts = result;
     _updatePagination();
     setPage(page);
+    
+    // Make sure UI updates by calling notifyListeners
     notifyListeners();
+    
+    // Debug info to help diagnose issues
+    debugPrint("Category filter applied: $categoryId - Products count: ${result.length}");
   }
 
   /// Searches through the filtered products using [query] on the product name.

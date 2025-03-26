@@ -33,8 +33,10 @@ import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
 import 'package:pos_machine/widgets/horizontal_product_view_local.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
+import 'package:pos_machine/widgets/sidebar_product_list.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
+import 'package:pos_machine/providers/category_providers.dart';
 
 class BillingPage extends StatefulWidget {
   const BillingPage({super.key});
@@ -233,7 +235,7 @@ class _BillingPageState extends State<BillingPage> {
               children: [
                 // Main content area
                 Expanded(
-                  flex: 5,
+                  flex: 3,
                   child: BuildBoxShadowContainer(
                     circleRadius: 10,
                     margin: const EdgeInsets.only(
@@ -332,19 +334,19 @@ class _BillingPageState extends State<BillingPage> {
                   ),
                 ),
 
-                // Saved orders on the right side
+                // Category Based Product List
                 Expanded(
                   flex: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Container(
-                      color: Colors.white,
-                      child: const Column(
-                        children: [
-                          Text("Saved Orders"),
-                        ],
-                      ),
-                    ),
+                  child: SideBarProductList(
+                    onProductSelected: (product) {
+                      // Add product to cart when selected
+                      Provider.of<LocalProductProvider>(context, listen: false)
+                          .addToCart(product: product);
+                      showScaffold(
+                        context: context,
+                        message: "Added To Cart",
+                      );
+                    },
                   ),
                 ),
               ],
@@ -2531,7 +2533,8 @@ class HorizontalSavedOrdersView extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<HorizontalSavedOrdersView> createState() => _HorizontalSavedOrdersViewState();
+  State<HorizontalSavedOrdersView> createState() =>
+      _HorizontalSavedOrdersViewState();
 }
 
 class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
@@ -2565,7 +2568,8 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
               child: ListView.builder(
                 controller: _scrollController,
                 scrollDirection: Axis.horizontal,
-                itemCount: provider.savedOrders.length + 1, // +1 for the new order button
+                itemCount: provider.savedOrders.length +
+                    1, // +1 for the new order button
                 itemBuilder: (context, index) {
                   // New Order button as the first item
                   if (index == 0) {
@@ -2584,7 +2588,8 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                           ? Colors.white
                           : Colors.white,
                       border: provider.currentOrder?.id == order.id
-                          ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
+                          ? Border.all(
+                              color: ColorManager.kPrimaryColor, width: 2)
                           : null,
                       width: 140,
                       child: InkWell(
@@ -2596,7 +2601,8 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child: Text(
@@ -2618,8 +2624,13 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                                   const SizedBox(width: 10),
                                   GestureDetector(
                                     onTap: () {
-                                      if (context.findAncestorStateOfType<_BillingPageState>() != null) {
-                                        context.findAncestorStateOfType<_BillingPageState>()!.printFromSavedOrder(order);
+                                      if (context.findAncestorStateOfType<
+                                              _BillingPageState>() !=
+                                          null) {
+                                        context
+                                            .findAncestorStateOfType<
+                                                _BillingPageState>()!
+                                            .printFromSavedOrder(order);
                                       }
                                     },
                                     child: const Icon(
@@ -2632,7 +2643,8 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                               ),
                               const SizedBox(height: 4),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     "₹${order.total.toStringAsFixed(2)}",
