@@ -140,13 +140,13 @@ class _CompactQuantityControlLocalState
               shape: BoxShape.circle,
               color: ColorManager.kPrimaryColor.withOpacity(0.1),
             ),
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(4),
             child: const Icon(Icons.remove,
-                size: 16, color: ColorManager.kPrimaryColor),
+                size: 12, color: ColorManager.kPrimaryColor),
           ),
         ),
         SizedBox(
-          width: 40,
+          width: 32,
           child: Builder(builder: (context) {
             final FocusNode focusNode = FocusNode();
 
@@ -169,6 +169,7 @@ class _CompactQuantityControlLocalState
               controller: _controller,
               keyboardType: TextInputType.number,
               focusNode: focusNode,
+              style: const TextStyle(fontSize: 11),
               inputFormatters: [
                 if (widget.productUnit == 'KG' || widget.productUnit == 'LT')
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
@@ -178,7 +179,8 @@ class _CompactQuantityControlLocalState
               textAlign: TextAlign.center,
               decoration: const InputDecoration(
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 5),
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(vertical: 3),
               ),
               onSubmitted: (value) {
                 num? newQuantity = num.tryParse(value);
@@ -196,9 +198,9 @@ class _CompactQuantityControlLocalState
               shape: BoxShape.circle,
               color: ColorManager.kPrimaryColor,
             ),
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(4),
             child: const Icon(Icons.add,
-                size: 16, color: ColorManager.kSecondaryColor),
+                size: 12, color: ColorManager.kSecondaryColor),
           ),
         ),
       ],

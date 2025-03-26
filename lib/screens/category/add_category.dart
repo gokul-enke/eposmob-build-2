@@ -525,7 +525,12 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     return TableRow(
       decoration:
           BoxDecoration(color: ColorManager.tableBGColor.withOpacity(0.4)),
-      children: ["No", "Category Name", "Slug", "Action"]
+      children: [
+        "No",
+        "Category Name",
+        "Slug",
+      ]
+          // "Action"
           .map((title) => TableCell(
                 verticalAlignment: TableCellVerticalAlignment.middle,
                 child: Padding(
@@ -555,39 +560,39 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
         _buildTableCell(index.toString()),
         _buildTableCell(category.categoryName ?? ""),
         _buildTableCell(category.categorySlug ?? ""),
-        TableCell(
-          verticalAlignment: TableCellVerticalAlignment.middle,
-          child: Padding(
-            padding: const EdgeInsets.all(15.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildActionButton(
-                  Icons.visibility,
-                  ColorManager.kPrimaryColor.withOpacity(0.9),
-                  Colors.white,
-                  () async {
-                    await categoryProvider.viewCategoryApi(
-                        categoryId: category.categoryId ?? 1);
-                    sideBarController.index.value = 27;
-                  },
-                ),
-                _buildActionButton(
-                  Icons.edit,
-                  ColorManager.kPrimaryColor.withOpacity(0.9),
-                  Colors.white,
-                  () async {
-                    await categoryProvider.setEditCategoryId(
-                        categoryId: category.categoryId ?? 1);
-                    await categoryProvider.viewCategoryApi(
-                        categoryId: category.categoryId ?? 1);
-                    sideBarController.index.value = 34;
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
+        // TableCell(
+        //   verticalAlignment: TableCellVerticalAlignment.middle,
+        //   child: Padding(
+        //     padding: const EdgeInsets.all(15.0),
+        //     child: Row(
+        //       mainAxisAlignment: MainAxisAlignment.center,
+        //       children: [
+        //         _buildActionButton(
+        //           Icons.visibility,
+        //           ColorManager.kPrimaryColor.withOpacity(0.9),
+        //           Colors.white,
+        //           () async {
+        //             await categoryProvider.viewCategoryApi(
+        //                 categoryId: category.categoryId ?? 1);
+        //             sideBarController.index.value = 27;
+        //           },
+        //         ),
+        //         _buildActionButton(
+        //           Icons.edit,
+        //           ColorManager.kPrimaryColor.withOpacity(0.9),
+        //           Colors.white,
+        //           () async {
+        //             await categoryProvider.setEditCategoryId(
+        //                 categoryId: category.categoryId ?? 1);
+        //             await categoryProvider.viewCategoryApi(
+        //                 categoryId: category.categoryId ?? 1);
+        //             sideBarController.index.value = 34;
+        //           },
+        //         ),
+        //       ],
+        //     ),
+        //   ),
+        // ),
       ],
     );
   }

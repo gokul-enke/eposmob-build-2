@@ -853,8 +853,8 @@ class _BillingPageState extends State<BillingPage> {
                 child: SizedBox(
                   width: constraints.maxWidth,
                   child: DataTable(
-                    columnSpacing: 20,
-                    horizontalMargin: 16,
+                    columnSpacing: 10, // Reduced from 20
+                    horizontalMargin: 8, // Reduced from 16
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.transparent),
                     ),
@@ -864,6 +864,9 @@ class _BillingPageState extends State<BillingPage> {
                         states.contains(WidgetState.selected)
                             ? Colors.grey.shade100
                             : Colors.white),
+                    headingRowHeight: 32, // Added to reduce header height
+                    dataRowMinHeight: 28, // Added to reduce row height
+                    dataRowMaxHeight: 36, // Added to constrain row height
                     dividerThickness: 0,
                     columns: [
                       DataColumn(
@@ -871,7 +874,7 @@ class _BillingPageState extends State<BillingPage> {
                           child: Text('Item Name',
                               textAlign: TextAlign.center,
                               style: buildCustomStyle(FontWeightManager.bold,
-                                  14, 0.21, ColorManager.textColor)),
+                                  12, 0.21, ColorManager.textColor)), // Reduced font size
                         ),
                       ),
                       DataColumn(
@@ -879,148 +882,165 @@ class _BillingPageState extends State<BillingPage> {
                           child: Text('Unit',
                               textAlign: TextAlign.center,
                               style: buildCustomStyle(FontWeightManager.bold,
-                                  14, 0.21, ColorManager.textColor)),
+                                  12, 0.21, ColorManager.textColor)), // Reduced font size
                         ),
                       ),
                       DataColumn(
                         label: Expanded(
-                          child: Text('Quantity',
+                          child: Text('Qty',
                               textAlign: TextAlign.center,
                               style: buildCustomStyle(FontWeightManager.bold,
-                                  14, 0.21, ColorManager.textColor)),
+                                  12, 0.21, ColorManager.textColor)), // Changed to Qty and reduced font size
                         ),
                       ),
                       DataColumn(
                         label: Expanded(
-                          child: Text('Unit Price',
+                          child: Text('Price',
                               textAlign: TextAlign.center,
                               style: buildCustomStyle(FontWeightManager.bold,
-                                  14, 0.21, ColorManager.textColor)),
+                                  12, 0.21, ColorManager.textColor)), // Changed to Price and reduced font size
                         ),
                       ),
                       DataColumn(
                         label: Expanded(
-                          child: Text('Total Price',
+                          child: Text('Total',
                               textAlign: TextAlign.center,
                               style: buildCustomStyle(FontWeightManager.bold,
-                                  14, 0.21, ColorManager.textColor)),
+                                  12, 0.21, ColorManager.textColor)), // Changed to Total and reduced font size
                         ),
                       ),
                       DataColumn(
                         label: Expanded(
-                          child: Text('Actions',
+                          child: Text('',
                               textAlign: TextAlign.center,
                               style: buildCustomStyle(FontWeightManager.bold,
-                                  14, 0.21, ColorManager.textColor)),
+                                  12, 0.21, ColorManager.textColor)), // Removed Actions text
                         ),
                       ),
                     ],
                     rows: cartItems.map((item) {
                       return DataRow(
                         cells: [
-                          DataCell(Align(
-                            alignment: Alignment.center,
-                            child: Text(
-                              item.product.productName ?? 'Unknown',
-                              style: buildCustomStyle(FontWeightManager.regular,
-                                  12, 0.21, ColorManager.textColor),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                            ),
-                          )),
-                          DataCell(Align(
-                            alignment: Alignment.center,
-                            child: Text(
-                              item.product.unit ?? '-',
-                              style: buildCustomStyle(FontWeightManager.regular,
-                                  12, 0.21, ColorManager.textColor),
-                              textAlign: TextAlign.center,
-                            ),
-                          )),
-                          DataCell(Center(
-                            child: CompactQuantityControlLocal(
-                              productId: item.product.productId!,
-                              quantity: item.quantity.toDouble(),
-                              unitPrice: item.price.toString(),
-                              productUnit: item.product.unit,
-                              product: item.product,
-                            ),
-                          )),
-                          DataCell(Center(
-                            child: SizedBox(
-                              width: 80,
-                              child: Builder(builder: (context) {
-                                // Create a controller that we can actually reference
-                                final TextEditingController controller =
-                                    TextEditingController(
-                                        text: item.price.toString());
-                                final FocusNode focusNode = FocusNode();
-
-                                // Add listener to focus node to select all text when focused
-                                focusNode.addListener(() {
-                                  if (focusNode.hasFocus) {
-                                    controller.selection = TextSelection(
-                                      baseOffset: 0,
-                                      extentOffset: controller.text.length,
-                                    );
-                                  } else {
-                                    // When focus is lost, update the price
-                                    localProductProvider.updateItemPrice(
-                                      item.product.productId!,
-                                      double.tryParse(controller.text) ??
-                                          item.price!,
-                                    );
-                                  }
-                                });
-
-                                return TextField(
-                                  textAlign: TextAlign.center,
-                                  controller: controller,
-                                  focusNode: focusNode,
-                                  keyboardType: TextInputType.number,
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    hintText: 'Unit Price',
-                                    hintStyle: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  onSubmitted: (newPrice) {
-                                    // Update when user presses enter
-                                    localProductProvider.updateItemPrice(
-                                      item.product.productId!,
-                                      double.tryParse(newPrice) ?? item.price!,
-                                    );
-                                  },
-                                );
-                              }),
-                            ),
-                          )),
                           DataCell(
-                            Center(
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2), // Reduced padding
+                              child: Text(
+                                item.product.productName ?? 'Unknown',
+                                style: buildCustomStyle(FontWeightManager.regular,
+                                    11, 0.21, ColorManager.textColor), // Reduced font size
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2), // Reduced padding
+                              child: Text(
+                                item.product.unit ?? '-',
+                                style: buildCustomStyle(FontWeightManager.regular,
+                                    11, 0.21, ColorManager.textColor), // Reduced font size
+                                textAlign: TextAlign.center,
+                              ), 
+                            ), 
+                          ),
+                          DataCell(
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2), // Reduced padding
+                              child: CompactQuantityControlLocal(
+                                productId: item.product.productId!,
+                                quantity: item.quantity.toDouble(),
+                                unitPrice: item.price.toString(),
+                                productUnit: item.product.unit,
+                                product: item.product,
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2), // Reduced padding
                               child: SizedBox(
-                                width: 80,
+                                width: 70, // Reduced width
+                                child: Builder(builder: (context) {
+                                  final TextEditingController controller =
+                                      TextEditingController(
+                                          text: item.price.toString());
+                                  final FocusNode focusNode = FocusNode();
+
+                                  focusNode.addListener(() {
+                                    if (focusNode.hasFocus) {
+                                      controller.selection = TextSelection(
+                                        baseOffset: 0,
+                                        extentOffset: controller.text.length,
+                                      );
+                                    } else {
+                                      localProductProvider.updateItemPrice(
+                                        item.product.productId!,
+                                        double.tryParse(controller.text) ??
+                                            item.price!,
+                                      );
+                                    }
+                                  });
+
+                                  return TextField(
+                                    textAlign: TextAlign.center,
+                                    controller: controller,
+                                    focusNode: focusNode,
+                                    keyboardType: TextInputType.number,
+                                    style: const TextStyle(fontSize: 11), // Reduced font size
+                                    decoration: const InputDecoration(
+                                      isDense: true, // Make input field more compact
+                                      contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                                      border: InputBorder.none,
+                                      hintText: 'Price',
+                                      hintStyle: TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    onSubmitted: (newPrice) {
+                                      localProductProvider.updateItemPrice(
+                                        item.product.productId!,
+                                        double.tryParse(newPrice) ?? item.price!,
+                                      );
+                                    },
+                                  );
+                                }),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2), // Reduced padding
+                              child: SizedBox(
+                                width: 70, // Reduced width
                                 child: Text(
                                   (item.price! * item.quantity)
                                       .toStringAsFixed(2),
+                                  style: const TextStyle(fontSize: 11), // Reduced font size
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ),
                           ),
-                          DataCell(Center(
-                            child: IconButton(
-                              icon: WebsafeSvg.asset(
-                                ImageAssets.oderlistCloseIcon,
-                                width: 15,
+                          DataCell(
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2), // Reduced padding
+                              child: IconButton(
+                                icon: WebsafeSvg.asset(
+                                  ImageAssets.oderlistCloseIcon,
+                                  width: 12, // Reduced from 15
+                                ),
+                                padding: EdgeInsets.zero, // Remove padding from IconButton
+                                constraints: const BoxConstraints(), // Remove constraints
+                                visualDensity: VisualDensity.compact, // Make the button more compact
+                                onPressed: () {
+                                  localProductProvider
+                                      .removeFromCart(item.product.productId!);
+                                },
                               ),
-                              onPressed: () {
-                                localProductProvider
-                                    .removeFromCart(item.product.productId!);
-                              },
                             ),
-                          )),
+                          ),
                         ],
                       );
                     }).toList(),
@@ -1435,7 +1455,7 @@ class _BillingPageState extends State<BillingPage> {
             isLoading: isLoadingSaveOrder,
           ),
           _buildActionButton(
-            text: 'Create Order and Print',
+            text: 'Confirm and Print',
             color: ColorManager.kButtonBlue,
             onPressed: _createOrderAndPrint,
             isLoading: isLoadingCreateOrder,

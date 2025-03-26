@@ -320,12 +320,12 @@ class LocalProductProvider extends ChangeNotifier {
     if (_filteredProducts.isEmpty) {
       return [];
     }
-    
+
     final startIndex = (_currentPage - 1) * _itemsPerPage;
     if (startIndex >= _filteredProducts.length) {
       return [];
     }
-    
+
     final endIndex = startIndex + _itemsPerPage;
     return _filteredProducts.sublist(
       startIndex,
@@ -355,6 +355,7 @@ class LocalProductProvider extends ChangeNotifier {
     int? categoryId,
     String? filterName,
     String? filterPrice,
+    String? filterBarcode,
     String? filterCreatedBy,
     String? filterProperties,
     String? filterStore,
@@ -373,6 +374,10 @@ class LocalProductProvider extends ChangeNotifier {
               .toLowerCase()
               .contains(filterName.toLowerCase()))
           .toList();
+    }
+
+    if (filterBarcode != null && filterBarcode.isNotEmpty) {
+      result = result.where((p) => p.barcode == filterBarcode).toList();
     }
 
     if (filterPrice != null && filterPrice.isNotEmpty) {
