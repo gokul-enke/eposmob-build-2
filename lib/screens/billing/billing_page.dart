@@ -872,17 +872,17 @@ class _BillingPageState extends State<BillingPage> {
                       DataColumn(
                         label: Expanded(
                           child: Text('Item Name',
-                              textAlign: TextAlign.center,
+                              textAlign: TextAlign.left,
                               style: buildCustomStyle(FontWeightManager.bold,
-                                  12, 0.21, ColorManager.textColor)), // Reduced font size
+                                  12, 0.21, ColorManager.textColor)),
                         ),
                       ),
                       DataColumn(
                         label: Expanded(
                           child: Text('Unit',
-                              textAlign: TextAlign.center,
+                              textAlign: TextAlign.left,
                               style: buildCustomStyle(FontWeightManager.bold,
-                                  12, 0.21, ColorManager.textColor)), // Reduced font size
+                                  12, 0.21, ColorManager.textColor)),
                         ),
                       ),
                       DataColumn(
@@ -890,31 +890,39 @@ class _BillingPageState extends State<BillingPage> {
                           child: Text('Qty',
                               textAlign: TextAlign.center,
                               style: buildCustomStyle(FontWeightManager.bold,
-                                  12, 0.21, ColorManager.textColor)), // Changed to Qty and reduced font size
+                                  12, 0.21, ColorManager.textColor)),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Expanded(
+                          child: Text('MRP',
+                              textAlign: TextAlign.left,
+                              style: buildCustomStyle(FontWeightManager.bold,
+                                  12, 0.21, ColorManager.textColor)),
                         ),
                       ),
                       DataColumn(
                         label: Expanded(
                           child: Text('Price',
-                              textAlign: TextAlign.center,
+                              textAlign: TextAlign.left,
                               style: buildCustomStyle(FontWeightManager.bold,
-                                  12, 0.21, ColorManager.textColor)), // Changed to Price and reduced font size
+                                  12, 0.21, ColorManager.textColor)),
                         ),
                       ),
                       DataColumn(
                         label: Expanded(
                           child: Text('Total',
-                              textAlign: TextAlign.center,
+                              textAlign: TextAlign.left,
                               style: buildCustomStyle(FontWeightManager.bold,
-                                  12, 0.21, ColorManager.textColor)), // Changed to Total and reduced font size
+                                  12, 0.21, ColorManager.textColor)),
                         ),
                       ),
                       DataColumn(
                         label: Expanded(
-                          child: Text('',
-                              textAlign: TextAlign.center,
+                          child: Text('Actions',
+                              textAlign: TextAlign.left,
                               style: buildCustomStyle(FontWeightManager.bold,
-                                  12, 0.21, ColorManager.textColor)), // Removed Actions text
+                                  12, 0.21, ColorManager.textColor)),
                         ),
                       ),
                     ],
@@ -923,11 +931,16 @@ class _BillingPageState extends State<BillingPage> {
                         cells: [
                           DataCell(
                             Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2), // Reduced padding
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 2), // Reduced padding
                               child: Text(
                                 item.product.productName ?? 'Unknown',
-                                style: buildCustomStyle(FontWeightManager.regular,
-                                    11, 0.21, ColorManager.textColor), // Reduced font size
+                                style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    12,
+                                    0.21,
+                                    ColorManager
+                                        .textColor), // Reduced font size
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -935,30 +948,54 @@ class _BillingPageState extends State<BillingPage> {
                           ),
                           DataCell(
                             Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2), // Reduced padding
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 2), // Reduced padding
                               child: Text(
                                 item.product.unit ?? '-',
-                                style: buildCustomStyle(FontWeightManager.regular,
-                                    11, 0.21, ColorManager.textColor), // Reduced font size
-                                textAlign: TextAlign.center,
-                              ), 
-                            ), 
+                                style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    12,
+                                    0.21,
+                                    ColorManager
+                                        .textColor), // Reduced font size
+                                textAlign: TextAlign.left,
+                              ),
+                            ),
                           ),
                           DataCell(
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2), // Reduced padding
-                              child: CompactQuantityControlLocal(
-                                productId: item.product.productId!,
-                                quantity: item.quantity.toDouble(),
-                                unitPrice: item.price.toString(),
-                                productUnit: item.product.unit,
-                                product: item.product,
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 2), // Reduced padding
+                                child: CompactQuantityControlLocal(
+                                  productId: item.product.productId!,
+                                  quantity: item.quantity.toDouble(),
+                                  unitPrice: item.price.toString(),
+                                  productUnit: item.product.unit,
+                                  product: item.product,
+                                ),
                               ),
                             ),
                           ),
                           DataCell(
                             Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2), // Reduced padding
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 2), // Reduced padding
+                              child: SizedBox(
+                                width: 70, // Reduced width
+                                child: Text(
+                                  item.product.mrp?.toString() ?? '0.00',
+                                  style: const TextStyle(
+                                      fontSize: 12), // Reduced font size
+                                  textAlign: TextAlign.left,
+                                ),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 2), // Reduced padding
                               child: SizedBox(
                                 width: 70, // Reduced width
                                 child: Builder(builder: (context) {
@@ -983,25 +1020,29 @@ class _BillingPageState extends State<BillingPage> {
                                   });
 
                                   return TextField(
-                                    textAlign: TextAlign.center,
+                                    textAlign: TextAlign.left,
                                     controller: controller,
                                     focusNode: focusNode,
                                     keyboardType: TextInputType.number,
-                                    style: const TextStyle(fontSize: 11), // Reduced font size
+                                    style: const TextStyle(
+                                        fontSize: 12), // Reduced font size
                                     decoration: const InputDecoration(
-                                      isDense: true, // Make input field more compact
-                                      contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                                      isDense:
+                                          true, // Make input field more compact
+                                      contentPadding: EdgeInsets.symmetric(
+                                          vertical: 6, horizontal: 4),
                                       border: InputBorder.none,
                                       hintText: 'Price',
                                       hintStyle: TextStyle(
                                         color: Colors.grey,
-                                        fontSize: 11,
+                                        fontSize: 12,
                                       ),
                                     ),
                                     onSubmitted: (newPrice) {
                                       localProductProvider.updateItemPrice(
                                         item.product.productId!,
-                                        double.tryParse(newPrice) ?? item.price!,
+                                        double.tryParse(newPrice) ??
+                                            item.price!,
                                       );
                                     },
                                   );
@@ -1011,29 +1052,35 @@ class _BillingPageState extends State<BillingPage> {
                           ),
                           DataCell(
                             Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2), // Reduced padding
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 2), // Reduced padding
                               child: SizedBox(
                                 width: 70, // Reduced width
                                 child: Text(
                                   (item.price! * item.quantity)
-                                      .toStringAsFixed(2),
-                                  style: const TextStyle(fontSize: 11), // Reduced font size
-                                  textAlign: TextAlign.center,
+                                      .toStringAsFixed(3),
+                                  style: const TextStyle(
+                                      fontSize: 12), // Reduced font size
+                                  textAlign: TextAlign.left,
                                 ),
                               ),
                             ),
                           ),
                           DataCell(
                             Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2), // Reduced padding
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 2), // Reduced padding
                               child: IconButton(
                                 icon: WebsafeSvg.asset(
                                   ImageAssets.oderlistCloseIcon,
-                                  width: 12, // Reduced from 15
+                                  width: 15, // Reduced from 15
                                 ),
-                                padding: EdgeInsets.zero, // Remove padding from IconButton
-                                constraints: const BoxConstraints(), // Remove constraints
-                                visualDensity: VisualDensity.compact, // Make the button more compact
+                                padding: EdgeInsets
+                                    .zero, // Remove padding from IconButton
+                                constraints:
+                                    const BoxConstraints(), // Remove constraints
+                                visualDensity: VisualDensity
+                                    .compact, // Make the button more compact
                                 onPressed: () {
                                   localProductProvider
                                       .removeFromCart(item.product.productId!);
@@ -2434,7 +2481,7 @@ class _BillingPageState extends State<BillingPage> {
       for (var item in savedOrder.items) {
         cartItems.add({
           'productName': item.product.productName ?? 'Unknown',
-          'mrp': (item.product.price?.mrp?.toString() ?? '0.00'),
+          'mrp': (item.product.mrp?.toString() ?? '0.00'),
           'quantity': item.quantity.toString(),
           'unitPrice': (item.price?.toString() ??
               item.product.price?.price?.toString() ??

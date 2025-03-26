@@ -169,7 +169,7 @@ class _CompactQuantityControlLocalState
               controller: _controller,
               keyboardType: TextInputType.number,
               focusNode: focusNode,
-              style: const TextStyle(fontSize: 11),
+              style: const TextStyle(fontSize: 12),
               inputFormatters: [
                 if (widget.productUnit == 'KG' || widget.productUnit == 'LT')
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),

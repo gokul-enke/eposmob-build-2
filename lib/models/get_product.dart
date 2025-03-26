@@ -55,6 +55,7 @@ class GetProduct {
   final String? currency;
   final dynamic description;
   final ProductPrice? price;
+  final dynamic mrp;
   final List<Attachment>? attachment;
   bool isSelected = false;
   final dynamic names; // Change to dynamic
@@ -71,6 +72,7 @@ class GetProduct {
     this.numberOfProductsAvailble,
     this.rating,
     this.price,
+    this.mrp,
     this.unit,
     this.currency,
     this.description,
@@ -100,6 +102,7 @@ class GetProduct {
         description: json["description"],
         price:
             json["price"] == null ? null : ProductPrice.fromJson(json["price"]),
+        mrp: json["mrp"] ?? "",
         attachment: json["attachment"] == null
             ? []
             : List<Attachment>.from(
@@ -124,6 +127,7 @@ class GetProduct {
         "number_of_products_availble": numberOfProductsAvailble,
         "rating": rating,
         "price": price?.toJson(),
+        "mrp": mrp,
         "unit": unit,
         "currency": currency,
         "description": description,
@@ -243,14 +247,12 @@ class ProductPrice {
   final dynamic price;
   final dynamic percentage;
   final dynamic totalPrice;
-  final dynamic mrp;
 
   ProductPrice({
     this.oldPrice,
     this.price,
     this.percentage,
     this.totalPrice,
-    this.mrp,
   });
 
   factory ProductPrice.fromJson(Map<String, dynamic> json) => ProductPrice(
