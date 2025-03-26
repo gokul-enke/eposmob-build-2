@@ -641,25 +641,32 @@ class _BillingPageState extends State<BillingPage> {
                         )
                       : Expanded(
                           flex: 4,
-                          child: ProductAutocomplete(
-                            autocompleteProductKey: _autocompleteProductKey,
-                            autofocus:
-                                !appSettingsProvider.appSettings!.barcodeSales,
-                            size: size,
-                            onSelected: (GetProduct selectedProduct) {
-                              setState(() {
-                                selectedProductIdController.text =
-                                    selectedProduct.productId.toString();
-                                unitPriceController.text =
-                                    selectedProduct.price?.price ?? '';
-                                quantityController.text = '1';
-                                selectedProductNameController.text =
-                                    selectedProduct.productName ?? '';
-                                barcodeController.text =
-                                    selectedProduct.barcode ?? '';
-                              });
-                            },
-                            productList: productProvider.productList!,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ProductAutocomplete(
+                                autocompleteProductKey: _autocompleteProductKey,
+                                autofocus: !appSettingsProvider
+                                    .appSettings!.barcodeSales,
+                                size: size,
+                                onSelected: (GetProduct selectedProduct) {
+                                  setState(() {
+                                    selectedProductIdController.text =
+                                        selectedProduct.productId.toString();
+                                    unitPriceController.text =
+                                        selectedProduct.price?.price ?? '';
+                                    quantityController.text = '1';
+                                    selectedProductNameController.text =
+                                        selectedProduct.productName ?? '';
+                                    barcodeController.text =
+                                        selectedProduct.barcode ?? '';
+                                        
+                                  });
+                                },
+                                productList: productProvider.productList!,
+                              ),
+                            ],
                           ),
                         ),
                   Expanded(
@@ -852,8 +859,8 @@ class _BillingPageState extends State<BillingPage> {
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.transparent),
                     ),
-                    headingRowColor: WidgetStateColor.resolveWith(
-                        (states) => ColorManager.kPrimaryColor.withOpacity(0.1)),
+                    headingRowColor: WidgetStateColor.resolveWith((states) =>
+                        ColorManager.kPrimaryColor.withOpacity(0.1)),
                     dataRowColor: WidgetStateColor.resolveWith((states) =>
                         states.contains(WidgetState.selected)
                             ? Colors.grey.shade100
@@ -864,48 +871,48 @@ class _BillingPageState extends State<BillingPage> {
                         label: Expanded(
                           child: Text('Item Name',
                               textAlign: TextAlign.center,
-                              style: buildCustomStyle(FontWeightManager.bold, 14,
-                                  0.21, ColorManager.textColor)),
+                              style: buildCustomStyle(FontWeightManager.bold,
+                                  14, 0.21, ColorManager.textColor)),
                         ),
                       ),
                       DataColumn(
                         label: Expanded(
                           child: Text('Unit',
                               textAlign: TextAlign.center,
-                              style: buildCustomStyle(FontWeightManager.bold, 14,
-                                  0.21, ColorManager.textColor)),
+                              style: buildCustomStyle(FontWeightManager.bold,
+                                  14, 0.21, ColorManager.textColor)),
                         ),
                       ),
                       DataColumn(
                         label: Expanded(
                           child: Text('Quantity',
                               textAlign: TextAlign.center,
-                              style: buildCustomStyle(FontWeightManager.bold, 14,
-                                  0.21, ColorManager.textColor)),
+                              style: buildCustomStyle(FontWeightManager.bold,
+                                  14, 0.21, ColorManager.textColor)),
                         ),
                       ),
                       DataColumn(
                         label: Expanded(
                           child: Text('Unit Price',
                               textAlign: TextAlign.center,
-                              style: buildCustomStyle(FontWeightManager.bold, 14,
-                                  0.21, ColorManager.textColor)),
+                              style: buildCustomStyle(FontWeightManager.bold,
+                                  14, 0.21, ColorManager.textColor)),
                         ),
                       ),
                       DataColumn(
                         label: Expanded(
                           child: Text('Total Price',
                               textAlign: TextAlign.center,
-                              style: buildCustomStyle(FontWeightManager.bold, 14,
-                                  0.21, ColorManager.textColor)),
+                              style: buildCustomStyle(FontWeightManager.bold,
+                                  14, 0.21, ColorManager.textColor)),
                         ),
                       ),
                       DataColumn(
                         label: Expanded(
                           child: Text('Actions',
                               textAlign: TextAlign.center,
-                              style: buildCustomStyle(FontWeightManager.bold, 14,
-                                  0.21, ColorManager.textColor)),
+                              style: buildCustomStyle(FontWeightManager.bold,
+                                  14, 0.21, ColorManager.textColor)),
                         ),
                       ),
                     ],
@@ -1323,7 +1330,8 @@ class _BillingPageState extends State<BillingPage> {
                           children: row.map((method) {
                             return Expanded(
                               child: Padding(
-                                padding: const EdgeInsets.only(right: 5, left: 5),
+                                padding:
+                                    const EdgeInsets.only(right: 5, left: 5),
                                 child: GestureDetector(
                                   onTap: () {
                                     setState(() {
@@ -1346,7 +1354,8 @@ class _BillingPageState extends State<BillingPage> {
                                               ? Icons.store
                                               : method.name == "Car Delivery"
                                                   ? Icons.car_rental
-                                                  : method.name == "Door Delivery"
+                                                  : method.name ==
+                                                          "Door Delivery"
                                                       ? Icons.doorbell_outlined
                                                       : Icons.local_shipping,
                                           size: 16,

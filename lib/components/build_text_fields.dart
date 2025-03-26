@@ -565,6 +565,7 @@ Widget buildColumnWidgetForTextFields({
   bool readOnly = false,
   String? title,
   void Function(String?)? onchanged,
+  void Function(String?)? onSubmitted,
   required String hintText,
   String? Function(String?)? validator,
   FocusNode? focusNode,
@@ -595,6 +596,7 @@ Widget buildColumnWidgetForTextFields({
           width: width ?? size.width / 3, //3.05,
           child: TextFormField(
             onChanged: onchanged,
+            onFieldSubmitted: onSubmitted,
             autofocus: autofocus,
             focusNode: focusNode,
             readOnly: readOnly,

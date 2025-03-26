@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/resources/font_manager.dart';
-import 'package:pos_machine/resources/style_manager.dart';
 import 'package:provider/provider.dart';
 
 class ProductAutocomplete extends StatefulWidget {
   final Size size;
   final Function(GetProduct) onSelected;
   final List<GetProduct> productList;
-  final GlobalKey autocompleteProductKey;
+  final GlobalKey? autocompleteProductKey;
   final bool autofocus;
 
   const ProductAutocomplete({
@@ -19,7 +18,7 @@ class ProductAutocomplete extends StatefulWidget {
     required this.size,
     required this.onSelected,
     required this.productList,
-    required this.autocompleteProductKey,
+    this.autocompleteProductKey,
     this.autofocus = false,
   }) : super(key: key);
 
@@ -28,128 +27,234 @@ class ProductAutocomplete extends StatefulWidget {
 }
 
 class _ProductAutocompleteState extends State<ProductAutocomplete> {
-  final ValueNotifier<int?> _hoveredIndex = ValueNotifier<int?>(null);
+  // Track the highlighted index
+  int? _highlightedOptionIndex;
+  final FocusNode _textFieldFocus = FocusNode();
+  // Add scroll controller for automatic scrolling
+  final ScrollController _scrollController = ScrollController();
+  // Define item height for scrolling calculations - adjusted to include margins
+  final double _itemHeight =
+      48.0; // Increased to account for margins and padding
+
+  @override
+  void dispose() {
+    _textFieldFocus.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // Function to scroll to the selected item
+  void _scrollToHighlightedItem() {
+    if (_highlightedOptionIndex == null) return;
+
+    // Calculate the offset to scroll to, with the item index
+    final double scrollOffset = _highlightedOptionIndex! * _itemHeight;
+
+    // Get the current scroll position and visible height
+    final double currentScroll = _scrollController.offset;
+    final double visibleHeight = 180.0; // maxHeight in constraints
+
+    // Adding buffer space to ensure the item is fully visible
+    const double bufferSpace = 4.0;
+
+    // Check if item is already visible
+    if (scrollOffset < currentScroll + bufferSpace) {
+      // Item is above visible area or partially visible at the top - scroll up to it
+      _scrollController.animateTo(
+        scrollOffset > 0 ? scrollOffset - bufferSpace : 0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+      );
+    } else if (scrollOffset + _itemHeight >
+        currentScroll + visibleHeight - bufferSpace) {
+      // Item is below visible area or partially visible at bottom - scroll down to it
+      _scrollController.animateTo(
+        scrollOffset - visibleHeight + _itemHeight + bufferSpace,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+      );
+    }
+    // If item is already fully visible, do nothing
+  }
 
   @override
   Widget build(BuildContext context) {
     final productProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-      child: Column(
-        children: [
-          Autocomplete<GetProduct>(
-            key: widget.autocompleteProductKey,
-            optionsBuilder: (TextEditingValue textEditingValue) {
-              if (textEditingValue.text.isEmpty) {
-                return [];
-              }
-              productProvider.listAllProducts(
-                  filterName: textEditingValue.text);
-              return productProvider.filteredProducts;
-            },
-            displayStringForOption: (GetProduct product) =>
-                product.productName ?? '',
-            onSelected: (GetProduct selectedProduct) {
-              // Call the onSelected function passed to the widget
-              widget.onSelected(selectedProduct);
 
-              // Set the selected product in LocalProductProvider
-              final localProductProvider =
-                  Provider.of<LocalProductProvider>(context, listen: false);
-              localProductProvider
-                  .callProductDetails(selectedProduct.productId!);
-              // debugPrint('Selected Product: ${selectedProduct.productName}');
+    // Store current options for Enter key selection
+    Iterable<GetProduct> currentOptions = const Iterable<GetProduct>.empty();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2.0),
+      child: Autocomplete<GetProduct>(
+        key: widget.autocompleteProductKey,
+        optionsBuilder: (TextEditingValue textEditingValue) {
+          if (textEditingValue.text.isEmpty) {
+            currentOptions = const Iterable<GetProduct>.empty();
+            return currentOptions;
+          }
+          productProvider.listAllProducts(filterName: textEditingValue.text);
+          // Reset highlighted index when options change
+          _highlightedOptionIndex = null;
+          currentOptions = productProvider.filteredProducts;
+          return currentOptions;
+        },
+        displayStringForOption: (GetProduct product) =>
+            product.productName ?? '',
+        onSelected: (GetProduct selectedProduct) {
+          widget.onSelected(selectedProduct);
+          productProvider.callProductDetails(selectedProduct.productId!);
+        },
+        fieldViewBuilder:
+            (context, textEditingController, focusNode, onFieldSubmitted) {
+          // Replace the provided focusNode with our own
+          return KeyboardListener(
+            focusNode: _textFieldFocus,
+            onKeyEvent: (KeyEvent event) {
+              if (event is KeyDownEvent) {
+                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                  setState(() {
+                    if (_highlightedOptionIndex == null) {
+                      _highlightedOptionIndex = 0;
+                    } else {
+                      _highlightedOptionIndex = _highlightedOptionIndex! + 1;
+                    }
+                  });
+                  // Scroll to show the highlighted item
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _scrollToHighlightedItem();
+                  });
+                } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                  setState(() {
+                    if (_highlightedOptionIndex == null) {
+                      _highlightedOptionIndex = 0;
+                    } else if (_highlightedOptionIndex! > 0) {
+                      _highlightedOptionIndex = _highlightedOptionIndex! - 1;
+                    }
+                  });
+                  // Scroll to show the highlighted item
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _scrollToHighlightedItem();
+                  });
+                } else if (event.logicalKey == LogicalKeyboardKey.enter) {
+                  // Handle Enter key to select highlighted item
+                  if (_highlightedOptionIndex != null &&
+                      currentOptions.isNotEmpty &&
+                      _highlightedOptionIndex! < currentOptions.length) {
+                    // Get the selected product
+                    final selectedProduct =
+                        currentOptions.elementAt(_highlightedOptionIndex!);
+                    // Call onSelected function
+                    widget.onSelected(selectedProduct);
+                    // Call product details
+                    productProvider
+                        .callProductDetails(selectedProduct.productId!);
+                    // Clear the text field
+                    textEditingController.clear();
+                    // Clear the focus
+                    focusNode.unfocus();
+                  }
+                }
+              }
             },
-            fieldViewBuilder: (BuildContext context,
-                TextEditingController textEditingController,
-                FocusNode focusNode,
-                VoidCallback onFieldSubmitted) {
-              return buildColumnWidgetForTextFields(
-                controller: textEditingController,
-                autofocus: widget.autofocus,
-                focusNode: focusNode,
-                onchanged: (query) {},
-                size: widget.size,
-                hintText: 'Search Product',
-              );
-            },
-            optionsViewBuilder: (BuildContext context,
-                AutocompleteOnSelected<GetProduct> onSelected,
-                Iterable<GetProduct> options) {
-              return Align(
-                alignment: Alignment.topLeft,
-                child: BuildBoxShadowContainer(
-                  circleRadius: 12,
-                  width: widget.size.width / 3,
-                  constraints: const BoxConstraints(maxHeight: 250),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: options.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final GetProduct option = options.elementAt(index);
-                      return ValueListenableBuilder<int?>(
-                        valueListenable: _hoveredIndex,
-                        builder: (context, hoveredIndex, child) {
-                          bool isHovered = hoveredIndex == index;
-                          return MouseRegion(
-                            onEnter: (_) => _hoveredIndex.value = index,
-                            onExit: (_) => _hoveredIndex.value = null,
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              decoration: BoxDecoration(
-                                color: isHovered
-                                    ? Colors.blue.shade50
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: ListTile(
-                                title: Text(
-                                  option.productName ?? '',
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 2,
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s12,
-                                    0.16,
-                                    isHovered
-                                        ? Colors.blue.shade800
-                                        : Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                                trailing: Text(
-                                  '${option.price?.price ?? ''} ${option.currency ?? ''}',
-                                  style: buildCustomStyle(
-                                    FontWeightManager.bold,
-                                    FontSize.s12,
-                                    0.16,
-                                    isHovered
-                                        ? Colors.blue.shade900
-                                        : Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                                onTap: () {
-                                  onSelected(option);
-                                },
-                              ),
-                            ),
-                          );
-                        },
-                      );
+            child: buildColumnWidgetForTextFields(
+              controller: textEditingController,
+              focusNode: focusNode,
+              autofocus: widget.autofocus,
+              size: widget.size,
+              hintText: 'Search Product',
+              onSubmitted: (_) => onFieldSubmitted(),
+            ),
+          );
+        },
+        optionsViewBuilder: (context, onSelected, options) {
+          // Update current options reference for Enter key handling
+          currentOptions = options;
+
+          // Ensure highlighted index is within bounds
+          if (_highlightedOptionIndex != null &&
+              _highlightedOptionIndex! >= options.length) {
+            _highlightedOptionIndex = options.length - 1;
+          }
+
+          return Align(
+            alignment: Alignment.topLeft,
+            child: BuildBoxShadowContainer(
+              circleRadius: 7,
+              constraints: BoxConstraints(
+                maxHeight: 300,
+                maxWidth: widget.size.width / 4,
+              ),
+              color: Colors.white,
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                shrinkWrap: true,
+                itemExtent:
+                    _itemHeight, // Set fixed item height for predictable scrolling
+                itemCount: options.length,
+                itemBuilder: (BuildContext context, int index) {
+                  final option = options.elementAt(index);
+                  final bool isHighlighted = _highlightedOptionIndex == index;
+
+                  return MouseRegion(
+                    onEnter: (_) {
+                      setState(() {
+                        _highlightedOptionIndex = index;
+                      });
                     },
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            isHighlighted ? Colors.blue.shade50 : Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: ListTile(
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        title: Text(
+                          option.productName ?? '',
+                          maxLines: 2,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isHighlighted
+                                ? Colors.blue.shade800
+                                : Colors.black87,
+                            fontWeight: isHighlighted
+                                ? FontWeight.w500
+                                : FontWeight.normal,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: Text(
+                          '${option.price?.price ?? ''} ${option.currency ?? ''}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isHighlighted
+                                ? Colors.blue.shade900
+                                : Colors.black87,
+                          ),
+                        ),
+                        onTap: () => onSelected(option),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+        },
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _hoveredIndex.dispose();
-    super.dispose();
   }
 }
