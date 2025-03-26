@@ -661,7 +661,6 @@ class _BillingPageState extends State<BillingPage> {
                                         selectedProduct.productName ?? '';
                                     barcodeController.text =
                                         selectedProduct.barcode ?? '';
-                                        
                                   });
                                 },
                                 productList: productProvider.productList!,
