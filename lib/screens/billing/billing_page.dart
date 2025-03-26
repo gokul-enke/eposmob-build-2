@@ -216,24 +216,6 @@ class _BillingPageState extends State<BillingPage> {
     }
   }
 
-  void _refetchCartData() {
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
-
-    // Fetch cart data
-    Provider.of<CartProvider>(context, listen: false)
-        .fetchCartDataFromApi(
-      customerId: customerId!,
-      accessToken: accessToken ?? '',
-    )
-        .then((_) {
-      // Optionally, you can add a message or handle UI changes after fetching
-      setState(() {
-        // Update the UI if necessary
-      });
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -355,40 +337,13 @@ class _BillingPageState extends State<BillingPage> {
                   flex: 1,
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: VerticalSavedOrdersView(
-                      onOrderSelected: (orderId) {
-                        // Get the local provider
-                        final localProductProvider =
-                            Provider.of<LocalProductProvider>(context,
-                                listen: false);
-
-                        // If we're editing an order and there are items in the cart, update that order
-                        if (localProductProvider.currentOrder != null &&
-                            localProductProvider.cartItems.isNotEmpty) {
-                          try {
-                            // Update the current order being edited
-                            localProductProvider.updateSavedOrder(
-                              localProductProvider.currentOrder!.id,
-                              customerName: selectedCustomer?.name,
-                              customerPhone:
-                                  selectedCustomerPhone ?? mobileNumberText,
-                              comment: _commentController.text,
-                              deliveryMethod: deliveryMethod,
-                            );
-
-                            // Show quick feedback
-                            showScaffold(
-                              context: context,
-                              message: "Current order updated before switching",
-                            );
-                          } catch (e) {
-                            debugPrint("Error updating current order: $e");
-                          }
-                        }
-
-                        // Now load the selected order
-                        _loadSavedOrderForEditing(orderId);
-                      },
+                    child: Container(
+                      color: Colors.white,
+                      child: const Column(
+                        children: [
+                          Text("Saved Orders"),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -408,6 +363,51 @@ class _BillingPageState extends State<BillingPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        HorizontalSavedOrdersView(
+          onOrderSelected: (orderId) {
+            // Get the local provider
+            final localProductProvider =
+                Provider.of<LocalProductProvider>(context, listen: false);
+
+            // If we're editing an order and there are items in the cart, update that order
+            if (localProductProvider.currentOrder != null &&
+                localProductProvider.cartItems.isNotEmpty) {
+              try {
+                // Update the current order being edited
+                localProductProvider.updateSavedOrder(
+                  localProductProvider.currentOrder!.id,
+                  customerName: selectedCustomer?.name,
+                  customerPhone: selectedCustomerPhone ?? mobileNumberText,
+                  comment: _commentController.text,
+                  deliveryMethod: deliveryMethod,
+                );
+
+                // Show quick feedback
+                showScaffold(
+                  context: context,
+                  message: "Current order updated before switching",
+                );
+              } catch (e) {
+                debugPrint("Error updating current order: $e");
+              }
+            } // If cart has items, save as new order
+            else if (localProductProvider.cartItems.isNotEmpty) {
+              try {
+                localProductProvider.saveCurrentCartAsOrder();
+                showScaffold(
+                  context: context,
+                  message: "Order Saved Successfully",
+                );
+              } catch (e) {
+                // Swallow exception if cart is empty
+              }
+            }
+
+            // Now load the selected order
+            _loadSavedOrderForEditing(orderId);
+          },
+        ),
+        const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -2521,139 +2521,144 @@ class _BillingPageState extends State<BillingPage> {
   }
 }
 
-/// A widget to display saved orders in a vertical scrollable list
-class VerticalSavedOrdersView extends StatelessWidget {
+/// A widget to display saved orders in a horizontal scrollable list
+class HorizontalSavedOrdersView extends StatefulWidget {
   final Function(String) onOrderSelected;
 
-  const VerticalSavedOrdersView({
+  const HorizontalSavedOrdersView({
     Key? key,
     required this.onOrderSelected,
   }) : super(key: key);
 
   @override
+  State<HorizontalSavedOrdersView> createState() => _HorizontalSavedOrdersViewState();
+}
+
+class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<LocalProductProvider>(
       builder: (context, provider, child) {
-        return BuildBoxShadowContainer(
-          circleRadius: 7,
-          color: Colors.white,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  "Saved Orders",
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s16,
-                    0.21,
-                    ColorManager.kPrimaryColor,
-                  ),
-                ),
-              ),
+        return SizedBox(
+          height: 60,
+          child: ScrollbarTheme(
+            data: ScrollbarThemeData(
+              thumbColor: WidgetStateProperty.all(Colors.grey.withOpacity(0.3)),
+              trackColor: WidgetStateProperty.all(Colors.grey.withOpacity(0.1)),
+              minThumbLength: 40,
+              thickness: WidgetStateProperty.all(4),
+              trackVisibility: WidgetStateProperty.all(true),
+              thumbVisibility: WidgetStateProperty.all(true),
+            ),
+            child: Scrollbar(
+              controller: _scrollController,
+              thumbVisibility: true,
+              trackVisibility: true,
+              child: ListView.builder(
+                controller: _scrollController,
+                scrollDirection: Axis.horizontal,
+                itemCount: provider.savedOrders.length + 1, // +1 for the new order button
+                itemBuilder: (context, index) {
+                  // New Order button as the first item
+                  if (index == 0) {
+                    return _buildNewOrderButton(context, provider);
+                  }
 
-              // New order button
-              _buildNewOrderButton(context, provider),
+                  // Saved orders
+                  final order = provider.savedOrders[index - 1];
+                  String time = _formatTimeWith12Hour(order.createdAt);
 
-              // Orders list
-              Expanded(
-                child: provider.savedOrders.isEmpty
-                    ? const Center(
-                        child: Text("No saved orders"),
-                      )
-                    : ListView.builder(
-                        itemCount: provider.savedOrders.length,
-                        itemBuilder: (context, index) {
-                          final order = provider.savedOrders[index];
-                          String time = _formatTimeWith12Hour(order.createdAt);
-
-                          return BuildBoxShadowContainer(
-                            circleRadius: 7,
-                            color: Colors.white,
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            child: InkWell(
-                              onTap: () => onOrderSelected(order.id),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          order.orderNumber,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        Text(
-                                          "₹${order.total.toStringAsFixed(2)}",
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ],
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 10.0),
+                    child: BuildBoxShadowContainer(
+                      circleRadius: 7,
+                      color: provider.currentOrder?.id == order.id
+                          ? Colors.white
+                          : Colors.white,
+                      border: provider.currentOrder?.id == order.id
+                          ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
+                          : null,
+                      width: 140,
+                      child: InkWell(
+                        onTap: () => widget.onOrderSelected(order.id),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      order.orderNumber,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          "Items: ${order.items.length}",
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                        Text(
-                                          time,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                      ],
+                                  ),
+                                  Text(
+                                    time,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey,
                                     ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        GestureDetector(
-                                          onTap: () {
-                                            if (context.findAncestorStateOfType<
-                                                    _BillingPageState>() !=
-                                                null) {
-                                              context
-                                                  .findAncestorStateOfType<
-                                                      _BillingPageState>()!
-                                                  .printFromSavedOrder(order);
-                                            }
-                                          },
-                                          child: const Icon(
-                                            Icons.print,
-                                            size: 16,
-                                            color: Colors.blue,
-                                          ),
-                                        ),
-                                      ],
+                                  ),
+                                  const SizedBox(width: 10),
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (context.findAncestorStateOfType<_BillingPageState>() != null) {
+                                        context.findAncestorStateOfType<_BillingPageState>()!.printFromSavedOrder(order);
+                                      }
+                                    },
+                                    child: const Icon(
+                                      Icons.print,
+                                      size: 14,
+                                      color: Colors.blue,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          );
-                        },
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    "₹${order.total.toStringAsFixed(2)}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  Text(
+                                    "Items: ${order.items.length}",
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
+                    ),
+                  );
+                },
               ),
-            ],
+            ),
           ),
         );
       },
@@ -2662,70 +2667,61 @@ class VerticalSavedOrdersView extends StatelessWidget {
 
   Widget _buildNewOrderButton(
       BuildContext context, LocalProductProvider provider) {
-    return BuildBoxShadowContainer(
-      circleRadius: 7,
-      color: Colors.white,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: InkWell(
-        onTap: () {
-          // If currently editing an order and cart has items, update it
-          if (provider.currentOrder != null && provider.cartItems.isNotEmpty) {
-            provider.updateSavedOrder(
-              provider.currentOrder!.id,
-              customerName: null, // Get these from context if needed
-              customerPhone: null,
-              comment: null,
-              deliveryMethod: null,
-            );
-          }
-
-          // If cart has items, save as new order
-          else if (provider.cartItems.isNotEmpty) {
-            try {
-              provider.saveCurrentCartAsOrder();
-
-              // Show feedback
-              showScaffold(
-                context: context,
-                message: "Order Saved Successfully",
+    return Padding(
+      padding: const EdgeInsets.only(right: 10.0),
+      child: BuildBoxShadowContainer(
+        circleRadius: 7,
+        color: Colors.white,
+        width: 60,
+        child: InkWell(
+          onTap: () {
+            // If currently editing an order and cart has items, update it
+            if (provider.currentOrder != null &&
+                provider.cartItems.isNotEmpty) {
+              provider.updateSavedOrder(
+                provider.currentOrder!.id,
+                customerName: null,
+                customerPhone: null,
+                comment: null,
+                deliveryMethod: null,
               );
-            } catch (e) {
-              // Swallow exception if cart is empty
             }
-          }
 
-          // Clear cart and reset current order
-          provider.clearCart();
-          // Reset current order using proper method
-          if (provider.currentOrder != null) {
-            // Create a temporary order ID before clearing
-            String orderId = provider.currentOrder!.id;
-            // Need to manually clear the current order reference
-            provider.loadOrderForEditing(orderId);
+            // If cart has items, save as new order
+            else if (provider.cartItems.isNotEmpty) {
+              try {
+                provider.saveCurrentCartAsOrder();
+                showScaffold(
+                  context: context,
+                  message: "Order Saved Successfully",
+                );
+              } catch (e) {
+                // Swallow exception if cart is empty
+              }
+            }
+
+            // Clear cart and reset current order
             provider.clearCart();
-          }
-          provider.notifyListeners();
-
-          // Update UI
-          (context as Element).markNeedsBuild();
-        },
-        child: const Padding(
-          padding: EdgeInsets.all(8.0),
-          child: Row(
-            children: [
-              Icon(
-                Icons.add_circle,
-                color: ColorManager.kPrimaryColor,
-              ),
-              SizedBox(width: 8),
-              Text(
-                "New Order",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
+            if (provider.currentOrder != null) {
+              String orderId = provider.currentOrder!.id;
+              provider.loadOrderForEditing(orderId);
+              provider.clearCart();
+            }
+            (context as Element).markNeedsBuild();
+          },
+          child: const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.add_circle,
+                  size: 30,
                   color: ColorManager.kPrimaryColor,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

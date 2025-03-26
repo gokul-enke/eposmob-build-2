@@ -933,15 +933,15 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            selectedPrinter!.address ??
-                                                'No address',
-                                            style: const TextStyle(
-                                              color: ColorManager.kGreyColor,
-                                              fontSize: 14,
-                                            ),
-                                          ),
+                                          // const SizedBox(height: 4),
+                                          // Text(
+                                          //   selectedPrinter!.address ??
+                                          //       'No address',
+                                          //   style: const TextStyle(
+                                          //     color: ColorManager.kGreyColor,
+                                          //     fontSize: 14,
+                                          //   ),
+                                          // ),
                                           const SizedBox(height: 4),
                                           Text(
                                             'Type: ${selectedPrinter!.typePrinter}',
