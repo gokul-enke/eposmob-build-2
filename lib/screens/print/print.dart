@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -508,19 +509,8 @@ class _PrintPageState extends State<PrintPage> {
   List<int> _buildCartItems(Generator generator, List<dynamic> cartItems) {
     List<int> bytes = [];
 
-    debugPrint("Building cart items, count: ${cartItems.length}");
-    debugPrint("Is from local storage: ${widget.isFromLocalStorage}");
-
     for (var i = 0; i < cartItems.length; i++) {
       var item = cartItems[i];
-
-      // Debug the item structure
-      if (i == 0) {
-        debugPrint("First item type: ${item.runtimeType}");
-        if (widget.isFromLocalStorage) {
-          debugPrint("Item keys: ${item.keys.toList()}");
-        }
-      }
 
       // Handle different models based on data source
       String productName = '';
@@ -537,9 +527,6 @@ class _PrintPageState extends State<PrintPage> {
         quantity = item['quantity'] ?? '0';
         unitPrice = item['unitPrice'] ?? '0.00';
         totalPrice = item['totalPrice'] ?? '0.00';
-
-        debugPrint(
-            "From storage - Product: $productName, Qty: $quantity, Price: $unitPrice");
       } else {
         // Handle current cart item format (Object format)
         productName = item.productName ?? '';
@@ -549,9 +536,12 @@ class _PrintPageState extends State<PrintPage> {
         totalPrice = item.totalPrice?.toString() ?? '0.00';
       }
 
+      // First, add the item row with product information and other details
       bytes += generator.row([
         PosColumn(text: (i + 1).toString(), width: 1),
-        PosColumn(text: productName, width: 3),
+        PosColumn(
+            text: productName.length > 15 ? productName.substring(0, 15) : productName, 
+            width: 3),
         PosColumn(
             text: mrp,
             width: 2,
@@ -569,7 +559,26 @@ class _PrintPageState extends State<PrintPage> {
             width: 2,
             styles: const PosStyles(align: PosAlign.right)),
       ]);
+
+      // If product name is long, add additional lines to show the full name
+      if (productName.length > 15) {
+        // Break the remaining text into chunks of appropriate length
+        int startIndex = 15;
+        while (startIndex < productName.length) {
+          int endIndex = startIndex + 24 < productName.length ? startIndex + 24 : productName.length;
+          String namePart = productName.substring(startIndex, endIndex);
+          
+          // Add a row with just the product name continuation and empty columns for other fields
+          bytes += generator.row([
+            PosColumn(text: '', width: 1), // Empty serial number
+            PosColumn(text: namePart, width: 11), // Give more space to the name on continuation lines
+          ]);
+          
+          startIndex = endIndex;
+        }
+      }
     }
+    
     return bytes + generator.hr();
   }
 
@@ -682,8 +691,9 @@ class _PrintPageState extends State<PrintPage> {
     // }
 
     // Amount in Words
+    // Amount in Words - Replace hardcoded text with dynamic conversion
     bytes += generator.text(
-        'Two Thousand Nine Hundred Fifty Four INDIAN RUPEES Only.',
+        '${AmountHelper().convertNumberToWords(double.parse(widget.formattedTotal))} Only.',
         styles: const PosStyles(align: PosAlign.left));
 
     // Separator
