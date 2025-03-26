@@ -2503,7 +2503,7 @@ class _BillingPageState extends State<BillingPage> {
         context,
         MaterialPageRoute(
           builder: (context) => PrintPage(
-            storeName: savedOrder.customerName ?? "",
+            storeName: "SOUQ POINT",
             cartItems: cartItems,
             formattedTotal: savedOrder.total.toString(),
             savedTotal: "0.00", // Adjust if you track discounts
