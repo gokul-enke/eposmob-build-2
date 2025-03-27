@@ -4,6 +4,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'dart:convert';
 
 class BluetoothPrinter {
@@ -1297,169 +1298,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                       const SizedBox(width: 10),
                                       CustomRoundButton(
                                         fct: () {
-                                          // Show delete confirmation dialog
-                                          showDialog(
+                                          // Show delete confirmation dialog using reusable component
+                                          DeleteConfirmationDialog.show(
                                             context: context,
-                                            builder: (BuildContext context) {
-                                              return Dialog(
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(24),
-                                                ),
-                                                elevation: 8,
-                                                backgroundColor: Colors.white,
-                                                child: Container(
-                                                  constraints:
-                                                      const BoxConstraints(
-                                                          maxWidth: 400),
-                                                  padding:
-                                                      const EdgeInsets.all(24),
-                                                  child: Column(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .stretch,
-                                                    children: [
-                                                      // Header with close button
-                                                      Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .spaceBetween,
-                                                        children: [
-                                                          const Text(
-                                                            "Delete Template",
-                                                            style: TextStyle(
-                                                              fontSize: 20,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                              color:
-                                                                  Colors.black,
-                                                            ),
-                                                          ),
-                                                          IconButton(
-                                                            icon: const Icon(
-                                                                Icons.close,
-                                                                color: Colors
-                                                                    .black),
-                                                            onPressed: () =>
-                                                                Navigator.of(
-                                                                        context)
-                                                                    .pop(),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      const SizedBox(
-                                                          height: 16),
-
-                                                      // Warning message
-                                                      Container(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .all(16),
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: Colors.red[50],
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(8),
-                                                          border: Border.all(
-                                                              color: Colors
-                                                                  .red[100]!),
-                                                        ),
-                                                        child: Column(
-                                                          children: [
-                                                            const Icon(
-                                                              Icons
-                                                                  .warning_amber_rounded,
-                                                              color: ColorManager
-                                                                  .kButtonRed,
-                                                              size: 32,
-                                                            ),
-                                                            const SizedBox(
-                                                                height: 8),
-                                                            Text(
-                                                              "Are you sure you want to delete '${selectedTemplate!.name}'?",
-                                                              textAlign:
-                                                                  TextAlign
-                                                                      .center,
-                                                              style:
-                                                                  const TextStyle(
-                                                                fontSize: 16,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w500,
-                                                              ),
-                                                            ),
-                                                            const SizedBox(
-                                                                height: 8),
-                                                            const Text(
-                                                              "This action cannot be undone.",
-                                                              textAlign:
-                                                                  TextAlign
-                                                                      .center,
-                                                              style: TextStyle(
-                                                                fontSize: 14,
-                                                                color:
-                                                                    Colors.grey,
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      const SizedBox(
-                                                          height: 24),
-
-                                                      // Action buttons
-                                                      Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .end,
-                                                        children: [
-                                                          CustomRoundButton(
-                                                            fct: () =>
-                                                                Navigator.pop(
-                                                                    context),
-                                                            title: "Cancel",
-                                                            height: 40,
-                                                            width: 100,
-                                                            fontSize: 14,
-                                                            borderColor:
-                                                                Colors.grey,
-                                                            boxColor:
-                                                                Colors.white,
-                                                            textColor: Colors
-                                                                .grey[700]!,
-                                                          ),
-                                                          const SizedBox(
-                                                              width: 12),
-                                                          CustomRoundButton(
-                                                            fct: () {
-                                                              _deleteTemplate(
-                                                                  selectedTemplate!);
-                                                              Navigator.pop(
-                                                                  context);
-                                                            },
-                                                            title: "Delete",
-                                                            height: 40,
-                                                            width: 100,
-                                                            fontSize: 14,
-                                                            borderColor:
-                                                                ColorManager
-                                                                    .kButtonRed,
-                                                            boxColor:
-                                                                ColorManager
-                                                                    .kButtonRed,
-                                                            textColor:
-                                                                Colors.white,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              );
+                                            title: "Delete Template",
+                                            itemName: selectedTemplate!.name,
+                                            message: "This action cannot be undone.",
+                                            onDelete: () {
+                                              _deleteTemplate(selectedTemplate!);
                                             },
                                           );
                                         },
