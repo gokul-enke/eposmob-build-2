@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -850,249 +851,286 @@ class _BillingPageState extends State<BillingPage> {
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.transparent),
               ),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: SizedBox(
-                  width: constraints.maxWidth,
-                  child: DataTable(
-                    columnSpacing: 10, // Reduced from 20
-                    horizontalMargin: 8, // Reduced from 16
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.transparent),
-                    ),
-                    headingRowColor: WidgetStateColor.resolveWith((states) =>
-                        ColorManager.kPrimaryColor.withOpacity(0.1)),
-                    dataRowColor: WidgetStateColor.resolveWith((states) =>
-                        states.contains(WidgetState.selected)
-                            ? Colors.grey.shade100
-                            : Colors.white),
-                    headingRowHeight: 32, // Added to reduce header height
-                    dataRowMinHeight: 28, // Added to reduce row height
-                    dataRowMaxHeight: 36, // Added to constrain row height
-                    dividerThickness: 0,
-                    columns: [
-                      DataColumn(
-                        label: Expanded(
-                          child: Text('Item Name',
-                              textAlign: TextAlign.left,
-                              style: buildCustomStyle(FontWeightManager.bold,
-                                  12, 0.21, ColorManager.textColor)),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.grab,
+                child: ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(context).copyWith(
+                    dragDevices: {
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.stylus,
+                      PointerDeviceKind.trackpad,
+                    },
+                  ),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    scrollDirection: Axis.vertical,
+                    child: SizedBox(
+                      width: constraints.maxWidth,
+                      child: DataTable(
+                        columnSpacing: 10, // Reduced from 20
+                        horizontalMargin: 8, // Reduced from 16
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.transparent),
                         ),
-                      ),
-                      DataColumn(
-                        label: Expanded(
-                          child: Text('Unit',
-                              textAlign: TextAlign.left,
-                              style: buildCustomStyle(FontWeightManager.bold,
-                                  12, 0.21, ColorManager.textColor)),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Expanded(
-                          child: Text('Qty',
-                              textAlign: TextAlign.center,
-                              style: buildCustomStyle(FontWeightManager.bold,
-                                  12, 0.21, ColorManager.textColor)),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Expanded(
-                          child: Text('MRP',
-                              textAlign: TextAlign.left,
-                              style: buildCustomStyle(FontWeightManager.bold,
-                                  12, 0.21, ColorManager.textColor)),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Expanded(
-                          child: Text('Price',
-                              textAlign: TextAlign.left,
-                              style: buildCustomStyle(FontWeightManager.bold,
-                                  12, 0.21, ColorManager.textColor)),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Expanded(
-                          child: Text('Total',
-                              textAlign: TextAlign.left,
-                              style: buildCustomStyle(FontWeightManager.bold,
-                                  12, 0.21, ColorManager.textColor)),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Expanded(
-                          child: Text('Actions',
-                              textAlign: TextAlign.left,
-                              style: buildCustomStyle(FontWeightManager.bold,
-                                  12, 0.21, ColorManager.textColor)),
-                        ),
-                      ),
-                    ],
-                    rows: cartItems.map((item) {
-                      return DataRow(
-                        cells: [
-                          DataCell(
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 2), // Reduced padding
-                              child: Text(
-                                item.product.productName ?? 'Unknown',
-                                style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    12,
-                                    0.21,
-                                    ColorManager
-                                        .textColor), // Reduced font size
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                          DataCell(
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 2), // Reduced padding
-                              child: Text(
-                                item.product.unit ?? '-',
-                                style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    12,
-                                    0.21,
-                                    ColorManager
-                                        .textColor), // Reduced font size
-                                textAlign: TextAlign.left,
-                              ),
-                            ),
-                          ),
-                          DataCell(
-                            Center(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 2), // Reduced padding
-                                child: CompactQuantityControlLocal(
-                                  productId: item.product.productId!,
-                                  quantity: item.quantity.toDouble(),
-                                  unitPrice: item.price.toString(),
-                                  productUnit: item.product.unit,
-                                  product: item.product,
-                                ),
-                              ),
-                            ),
-                          ),
-                          DataCell(
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 2), // Reduced padding
-                              child: SizedBox(
-                                width: 70, // Reduced width
-                                child: Text(
-                                  item.product.mrp?.toString() ?? '0.00',
-                                  style: const TextStyle(
-                                      fontSize: 12), // Reduced font size
+                        headingRowColor: WidgetStateColor.resolveWith(
+                            (states) =>
+                                ColorManager.kPrimaryColor.withOpacity(0.1)),
+                        dataRowColor: WidgetStateColor.resolveWith((states) =>
+                            states.contains(WidgetState.selected)
+                                ? Colors.grey.shade100
+                                : Colors.white),
+                        headingRowHeight: 32, // Added to reduce header height
+                        dataRowMinHeight: 28, // Added to reduce row height
+                        dataRowMaxHeight: 36, // Added to constrain row height
+                        dividerThickness: 0,
+                        columns: [
+                          DataColumn(
+                            label: Expanded(
+                              child: Text('Item Name',
                                   textAlign: TextAlign.left,
-                                ),
-                              ),
+                                  style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      12,
+                                      0.21,
+                                      ColorManager.textColor)),
                             ),
                           ),
-                          DataCell(
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 2), // Reduced padding
-                              child: SizedBox(
-                                width: 70, // Reduced width
-                                child: Builder(builder: (context) {
-                                  final TextEditingController controller =
-                                      TextEditingController(
-                                          text: item.price.toString());
-                                  final FocusNode focusNode = FocusNode();
-
-                                  focusNode.addListener(() {
-                                    if (focusNode.hasFocus) {
-                                      controller.selection = TextSelection(
-                                        baseOffset: 0,
-                                        extentOffset: controller.text.length,
-                                      );
-                                    } else {
-                                      localProductProvider.updateItemPrice(
-                                        item.product.productId!,
-                                        double.tryParse(controller.text) ??
-                                            item.price!,
-                                      );
-                                    }
-                                  });
-
-                                  return TextField(
-                                    textAlign: TextAlign.left,
-                                    controller: controller,
-                                    focusNode: focusNode,
-                                    keyboardType: TextInputType.number,
-                                    style: const TextStyle(
-                                        fontSize: 12), // Reduced font size
-                                    decoration: const InputDecoration(
-                                      isDense:
-                                          true, // Make input field more compact
-                                      contentPadding: EdgeInsets.symmetric(
-                                          vertical: 6, horizontal: 4),
-                                      border: InputBorder.none,
-                                      hintText: 'Price',
-                                      hintStyle: TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    onSubmitted: (newPrice) {
-                                      localProductProvider.updateItemPrice(
-                                        item.product.productId!,
-                                        double.tryParse(newPrice) ??
-                                            item.price!,
-                                      );
-                                    },
-                                  );
-                                }),
-                              ),
-                            ),
-                          ),
-                          DataCell(
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 2), // Reduced padding
-                              child: SizedBox(
-                                width: 70, // Reduced width
-                                child: Text(
-                                  (item.price! * item.quantity)
-                                      .toStringAsFixed(3),
-                                  style: const TextStyle(
-                                      fontSize: 12), // Reduced font size
+                          DataColumn(
+                            label: Expanded(
+                              child: Text('Unit',
                                   textAlign: TextAlign.left,
-                                ),
-                              ),
+                                  style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      12,
+                                      0.21,
+                                      ColorManager.textColor)),
                             ),
                           ),
-                          DataCell(
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 2), // Reduced padding
-                              child: IconButton(
-                                icon: WebsafeSvg.asset(
-                                  ImageAssets.oderlistCloseIcon,
-                                  width: 15, // Reduced from 15
-                                ),
-                                padding: EdgeInsets
-                                    .zero, // Remove padding from IconButton
-                                constraints:
-                                    const BoxConstraints(), // Remove constraints
-                                visualDensity: VisualDensity
-                                    .compact, // Make the button more compact
-                                onPressed: () {
-                                  localProductProvider
-                                      .removeFromCart(item.product.productId!);
-                                },
-                              ),
+                          DataColumn(
+                            label: Expanded(
+                              child: Text('Qty',
+                                  textAlign: TextAlign.center,
+                                  style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      12,
+                                      0.21,
+                                      ColorManager.textColor)),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Expanded(
+                              child: Text('MRP',
+                                  textAlign: TextAlign.left,
+                                  style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      12,
+                                      0.21,
+                                      ColorManager.textColor)),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Expanded(
+                              child: Text('Price',
+                                  textAlign: TextAlign.left,
+                                  style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      12,
+                                      0.21,
+                                      ColorManager.textColor)),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Expanded(
+                              child: Text('Total',
+                                  textAlign: TextAlign.left,
+                                  style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      12,
+                                      0.21,
+                                      ColorManager.textColor)),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Expanded(
+                              child: Text('Actions',
+                                  textAlign: TextAlign.left,
+                                  style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      12,
+                                      0.21,
+                                      ColorManager.textColor)),
                             ),
                           ),
                         ],
-                      );
-                    }).toList(),
+                        rows: cartItems.map((item) {
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 2), // Reduced padding
+                                  child: Text(
+                                    item.product.productName ?? 'Unknown',
+                                    style: buildCustomStyle(
+                                        FontWeightManager.regular,
+                                        12,
+                                        0.21,
+                                        ColorManager
+                                            .textColor), // Reduced font size
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 2), // Reduced padding
+                                  child: Text(
+                                    item.product.unit ?? '-',
+                                    style: buildCustomStyle(
+                                        FontWeightManager.regular,
+                                        12,
+                                        0.21,
+                                        ColorManager
+                                            .textColor), // Reduced font size
+                                    textAlign: TextAlign.left,
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 2), // Reduced padding
+                                    child: CompactQuantityControlLocal(
+                                      productId: item.product.productId!,
+                                      quantity: item.quantity.toDouble(),
+                                      unitPrice: item.price.toString(),
+                                      productUnit: item.product.unit,
+                                      product: item.product,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 2), // Reduced padding
+                                  child: SizedBox(
+                                    width: 70, // Reduced width
+                                    child: Text(
+                                      item.product.mrp?.toString() ?? '0.00',
+                                      style: const TextStyle(
+                                          fontSize: 12), // Reduced font size
+                                      textAlign: TextAlign.left,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 2), // Reduced padding
+                                  child: SizedBox(
+                                    width: 70, // Reduced width
+                                    child: Builder(builder: (context) {
+                                      final TextEditingController controller =
+                                          TextEditingController(
+                                              text: item.price.toString());
+                                      final FocusNode focusNode = FocusNode();
+
+                                      focusNode.addListener(() {
+                                        if (focusNode.hasFocus) {
+                                          controller.selection = TextSelection(
+                                            baseOffset: 0,
+                                            extentOffset:
+                                                controller.text.length,
+                                          );
+                                        } else {
+                                          localProductProvider.updateItemPrice(
+                                            item.product.productId!,
+                                            double.tryParse(controller.text) ??
+                                                item.price!,
+                                          );
+                                        }
+                                      });
+
+                                      return TextField(
+                                        textAlign: TextAlign.left,
+                                        controller: controller,
+                                        focusNode: focusNode,
+                                        keyboardType: TextInputType.number,
+                                        style: const TextStyle(
+                                            fontSize: 12), // Reduced font size
+                                        decoration: const InputDecoration(
+                                          isDense:
+                                              true, // Make input field more compact
+                                          contentPadding: EdgeInsets.symmetric(
+                                              vertical: 6, horizontal: 4),
+                                          border: InputBorder.none,
+                                          hintText: 'Price',
+                                          hintStyle: TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        onSubmitted: (newPrice) {
+                                          localProductProvider.updateItemPrice(
+                                            item.product.productId!,
+                                            double.tryParse(newPrice) ??
+                                                item.price!,
+                                          );
+                                        },
+                                      );
+                                    }),
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 2), // Reduced padding
+                                  child: SizedBox(
+                                    width: 70, // Reduced width
+                                    child: Text(
+                                      (item.price! * item.quantity)
+                                          .toStringAsFixed(3),
+                                      style: const TextStyle(
+                                          fontSize: 12), // Reduced font size
+                                      textAlign: TextAlign.left,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 2), // Reduced padding
+                                  child: IconButton(
+                                    icon: WebsafeSvg.asset(
+                                      ImageAssets.oderlistCloseIcon,
+                                      width: 15, // Reduced from 15
+                                    ),
+                                    padding: EdgeInsets
+                                        .zero, // Remove padding from IconButton
+                                    constraints:
+                                        const BoxConstraints(), // Remove constraints
+                                    visualDensity: VisualDensity
+                                        .compact, // Make the button more compact
+                                    onPressed: () {
+                                      localProductProvider.removeFromCart(
+                                          item.product.productId!);
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -2554,146 +2592,139 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
         return SizedBox(
           height: 60,
           child: MouseRegion(
-            onEnter: (_) => setState(() => _isHovering = true),
-            onExit: (_) => setState(() => _isHovering = false),
-            child: ScrollbarTheme(
-              data: ScrollbarThemeData(
-                thumbColor:
-                    WidgetStateProperty.all(Colors.grey.withOpacity(0.3)),
-                trackColor:
-                    WidgetStateProperty.all(Colors.grey.withOpacity(0.1)),
-                minThumbLength: 40,
-                thickness: WidgetStateProperty.all(4),
-                trackVisibility: WidgetStateProperty.all(_isHovering),
-                thumbVisibility: WidgetStateProperty.all(_isHovering),
+            cursor: SystemMouseCursors.grab,
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.stylus,
+                  PointerDeviceKind.trackpad,
+                },
               ),
-              child: Scrollbar(
+              child: ListView.builder(
                 controller: _scrollController,
-                thumbVisibility: _isHovering,
-                trackVisibility: _isHovering,
-                child: ListView.builder(
-                  controller: _scrollController,
-                  scrollDirection: Axis.horizontal,
-                  itemCount: provider.savedOrders.length +
-                      1, // +1 for the new order button
-                  itemBuilder: (context, index) {
-                    // New Order button as the first item
-                    if (index == 0) {
-                      return _buildNewOrderButton(context, provider);
-                    }
+                physics: const BouncingScrollPhysics(),
+                scrollDirection: Axis.horizontal,
+                itemCount: provider.savedOrders.length +
+                    1, // +1 for the new order button
+                itemBuilder: (context, index) {
+                  // New Order button as the first item
+                  if (index == 0) {
+                    return _buildNewOrderButton(context, provider);
+                  }
 
-                    // Saved orders
-                    final order = provider.savedOrders[index - 1];
-                    String time = _formatTimeWith12Hour(order.createdAt);
+                  // Saved orders
+                  final order = provider.savedOrders[index - 1];
+                  String time = _formatTimeWith12Hour(order.createdAt);
 
-                    return Padding(
-                      padding:
-                          const EdgeInsets.only(right: 10.0, bottom: 1, top: 1),
-                      child: BuildBoxShadowContainer(
-                        circleRadius: 7,
-                        color: provider.currentOrder?.id == order.id
-                            ? Colors.white
-                            : Colors.white,
-                        border: provider.currentOrder?.id == order.id
-                            ? Border.all(
-                                color: ColorManager.kPrimaryColor, width: 2)
-                            : null,
-                        width: 140,
-                        child: InkWell(
-                          onTap: () => widget.onOrderSelected(order.id),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        order.orderNumber,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    Text(
-                                      time,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 5),
-                                    GestureDetector(
-                                      onTap: () {
-                                        if (context.findAncestorStateOfType<
-                                                _BillingPageState>() !=
-                                            null) {
-                                          context
-                                              .findAncestorStateOfType<
-                                                  _BillingPageState>()!
-                                              .printFromSavedOrder(order);
-                                        }
-                                      },
-                                      child: const Icon(
-                                        Icons.print,
-                                        size: 14,
-                                        color: Colors.blue,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "₹${order.total.toStringAsFixed(2)}",
+                  return Padding(
+                    padding:
+                        const EdgeInsets.only(right: 10.0, bottom: 1, top: 1),
+                    child: BuildBoxShadowContainer(
+                      circleRadius: 7,
+                      color: provider.currentOrder?.id == order.id
+                          ? Colors.white
+                          : Colors.white,
+                      border: provider.currentOrder?.id == order.id
+                          ? Border.all(
+                              color: ColorManager.kPrimaryColor, width: 2)
+                          : null,
+                      width: 140,
+                      child: InkWell(
+                        onTap: () => widget.onOrderSelected(order.id),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      order.orderNumber,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 12,
                                       ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          "Items: ${order.items.length}",
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        GestureDetector(
-                                          onTap: () {
-                                            _showDeleteConfirmationDialog(
-                                                context, provider, order);
-                                          },
-                                          child: const Icon(
-                                            Icons.delete_outline,
-                                            size: 14,
-                                            color: ColorManager.kButtonRed,
-                                          ),
-                                        ),
-                                      ],
+                                  ),
+                                  Text(
+                                    time,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey,
                                     ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (context.findAncestorStateOfType<
+                                              _BillingPageState>() !=
+                                          null) {
+                                        context
+                                            .findAncestorStateOfType<
+                                                _BillingPageState>()!
+                                            .printFromSavedOrder(order);
+                                      }
+                                    },
+                                    child: const Icon(
+                                      Icons.print,
+                                      size: 14,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    "₹${order.total.toStringAsFixed(2)}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        "Items: ${order.items.length}",
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      GestureDetector(
+                                        onTap: () {
+                                          _showDeleteConfirmationDialog(
+                                              context, provider, order);
+                                        },
+                                        child: const Icon(
+                                          Icons.delete_outline,
+                                          size: 14,
+                                          color: ColorManager.kButtonRed,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ),

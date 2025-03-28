@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -131,155 +133,163 @@ class _SideBarProductListState extends State<SideBarProductList> {
 
                 return categories.isEmpty
                     ? const Center(child: CircularProgressIndicator())
-                    : Scrollbar(
-                        controller: _categoryScrollController,
-                        thumbVisibility: false,
-                        trackVisibility: false,
-                        thickness: 4,
-                        radius: const Radius.circular(10),
-                        child: ListView.builder(
-                          controller: _categoryScrollController,
-                          scrollDirection: Axis.horizontal,
-                          itemCount: categories.length,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemBuilder: (context, index) {
-                            final category = categories[index];
-                            final isSelected =
-                                index == categoryProvider.selectedCategoryIndex;
+                    : MouseRegion(
+                        cursor: SystemMouseCursors.grab,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(
+                            dragDevices: {
+                              PointerDeviceKind.mouse,
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.stylus,
+                              PointerDeviceKind.trackpad,
+                            },
+                          ),
+                          child: ListView.builder(
+                            physics: const BouncingScrollPhysics(),
+                            controller: _categoryScrollController,
+                            scrollDirection: Axis.horizontal,
+                            itemCount: categories.length,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemBuilder: (context, index) {
+                              final category = categories[index];
+                              final isSelected = index ==
+                                  categoryProvider.selectedCategoryIndex;
 
-                            return GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () {
-                                categoryProvider.selectCategory(
-                                  index,
-                                  category.categoryName ?? '',
-                                  category.productsCount ?? 0,
-                                );
+                              return GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  categoryProvider.selectCategory(
+                                    index,
+                                    category.categoryName ?? '',
+                                    category.productsCount ?? 0,
+                                  );
 
-                                // Filter products by selected category
-                                if (category.categoryId == 0) {
-                                  // "ALL" category selected
-                                  Provider.of<LocalProductProvider>(context,
-                                          listen: false)
-                                      .refreshProducts();
-                                } else {
-                                  // Specific category selected
-                                  Provider.of<LocalProductProvider>(context,
-                                          listen: false)
-                                      .listAllProducts(
-                                          categoryId: category.categoryId);
-                                }
+                                  // Filter products by selected category
+                                  if (category.categoryId == 0) {
+                                    // "ALL" category selected
+                                    Provider.of<LocalProductProvider>(context,
+                                            listen: false)
+                                        .refreshProducts();
+                                  } else {
+                                    // Specific category selected
+                                    Provider.of<LocalProductProvider>(context,
+                                            listen: false)
+                                        .listAllProducts(
+                                            categoryId: category.categoryId);
+                                  }
 
-                                // Force rebuild to ensure UI updates
-                                setState(() {});
-                              },
-                              child: Container(
-                                width: 85,
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 6),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    // Category image with highlight effect
-                                    Stack(
-                                      alignment: Alignment.center,
-                                      children: [
-                                        // Outer circle highlight
-                                        if (isSelected)
-                                          Container(
-                                            width: 76,
-                                            height: 76,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              gradient: LinearGradient(
-                                                colors: [
-                                                  ColorManager.kPrimaryColor
-                                                      .withOpacity(0.7),
-                                                  ColorManager.kPrimaryColor
-                                                      .withOpacity(0.3),
-                                                ],
-                                                begin: Alignment.topLeft,
-                                                end: Alignment.bottomRight,
-                                              ),
-                                            ),
-                                          ),
-
-                                        // Main circle avatar
-                                        CircleAvatar(
-                                          backgroundColor: isSelected
-                                              ? Colors.white
-                                              : Colors.grey.shade200,
-                                          radius: 34,
-                                          child: ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(33),
-                                            child: category.categoryImage !=
-                                                    null
-                                                ? Image.network(
-                                                    category.categoryImage!,
-                                                    width: 64,
-                                                    height: 64,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (context,
-                                                            error,
-                                                            stackTrace) =>
-                                                        Icon(Icons.category,
-                                                            size: 30,
-                                                            color: isSelected
-                                                                ? ColorManager
-                                                                    .kPrimaryColor
-                                                                : Colors.grey
-                                                                    .shade400),
-                                                  )
-                                                : Icon(Icons.category,
-                                                    size: 30,
-                                                    color: isSelected
-                                                        ? ColorManager
-                                                            .kPrimaryColor
-                                                        : Colors.grey.shade400),
-                                          ),
-                                        ),
-
-                                        // Selection indicator dot
-                                        if (isSelected)
-                                          Positioned(
-                                            bottom: 0,
-                                            child: Container(
-                                              width: 12,
-                                              height: 3,
+                                  // Force rebuild to ensure UI updates
+                                  setState(() {});
+                                },
+                                child: Container(
+                                  width: 85,
+                                  margin:
+                                      const EdgeInsets.symmetric(horizontal: 6),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Category image with highlight effect
+                                      Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          // Outer circle highlight
+                                          if (isSelected)
+                                            Container(
+                                              width: 76,
+                                              height: 76,
                                               decoration: BoxDecoration(
-                                                color:
-                                                    ColorManager.kPrimaryColor,
-                                                borderRadius:
-                                                    BorderRadius.circular(2),
+                                                shape: BoxShape.circle,
+                                                gradient: LinearGradient(
+                                                  colors: [
+                                                    ColorManager.kPrimaryColor
+                                                        .withOpacity(0.7),
+                                                    ColorManager.kPrimaryColor
+                                                        .withOpacity(0.3),
+                                                  ],
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                ),
                                               ),
                                             ),
+
+                                          // Main circle avatar
+                                          CircleAvatar(
+                                            backgroundColor: isSelected
+                                                ? Colors.white
+                                                : Colors.grey.shade200,
+                                            radius: 34,
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(33),
+                                              child: category.categoryImage !=
+                                                      null
+                                                  ? Image.network(
+                                                      category.categoryImage!,
+                                                      width: 64,
+                                                      height: 64,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (context,
+                                                              error,
+                                                              stackTrace) =>
+                                                          Icon(Icons.category,
+                                                              size: 30,
+                                                              color: isSelected
+                                                                  ? ColorManager
+                                                                      .kPrimaryColor
+                                                                  : Colors.grey
+                                                                      .shade400),
+                                                    )
+                                                  : Icon(Icons.category,
+                                                      size: 30,
+                                                      color: isSelected
+                                                          ? ColorManager
+                                                              .kPrimaryColor
+                                                          : Colors
+                                                              .grey.shade400),
+                                            ),
                                           ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    // Category name
-                                    Text(
-                                      category.categoryName ?? 'Unknown',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: isSelected
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
-                                        color: isSelected
-                                            ? ColorManager.kPrimaryColor
-                                            : Colors.grey.shade800,
+
+                                          // Selection indicator dot
+                                          if (isSelected)
+                                            Positioned(
+                                              bottom: 0,
+                                              child: Container(
+                                                width: 12,
+                                                height: 3,
+                                                decoration: BoxDecoration(
+                                                  color: ColorManager
+                                                      .kPrimaryColor,
+                                                  borderRadius:
+                                                      BorderRadius.circular(2),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
+                                      const SizedBox(height: 6),
+                                      // Category name
+                                      Text(
+                                        category.categoryName ?? 'Unknown',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: isSelected
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                          color: isSelected
+                                              ? ColorManager.kPrimaryColor
+                                              : Colors.grey.shade800,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       );
               },
@@ -414,158 +424,184 @@ class _SideBarProductListState extends State<SideBarProductList> {
                           ],
                         ),
                       )
-                    : GridView.count(
-                        padding: const EdgeInsets.only(
-                            top: 16, left: 16, right: 16, bottom: 16),
-                        crossAxisCount: 3,
-                        childAspectRatio: 0.8,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                        children: List.generate(products.length, (index) {
-                          final product = products[index];
-                          final isSelected =
-                              product == productProvider.selectedProduct;
-
-                          // Find primary image
-                          String? primaryImage;
-                          if (product.attachment != null &&
-                              product.attachment!.isNotEmpty) {
-                            for (var attachment in product.attachment!) {
-                              if (attachment.isPrimary == 1) {
-                                primaryImage = attachment.filePath;
-                                break;
-                              }
-                            }
-                            // If no primary image found, use the first one
-                            if (primaryImage == null &&
-                                product.attachment!.isNotEmpty) {
-                              primaryImage = product.attachment!.first.filePath;
-                            }
-                          }
-
-                          return GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () {
-                              debugPrint("Product: $product");
-                              if (widget.onProductSelected != null) {
-                                widget.onProductSelected!(product);
-                              } else {
-                                _addToCart(context, product, customerId);
-                              }
+                    : MouseRegion(
+                        cursor: SystemMouseCursors.grab,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(
+                            dragDevices: {
+                              PointerDeviceKind.mouse,
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.stylus,
+                              PointerDeviceKind.trackpad,
                             },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                                border: isSelected
-                                    ? Border.all(
-                                        color: ColorManager.kPrimaryColor,
-                                        width: 1)
-                                    : Border.all(color: Colors.grey.shade100),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Product image
-                                  Expanded(
-                                    child: Stack(
-                                      fit: StackFit.expand,
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius: const BorderRadius.only(
-                                            topLeft: Radius.circular(8),
-                                            topRight: Radius.circular(8),
-                                          ),
-                                          child: Container(
-                                            color: Colors.grey.shade50,
-                                            child: primaryImage != null
-                                                ? Image.network(
-                                                    primaryImage,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (context,
-                                                            error,
-                                                            stackTrace) =>
-                                                        const Icon(
-                                                            Icons
-                                                                .image_not_supported,
-                                                            size: 24,
-                                                            color: Colors.grey),
-                                                  )
-                                                : const Icon(
-                                                    Icons.inventory_2_outlined,
-                                                    size: 24,
-                                                    color: Colors.grey),
-                                          ),
-                                        ),
-                                        // Price indicator
-                                        Positioned(
-                                          bottom: 0,
-                                          right: 0,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 4, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: ColorManager.kPrimaryColor
-                                                  .withOpacity(0.8),
+                          ),
+                          child: GridView.count(
+                            padding: const EdgeInsets.only(
+                                top: 16, left: 16, right: 16, bottom: 16),
+                            crossAxisCount: 3,
+                            childAspectRatio: 0.8,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 8,
+                            physics: const BouncingScrollPhysics(),
+                            children: List.generate(products.length, (index) {
+                              final product = products[index];
+                              final isSelected =
+                                  product == productProvider.selectedProduct;
+
+                              // Find primary image
+                              String? primaryImage;
+                              if (product.attachment != null &&
+                                  product.attachment!.isNotEmpty) {
+                                for (var attachment in product.attachment!) {
+                                  if (attachment.isPrimary == 1) {
+                                    primaryImage = attachment.filePath;
+                                    break;
+                                  }
+                                }
+                                // If no primary image found, use the first one
+                                if (primaryImage == null &&
+                                    product.attachment!.isNotEmpty) {
+                                  primaryImage =
+                                      product.attachment!.first.filePath;
+                                }
+                              }
+
+                              return GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  debugPrint("Product: $product");
+                                  if (widget.onProductSelected != null) {
+                                    widget.onProductSelected!(product);
+                                  } else {
+                                    _addToCart(context, product, customerId);
+                                  }
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: isSelected
+                                        ? Border.all(
+                                            color: ColorManager.kPrimaryColor,
+                                            width: 1)
+                                        : Border.all(
+                                            color: Colors.grey.shade100),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Product image
+                                      Expanded(
+                                        child: Stack(
+                                          fit: StackFit.expand,
+                                          children: [
+                                            ClipRRect(
                                               borderRadius:
                                                   const BorderRadius.only(
-                                                topLeft: Radius.circular(4),
+                                                topLeft: Radius.circular(8),
+                                                topRight: Radius.circular(8),
+                                              ),
+                                              child: Container(
+                                                color: Colors.grey.shade50,
+                                                child: primaryImage != null
+                                                    ? Image.network(
+                                                        primaryImage,
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder: (context,
+                                                                error,
+                                                                stackTrace) =>
+                                                            const Icon(
+                                                                Icons
+                                                                    .image_not_supported,
+                                                                size: 24,
+                                                                color: Colors
+                                                                    .grey),
+                                                      )
+                                                    : const Icon(
+                                                        Icons
+                                                            .inventory_2_outlined,
+                                                        size: 24,
+                                                        color: Colors.grey),
                                               ),
                                             ),
-                                            child: Text(
-                                              '${product.price?.price ?? '0.00'} ${product.currency ?? ''}',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 8,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        // Selection indicator
-                                        if (isSelected)
-                                          Positioned(
-                                            top: 0,
-                                            left: 0,
-                                            child: Container(
-                                              height: 16,
-                                              width: 16,
-                                              decoration: const BoxDecoration(
-                                                color:
-                                                    ColorManager.kPrimaryColor,
-                                                borderRadius: BorderRadius.only(
-                                                  topLeft: Radius.circular(8),
-                                                  bottomRight:
-                                                      Radius.circular(8),
+                                            // Price indicator
+                                            Positioned(
+                                              bottom: 0,
+                                              right: 0,
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 4,
+                                                        vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: ColorManager
+                                                      .kPrimaryColor
+                                                      .withOpacity(0.8),
+                                                  borderRadius:
+                                                      const BorderRadius.only(
+                                                    topLeft: Radius.circular(4),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  '${product.price?.price ?? '0.00'} ${product.currency ?? ''}',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 8,
+                                                  ),
                                                 ),
                                               ),
-                                              child: const Icon(
-                                                Icons.check,
-                                                color: Colors.white,
-                                                size: 10,
-                                              ),
                                             ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  // Product name/unit
-                                  Padding(
-                                    padding: const EdgeInsets.all(4.0),
-                                    child: Text(
-                                      "${product.productName} / ${product.unit}",
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 9,
+                                            // Selection indicator
+                                            if (isSelected)
+                                              Positioned(
+                                                top: 0,
+                                                left: 0,
+                                                child: Container(
+                                                  height: 16,
+                                                  width: 16,
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                    color: ColorManager
+                                                        .kPrimaryColor,
+                                                    borderRadius:
+                                                        BorderRadius.only(
+                                                      topLeft:
+                                                          Radius.circular(8),
+                                                      bottomRight:
+                                                          Radius.circular(8),
+                                                    ),
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.check,
+                                                    color: Colors.white,
+                                                    size: 10,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
+
+                                      // Product name/unit
+                                      Padding(
+                                        padding: const EdgeInsets.all(4.0),
+                                        child: Text(
+                                          "${product.productName} / ${product.unit}",
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 9,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
                       );
               },
             ),

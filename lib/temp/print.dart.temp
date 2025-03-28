@@ -14,8 +14,6 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pos_machine/screens/print/printer_settings.dart';
-import 'package:pos_machine/models/get_app_settings.dart';
 
 class PrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
@@ -48,7 +46,6 @@ class _PrintPageState extends State<PrintPage> {
   BluetoothPrinter? selectedPrinter;
   bool _isScanning = false;
   bool _isLoading = true;
-  ReceiptTemplate? selectedTemplate;
 
   static const Color primaryColor = Color(0XFF3C92F5);
   static const Color accentColor = Color(0xFF4CAF50);
@@ -65,7 +62,6 @@ class _PrintPageState extends State<PrintPage> {
       Provider.of<PaymentGatewaysProvider>(context, listen: false)
           .fetchPaymentGateways(accessToken: accessToken!);
       _loadDefaultPrinter();
-      _loadReceiptTemplate();
     });
   }
 
@@ -237,55 +233,6 @@ class _PrintPageState extends State<PrintPage> {
     }
   }
 
-  Future<void> _loadReceiptTemplate() async {
-    final prefs = await SharedPreferences.getInstance();
-    final templatesJson = prefs.getString('receipt_templates');
-
-    if (templatesJson != null) {
-      try {
-        final List<dynamic> decodedData = json.decode(templatesJson);
-        final List<ReceiptTemplate> loadedTemplates = decodedData
-            .map((template) => ReceiptTemplate.fromJson(template))
-            .toList();
-
-        // Find default template
-        final defaultTemplate = loadedTemplates.firstWhere(
-          (template) => template.isDefault,
-          orElse: () => loadedTemplates.isNotEmpty
-              ? loadedTemplates.first
-              : ReceiptTemplate(
-                  name: 'Default Template',
-                  settings: ReceiptSettings(),
-                  isDefault: true,
-                ),
-        );
-
-        setState(() {
-          selectedTemplate = defaultTemplate;
-        });
-      } catch (e) {
-        print('Error decoding templates: $e');
-        // Create a default template if none exists
-        setState(() {
-          selectedTemplate = ReceiptTemplate(
-            name: 'Default Template',
-            settings: ReceiptSettings(),
-            isDefault: true,
-          );
-        });
-      }
-    } else {
-      // Create a default template if none exists
-      setState(() {
-        selectedTemplate = ReceiptTemplate(
-          name: 'Default Template',
-          settings: ReceiptSettings(),
-          isDefault: true,
-        );
-      });
-    }
-  }
-
   Future<void> printReceipt(
       String customerCareNumber, String customerCareEmail) async {
     if (selectedPrinter == null) {
@@ -307,38 +254,48 @@ class _PrintPageState extends State<PrintPage> {
       final generator = Generator(PaperSize.mm80, profile);
       List<int> bytes = [];
 
-      // Get settings from template or use defaults
-      final settings = selectedTemplate?.settings ?? ReceiptSettings();
-      final appSettingsProvider =
-          Provider.of<AppSettingsProvider>(context, listen: false);
-      final appSettings = appSettingsProvider.appSettings;
+      // Title
+      // bytes += _buildTitle(generator, 'EPOS Invoice');
 
-      // Header
-      bytes += _buildHeader(generator, settings, appSettings!);
+      //Header
+      bytes += _buildHeader(generator, '${widget.storeName}',
+          customerCareNumber, customerCareEmail);
+
+      // Date and Order Number
+      // bytes += _buildOrderDetails(generator);
+
+      // Store Name
+      // bytes += _buildStoreName(generator, widget.storeName.toString());
 
       // Item Table Header
-      bytes += _buildTableHeader(generator, settings);
+      bytes += _buildTableHeader(generator);
 
       // Cart Items
-      bytes += _buildCartItems(generator, widget.cartItems, settings);
+      bytes += _buildCartItems(generator, widget.cartItems);
 
       // Total Amount
-      bytes += _buildTotalAmount(generator, settings);
+      bytes += _buildTotalAmount(generator);
+
+      // Payment Details
+      bytes += _buildPaymentDetails(generator);
+
+      // Tax Details
+      // bytes += _buildTaxDetails(generator);
+
+      // Tax Details
+      // bytes += _buildPointsDetails(generator);
+
+      // Tax Details
+      // bytes += _buildServiceDetails(generator);
+
+      // Customer Care Details
+      // bytes += _buildCustomerCareDetails(
+      //     generator, customerCareNumber, customerCareEmail);
 
       // Thank You Message
-      if (settings.showThankYouMessage) {
-        bytes += _buildThankYouMessage(generator, settings);
-      }
+      bytes += _buildThankYouMessage(generator);
 
-      // QR Code
-      if (settings.showQRCode) {
-        bytes += _buildQRCode(generator, customerCareNumber, settings);
-      }
-
-      // Terms & Conditions
-      if (settings.showTermsConditions) {
-        bytes += _buildTermsConditions(generator, settings);
-      }
+      bytes += _buildQRCode(generator, customerCareNumber);
 
       // Cut the receipt
       bytes += generator.cut();
@@ -355,434 +312,12 @@ class _PrintPageState extends State<PrintPage> {
       }
     } catch (e) {
       debugPrint(e.toString());
+      // if (mounted) {
+      //   showScaffoldError(context: context, message: 'Error: ${e.toString()}');
+      // }
     } finally {
       await _disconnectPrinter();
     }
-  }
-
-  List<int> _buildHeader(
-      Generator generator, ReceiptSettings settings, AppSettings appSettings) {
-    List<int> bytes = [];
-
-    if (settings.showStoreName) {
-      bytes += generator.row([
-        PosColumn(
-          text:
-              settings.storeName.isNotEmpty ? settings.storeName : 'STORE NAME',
-          width: 12,
-          styles: const PosStyles(
-              align: PosAlign.center, bold: true, height: PosTextSize.size2),
-        ),
-      ]);
-    }
-
-    if (settings.showStoreAddress) {
-      bytes += generator.row([
-        PosColumn(
-          text: settings.storeAddress.isNotEmpty
-              ? settings.storeAddress
-              : 'Shop Address',
-          width: 12,
-          styles: const PosStyles(
-              align: PosAlign.center, height: PosTextSize.size1),
-        ),
-      ]);
-    }
-
-    if (settings.showFssaiInfo) {
-      bytes += generator.row([
-        PosColumn(
-          text: settings.fssaiInfo.isNotEmpty
-              ? settings.fssaiInfo
-              : 'Fssai: xxxx',
-          width: 12,
-          styles: const PosStyles(
-              align: PosAlign.center, height: PosTextSize.size1),
-        ),
-      ]);
-    }
-
-    if (settings.showTel) {
-      bytes += generator.text(
-          settings.telephone.isNotEmpty
-              ? settings.telephone
-              : 'TEL: ${appSettings.customerCarePhone}',
-          styles: const PosStyles(align: PosAlign.center));
-    }
-
-    if (settings.showEmail) {
-      bytes += generator.text(
-          settings.email.isNotEmpty
-              ? settings.email
-              : 'Email: ${appSettings.customerCareEmail}',
-          styles: const PosStyles(align: PosAlign.center));
-    }
-
-    if (settings.showInvoiceNumber) {
-      bytes += generator.text('INVOICE',
-          styles: const PosStyles(align: PosAlign.center, bold: true));
-      bytes += generator.text('INV No: ${widget.orderNumber}',
-          styles: const PosStyles(align: PosAlign.center, bold: true));
-    }
-
-    if (settings.showDateHeader) {
-      bytes += generator.hr();
-      bytes += generator.row([
-        PosColumn(
-            text: DateHelper.formatISODate(widget.orderDate),
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
-        PosColumn(
-            text: DateHelper.formatISODateToIST(widget.orderDate),
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
-      ]);
-      bytes += generator.hr();
-    }
-
-    return bytes;
-  }
-
-  List<int> _buildTableHeader(Generator generator, ReceiptSettings settings) {
-    List<PosColumn> columns = [];
-    int totalWidth = 0;
-
-    // Always add SL# column
-    columns.add(PosColumn(
-        text: 'SL#',
-        width: 1,
-        styles: const PosStyles(align: PosAlign.center)));
-    totalWidth += 1;
-
-    // Always add PARTICULARS column
-    columns.add(PosColumn(text: 'PARTICULARS', width: 3));
-    totalWidth += 3;
-
-    // Always add MRP column
-    columns.add(PosColumn(
-        text: 'MRP', width: 2, styles: const PosStyles(align: PosAlign.right)));
-    totalWidth += 2;
-
-    // Always add QTY column
-    columns.add(PosColumn(
-        text: 'QTY', width: 2, styles: const PosStyles(align: PosAlign.right)));
-    totalWidth += 2;
-
-    // Always add RATE column
-    columns.add(PosColumn(
-        text: 'RATE',
-        width: 2,
-        styles: const PosStyles(align: PosAlign.right)));
-    totalWidth += 2;
-
-    // Always add TOTAL column
-    columns.add(PosColumn(
-        text: 'TOTAL',
-        width: 2,
-        styles: const PosStyles(align: PosAlign.right)));
-    totalWidth += 2;
-
-    // Adjust if total width is not 12
-    if (totalWidth < 12 && columns.isNotEmpty) {
-      // Add remaining width to the first column
-      columns[0] = PosColumn(
-        text: columns[0].text,
-        width: columns[0].width + (12 - totalWidth),
-        styles: columns[0].styles,
-      );
-    }
-
-    return generator.row(columns) + generator.hr();
-  }
-
-  List<int> _buildCartItems(
-      Generator generator, List<dynamic> cartItems, ReceiptSettings settings) {
-    List<int> bytes = [];
-
-    for (var i = 0; i < cartItems.length; i++) {
-      var item = cartItems[i];
-
-      // Handle different models based on data source
-      String slNumber = '';
-      String productName = '';
-      String mrp = '';
-      String quantity = '';
-      String unitPrice = '';
-      String totalPrice = '';
-
-      // Adapt the model based on whether it's from local storage or current cart
-      if (widget.isFromLocalStorage) {
-        slNumber = (i + 1).toString();
-        productName = item['productName'] ?? '';
-        mrp = item['mrp'] ?? '0.00';
-        quantity = item['quantity'] ?? '0';
-        unitPrice = item['unitPrice'] ?? '0.00';
-        totalPrice = item['totalPrice'] ?? '0.00';
-      } else {
-        slNumber = (i + 1).toString();
-        productName = item.productName ?? '';
-        mrp = item.mrp ?? '0.00';
-        quantity = item.quantity?.toString() ?? '0';
-        unitPrice = item.unitPrice?.toString() ?? '0.00';
-        totalPrice = item.totalPrice?.toString() ?? '0.00';
-      }
-
-      List<PosColumn> columns = [];
-      int totalWidth = 0;
-
-      // Always add SL# column
-      columns.add(PosColumn(
-          text: slNumber,
-          width: 1,
-          styles: const PosStyles(align: PosAlign.center)));
-      totalWidth += 1;
-
-      // Always add PARTICULARS column
-      columns.add(PosColumn(
-          text: productName.length > 15
-              ? productName.substring(0, 15)
-              : productName,
-          width: 3));
-      totalWidth += 3;
-
-      // Always add MRP column
-      columns.add(PosColumn(
-          text: mrp, width: 2, styles: const PosStyles(align: PosAlign.right)));
-      totalWidth += 2;
-
-      // Always add QTY column
-      columns.add(PosColumn(
-          text: quantity,
-          width: 2,
-          styles: const PosStyles(align: PosAlign.right)));
-      totalWidth += 2;
-
-      // Always add RATE column
-      columns.add(PosColumn(
-          text: unitPrice,
-          width: 2,
-          styles: const PosStyles(align: PosAlign.right)));
-      totalWidth += 2;
-
-      // Always add TOTAL column
-      columns.add(PosColumn(
-          text: totalPrice,
-          width: 2,
-          styles: const PosStyles(align: PosAlign.right)));
-      totalWidth += 2;
-
-      // Adjust if total width is not 12
-      if (totalWidth < 12 && columns.isNotEmpty) {
-        // Add remaining width to the first column
-        columns[0] = PosColumn(
-          text: columns[0].text,
-          width: columns[0].width + (12 - totalWidth),
-          styles: columns[0].styles,
-        );
-      }
-
-      bytes += generator.row(columns);
-
-      // If product name is long, add additional lines to show the full name
-      if (productName.length > 15) {
-        int startIndex = 15;
-        while (startIndex < productName.length) {
-          int endIndex = startIndex + 24 < productName.length
-              ? startIndex + 24
-              : productName.length;
-          String namePart = productName.substring(startIndex, endIndex);
-
-          // Create a new row with proper column alignment
-          List<PosColumn> continuationColumns = [];
-          int currentWidth = 0;
-
-          // Always add empty column for SL#
-          continuationColumns.add(PosColumn(
-              text: '',
-              width: 1,
-              styles: const PosStyles(align: PosAlign.center)));
-          currentWidth += 1;
-
-          // Always add the continuation text in the PARTICULARS column
-          continuationColumns.add(PosColumn(
-              text: namePart,
-              width: 3,
-              styles: const PosStyles(align: PosAlign.left)));
-          currentWidth += 3;
-
-          // Always add empty columns for the rest of the fields
-          continuationColumns.add(PosColumn(text: '', width: 2));
-          currentWidth += 2;
-
-          continuationColumns.add(PosColumn(text: '', width: 2));
-          currentWidth += 2;
-
-          continuationColumns.add(PosColumn(text: '', width: 2));
-          currentWidth += 2;
-
-          continuationColumns.add(PosColumn(text: '', width: 2));
-          currentWidth += 2;
-
-          // Adjust if total width is not 12
-          if (currentWidth < 12 && continuationColumns.isNotEmpty) {
-            // Add remaining width to the product name column (index 1)
-            continuationColumns[1] = PosColumn(
-              text: continuationColumns[1].text,
-              width: continuationColumns[1].width + (12 - currentWidth),
-              styles: continuationColumns[1].styles,
-            );
-          }
-
-          bytes += generator.row(continuationColumns);
-          startIndex = endIndex;
-        }
-      }
-    }
-
-    return bytes + generator.hr();
-  }
-
-  List<int> _buildTotalAmount(Generator generator, ReceiptSettings settings) {
-    List<int> bytes = [];
-
-    // Display item count
-    if (settings.showMRPTotal) {
-      bytes += generator.row([
-        PosColumn(
-            text: 'Items',
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
-        PosColumn(
-            text: widget.cartItems.length.toString(),
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
-      ]);
-    }
-
-    if (settings.showNetAmount) {
-      bytes += generator.row([
-        PosColumn(
-            text: 'Net Total',
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
-        PosColumn(
-            text: widget.formattedTotal,
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
-      ]);
-    }
-
-    if (settings.showMRPTotal) {
-      bytes += generator.row([
-        PosColumn(
-            text: 'Total MRP',
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
-        PosColumn(
-            text:
-                "${(double.parse(widget.savedTotal!) + double.parse(widget.formattedTotal))}",
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
-      ]);
-    }
-
-    if (settings.showSaved) {
-      bytes += generator.row([
-        PosColumn(
-            text: 'You Saved',
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
-        PosColumn(
-            text: widget.savedTotal.toString(),
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
-      ]);
-    }
-
-    // Add a separator line
-    bytes += generator.hr();
-
-    if (settings.showAmountInWords) {
-      bytes += generator.text(
-          '${AmountHelper().convertNumberToWords(double.parse(widget.formattedTotal))} Only.',
-          styles: const PosStyles(align: PosAlign.center));
-      bytes += generator.hr();
-    }
-
-    return bytes;
-  }
-
-  List<int> _buildThankYouMessage(
-      Generator generator, ReceiptSettings settings) {
-    List<int> bytes = [];
-
-    bytes += generator.text(
-        settings.thankYouMessage.isNotEmpty
-            ? settings.thankYouMessage
-            : 'Thank You... Visit Again',
-        styles: const PosStyles(bold: true, align: PosAlign.center));
-
-    bytes += generator.hr();
-    return bytes;
-  }
-
-  List<int> _buildQRCode(Generator generator, String customerCareNumber,
-      ReceiptSettings settings) {
-    final paymentGatewaysProvider =
-        Provider.of<PaymentGatewaysProvider>(context, listen: false);
-    final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
-        .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY");
-    List<int> bytes = [];
-
-    bytes += generator.emptyLines(1);
-
-    bytes += generator.qrcode(
-      'upi://pay?pa=${manualPaymentGateway.link}&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS&t=c&st=1&se=1&sd=1',
-      size: QRSize.Size4,
-      align: PosAlign.center,
-    );
-
-    bytes += generator.emptyLines(1);
-
-    bytes += generator.text(
-        settings.qrCodeMessage.isNotEmpty
-            ? settings.qrCodeMessage
-            : 'Scan this QR code to Pay',
-        styles: const PosStyles(align: PosAlign.center));
-
-    bytes += generator.emptyLines(1);
-    return bytes;
-  }
-
-  List<int> _buildTermsConditions(
-      Generator generator, ReceiptSettings settings) {
-    List<int> bytes = [];
-
-    bytes += generator.text('Terms & Conditions',
-        styles: const PosStyles(bold: true, align: PosAlign.left));
-
-    String terms = settings.termsConditions.isNotEmpty
-        ? settings.termsConditions
-        : '1. Replace or Return only within 7 Days of Purchase.\n2. Replace only with Bill.';
-
-    List<String> termsList = terms.split('\n');
-    for (var term in termsList) {
-      bytes +=
-          generator.text(term, styles: const PosStyles(align: PosAlign.left));
-    }
-
-    bytes += generator.hr();
-    return bytes;
   }
 
   Future<void> _connectToPrinter() async {
@@ -808,6 +343,529 @@ class _PrintPageState extends State<PrintPage> {
         ),
       );
     }
+  }
+
+  List<int> _buildHeader(Generator generator, String title,
+      String customerCareNumber, String customerCareEmail) {
+    List<int> bytes = [];
+
+    // // Store Details
+    // bytes += generator.text(title,
+    //     styles: const PosStyles(
+    //         align: PosAlign.center, bold: true, height: PosTextSize.size2));
+
+    // bytes += generator.row([
+    //   PosColumn(
+    //     text: '', // Empty column on the left
+    //     width: 3,
+    //   ),
+    //   PosColumn(
+    //     text: title, // The main centered text
+    //     width: 6,
+    //     styles: const PosStyles(
+    //         align: PosAlign.center, bold: true, height: PosTextSize.size2),
+    //   ),
+    //   PosColumn(
+    //     text: '', // Empty column on the right
+    //     width: 3,
+    //   ),
+    // ]);
+
+    bytes += generator.row([
+      PosColumn(
+        text: title, // The main centered text
+        width: 12,
+        styles: const PosStyles(
+            align: PosAlign.center, bold: true, height: PosTextSize.size2),
+      ),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(
+        text: "Mini Supermarket", // The main centered text
+        width: 12,
+        styles:
+            const PosStyles(align: PosAlign.center, height: PosTextSize.size1),
+      ),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(
+        text: "Manjeri, Malappuram", // The main centered text
+        width: 12,
+        styles:
+            const PosStyles(align: PosAlign.center, height: PosTextSize.size1),
+      ),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(
+        text: "Fssai : xxxx", // The main centered text
+        width: 12,
+        styles:
+            const PosStyles(align: PosAlign.center, height: PosTextSize.size1),
+      ),
+    ]);
+
+    // bytes += generator.text('Manjeri,Malappuram',
+    //     styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.text('TEL: $customerCareNumber',
+        styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.text('Email: $customerCareEmail',
+        styles: const PosStyles(align: PosAlign.center));
+    // bytes += generator.text('The Goods and Service Tax Rule 2017',
+    //     styles: const PosStyles(align: PosAlign.center));
+    // bytes += generator.text('GSTIN No: 32AAT000004G1ZH',
+    //     styles: const PosStyles(align: PosAlign.center));
+    // bytes += generator.text('FSSAI: 113250100000078',
+    //     styles: const PosStyles(align: PosAlign.center));
+
+    // Invoice Title
+    bytes += generator.text('INVOICE',
+        styles: const PosStyles(align: PosAlign.center, bold: true));
+
+    bytes += generator.text('INV No: ${widget.orderNumber}',
+        styles: const PosStyles(align: PosAlign.center, bold: true));
+
+    // Date and Time
+    // bytes += generator.text(
+    //     'Date: ${DateHelper.formatISODate(widget.orderDate)}  Order#: ${widget.orderNumber}',
+    //     styles: const PosStyles(align: PosAlign.center));
+    // bytes += generator.text(
+    //     'Time: ${DateHelper.formatISODateToIST(widget.orderDate)} Store Name: ${widget.storeName}',
+    //     styles: const PosStyles(align: PosAlign.center));
+
+    // Separator
+    // bytes += generator.text("================================");
+    bytes += generator.hr();
+    bytes += generator.row([
+      PosColumn(
+          text: DateHelper.formatISODate(widget.orderDate),
+          width: 6,
+          styles: const PosStyles(
+              align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+      PosColumn(
+          text: DateHelper.formatISODateToIST(widget.orderDate),
+          width: 6,
+          styles: const PosStyles(
+              align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+    ]);
+    bytes += generator.hr();
+
+    return bytes;
+  }
+
+  List<int> _buildTitle(Generator generator, String title) {
+    return generator.text(title,
+            styles: const PosStyles(
+                align: PosAlign.center,
+                bold: true,
+                height: PosTextSize.size2)) +
+        // generator.text("================================");
+        generator.hr();
+  }
+
+  List<int> _buildOrderDetails(Generator generator) {
+    return generator.text('Date: ${widget.orderDate}',
+            styles: const PosStyles(align: PosAlign.left)) +
+        generator.text('Order#: ${widget.orderNumber}',
+            styles: const PosStyles(align: PosAlign.left)) +
+        // generator.text("================================");
+        generator.hr();
+  }
+
+  List<int> _buildStoreName(Generator generator, String storeName) {
+    return generator.text('Store Name: $storeName',
+            styles: const PosStyles(align: PosAlign.left)) +
+        generator.hr();
+    // generator.text("================================");
+  }
+
+  List<int> _buildTableHeader(Generator generator) {
+    return generator.row([
+          PosColumn(text: 'Sl#', width: 1),
+          PosColumn(text: 'PARTICULARS', width: 3),
+          PosColumn(
+              text: 'MRP',
+              width: 2,
+              styles: const PosStyles(align: PosAlign.right)),
+          PosColumn(
+              text: 'QTY',
+              width: 2,
+              styles: const PosStyles(align: PosAlign.right)),
+          PosColumn(
+              text: 'RATE',
+              width: 2,
+              styles: const PosStyles(align: PosAlign.right)),
+          PosColumn(
+              text: 'TOTAL',
+              width: 2,
+              styles: const PosStyles(align: PosAlign.right)),
+        ]) +
+        generator.hr();
+    // generator.text("================================");
+  }
+
+  List<int> _buildCartItems(Generator generator, List<dynamic> cartItems) {
+    List<int> bytes = [];
+
+    for (var i = 0; i < cartItems.length; i++) {
+      var item = cartItems[i];
+
+      // Handle different models based on data source
+      String productName = '';
+      String mrp = '';
+      String quantity = '';
+      String unitPrice = '';
+      String totalPrice = '';
+
+      // Adapt the model based on whether it's from local storage or current cart
+      if (widget.isFromLocalStorage) {
+        // Handle saved order item format (Map format)
+        productName = item['productName'] ?? '';
+        mrp = item['mrp'] ?? '0.00';
+        quantity = item['quantity'] ?? '0';
+        unitPrice = item['unitPrice'] ?? '0.00';
+        totalPrice = item['totalPrice'] ?? '0.00';
+      } else {
+        // Handle current cart item format (Object format)
+        productName = item.productName ?? '';
+        mrp = item.mrp ?? '0.00';
+        quantity = item.quantity?.toString() ?? '0';
+        unitPrice = item.unitPrice?.toString() ?? '0.00';
+        totalPrice = item.totalPrice?.toString() ?? '0.00';
+      }
+
+      // First, add the item row with product information and other details
+      bytes += generator.row([
+        PosColumn(text: (i + 1).toString(), width: 1),
+        PosColumn(
+            text: productName.length > 15 ? productName.substring(0, 15) : productName, 
+            width: 3),
+        PosColumn(
+            text: mrp,
+            width: 2,
+            styles: const PosStyles(align: PosAlign.right)),
+        PosColumn(
+            text: quantity,
+            width: 2,
+            styles: const PosStyles(align: PosAlign.right)),
+        PosColumn(
+            text: unitPrice,
+            width: 2,
+            styles: const PosStyles(align: PosAlign.right)),
+        PosColumn(
+            text: totalPrice,
+            width: 2,
+            styles: const PosStyles(align: PosAlign.right)),
+      ]);
+
+      // If product name is long, add additional lines to show the full name
+      if (productName.length > 15) {
+        // Break the remaining text into chunks of appropriate length
+        int startIndex = 15;
+        while (startIndex < productName.length) {
+          int endIndex = startIndex + 24 < productName.length ? startIndex + 24 : productName.length;
+          String namePart = productName.substring(startIndex, endIndex);
+          
+          // Add a row with just the product name continuation and empty columns for other fields
+          bytes += generator.row([
+            PosColumn(text: '', width: 1), // Empty serial number
+            PosColumn(text: namePart, width: 11), // Give more space to the name on continuation lines
+          ]);
+          
+          startIndex = endIndex;
+        }
+      }
+    }
+    
+    return bytes + generator.hr();
+  }
+
+  List<int> _buildTotalAmount(Generator generator) {
+    List<int> bytes = [];
+
+    // bytes += generator.row([
+    //   // PosColumn(text: 'Sl#', width: 1),
+    //   PosColumn(text: 'DISCOUNT 0.00', width: 6),
+    //   // PosColumn(
+    //   //     text: 'MRP',
+    //   //     width: 2,
+    //   //     styles: const PosStyles(align: PosAlign.right)),
+    //   PosColumn(
+    //       text: widget.cartItems.length.toString(),
+    //       width: 2,
+    //       styles: const PosStyles(align: PosAlign.right)),
+    //   PosColumn(
+    //       text: '', width: 2, styles: const PosStyles(align: PosAlign.right)),
+    //   PosColumn(
+    //       text: widget.formattedTotal,
+    //       width: 2,
+    //       styles: const PosStyles(align: PosAlign.right)),
+    // ]);
+
+    bytes += generator.row([
+      PosColumn(
+          text: 'Items',
+          width: 6,
+          styles: const PosStyles(
+              align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+      PosColumn(
+          text: widget.cartItems.length.toString(),
+          width: 6,
+          styles: const PosStyles(
+              align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+    ]);
+
+    // bytes += generator.hr();
+
+    bytes += generator.row([
+      PosColumn(
+          text: 'Net Total',
+          width: 6,
+          styles: const PosStyles(
+              align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+      PosColumn(
+          text: widget.formattedTotal,
+          width: 6,
+          styles: const PosStyles(
+              align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(
+          text: 'Total MRP',
+          width: 6,
+          styles: const PosStyles(
+              align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+      PosColumn(
+          text:
+              "${(double.parse(widget.savedTotal!) + double.parse(widget.formattedTotal))}",
+          width: 6,
+          styles: const PosStyles(
+              align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(
+          text: 'You Saved',
+          width: 6,
+          styles: const PosStyles(
+              align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+      PosColumn(
+          text: widget.savedTotal.toString(),
+          width: 6,
+          styles: const PosStyles(
+              align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+    ]);
+
+    bytes += generator.hr();
+
+    // List<Map<String, String>> items = [
+    //   // {'label': 'Net Amount', 'value': widget.formattedTotal},
+    //   {
+    //     'label': 'Items ${widget.cartItems.length}',
+    //     'value':
+    //         "MRP TOTAL ${(double.parse(widget.savedTotal!) + double.parse(widget.formattedTotal))}"
+    //   },
+    //   {'label': 'You Save', 'value': widget.savedTotal ?? "0.00"},
+    //   // {'label': 'E&OE Discount', 'value': '0.00'},
+    //   // {'label': 'Sales Return', 'value': '0.00'},
+    //   // {'label': 'RoundOff', 'value': '0.00'},
+    //   // {'label': 'Invoice Total:', 'value': widget.formattedTotal},
+    // ];
+
+    // for (var item in items) {
+    //   bytes += generator.row([
+    //     PosColumn(
+    //         text: item['label']!,
+    //         width: 6,
+    //         styles: const PosStyles(
+    //             align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+    //     PosColumn(
+    //         text: item['value']!,
+    //         width: 6,
+    //         styles: const PosStyles(
+    //             align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+    //   ]);
+    // }
+
+    // Amount in Words
+    // Amount in Words - Replace hardcoded text with dynamic conversion
+    bytes += generator.text(
+        '${AmountHelper().convertNumberToWords(double.parse(widget.formattedTotal))} Only.',
+        styles: const PosStyles(align: PosAlign.left));
+
+    // Separator
+    // bytes += generator.text("================================");
+    generator.hr();
+    return bytes;
+  }
+
+  List<int> _buildPaymentDetails(Generator generator) {
+    List<int> bytes = [];
+
+    // Payment Header
+    // bytes += generator.text('CASH     | CARD     | COUPON   | CHANGE',
+    //     styles: const PosStyles(align: PosAlign.center));
+
+    // // Payment Values (dummy data)
+    // bytes += generator.text('3000.00  | 0.00     | 0.00     | 46.00',
+    //     styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.hr();
+
+    // Savings Message
+    // bytes += generator.text('You Have Saved ${widget.savedTotal ?? "0.00"}',
+    //     styles: const PosStyles(bold: true, align: PosAlign.center));
+    // bytes += generator.text('0.00',
+    //     styles: const PosStyles(bold: true, align: PosAlign.center));
+
+    // Separator
+    // bytes += generator.hr();
+
+    return bytes;
+  }
+
+  List<int> _buildTaxDetails(Generator generator) {
+    List<int> bytes = [];
+
+    // Tax Header
+    bytes += generator.text(
+        'GST       | TaxableAmt | SGST     | CGST     | TotalGST',
+        styles: const PosStyles(bold: true, align: PosAlign.center));
+    bytes += generator.hr();
+
+    // Tax Details (dummy data)
+    bytes += generator.text(
+        '0%       | 207.00     | 0.00     | 0.00     | 0.00',
+        styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.text(
+        '5%       | 947.62     | 23.69    | 23.69    | 23.69',
+        styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.text(
+        '12%      | 936.79     | 28.61    | 28.61    | 57.21',
+        styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.text(
+        '18%      | 1032.18    | 92.90    | 92.90    | 185.80',
+        styles: const PosStyles(align: PosAlign.center));
+
+    // Total Taxable Amount
+    bytes += generator.hr();
+    bytes += generator.text(
+        'Total    | 2663.59    | 145.20   | 145.20   | 290.39',
+        styles: const PosStyles(bold: true, align: PosAlign.center));
+
+    // MRP Total
+    bytes += generator.text('MRP Total: 5495.00',
+        styles: const PosStyles(bold: true, align: PosAlign.left));
+
+    // Separator
+    bytes += generator.hr();
+
+    return bytes;
+  }
+
+  List<int> _buildPointsDetails(Generator generator) {
+    List<int> bytes = [];
+
+    // Points Header
+    bytes += generator.text('NewPoint | Redeem | Balance | CardBalance',
+        styles: const PosStyles(bold: true, align: PosAlign.center));
+
+    bytes += generator.hr();
+
+    return bytes;
+  }
+
+  List<int> _buildServiceDetails(Generator generator) {
+    List<int> bytes = [];
+
+    // Points Values (dummy data)
+    bytes += generator.text('0.00     | 0.00   | 0.00    | 0.00',
+        styles: const PosStyles(align: PosAlign.center));
+
+    // Service Details Header
+    bytes += generator.text(
+        'Served by | Total Item | Print Date & Time | Counter | DD',
+        styles: const PosStyles(bold: true, align: PosAlign.center));
+
+    bytes += generator.hr();
+
+    // Service Details Values (dummy data)
+    bytes += generator.text(
+        'adhi      | 27.00     | 21-02-2025 19:39:36 | POS5',
+        styles: const PosStyles(align: PosAlign.center));
+
+    // Separator
+    bytes += generator.hr();
+
+    return bytes;
+  }
+
+  List<int> _buildCustomerCareDetails(
+      Generator generator, String customerCareNumber, String email) {
+    return generator.text('Customer Care: $customerCareNumber',
+            styles: const PosStyles(align: PosAlign.center)) +
+        generator.text('Email: $email',
+            styles: const PosStyles(align: PosAlign.center)) +
+        // generator.text("================================");
+        generator.hr();
+  }
+
+  List<int> _buildThankYouMessage(Generator generator) {
+    List<int> bytes = [];
+
+    // Thank You Message
+    bytes += generator.text('Thank You... Visit Again ',
+        styles: const PosStyles(bold: true, align: PosAlign.center));
+
+    // Separator
+    bytes += generator.hr();
+
+    return bytes;
+  }
+
+  List<int> _buildQRCode(Generator generator, String customerCareNumber) {
+    final paymentGatewaysProvider =
+        Provider.of<PaymentGatewaysProvider>(context, listen: false);
+    final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
+        .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY");
+    List<int> bytes = [];
+
+    // Add space before QR code
+    bytes += generator.emptyLines(1);
+
+    // Add QR Code - You can customize the data to whatever you need
+    // For example, a URL to your store website or a customer feedback form
+    bytes += generator.qrcode(
+      'upi://pay?pa=${manualPaymentGateway.link}&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS&t=c&st=1&se=1&sd=1',
+      size: QRSize.Size4,
+      align: PosAlign.center,
+    );
+
+    // Add space after QR code
+    bytes += generator.emptyLines(1);
+
+    // Add a label for the QR code
+    bytes += generator.text('Scan this QR code to Pay',
+        styles: const PosStyles(align: PosAlign.center));
+
+    bytes += generator.emptyLines(1);
+    // Terms & Conditions Header
+    bytes += generator.text('Terms & Conditions',
+        styles: const PosStyles(bold: true, align: PosAlign.left));
+
+    // Terms & Conditions Text
+    bytes += generator.text(
+        '1. Replace or Return only within 7 Days of Purchase.',
+        styles: const PosStyles(align: PosAlign.left));
+    bytes += generator.text('2.Replace only with Bill.',
+        styles: const PosStyles(align: PosAlign.left));
+
+    // Separator
+    bytes += generator.hr();
+
+    return bytes;
   }
 
   Future<void> _disconnectPrinter() async {
@@ -1006,7 +1064,7 @@ class _PrintPageState extends State<PrintPage> {
             ElevatedButton.icon(
               onPressed: () => selectedPrinter == null
                   ? null
-                  : printReceipt(appSettings.customerCarePhone,
+                  : printReceipt(appSettings!.customerCarePhone,
                       appSettings.customerCareEmail),
               icon: const Icon(Icons.receipt_long),
               label: const Text(

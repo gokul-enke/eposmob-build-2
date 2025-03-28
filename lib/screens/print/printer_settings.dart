@@ -6,6 +6,8 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'dart:convert';
+import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class BluetoothPrinter {
   String? deviceName;
@@ -30,14 +32,27 @@ class BluetoothPrinter {
 class ReceiptSettings {
   // Store Header settings
   bool showStoreName;
+  bool showDescription;
   bool showTel;
   bool showEmail;
   bool showInvoiceNumber;
+  bool showStoreAddress;
+  bool showFssaiInfo;
+
+  // Store Header content
+  String storeName;
+  String description;
+  String storeAddress;
+  String fssaiInfo;
+  String telephone;
+  String email;
 
   // Date Header settings
   bool showDateHeader;
 
   // Cart Items settings
+  // These will be removed from toggles but kept in the model for backwards compatibility
+  bool showSLNumber;
   bool showParticulars;
   bool showMRP;
   bool showQty;
@@ -49,17 +64,28 @@ class ReceiptSettings {
   bool showNetAmount;
   bool showMRPTotal;
   bool showSaved;
+  bool showAmountInWords;
 
   // Additional settings
   bool showThankYouMessage;
   bool showQRCode;
+  bool showTermsConditions;
+
+  // Additional content
+  String thankYouMessage;
+  String termsConditions;
+  String qrCodeMessage;
 
   ReceiptSettings({
     this.showStoreName = true,
+    this.showDescription = true,
     this.showTel = true,
     this.showEmail = true,
     this.showInvoiceNumber = true,
+    this.showStoreAddress = true,
+    this.showFssaiInfo = true,
     this.showDateHeader = true,
+    this.showSLNumber = true,
     this.showParticulars = true,
     this.showMRP = true,
     this.showQty = true,
@@ -69,17 +95,33 @@ class ReceiptSettings {
     this.showNetAmount = true,
     this.showMRPTotal = true,
     this.showSaved = true,
+    this.showAmountInWords = true,
     this.showThankYouMessage = true,
     this.showQRCode = true,
+    this.showTermsConditions = true,
+    this.storeName = 'STORE NAME',
+    this.description = 'Mini Supermarket',
+    this.storeAddress = 'Manjeri, Malappuram',
+    this.fssaiInfo = 'Fssai: xxxx',
+    this.telephone = 'TEL: 123-456-7890',
+    this.email = 'Email: example@store.com',
+    this.thankYouMessage = 'Thank You... Visit Again',
+    this.termsConditions =
+        '1. Replace within 7 Days of Purchase\n2. Replace only with Bill',
+    this.qrCodeMessage = 'Scan this QR code to Pay',
   });
 
   Map<String, dynamic> toJson() {
     return {
       'showStoreName': showStoreName,
+      'showDescription': showDescription,
       'showTel': showTel,
       'showEmail': showEmail,
       'showInvoiceNumber': showInvoiceNumber,
+      'showStoreAddress': showStoreAddress,
+      'showFssaiInfo': showFssaiInfo,
       'showDateHeader': showDateHeader,
+      'showSLNumber': showSLNumber,
       'showParticulars': showParticulars,
       'showMRP': showMRP,
       'showQty': showQty,
@@ -89,18 +131,33 @@ class ReceiptSettings {
       'showNetAmount': showNetAmount,
       'showMRPTotal': showMRPTotal,
       'showSaved': showSaved,
+      'showAmountInWords': showAmountInWords,
       'showThankYouMessage': showThankYouMessage,
       'showQRCode': showQRCode,
+      'showTermsConditions': showTermsConditions,
+      'storeName': storeName,
+      'description': description,
+      'storeAddress': storeAddress,
+      'fssaiInfo': fssaiInfo,
+      'telephone': telephone,
+      'email': email,
+      'thankYouMessage': thankYouMessage,
+      'termsConditions': termsConditions,
+      'qrCodeMessage': qrCodeMessage,
     };
   }
 
   factory ReceiptSettings.fromJson(Map<String, dynamic> json) {
     return ReceiptSettings(
       showStoreName: json['showStoreName'] ?? true,
+      showDescription: json['showDescription'] ?? true,
       showTel: json['showTel'] ?? true,
       showEmail: json['showEmail'] ?? true,
       showInvoiceNumber: json['showInvoiceNumber'] ?? true,
+      showStoreAddress: json['showStoreAddress'] ?? true,
+      showFssaiInfo: json['showFssaiInfo'] ?? true,
       showDateHeader: json['showDateHeader'] ?? true,
+      showSLNumber: json['showSLNumber'] ?? true,
       showParticulars: json['showParticulars'] ?? true,
       showMRP: json['showMRP'] ?? true,
       showQty: json['showQty'] ?? true,
@@ -110,8 +167,20 @@ class ReceiptSettings {
       showNetAmount: json['showNetAmount'] ?? true,
       showMRPTotal: json['showMRPTotal'] ?? true,
       showSaved: json['showSaved'] ?? true,
+      showAmountInWords: json['showAmountInWords'] ?? true,
       showThankYouMessage: json['showThankYouMessage'] ?? true,
       showQRCode: json['showQRCode'] ?? true,
+      showTermsConditions: json['showTermsConditions'] ?? true,
+      storeName: json['storeName'] ?? 'STORE NAME',
+      description: json['description'] ?? 'Your one-stop shop for all needs',
+      storeAddress: json['storeAddress'] ?? 'Manjeri, Malappuram',
+      fssaiInfo: json['fssaiInfo'] ?? 'Fssai: xxxx',
+      telephone: json['telephone'] ?? 'TEL: 123-456-7890',
+      email: json['email'] ?? 'Email: example@store.com',
+      thankYouMessage: json['thankYouMessage'] ?? 'Thank You... Visit Again',
+      termsConditions: json['termsConditions'] ??
+          '1. Replace within 7 Days of Purchase\n2. Replace only with Bill',
+      qrCodeMessage: json['qrCodeMessage'] ?? 'Scan this QR code to Pay',
     );
   }
 }
@@ -176,6 +245,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   bool isLoading = true;
   bool isEditing = false;
   final ScrollController _templatesScrollController = ScrollController();
+  List<FocusNode> _focusNodes = [];
 
   @override
   void initState() {
@@ -186,6 +256,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   @override
   void dispose() {
     _templatesScrollController.dispose();
+    // Make sure to clean up all focus nodes
+    for (var element in _focusNodes) {
+      element.dispose();
+    }
     super.dispose();
   }
 
@@ -467,6 +541,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     if (selectedTemplate == null) return const SizedBox();
 
     final settings = selectedTemplate!.settings;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final appSettings = appSettingsProvider.appSettings;
 
     return Container(
       decoration: BoxDecoration(
@@ -490,43 +567,90 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           children: [
             // Store Header
             if (settings.showStoreName)
-              const Text(
-                'STORE NAME',
-                style: TextStyle(
+              Text(
+                settings.storeName.isNotEmpty
+                    ? settings.storeName
+                    : 'STORE NAME',
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
                 textAlign: TextAlign.center,
               ),
+            if (settings.showDescription)
+              Text(
+                settings.description.isNotEmpty
+                    ? settings.description
+                    : 'Your one-stop shop for all needs',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            if (settings.showStoreAddress)
+              Text(
+                settings.storeAddress.isNotEmpty
+                    ? settings.storeAddress
+                    : 'Shop Address',
+                style: const TextStyle(fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            if (settings.showFssaiInfo)
+              Text(
+                settings.fssaiInfo.isNotEmpty
+                    ? settings.fssaiInfo
+                    : 'Fssai: xxxx',
+                style: const TextStyle(fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
             if (settings.showTel)
-              const Text(
-                'TEL: 123-456-7890',
-                style: TextStyle(fontSize: 12),
+              Text(
+                settings.telephone.isNotEmpty
+                    ? settings.telephone
+                    : 'TEL: ${appSettings?.customerCarePhone ?? ""}',
+                style: const TextStyle(fontSize: 12),
                 textAlign: TextAlign.center,
               ),
             if (settings.showEmail)
-              const Text(
-                'Email: example@store.com',
-                style: TextStyle(fontSize: 12),
+              Text(
+                settings.email.isNotEmpty
+                    ? settings.email
+                    : 'Email: ${appSettings?.customerCareEmail ?? ""}',
+                style: const TextStyle(fontSize: 12),
                 textAlign: TextAlign.center,
               ),
             if (settings.showInvoiceNumber)
-              const Text(
-                'INVOICE #12345',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-                textAlign: TextAlign.center,
+              const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'INVOICE',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'INV No: 12345',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             const SizedBox(height: 8),
             const Divider(),
 
             // Date Header
             if (settings.showDateHeader)
-              Row(
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
+                children: [
                   Text(
                     '2023-06-15',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
@@ -546,6 +670,15 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Row(
                   children: [
+                    if (settings.showSLNumber)
+                      const Expanded(
+                        flex: 1,
+                        child: Text(
+                          'SL#',
+                          style: TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                     if (settings.showParticulars)
                       const Expanded(
                         flex: 4,
@@ -610,6 +743,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                     padding: const EdgeInsets.symmetric(vertical: 4.0),
                     child: Row(
                       children: [
+                        if (settings.showSLNumber)
+                          Expanded(
+                            flex: 1,
+                            child: Text(
+                              '${index + 1}',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                          ),
                         if (settings.showParticulars)
                           Expanded(
                             flex: 4,
@@ -663,36 +804,76 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             if (_anyCartColumnVisible()) const Divider(),
 
             // Amount Section
-            if (settings.showDiscount)
-              Row(
+            if (settings.showMRPTotal)
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
+                children: [
                   Text(
-                    'DISCOUNT',
-                    style: TextStyle(fontSize: 11),
+                    'Items',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    '0.00',
-                    style: TextStyle(fontSize: 11),
+                    '2',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
 
             if (settings.showNetAmount)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
+                  children: [
                     Text(
-                      'Net Amount',
+                      'Net Total',
                       style:
-                          TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                     Text(
                       '300.00',
                       style:
-                          TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+
+            if (settings.showMRPTotal)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Total MRP',
+                      style:
+                          TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '315.00',
+                      style:
+                          TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+
+            if (settings.showSaved)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'You Saved',
+                      style:
+                          TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '15.00',
+                      style:
+                          TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -700,45 +881,25 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
             if (settings.showMRPTotal || settings.showSaved) const Divider(),
 
-            if (settings.showMRPTotal)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
-                    'Items 3',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    'MRP TOTAL 315.00',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ],
+            if (settings.showAmountInWords) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4.0),
+                child: Text(
+                  'Three Hundred Rupees Only.',
+                  style: TextStyle(fontSize: 11),
+                  textAlign: TextAlign.center,
+                ),
               ),
-
-            if (settings.showSaved)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
-                    'You Save',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '15.00',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-
-            const Divider(),
+              const Divider(),
+            ],
 
             // Thank You Message
             if (settings.showThankYouMessage)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Text(
-                  'Thank You... Visit Again',
-                  style: TextStyle(
+                  settings.thankYouMessage,
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -763,9 +924,38 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                 ),
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Scan this QR code to Pay',
-                style: TextStyle(fontSize: 10),
+              Text(
+                settings.qrCodeMessage,
+                style: const TextStyle(fontSize: 10),
+              ),
+            ],
+
+            // Terms & Conditions
+            if (settings.showTermsConditions) ...[
+              const SizedBox(height: 8),
+              const Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Terms & Conditions',
+                        style: TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.left,
+                      ),
+                      Text(
+                        settings.termsConditions,
+                        style: const TextStyle(fontSize: 9),
+                        textAlign: TextAlign.left,
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ],
@@ -778,7 +968,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     if (selectedTemplate == null) return false;
     final settings = selectedTemplate!.settings;
 
-    return settings.showParticulars ||
+    return settings.showSLNumber ||
+        settings.showParticulars ||
         settings.showMRP ||
         settings.showQty ||
         settings.showRate ||
@@ -825,6 +1016,860 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     );
   }
 
+  Column _buildSettingsForm() {
+    if (selectedTemplate == null) return const Column();
+
+    return Column(
+      children: [
+        _buildSettingsSection(
+          'Store Header',
+          [
+            _buildSwitchTile(
+              'Store Name',
+              selectedTemplate!.settings.showStoreName,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showStoreName = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+            if (selectedTemplate!.settings.showStoreName)
+              _buildTextEditField(
+                label: 'Store Name Content',
+                value: selectedTemplate!.settings.storeName,
+                onChanged: (value) {
+                  final newSettings = selectedTemplate!.settings;
+                  newSettings.storeName = value;
+                  _updateSelectedTemplateSettings(newSettings);
+                },
+              ),
+            _buildSwitchTile(
+              'Store Description',
+              selectedTemplate!.settings.showDescription,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showDescription = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+            if (selectedTemplate!.settings.showDescription)
+              _buildTextEditField(
+                label: 'Store Description Content',
+                value: selectedTemplate!.settings.description,
+                onChanged: (value) {
+                  final newSettings = selectedTemplate!.settings;
+                  newSettings.description = value;
+                  _updateSelectedTemplateSettings(newSettings);
+                },
+              ),
+            _buildSwitchTile(
+              'Store Address',
+              selectedTemplate!.settings.showStoreAddress,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showStoreAddress = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+            if (selectedTemplate!.settings.showStoreAddress)
+              _buildTextEditField(
+                label: 'Store Address Content',
+                value: selectedTemplate!.settings.storeAddress,
+                onChanged: (value) {
+                  final newSettings = selectedTemplate!.settings;
+                  newSettings.storeAddress = value;
+                  _updateSelectedTemplateSettings(newSettings);
+                },
+              ),
+            _buildSwitchTile(
+              'FSSAI Info',
+              selectedTemplate!.settings.showFssaiInfo,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showFssaiInfo = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+            if (selectedTemplate!.settings.showFssaiInfo)
+              _buildTextEditField(
+                label: 'FSSAI Info Content',
+                value: selectedTemplate!.settings.fssaiInfo,
+                onChanged: (value) {
+                  final newSettings = selectedTemplate!.settings;
+                  newSettings.fssaiInfo = value;
+                  _updateSelectedTemplateSettings(newSettings);
+                },
+              ),
+            _buildSwitchTile(
+              'Telephone',
+              selectedTemplate!.settings.showTel,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showTel = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+            if (selectedTemplate!.settings.showTel)
+              _buildTextEditField(
+                label: 'Telephone Content',
+                value: selectedTemplate!.settings.telephone,
+                onChanged: (value) {
+                  final newSettings = selectedTemplate!.settings;
+                  newSettings.telephone = value;
+                  _updateSelectedTemplateSettings(newSettings);
+                },
+              ),
+            _buildSwitchTile(
+              'Email',
+              selectedTemplate!.settings.showEmail,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showEmail = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+            if (selectedTemplate!.settings.showEmail)
+              _buildTextEditField(
+                label: 'Email Content',
+                value: selectedTemplate!.settings.email,
+                onChanged: (value) {
+                  final newSettings = selectedTemplate!.settings;
+                  newSettings.email = value;
+                  _updateSelectedTemplateSettings(newSettings);
+                },
+              ),
+            _buildSwitchTile(
+              'Invoice Number',
+              selectedTemplate!.settings.showInvoiceNumber,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showInvoiceNumber = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+          ],
+        ),
+        _buildSettingsSection(
+          'Date Header',
+          [
+            _buildSwitchTile(
+              'Show Date Header',
+              selectedTemplate!.settings.showDateHeader,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showDateHeader = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+          ],
+        ),
+        _buildSettingsSection(
+          'Amount Section',
+          [
+            _buildSwitchTile(
+              'Discount',
+              selectedTemplate!.settings.showDiscount,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showDiscount = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+            _buildSwitchTile(
+              'Net Total',
+              selectedTemplate!.settings.showNetAmount,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showNetAmount = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+            _buildSwitchTile(
+              'MRP Total',
+              selectedTemplate!.settings.showMRPTotal,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showMRPTotal = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+            _buildSwitchTile(
+              'You Save',
+              selectedTemplate!.settings.showSaved,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showSaved = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+            _buildSwitchTile(
+              'Amount in Words',
+              selectedTemplate!.settings.showAmountInWords,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showAmountInWords = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+          ],
+        ),
+        _buildSettingsSection(
+          'Additional Settings',
+          [
+            _buildSwitchTile(
+              'Thank You Message',
+              selectedTemplate!.settings.showThankYouMessage,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showThankYouMessage = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+            if (selectedTemplate!.settings.showThankYouMessage)
+              _buildTextEditField(
+                label: 'Thank You Message Content',
+                value: selectedTemplate!.settings.thankYouMessage,
+                onChanged: (value) {
+                  final newSettings = selectedTemplate!.settings;
+                  newSettings.thankYouMessage = value;
+                  _updateSelectedTemplateSettings(newSettings);
+                },
+              ),
+            _buildSwitchTile(
+              'QR Code',
+              selectedTemplate!.settings.showQRCode,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showQRCode = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+            if (selectedTemplate!.settings.showQRCode)
+              _buildTextEditField(
+                label: 'QR Code Message',
+                value: selectedTemplate!.settings.qrCodeMessage,
+                onChanged: (value) {
+                  final newSettings = selectedTemplate!.settings;
+                  newSettings.qrCodeMessage = value;
+                  _updateSelectedTemplateSettings(newSettings);
+                },
+              ),
+            _buildSwitchTile(
+              'Terms & Conditions',
+              selectedTemplate!.settings.showTermsConditions,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showTermsConditions = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+            if (selectedTemplate!.settings.showTermsConditions)
+              _buildTextEditField(
+                label: 'Terms & Conditions Content',
+                value: selectedTemplate!.settings.termsConditions,
+                onChanged: (value) {
+                  final newSettings = selectedTemplate!.settings;
+                  newSettings.termsConditions = value;
+                  _updateSelectedTemplateSettings(newSettings);
+                },
+                maxLines: 4,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Show receipt template modal
+  void _showReceiptTemplateModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: ContentBox(context),
+        );
+      },
+    );
+  }
+
+  // Content box for receipt template modal
+  Widget ContentBox(BuildContext context) {
+    final TextEditingController nameController = TextEditingController(
+      text: selectedTemplate?.name ?? "",
+    );
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 800, maxHeight: 600),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        shape: BoxShape.rectangle,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 10.0,
+            offset: Offset(0.0, 10.0),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(
+                    Icons.receipt_long,
+                    color: ColorManager.kPrimaryColor,
+                    size: 24,
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    "Receipt Template Settings",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: ColorManager.kTitleTextColor,
+                    ),
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.grey),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+          const Divider(),
+          const SizedBox(height: 16),
+
+          // Template name input field
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Row(
+              children: [
+                const Text(
+                  "Template Name:",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: ColorManager.kTitleTextColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: "Enter template name",
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Tabs for Content vs Visibility
+          DefaultTabController(
+            length: 2,
+            child: Expanded(
+              child: Column(
+                children: [
+                  const TabBar(
+                    labelColor: ColorManager.kPrimaryColor,
+                    unselectedLabelColor: Colors.grey,
+                    indicatorColor: ColorManager.kPrimaryColor,
+                    tabs: [
+                      Tab(text: "Visibility Settings"),
+                      Tab(text: "Content Settings"),
+                    ],
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        // Visibility Settings Tab
+                        SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              _buildSettingsSection(
+                                'Store Header',
+                                [
+                                  _buildSwitchTile(
+                                    'Store Name',
+                                    selectedTemplate!.settings.showStoreName,
+                                    (value) {
+                                      final newSettings =
+                                          selectedTemplate!.settings;
+                                      newSettings.showStoreName = value;
+                                      _updateSelectedTemplateSettings(
+                                          newSettings);
+                                    },
+                                  ),
+                                  _buildSwitchTile(
+                                    'Store Description',
+                                    selectedTemplate!.settings.showDescription,
+                                    (value) {
+                                      final newSettings =
+                                          selectedTemplate!.settings;
+                                      newSettings.showDescription = value;
+                                      _updateSelectedTemplateSettings(
+                                          newSettings);
+                                    },
+                                  ),
+                                  if (selectedTemplate!.settings.showStoreName)
+                                    _buildTextEditField(
+                                      label: 'Store Name Content',
+                                      value:
+                                          selectedTemplate!.settings.storeName,
+                                      onChanged: (value) {
+                                        final newSettings =
+                                            selectedTemplate!.settings;
+                                        newSettings.storeName = value;
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
+                                      },
+                                    ),
+                                  if (selectedTemplate!
+                                      .settings.showDescription)
+                                    _buildTextEditField(
+                                      label: 'Store Description Content',
+                                      value: selectedTemplate!
+                                          .settings.description,
+                                      onChanged: (value) {
+                                        final newSettings =
+                                            selectedTemplate!.settings;
+                                        newSettings.description = value;
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
+                                      },
+                                    ),
+                                  _buildSwitchTile(
+                                    'Store Address',
+                                    selectedTemplate!.settings.showStoreAddress,
+                                    (value) {
+                                      final newSettings =
+                                          selectedTemplate!.settings;
+                                      newSettings.showStoreAddress = value;
+                                      _updateSelectedTemplateSettings(
+                                          newSettings);
+                                    },
+                                  ),
+                                  if (selectedTemplate!
+                                      .settings.showStoreAddress)
+                                    _buildTextEditField(
+                                      label: 'Store Address Content',
+                                      value: selectedTemplate!
+                                          .settings.storeAddress,
+                                      onChanged: (value) {
+                                        final newSettings =
+                                            selectedTemplate!.settings;
+                                        newSettings.storeAddress = value;
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
+                                      },
+                                    ),
+                                  _buildSwitchTile(
+                                    'FSSAI Info',
+                                    selectedTemplate!.settings.showFssaiInfo,
+                                    (value) {
+                                      final newSettings =
+                                          selectedTemplate!.settings;
+                                      newSettings.showFssaiInfo = value;
+                                      _updateSelectedTemplateSettings(
+                                          newSettings);
+                                    },
+                                  ),
+                                  if (selectedTemplate!.settings.showFssaiInfo)
+                                    _buildTextEditField(
+                                      label: 'FSSAI Info Content',
+                                      value:
+                                          selectedTemplate!.settings.fssaiInfo,
+                                      onChanged: (value) {
+                                        final newSettings =
+                                            selectedTemplate!.settings;
+                                        newSettings.fssaiInfo = value;
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
+                                      },
+                                    ),
+                                  _buildSwitchTile(
+                                    'Telephone',
+                                    selectedTemplate!.settings.showTel,
+                                    (value) {
+                                      final newSettings =
+                                          selectedTemplate!.settings;
+                                      newSettings.showTel = value;
+                                      _updateSelectedTemplateSettings(
+                                          newSettings);
+                                    },
+                                  ),
+                                  if (selectedTemplate!.settings.showTel)
+                                    _buildTextEditField(
+                                      label: 'Telephone Content',
+                                      value:
+                                          selectedTemplate!.settings.telephone,
+                                      onChanged: (value) {
+                                        final newSettings =
+                                            selectedTemplate!.settings;
+                                        newSettings.telephone = value;
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
+                                      },
+                                    ),
+                                  _buildSwitchTile(
+                                    'Email',
+                                    selectedTemplate!.settings.showEmail,
+                                    (value) {
+                                      final newSettings =
+                                          selectedTemplate!.settings;
+                                      newSettings.showEmail = value;
+                                      _updateSelectedTemplateSettings(
+                                          newSettings);
+                                    },
+                                  ),
+                                  _buildSwitchTile(
+                                    'Invoice Number',
+                                    selectedTemplate!
+                                        .settings.showInvoiceNumber,
+                                    (value) {
+                                      final newSettings =
+                                          selectedTemplate!.settings;
+                                      newSettings.showInvoiceNumber = value;
+                                      _updateSelectedTemplateSettings(
+                                          newSettings);
+                                    },
+                                  ),
+                                ],
+                              ),
+                              // Other visibility settings...
+                              _buildSettingsSection(
+                                'Date Header',
+                                [
+                                  _buildSwitchTile(
+                                    'Show Date Header',
+                                    selectedTemplate!.settings.showDateHeader,
+                                    (value) {
+                                      final newSettings =
+                                          selectedTemplate!.settings;
+                                      newSettings.showDateHeader = value;
+                                      _updateSelectedTemplateSettings(
+                                          newSettings);
+                                    },
+                                  ),
+                                ],
+                              ),
+                              // Cart Items section removed
+                              _buildSettingsSection(
+                                'Additional Settings',
+                                [
+                                  _buildSwitchTile(
+                                    'Thank You Message',
+                                    selectedTemplate!
+                                        .settings.showThankYouMessage,
+                                    (value) {
+                                      final newSettings =
+                                          selectedTemplate!.settings;
+                                      newSettings.showThankYouMessage = value;
+                                      _updateSelectedTemplateSettings(
+                                          newSettings);
+                                    },
+                                  ),
+                                  _buildSwitchTile(
+                                    'QR Code',
+                                    selectedTemplate!.settings.showQRCode,
+                                    (value) {
+                                      final newSettings =
+                                          selectedTemplate!.settings;
+                                      newSettings.showQRCode = value;
+                                      _updateSelectedTemplateSettings(
+                                          newSettings);
+                                    },
+                                  ),
+                                  _buildSwitchTile(
+                                    'Terms & Conditions',
+                                    selectedTemplate!
+                                        .settings.showTermsConditions,
+                                    (value) {
+                                      final newSettings =
+                                          selectedTemplate!.settings;
+                                      newSettings.showTermsConditions = value;
+                                      _updateSelectedTemplateSettings(
+                                          newSettings);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Content Settings Tab
+                        SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              _buildSettingsSection(
+                                'Store Information',
+                                [
+                                  if (selectedTemplate!.settings.showStoreName)
+                                    _buildTextEditField(
+                                      label: 'Store Name',
+                                      value:
+                                          selectedTemplate!.settings.storeName,
+                                      onChanged: (value) {
+                                        final newSettings =
+                                            selectedTemplate!.settings;
+                                        newSettings.storeName = value;
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
+                                      },
+                                    ),
+                                  if (selectedTemplate!
+                                      .settings.showDescription)
+                                    _buildTextEditField(
+                                      label: 'Store Description',
+                                      value: selectedTemplate!
+                                          .settings.description,
+                                      onChanged: (value) {
+                                        final newSettings =
+                                            selectedTemplate!.settings;
+                                        newSettings.description = value;
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
+                                      },
+                                    ),
+                                  if (selectedTemplate!
+                                      .settings.showStoreAddress)
+                                    _buildTextEditField(
+                                      label: 'Store Address',
+                                      value: selectedTemplate!
+                                          .settings.storeAddress,
+                                      onChanged: (value) {
+                                        final newSettings =
+                                            selectedTemplate!.settings;
+                                        newSettings.storeAddress = value;
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
+                                      },
+                                    ),
+                                  if (selectedTemplate!.settings.showFssaiInfo)
+                                    _buildTextEditField(
+                                      label: 'FSSAI Info',
+                                      value:
+                                          selectedTemplate!.settings.fssaiInfo,
+                                      onChanged: (value) {
+                                        final newSettings =
+                                            selectedTemplate!.settings;
+                                        newSettings.fssaiInfo = value;
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
+                                      },
+                                    ),
+                                  if (selectedTemplate!.settings.showTel)
+                                    _buildTextEditField(
+                                      label: 'Telephone',
+                                      value:
+                                          selectedTemplate!.settings.telephone,
+                                      onChanged: (value) {
+                                        final newSettings =
+                                            selectedTemplate!.settings;
+                                        newSettings.telephone = value;
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
+                                      },
+                                    ),
+                                  if (selectedTemplate!.settings.showEmail)
+                                    _buildTextEditField(
+                                      label: 'Email',
+                                      value: selectedTemplate!.settings.email,
+                                      onChanged: (value) {
+                                        final newSettings =
+                                            selectedTemplate!.settings;
+                                        newSettings.email = value;
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
+                                      },
+                                    ),
+                                ],
+                              ),
+                              _buildSettingsSection(
+                                'Additional Content',
+                                [
+                                  if (selectedTemplate!
+                                      .settings.showThankYouMessage)
+                                    _buildTextEditField(
+                                      label: 'Thank You Message',
+                                      value: selectedTemplate!
+                                          .settings.thankYouMessage,
+                                      onChanged: (value) {
+                                        final newSettings =
+                                            selectedTemplate!.settings;
+                                        newSettings.thankYouMessage = value;
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
+                                      },
+                                    ),
+                                  if (selectedTemplate!.settings.showQRCode)
+                                    _buildTextEditField(
+                                      label: 'QR Code Message',
+                                      value: selectedTemplate!
+                                          .settings.qrCodeMessage,
+                                      onChanged: (value) {
+                                        final newSettings =
+                                            selectedTemplate!.settings;
+                                        newSettings.qrCodeMessage = value;
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
+                                      },
+                                    ),
+                                  if (selectedTemplate!
+                                      .settings.showTermsConditions)
+                                    _buildTextEditField(
+                                      label: 'Terms & Conditions',
+                                      value: selectedTemplate!
+                                          .settings.termsConditions,
+                                      onChanged: (value) {
+                                        final newSettings =
+                                            selectedTemplate!.settings;
+                                        newSettings.termsConditions = value;
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
+                                      },
+                                      maxLines: 4,
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              CustomRoundButton(
+                fct: () => Navigator.of(context).pop(),
+                title: "Cancel",
+                height: 40,
+                width: 100,
+                fontSize: 14,
+                borderColor: ColorManager.kGreyColor,
+                boxColor: Colors.white,
+                textColor: ColorManager.kGreyColor,
+              ),
+              const SizedBox(width: 10),
+              CustomRoundButton(
+                fct: () {
+                  if (selectedTemplate != null &&
+                      nameController.text.isNotEmpty) {
+                    _renameTemplate(selectedTemplate!, nameController.text);
+                  }
+                  _saveTemplates(showMessage: true);
+                  Navigator.of(context).pop();
+                },
+                title: "Save",
+                height: 40,
+                width: 100,
+                fontSize: 14,
+                borderColor: ColorManager.kPrimaryColor,
+                boxColor: ColorManager.kPrimaryColor,
+                textColor: Colors.white,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextEditField({
+    required String label,
+    required String value,
+    required Function(String) onChanged,
+    int maxLines = 1,
+  }) {
+    final FocusNode focusNode = FocusNode();
+    final TextEditingController controller = TextEditingController(text: value);
+
+    // Add focus node to the list for later disposal
+    _focusNodes.add(focusNode);
+
+    // Add listener to handle focus changes
+    focusNode.addListener(() {
+      if (!focusNode.hasFocus) {
+        // When focus is lost, trigger onChanged with current value
+        onChanged(controller.text);
+      }
+    });
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: ColorManager.kTitleTextColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              maxLines: maxLines,
+              style: const TextStyle(fontSize: 12),
+              decoration: const InputDecoration(
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                border: InputBorder.none,
+                isDense: true,
+              ),
+              onChanged: (text) {
+                // We won't immediately save on every change
+              },
+              onSubmitted: onChanged, // Keep this for when Enter is pressed
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -865,17 +1910,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                             ),
                             Row(
                               children: [
-                                // CustomRoundButton(
-                                //   fct: () => {_saveTemplates(showMessage: true)},
-                                //   title: 'Manual Save',
-                                //   height: 36,
-                                //   width: 120,
-                                //   fontSize: 12,
-                                //   borderColor: ColorManager.kPrimaryColor,
-                                //   boxColor: Colors.white,
-                                //   textColor: ColorManager.kPrimaryColor,
-                                // ),
-                                // const SizedBox(width: 10),
                                 CustomRoundButton(
                                   fct: () => {clearDefaultPrinter()},
                                   title: 'Clear Default Printer',
@@ -1156,135 +2190,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                     const SizedBox(width: 10),
                                     CustomRoundButton(
                                       fct: () {
-                                        showDialog(
-                                          context: context,
-                                          builder: (BuildContext context) {
-                                            final TextEditingController
-                                                nameController =
-                                                TextEditingController(
-                                              text: selectedTemplate!.name,
-                                            );
-                                            return Dialog(
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(24),
-                                              ),
-                                              elevation: 8,
-                                              backgroundColor: Colors.white,
-                                              child: Container(
-                                                constraints:
-                                                    const BoxConstraints(
-                                                        maxWidth: 400),
-                                                padding:
-                                                    const EdgeInsets.all(24),
-                                                child: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment
-                                                          .stretch,
-                                                  children: [
-                                                    // Header with close button
-                                                    Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .spaceBetween,
-                                                      children: [
-                                                        const Text(
-                                                          "Rename Template",
-                                                          style: TextStyle(
-                                                            fontSize: 20,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            color: Colors.black,
-                                                          ),
-                                                        ),
-                                                        IconButton(
-                                                          icon: const Icon(
-                                                              Icons.close,
-                                                              color:
-                                                                  Colors.black),
-                                                          onPressed: () =>
-                                                              Navigator.of(
-                                                                      context)
-                                                                  .pop(),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 16),
-
-                                                    // Template name input
-                                                    TextField(
-                                                      controller:
-                                                          nameController,
-                                                      decoration:
-                                                          InputDecoration(
-                                                        labelText:
-                                                            'Template Name',
-                                                        border:
-                                                            OutlineInputBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(8),
-                                                        ),
-                                                        filled: true,
-                                                        fillColor:
-                                                            Colors.grey[100],
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 24),
-
-                                                    // Action buttons
-                                                    Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment.end,
-                                                      children: [
-                                                        CustomRoundButton(
-                                                          fct: () =>
-                                                              Navigator.pop(
-                                                                  context),
-                                                          title: "Cancel",
-                                                          height: 40,
-                                                          width: 100,
-                                                          fontSize: 14,
-                                                          borderColor:
-                                                              Colors.grey,
-                                                          boxColor:
-                                                              Colors.white,
-                                                          textColor:
-                                                              Colors.grey[700]!,
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 12),
-                                                        CustomRoundButton(
-                                                          fct: () {
-                                                            _renameTemplate(
-                                                                selectedTemplate!,
-                                                                nameController
-                                                                    .text);
-                                                            Navigator.pop(
-                                                                context);
-                                                          },
-                                                          title: "Save",
-                                                          height: 40,
-                                                          width: 100,
-                                                          fontSize: 14,
-                                                          borderColor:
-                                                              ColorManager
-                                                                  .kPrimaryColor,
-                                                          boxColor: ColorManager
-                                                              .kPrimaryColor,
-                                                          textColor:
-                                                              Colors.white,
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        );
+                                        _showReceiptTemplateModal(context);
                                       },
                                       title: 'Rename',
                                       height: 40,
@@ -1303,9 +2209,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                             context: context,
                                             title: "Delete Template",
                                             itemName: selectedTemplate!.name,
-                                            message: "This action cannot be undone.",
+                                            message:
+                                                "This action cannot be undone.",
                                             onDelete: () {
-                                              _deleteTemplate(selectedTemplate!);
+                                              _deleteTemplate(
+                                                  selectedTemplate!);
                                             },
                                           );
                                         },
@@ -1332,227 +2240,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                               Expanded(
                                 flex: 1,
                                 child: SingleChildScrollView(
-                                  child: Column(
-                                    children: [
-                                      _buildSettingsSection(
-                                        'Store Header',
-                                        [
-                                          _buildSwitchTile(
-                                            'Store Name',
-                                            selectedTemplate!
-                                                .settings.showStoreName,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showStoreName = value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                          _buildSwitchTile(
-                                            'Telephone',
-                                            selectedTemplate!.settings.showTel,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showTel = value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                          _buildSwitchTile(
-                                            'Email',
-                                            selectedTemplate!
-                                                .settings.showEmail,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showEmail = value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                          _buildSwitchTile(
-                                            'Invoice Number',
-                                            selectedTemplate!
-                                                .settings.showInvoiceNumber,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showInvoiceNumber =
-                                                  value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                      _buildSettingsSection(
-                                        'Date Header',
-                                        [
-                                          _buildSwitchTile(
-                                            'Show Date Header',
-                                            selectedTemplate!
-                                                .settings.showDateHeader,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showDateHeader =
-                                                  value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                      _buildSettingsSection(
-                                        'Cart Items',
-                                        [
-                                          _buildSwitchTile(
-                                            'Particulars',
-                                            selectedTemplate!
-                                                .settings.showParticulars,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showParticulars =
-                                                  value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                          _buildSwitchTile(
-                                            'MRP',
-                                            selectedTemplate!.settings.showMRP,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showMRP = value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                          _buildSwitchTile(
-                                            'Quantity',
-                                            selectedTemplate!.settings.showQty,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showQty = value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                          _buildSwitchTile(
-                                            'Rate',
-                                            selectedTemplate!.settings.showRate,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showRate = value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                          _buildSwitchTile(
-                                            'Total',
-                                            selectedTemplate!
-                                                .settings.showTotal,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showTotal = value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                      _buildSettingsSection(
-                                        'Amount Section',
-                                        [
-                                          _buildSwitchTile(
-                                            'Discount',
-                                            selectedTemplate!
-                                                .settings.showDiscount,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showDiscount = value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                          _buildSwitchTile(
-                                            'Net Amount',
-                                            selectedTemplate!
-                                                .settings.showNetAmount,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showNetAmount = value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                          _buildSwitchTile(
-                                            'MRP Total',
-                                            selectedTemplate!
-                                                .settings.showMRPTotal,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showMRPTotal = value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                          _buildSwitchTile(
-                                            'You Save',
-                                            selectedTemplate!
-                                                .settings.showSaved,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showSaved = value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                      _buildSettingsSection(
-                                        'Additional Settings',
-                                        [
-                                          _buildSwitchTile(
-                                            'Thank You Message',
-                                            selectedTemplate!
-                                                .settings.showThankYouMessage,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showThankYouMessage =
-                                                  value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                          _buildSwitchTile(
-                                            'QR Code',
-                                            selectedTemplate!
-                                                .settings.showQRCode,
-                                            (value) {
-                                              final newSettings =
-                                                  selectedTemplate!.settings;
-                                              newSettings.showQRCode = value;
-                                              _updateSelectedTemplateSettings(
-                                                  newSettings);
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
+                                  child: _buildSettingsForm(),
                                 ),
                               ),
 

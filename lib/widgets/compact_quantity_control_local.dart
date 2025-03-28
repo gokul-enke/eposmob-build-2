@@ -152,6 +152,7 @@ class _CompactQuantityControlLocalState
 
             // Add listener to focus node to select all text when focused
             focusNode.addListener(() {
+              print('focusNode.hasFocus: ${focusNode.hasFocus}');
               if (focusNode.hasFocus) {
                 _controller.selection = TextSelection(
                   baseOffset: 0,
