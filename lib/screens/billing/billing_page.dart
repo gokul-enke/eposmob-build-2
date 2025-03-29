@@ -516,72 +516,161 @@ class _BillingPageState extends State<BillingPage> {
                                         }
 
                                         if (filteredProducts.isNotEmpty) {
-                                          // Handle the case where products are found
-                                          // For example, you can update the UI or add to cart
-                                          // Example: add the first product to the cart
-                                          GetProduct product =
-                                              filteredProducts.first;
-
-                                          if (product.unit == 'KGS' &&
-                                              prefix == '000' &&
-                                              query.length == 14) {
-                                            // Weight-based product
-                                            String weightKg = lastFive!
-                                                .substring(0,
-                                                    2); // First 2 digits = KG
-                                            String weightGrams =
-                                                lastFive.substring(2,
-                                                    5); // Last 3 digits = Grams
-                                            double totalWeight =
-                                                double.parse(weightKg) +
-                                                    (double.parse(weightGrams) /
-                                                        1000);
-
-                                            localProductProvider.addToCart(
-                                              product: product,
-                                              quantity: totalWeight,
-                                            );
-
-                                            showScaffold(
+                                          // Check if we found multiple products with the same barcode
+                                          if (filteredProducts.length > 1) {
+                                            // Show product selection modal
+                                            _isDialogOpen = true;
+                                            final selectedProduct =
+                                                await showDialog(
                                               context: context,
-                                              message: 'Added To Cart',
+                                              builder: (context) =>
+                                                  ProductSelectionModal(
+                                                products: filteredProducts,
+                                                barcode: query,
+                                              ),
                                             );
-                                          } else if (product.unit == 'PCS' &&
-                                              prefix == '000' &&
-                                              query.length == 14) {
-                                            // Count-based product
-                                            int quantity = int.parse(
-                                                lastFive!); // Last 5 digits represent quantity
+                                            _isDialogOpen = false;
 
-                                            localProductProvider.addToCart(
-                                              product: product,
-                                              quantity: quantity,
-                                            );
+                                            if (selectedProduct != null) {
+                                              // Process the selected product
+                                              GetProduct product =
+                                                  selectedProduct;
 
-                                            showScaffold(
-                                              context: context,
-                                              message: 'Added To Cart',
-                                            );
+                                              if (product.unit == 'KGS' &&
+                                                  prefix == '000' &&
+                                                  query.length == 14) {
+                                                // Weight-based product
+                                                String weightKg = lastFive!
+                                                    .substring(0,
+                                                        2); // First 2 digits = KG
+                                                String weightGrams =
+                                                    lastFive.substring(2,
+                                                        5); // Last 3 digits = Grams
+                                                double totalWeight =
+                                                    double.parse(weightKg) +
+                                                        (double.parse(
+                                                                weightGrams) /
+                                                            1000);
+
+                                                localProductProvider.addToCart(
+                                                  product: product,
+                                                  quantity: totalWeight,
+                                                );
+
+                                                showScaffold(
+                                                  context: context,
+                                                  message: 'Added To Cart',
+                                                );
+                                              } else if (product.unit ==
+                                                      'PCS' &&
+                                                  prefix == '000' &&
+                                                  query.length == 14) {
+                                                // Count-based product
+                                                int quantity = int.parse(
+                                                    lastFive!); // Last 5 digits represent quantity
+
+                                                localProductProvider.addToCart(
+                                                  product: product,
+                                                  quantity: quantity,
+                                                );
+
+                                                showScaffold(
+                                                  context: context,
+                                                  message: 'Added To Cart',
+                                                );
+                                              } else {
+                                                localProductProvider.addToCart(
+                                                    product: product);
+
+                                                showScaffold(
+                                                  context: context,
+                                                  message: 'Added To Cart',
+                                                );
+                                              }
+
+                                              // Clear input fields
+                                              setState(() {
+                                                _autocompleteProductKey =
+                                                    GlobalKey();
+                                                quantityController.clear();
+                                                barcodeController.clear();
+                                                selectedProductIdController
+                                                    .clear();
+                                                unitPriceController.clear();
+                                              });
+                                              _focusTextField();
+                                            } else {
+                                              // User cancelled selection
+                                              barcodeController.clear();
+                                              _focusTextField();
+                                            }
                                           } else {
-                                            localProductProvider.addToCart(
-                                                product: product);
+                                            // Single product found, use existing logic
+                                            GetProduct product =
+                                                filteredProducts.first;
 
-                                            showScaffold(
-                                              context: context,
-                                              message: 'Added To Cart',
-                                            );
+                                            if (product.unit == 'KGS' &&
+                                                prefix == '000' &&
+                                                query.length == 14) {
+                                              // Weight-based product
+                                              String weightKg = lastFive!
+                                                  .substring(0,
+                                                      2); // First 2 digits = KG
+                                              String weightGrams =
+                                                  lastFive.substring(2,
+                                                      5); // Last 3 digits = Grams
+                                              double totalWeight = double.parse(
+                                                      weightKg) +
+                                                  (double.parse(weightGrams) /
+                                                      1000);
+
+                                              localProductProvider.addToCart(
+                                                product: product,
+                                                quantity: totalWeight,
+                                              );
+
+                                              showScaffold(
+                                                context: context,
+                                                message: 'Added To Cart',
+                                              );
+                                            } else if (product.unit == 'PCS' &&
+                                                prefix == '000' &&
+                                                query.length == 14) {
+                                              // Count-based product
+                                              int quantity = int.parse(
+                                                  lastFive!); // Last 5 digits represent quantity
+
+                                              localProductProvider.addToCart(
+                                                product: product,
+                                                quantity: quantity,
+                                              );
+
+                                              showScaffold(
+                                                context: context,
+                                                message: 'Added To Cart',
+                                              );
+                                            } else {
+                                              localProductProvider.addToCart(
+                                                  product: product);
+
+                                              showScaffold(
+                                                context: context,
+                                                message: 'Added To Cart',
+                                              );
+                                            }
+
+                                            // Clear input fields if necessary
+                                            setState(() {
+                                              _autocompleteProductKey =
+                                                  GlobalKey();
+                                              quantityController.clear();
+                                              barcodeController.clear();
+                                              selectedProductIdController
+                                                  .clear();
+                                              unitPriceController.clear();
+                                            });
+                                            _focusTextField();
                                           }
-
-                                          // Clear input fields if necessary
-                                          setState(() {
-                                            _autocompleteProductKey =
-                                                GlobalKey();
-                                            quantityController.clear();
-                                            barcodeController.clear();
-                                            selectedProductIdController.clear();
-                                            unitPriceController.clear();
-                                          });
-                                          _focusTextField();
                                         } else {
                                           _isDialogOpen =
                                               true; // Set dialog state to open
@@ -851,293 +940,292 @@ class _BillingPageState extends State<BillingPage> {
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.transparent),
               ),
-              child: MouseRegion(
-                cursor: SystemMouseCursors.grab,
-                child: ScrollConfiguration(
-                  behavior: ScrollConfiguration.of(context).copyWith(
-                    dragDevices: {
-                      PointerDeviceKind.mouse,
-                      PointerDeviceKind.touch,
-                      PointerDeviceKind.stylus,
-                      PointerDeviceKind.trackpad,
-                    },
+              child: Column(
+                children: [
+                  // Fixed header
+                  Container(
+                    color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                    child: Row(
+                      children: [
+                        _buildHeaderCell('Item Name',
+                            flex: 3, alignment: Alignment.centerLeft),
+                        _buildHeaderCell('Unit',
+                            flex: 1, alignment: Alignment.centerLeft),
+                        _buildHeaderCell('Qty',
+                            flex: 2, alignment: Alignment.center),
+                        _buildHeaderCell('MRP',
+                            flex: 1, alignment: Alignment.centerLeft),
+                        _buildHeaderCell('Price',
+                            flex: 1, alignment: Alignment.centerLeft),
+                        _buildHeaderCell('Total',
+                            flex: 1, alignment: Alignment.centerLeft),
+                        _buildHeaderCell('Actions',
+                            flex: 1, alignment: Alignment.centerLeft),
+                      ],
+                    ),
                   ),
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    scrollDirection: Axis.vertical,
-                    child: SizedBox(
-                      width: constraints.maxWidth,
-                      child: DataTable(
-                        columnSpacing: 10, // Reduced from 20
-                        horizontalMargin: 8, // Reduced from 16
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.transparent),
+                  // Scrollable content
+                  Expanded(
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.grab,
+                      child: ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.mouse,
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.stylus,
+                            PointerDeviceKind.trackpad,
+                          },
                         ),
-                        headingRowColor: WidgetStateColor.resolveWith(
-                            (states) =>
-                                ColorManager.kPrimaryColor.withOpacity(0.1)),
-                        dataRowColor: WidgetStateColor.resolveWith((states) =>
-                            states.contains(WidgetState.selected)
-                                ? Colors.grey.shade100
-                                : Colors.white),
-                        headingRowHeight: 32, // Added to reduce header height
-                        dataRowMinHeight: 28, // Added to reduce row height
-                        dataRowMaxHeight: 36, // Added to constrain row height
-                        dividerThickness: 0,
-                        columns: [
-                          DataColumn(
-                            label: Expanded(
-                              child: Text('Item Name',
-                                  textAlign: TextAlign.left,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      12,
-                                      0.21,
-                                      ColorManager.textColor)),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Expanded(
-                              child: Text('Unit',
-                                  textAlign: TextAlign.left,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      12,
-                                      0.21,
-                                      ColorManager.textColor)),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Expanded(
-                              child: Text('Qty',
-                                  textAlign: TextAlign.center,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      12,
-                                      0.21,
-                                      ColorManager.textColor)),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Expanded(
-                              child: Text('MRP',
-                                  textAlign: TextAlign.left,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      12,
-                                      0.21,
-                                      ColorManager.textColor)),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Expanded(
-                              child: Text('Price',
-                                  textAlign: TextAlign.left,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      12,
-                                      0.21,
-                                      ColorManager.textColor)),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Expanded(
-                              child: Text('Total',
-                                  textAlign: TextAlign.left,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      12,
-                                      0.21,
-                                      ColorManager.textColor)),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Expanded(
-                              child: Text('Actions',
-                                  textAlign: TextAlign.left,
-                                  style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      12,
-                                      0.21,
-                                      ColorManager.textColor)),
-                            ),
-                          ),
-                        ],
-                        rows: cartItems.map((item) {
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 2), // Reduced padding
-                                  child: Text(
-                                    item.product.productName ?? 'Unknown',
-                                    style: buildCustomStyle(
-                                        FontWeightManager.regular,
-                                        12,
-                                        0.21,
-                                        ColorManager
-                                            .textColor), // Reduced font size
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                              DataCell(
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 2), // Reduced padding
-                                  child: Text(
-                                    item.product.unit ?? '-',
-                                    style: buildCustomStyle(
-                                        FontWeightManager.regular,
-                                        12,
-                                        0.21,
-                                        ColorManager
-                                            .textColor), // Reduced font size
-                                    textAlign: TextAlign.left,
-                                  ),
-                                ),
-                              ),
-                              DataCell(
-                                Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 2), // Reduced padding
-                                    child: CompactQuantityControlLocal(
-                                      productId: item.product.productId!,
-                                      quantity: item.quantity.toDouble(),
-                                      unitPrice: item.price.toString(),
-                                      productUnit: item.product.unit,
-                                      product: item.product,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              DataCell(
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 2), // Reduced padding
-                                  child: SizedBox(
-                                    width: 70, // Reduced width
-                                    child: Text(
-                                      item.product.mrp?.toString() ?? '0.00',
-                                      style: const TextStyle(
-                                          fontSize: 12), // Reduced font size
-                                      textAlign: TextAlign.left,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              DataCell(
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 2), // Reduced padding
-                                  child: SizedBox(
-                                    width: 70, // Reduced width
-                                    child: Builder(builder: (context) {
-                                      final TextEditingController controller =
-                                          TextEditingController(
-                                              text: item.price.toString());
-                                      final FocusNode focusNode = FocusNode();
-
-                                      focusNode.addListener(() {
-                                        if (focusNode.hasFocus) {
-                                          controller.selection = TextSelection(
-                                            baseOffset: 0,
-                                            extentOffset:
-                                                controller.text.length,
-                                          );
-                                        } else {
-                                          localProductProvider.updateItemPrice(
-                                            item.product.productId!,
-                                            double.tryParse(controller.text) ??
-                                                item.price!,
-                                          );
-                                        }
-                                      });
-
-                                      return TextField(
-                                        textAlign: TextAlign.left,
-                                        controller: controller,
-                                        focusNode: focusNode,
-                                        keyboardType: TextInputType.number,
-                                        style: const TextStyle(
-                                            fontSize: 12), // Reduced font size
-                                        decoration: const InputDecoration(
-                                          isDense:
-                                              true, // Make input field more compact
-                                          contentPadding: EdgeInsets.symmetric(
-                                              vertical: 6, horizontal: 4),
-                                          border: InputBorder.none,
-                                          hintText: 'Price',
-                                          hintStyle: TextStyle(
-                                            color: Colors.grey,
-                                            fontSize: 12,
-                                          ),
+                        child: ListView.builder(
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: cartItems.length,
+                          itemBuilder: (context, index) {
+                            final item = cartItems[index];
+                            return Container(
+                              color: index % 2 == 0
+                                  ? Colors.white
+                                  : Colors.grey.shade50,
+                              child: Row(
+                                children: [
+                                  // Item Name
+                                  _buildContentCell(
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 2),
+                                      child: Text(
+                                        item.product.productName ?? 'Unknown',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          12,
+                                          0.21,
+                                          ColorManager.textColor,
                                         ),
-                                        onSubmitted: (newPrice) {
-                                          localProductProvider.updateItemPrice(
-                                            item.product.productId!,
-                                            double.tryParse(newPrice) ??
-                                                item.price!,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    flex: 3,
+                                    alignment: Alignment.centerLeft,
+                                  ),
+
+                                  // Unit
+                                  _buildContentCell(
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 2),
+                                      child: Text(
+                                        item.product.unit ?? '-',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          12,
+                                          0.21,
+                                          ColorManager.textColor,
+                                        ),
+                                        textAlign: TextAlign.left,
+                                      ),
+                                    ),
+                                    flex: 1,
+                                    alignment: Alignment.centerLeft,
+                                  ),
+
+                                  // Qty
+                                  _buildContentCell(
+                                    Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 2),
+                                        child: CompactQuantityControlLocal(
+                                          productId: item.product.productId!,
+                                          quantity: item.quantity.toDouble(),
+                                          unitPrice: item.price.toString(),
+                                          productUnit: item.product.unit,
+                                          product: item.product,
+                                        ),
+                                      ),
+                                    ),
+                                    flex: 2,
+                                    alignment: Alignment.center,
+                                  ),
+
+                                  // MRP
+                                  _buildContentCell(
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 2),
+                                      child: SizedBox(
+                                        width: 70,
+                                        child: Text(
+                                          item.product.mrp?.toString() ??
+                                              '0.00',
+                                          style: const TextStyle(fontSize: 12),
+                                          textAlign: TextAlign.left,
+                                        ),
+                                      ),
+                                    ),
+                                    flex: 1,
+                                    alignment: Alignment.centerLeft,
+                                  ),
+
+                                  // Price
+                                  _buildContentCell(
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 2),
+                                      child: SizedBox(
+                                        width: 70,
+                                        child: Builder(builder: (context) {
+                                          final TextEditingController
+                                              controller =
+                                              TextEditingController(
+                                                  text: item.price.toString());
+                                          final FocusNode focusNode =
+                                              FocusNode();
+
+                                          focusNode.addListener(() {
+                                            if (focusNode.hasFocus) {
+                                              controller.selection =
+                                                  TextSelection(
+                                                baseOffset: 0,
+                                                extentOffset:
+                                                    controller.text.length,
+                                              );
+                                            } else {
+                                              localProductProvider
+                                                  .updateItemPrice(
+                                                item.product.productId!,
+                                                double.tryParse(
+                                                        controller.text) ??
+                                                    item.price!,
+                                              );
+                                            }
+                                          });
+
+                                          return TextField(
+                                            textAlign: TextAlign.left,
+                                            controller: controller,
+                                            focusNode: focusNode,
+                                            keyboardType: TextInputType.number,
+                                            style:
+                                                const TextStyle(fontSize: 12),
+                                            decoration: const InputDecoration(
+                                              isDense: true,
+                                              contentPadding:
+                                                  EdgeInsets.symmetric(
+                                                      vertical: 6,
+                                                      horizontal: 4),
+                                              border: InputBorder.none,
+                                              hintText: 'Price',
+                                              hintStyle: TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                            onSubmitted: (newPrice) {
+                                              localProductProvider
+                                                  .updateItemPrice(
+                                                item.product.productId!,
+                                                double.tryParse(newPrice) ??
+                                                    item.price!,
+                                              );
+                                            },
                                           );
+                                        }),
+                                      ),
+                                    ),
+                                    flex: 1,
+                                    alignment: Alignment.centerLeft,
+                                  ),
+
+                                  // Total
+                                  _buildContentCell(
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 2),
+                                      child: SizedBox(
+                                        width: 70,
+                                        child: Text(
+                                          (item.price! * item.quantity)
+                                              .toStringAsFixed(3),
+                                          style: const TextStyle(fontSize: 12),
+                                          textAlign: TextAlign.left,
+                                        ),
+                                      ),
+                                    ),
+                                    flex: 1,
+                                    alignment: Alignment.centerLeft,
+                                  ),
+
+                                  // Actions
+                                  _buildContentCell(
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 2),
+                                      child: IconButton(
+                                        icon: WebsafeSvg.asset(
+                                          ImageAssets.oderlistCloseIcon,
+                                          width: 15,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        visualDensity: VisualDensity.compact,
+                                        onPressed: () {
+                                          localProductProvider.removeFromCart(
+                                              item.product.productId!);
                                         },
-                                      );
-                                    }),
-                                  ),
-                                ),
-                              ),
-                              DataCell(
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 2), // Reduced padding
-                                  child: SizedBox(
-                                    width: 70, // Reduced width
-                                    child: Text(
-                                      (item.price! * item.quantity)
-                                          .toStringAsFixed(3),
-                                      style: const TextStyle(
-                                          fontSize: 12), // Reduced font size
-                                      textAlign: TextAlign.left,
+                                      ),
                                     ),
+                                    flex: 1,
+                                    alignment: Alignment.centerLeft,
                                   ),
-                                ),
+                                ],
                               ),
-                              DataCell(
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 2), // Reduced padding
-                                  child: IconButton(
-                                    icon: WebsafeSvg.asset(
-                                      ImageAssets.oderlistCloseIcon,
-                                      width: 15, // Reduced from 15
-                                    ),
-                                    padding: EdgeInsets
-                                        .zero, // Remove padding from IconButton
-                                    constraints:
-                                        const BoxConstraints(), // Remove constraints
-                                    visualDensity: VisualDensity
-                                        .compact, // Make the button more compact
-                                    onPressed: () {
-                                      localProductProvider.removeFromCart(
-                                          item.product.productId!);
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(),
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             );
           },
         );
       },
+    );
+  }
+
+  Widget _buildHeaderCell(String text,
+      {required int flex, required Alignment alignment}) {
+    return Expanded(
+      flex: flex,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        alignment: alignment,
+        child: Text(
+          text,
+          textAlign:
+              alignment == Alignment.center ? TextAlign.center : TextAlign.left,
+          style: buildCustomStyle(
+            FontWeightManager.bold,
+            12,
+            0.21,
+            ColorManager.textColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContentCell(Widget child,
+      {required int flex, required Alignment alignment}) {
+    return Expanded(
+      flex: flex,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        alignment: alignment,
+        child: child,
+      ),
     );
   }
 
@@ -2823,6 +2911,198 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
           message: "Order deleted successfully",
         );
       },
+    );
+  }
+}
+
+/// Modal dialog to select a product when multiple products match the same barcode
+class ProductSelectionModal extends StatelessWidget {
+  final List<GetProduct> products;
+  final String barcode;
+
+  const ProductSelectionModal({
+    Key? key,
+    required this.products,
+    required this.barcode,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        constraints: BoxConstraints(
+          maxWidth: 500,
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              spreadRadius: 5,
+              blurRadius: 7,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Multiple Products Found',
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s16,
+                    0.21,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Barcode: $barcode',
+              style: buildCustomStyle(
+                FontWeightManager.bold,
+                FontSize.s16,
+                0.21,
+                ColorManager.textColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Product list
+            Expanded(
+              child: MouseRegion(
+                cursor: SystemMouseCursors.grab,
+                child: ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(context).copyWith(
+                    dragDevices: {
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.stylus,
+                      PointerDeviceKind.trackpad,
+                    },
+                  ),
+                  child: ListView.builder(
+                    itemCount: products.length,
+                    physics: const BouncingScrollPhysics(),
+                    itemBuilder: (context, index) {
+                      final product = products[index];
+                      return BuildBoxShadowContainer(
+                        circleRadius: 7,
+                        margin: const EdgeInsets.symmetric(vertical: 5),
+                        color: Colors.white,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          title: Text(
+                            product.productName ?? 'Unknown Product',
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s14,
+                              0.21,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Text(
+                                'Price: ₹${product.price?.price ?? 0.00}',
+                                style: const TextStyle(
+                                    fontSize: 14, fontWeight: FontWeight.w500),
+                              ),
+                              Text(
+                                'MRP: ₹${product.mrp ?? 0.00}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              Text(
+                                'Unit: ${product.unit ?? ""}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                          trailing: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: ColorManager.kPrimaryColor,
+                              foregroundColor: Colors.white,
+                              textStyle: const TextStyle(fontSize: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(context, product);
+                            },
+                            child: const Text('Choose'),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // Close Button
+                CustomRoundButton(
+                  title: "Close",
+                  fontSize: FontSize.s12,
+                  height: MediaQuery.of(context).size.height * .05,
+                  width: 120,
+                  textColor: Colors.blue,
+                  borderColor: Colors.blue,
+                  boxColor: Colors.white,
+                  fct: () async {
+                    Navigator.pop(context, null);
+                  },
+                ),
+                const SizedBox(width: 10),
+                // Add Product Button
+                CustomRoundButton(
+                  title: "Add Product",
+                  fontSize: FontSize.s12,
+                  height: MediaQuery.of(context).size.height * .05,
+                  width: 120,
+                  fct: () async {
+                    final result = await showDialog(
+                      context: context,
+                      builder: (context) => AddProductWithBarcodeModal(barcode: barcode),
+                    );
+                    
+                    if (result != null) {
+                      Navigator.pop(context, result);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
