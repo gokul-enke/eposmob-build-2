@@ -385,10 +385,18 @@ class _AddProductWithBarcodeModalState
                             } catch (e) {
                               debugPrint("Error parsing product: $e");
                             }
-                            Navigator.pop(context, {
-                              'price': _productSellingPriceController.text,
-                              'id': value["data"]['product_id'],
-                            });
+
+                            // Add the product directly to the cart
+                            Provider.of<LocalProductProvider>(context,
+                                    listen: false)
+                                .addToCart(
+                              productId: value["data"]['product_id'],
+                              price: double.parse(
+                                  _productSellingPriceController.text),
+                              quantity: 1,
+                            );
+
+                            Navigator.pop(context);
                             showScaffold(
                               context: context,
                               message: 'Product added successfully',

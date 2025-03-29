@@ -674,7 +674,7 @@ class _BillingPageState extends State<BillingPage> {
                                         } else {
                                           _isDialogOpen =
                                               true; // Set dialog state to open
-                                          final result = await showDialog(
+                                          await showDialog(
                                             context: context,
                                             builder: (context) =>
                                                 AddProductWithBarcodeModal(
@@ -682,18 +682,10 @@ class _BillingPageState extends State<BillingPage> {
                                           );
                                           _isDialogOpen =
                                               false; // Reset dialog state
-                                          debugPrint("result $result");
-                                          if (result != null) {
-                                            localProductProvider.addToCart(
-                                                productId: result["id"],
-                                                price: double.tryParse(
-                                                    result["price"]
-                                                        .toString()));
-                                            barcodeController.clear();
-                                          } else {
-                                            barcodeController.clear();
-                                            _focusTextField();
-                                          }
+
+                                          barcodeController.clear();
+                                          _focusTextField();
+
                                           debugPrint(
                                               "No products found for barcode: $query");
                                         }
@@ -1641,6 +1633,12 @@ class _BillingPageState extends State<BillingPage> {
             onPressed: _confirmOrder,
             isLoading: isLoadingConfirmOrder,
           ),
+          _buildActionButton(
+            text: 'Save and Print',
+            color: ColorManager.kButtonYellow,
+            onPressed: _saveOrderAndPrint,
+            isLoading: isLoadingConfirmOrder,
+          ),
         ],
       ),
     );
@@ -2131,6 +2129,116 @@ class _BillingPageState extends State<BillingPage> {
           context: context,
           message: "Order Saved Successfully",
         );
+      }
+
+      localProductProvider.clearCart();
+
+      // Clear form fields
+      setState(() {
+        mobileNumberText = ""; // Clear the variable
+        selectedCustomerID = null;
+        selectedCustomerPhone = null;
+        iconColor = 0;
+        mobileNumberTextController.clear();
+        quantityController.clear();
+        barcodeController.clear();
+        selectedProductIdController.clear();
+        unitPriceController.clear();
+        isCustomerFound = false;
+        selectedCustomer = null;
+        isCouponApplied = false;
+        coupenCodeTextController.clear();
+        _transactionNumberController.clear();
+        _paidAmountController.clear();
+        _balanceAmount = 0;
+        _carNumberController.clear();
+        _commentController.clear();
+      });
+
+      resetAutocomplete();
+      _focusTextField();
+    } catch (error) {
+      debugPrint(error.toString());
+      showScaffoldError(
+        context: context,
+        message: "Failed to save order. Please try again.",
+      );
+    } finally {
+      setState(() {
+        isLoadingSaveOrder = false; // Indicate that loading has finished
+      });
+    }
+  }
+
+  void _saveOrderAndPrint() async {
+    setState(() {
+      isLoadingSaveOrder = true; // Indicate that loading has started
+    });
+    debugPrint("Save Order pressed");
+    try {
+      if (Provider.of<LocalProductProvider>(context, listen: false)
+          .cartItems
+          .isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: "Please add items to cart",
+        );
+        return;
+      }
+
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      // Check if we're editing an existing order
+      SavedOrder? currentOrder = localProductProvider.currentOrder;
+
+      if (currentOrder != null) {
+        // Update existing order
+        localProductProvider.updateSavedOrder(
+          currentOrder.id,
+          customerName: selectedCustomer?.name,
+          customerPhone: selectedCustomerPhone ?? mobileNumberText,
+          comment: _commentController.text,
+          deliveryMethod: deliveryMethod,
+        );
+
+        showScaffold(
+          context: context,
+          message: "Order Updated Successfully",
+        );
+      } else {
+        // Save as new order
+        // Get customer name if available
+        String? customerName;
+        if (selectedCustomer != null) {
+          customerName = selectedCustomer!.name;
+        }
+
+        localProductProvider.saveCurrentCartAsOrder(
+          customerName: customerName,
+          customerPhone: selectedCustomerPhone ?? mobileNumberText,
+          comment: _commentController.text,
+          deliveryMethod: deliveryMethod,
+        );
+
+        showScaffold(
+          context: context,
+          message: "Order Saved Successfully",
+        );
+      }
+
+      try {
+        // Get the current order being saved and print it
+        final localSavedOrder = localProductProvider.currentOrder ??
+            (localProductProvider.savedOrders.isNotEmpty
+                ? localProductProvider.savedOrders.last
+                : null);
+
+        if (localSavedOrder != null) {
+          printFromSavedOrder(localSavedOrder);
+        }
+      } catch (error) {
+        debugPrint(error.toString());
       }
 
       localProductProvider.clearCart();
@@ -3088,14 +3196,12 @@ class ProductSelectionModal extends StatelessWidget {
                   height: MediaQuery.of(context).size.height * .05,
                   width: 120,
                   fct: () async {
-                    final result = await showDialog(
+                    await showDialog(
                       context: context,
-                      builder: (context) => AddProductWithBarcodeModal(barcode: barcode),
+                      builder: (context) =>
+                          AddProductWithBarcodeModal(barcode: barcode),
                     );
-                    
-                    if (result != null) {
-                      Navigator.pop(context, result);
-                    }
+                    Navigator.pop(context);
                   },
                 ),
               ],

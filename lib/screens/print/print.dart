@@ -648,6 +648,24 @@ class _PrintPageState extends State<PrintPage> {
     List<int> bytes = [];
 
     // Display item count
+    // if (settings.showMRPTotal) {
+    //   bytes += generator.row([
+    //     PosColumn(
+    //         text: 'Discount',
+    //         width: 6,
+    //         styles: const PosStyles(
+    //             align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+    //     PosColumn(
+    //         text: (double.parse(widget.formattedTotal) -
+    //                 double.parse(widget.savedTotal!))
+    //             .toString(),
+    //         width: 6,
+    //         styles: const PosStyles(
+    //             align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+    //   ]);
+    // }
+
+    // Display item count
     if (settings.showMRPTotal) {
       bytes += generator.row([
         PosColumn(
