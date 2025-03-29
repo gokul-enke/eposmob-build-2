@@ -232,7 +232,19 @@ class SideMenu extends StatelessWidget {
             ),
           ),
           Obx(
-            () => DrawerListTile(
+            () => DrawerListTileExpandableColumn(
+              onTapTitle1: () {
+                sideBarController.index.value = 2;
+              },
+              onTapTitle2: () {
+                sideBarController.index.value = 56;
+              },
+              onTapTitle3: () {
+                sideBarController.index.value = 50;
+              },
+              listTitle1: "Sales",
+              listTitle2: "Confirmed Orders",
+              listTitle3: "Sales Return",
               iconPath: ImageAssets.saleIcon,
               title: 'Sales',
               onTap: () {
@@ -250,28 +262,10 @@ class SideMenu extends StatelessWidget {
               },
               selected: sideBarController.index.value == 2 ||
                   sideBarController.index.value == 51 ||
+                  sideBarController.index.value == 56 ||
+                  sideBarController.index.value == 50 ||
+                  sideBarController.index.value == 49 ||
                   sideBarController.index.value == 11,
-            ),
-          ),
-          // Obx(
-          //   () => DrawerListTile(
-          //     iconPath: ImageAssets.saleIcon,
-          //     title: 'Confirmed Orders',
-          //     onTap: () {
-          //       sideBarController.index.value = 56;
-          //     },
-          //     selected: sideBarController.index.value == 56,
-          //   ),
-          // ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.saleIcon,
-              title: 'Sales Return',
-              onTap: () {
-                sideBarController.index.value = 50;
-              },
-              selected: sideBarController.index.value == 50 ||
-                  sideBarController.index.value == 49,
             ),
           ),
           Obx(

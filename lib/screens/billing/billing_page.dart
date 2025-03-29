@@ -97,6 +97,7 @@ class _BillingPageState extends State<BillingPage> {
   bool isLoadingSaveOrder = false;
   bool isLoadingCreateOrder = false;
   bool isLoadingConfirmOrder = false;
+  bool isLoadingSaveOrderAndPrint = false;
   bool isLoadingAddItem = false;
 
   bool _isDialogOpen = false;
@@ -1637,7 +1638,7 @@ class _BillingPageState extends State<BillingPage> {
             text: 'Save and Print',
             color: ColorManager.kButtonYellow,
             onPressed: _saveOrderAndPrint,
-            isLoading: isLoadingConfirmOrder,
+            isLoading: isLoadingSaveOrderAndPrint,
           ),
         ],
       ),
@@ -2172,7 +2173,7 @@ class _BillingPageState extends State<BillingPage> {
 
   void _saveOrderAndPrint() async {
     setState(() {
-      isLoadingSaveOrder = true; // Indicate that loading has started
+      isLoadingSaveOrderAndPrint = true; // Indicate that loading has started
     });
     debugPrint("Save Order and Print pressed");
     try {
@@ -2287,7 +2288,7 @@ class _BillingPageState extends State<BillingPage> {
       );
     } finally {
       setState(() {
-        isLoadingSaveOrder = false; // Indicate that loading has finished
+        isLoadingSaveOrderAndPrint = false;
       });
     }
   }
