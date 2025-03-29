@@ -992,6 +992,7 @@ class _BillingNewPageState extends State<BillingNewPage> {
                             unitPrice: item.price.toString(),
                             productUnit: item.product.unit,
                             product: item.product,
+                            selectedStock: item.selectedStock,
                           ),
                         )),
                         DataCell(Center(

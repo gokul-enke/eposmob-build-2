@@ -673,10 +673,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                   productAvailabeStockController.text =
                                                       value == null
                                                           ? ""
-                                                          : value.numberOfProductsAvailble!
+                                                          : value.numberOfProductsAvailable!
                                                                   .isEmpty
                                                               ? "0"
-                                                              : value.numberOfProductsAvailble ??
+                                                              : value.numberOfProductsAvailable ??
                                                                   "0";
 
                                                   productCurrencyController

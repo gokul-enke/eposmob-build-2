@@ -517,25 +517,158 @@ class _BillingPageState extends State<BillingPage> {
                                         }
 
                                         if (filteredProducts.isNotEmpty) {
-                                          // Check if we found multiple products with the same barcode
-                                          if (filteredProducts.length > 1) {
-                                            // Show product selection modal
-                                            _isDialogOpen = true;
-                                            final selectedProduct =
-                                                await showDialog(
-                                              context: context,
-                                              builder: (context) =>
-                                                  ProductSelectionModal(
-                                                products: filteredProducts,
-                                                barcode: query,
-                                              ),
-                                            );
-                                            _isDialogOpen = false;
+                                          // Get the first product (we're now checking for stock options)
+                                          GetProduct product =
+                                              filteredProducts.first;
 
-                                            if (selectedProduct != null) {
-                                              // Process the selected product
-                                              GetProduct product =
-                                                  selectedProduct;
+                                          // Check if product has multiple stock options
+                                          if (product.stock != null &&
+                                              product.stock!.length > 1) {
+                                            // Filter available stock options (quantity > 0)
+                                            List<Stock> availableStocks =
+                                                product.stock!
+                                                    .where((stock) =>
+                                                        stock.quantity !=
+                                                            null &&
+                                                        stock.quantity! > 0)
+                                                    .toList();
+
+                                            if (availableStocks.length > 1) {
+                                              // Show stock selection modal
+                                              _isDialogOpen = true;
+                                              final result = await showDialog(
+                                                context: context,
+                                                builder: (context) =>
+                                                    StockSelectionModal(
+                                                  product: product,
+                                                  stockOptions: availableStocks,
+                                                ),
+                                              );
+                                              _isDialogOpen = false;
+
+                                              if (result != null) {
+                                                // Process the selected product and stock
+                                                GetProduct selectedProduct =
+                                                    result['product'];
+                                                Stock selectedStock =
+                                                    result['stock'];
+
+                                                // Add to cart with selected stock
+                                                if (selectedProduct.unit ==
+                                                        'KGS' &&
+                                                    prefix == '000' &&
+                                                    query.length == 14) {
+                                                  // Weight-based product
+                                                  String weightKg = lastFive!
+                                                      .substring(0,
+                                                          2); // First 2 digits = KG
+                                                  String weightGrams =
+                                                      lastFive.substring(2,
+                                                          5); // Last 3 digits = Grams
+                                                  double totalWeight =
+                                                      double.parse(weightKg) +
+                                                          (double.parse(
+                                                                  weightGrams) /
+                                                              1000);
+
+                                                  double stockPrice =
+                                                      double.tryParse(
+                                                              selectedStock
+                                                                      .price ??
+                                                                  "0") ??
+                                                          0.00;
+
+                                                  double? stockMrp =
+                                                      double.tryParse(
+                                                              selectedStock
+                                                                      .mrp ??
+                                                                  "0") ??
+                                                          0.00;
+
+                                                  localProductProvider
+                                                      .addToCart(
+                                                    product: selectedProduct,
+                                                    quantity: totalWeight,
+                                                    price: stockPrice,
+                                                    mrp: stockMrp,
+                                                    selectedStock:
+                                                        selectedStock,
+                                                  );
+
+                                                  showScaffold(
+                                                    context: context,
+                                                    message: 'Added To Cart',
+                                                  );
+                                                } else if (selectedProduct
+                                                            .unit ==
+                                                        'PCS' &&
+                                                    prefix == '000' &&
+                                                    query.length == 14) {
+                                                  // Count-based product
+                                                  int quantity = int.parse(
+                                                      lastFive!); // Last 5 digits represent quantity
+
+                                                  double stockPrice =
+                                                      double.tryParse(
+                                                              selectedStock
+                                                                      .price ??
+                                                                  "0") ??
+                                                          0;
+                                                  localProductProvider
+                                                      .addToCart(
+                                                    product: selectedProduct,
+                                                    quantity: quantity,
+                                                    price: stockPrice,
+                                                    selectedStock:
+                                                        selectedStock,
+                                                  );
+
+                                                  showScaffold(
+                                                    context: context,
+                                                    message: 'Added To Cart',
+                                                  );
+                                                } else {
+                                                  double stockPrice =
+                                                      double.tryParse(
+                                                              selectedStock
+                                                                      .price ??
+                                                                  "0") ??
+                                                          0;
+                                                  localProductProvider
+                                                      .addToCart(
+                                                    product: selectedProduct,
+                                                    price: stockPrice,
+                                                    selectedStock:
+                                                        selectedStock,
+                                                  );
+
+                                                  showScaffold(
+                                                    context: context,
+                                                    message: 'Added To Cart',
+                                                  );
+                                                }
+
+                                                // Clear input fields
+                                                setState(() {
+                                                  _autocompleteProductKey =
+                                                      GlobalKey();
+                                                  quantityController.clear();
+                                                  barcodeController.clear();
+                                                  selectedProductIdController
+                                                      .clear();
+                                                  unitPriceController.clear();
+                                                });
+                                                _focusTextField();
+                                              } else {
+                                                // User cancelled selection
+                                                barcodeController.clear();
+                                                _focusTextField();
+                                              }
+                                            } else if (availableStocks
+                                                .isNotEmpty) {
+                                              // Single stock option available, use it
+                                              Stock stock =
+                                                  availableStocks.first;
 
                                               if (product.unit == 'KGS' &&
                                                   prefix == '000' &&
@@ -553,9 +686,16 @@ class _BillingPageState extends State<BillingPage> {
                                                                 weightGrams) /
                                                             1000);
 
+                                                double stockPrice =
+                                                    double.tryParse(
+                                                            stock.price ??
+                                                                "0") ??
+                                                        0;
                                                 localProductProvider.addToCart(
                                                   product: product,
                                                   quantity: totalWeight,
+                                                  price: stockPrice,
+                                                  selectedStock: stock,
                                                 );
 
                                                 showScaffold(
@@ -570,9 +710,16 @@ class _BillingPageState extends State<BillingPage> {
                                                 int quantity = int.parse(
                                                     lastFive!); // Last 5 digits represent quantity
 
+                                                double stockPrice =
+                                                    double.tryParse(
+                                                            stock.price ??
+                                                                "0") ??
+                                                        0;
                                                 localProductProvider.addToCart(
                                                   product: product,
                                                   quantity: quantity,
+                                                  price: stockPrice,
+                                                  selectedStock: stock,
                                                 );
 
                                                 showScaffold(
@@ -580,8 +727,158 @@ class _BillingPageState extends State<BillingPage> {
                                                   message: 'Added To Cart',
                                                 );
                                               } else {
+                                                double stockPrice =
+                                                    double.tryParse(
+                                                            stock.price ??
+                                                                "0") ??
+                                                        0;
                                                 localProductProvider.addToCart(
-                                                    product: product);
+                                                  product: product,
+                                                  price: stockPrice,
+                                                  selectedStock: stock,
+                                                );
+
+                                                showScaffold(
+                                                  context: context,
+                                                  message: 'Added To Cart',
+                                                );
+                                              }
+
+                                              // Clear input fields
+                                              setState(() {
+                                                _autocompleteProductKey =
+                                                    GlobalKey();
+                                                quantityController.clear();
+                                                barcodeController.clear();
+                                                selectedProductIdController
+                                                    .clear();
+                                                unitPriceController.clear();
+                                              });
+                                              _focusTextField();
+                                            } else {
+                                              // No stock available
+                                              showScaffoldError(
+                                                context: context,
+                                                message:
+                                                    "No stock available for this product.",
+                                              );
+                                              barcodeController.clear();
+                                              _focusTextField();
+                                            }
+                                          } else if (filteredProducts.length >
+                                              1) {
+                                            // If there are multiple products with the same barcode, show product selection
+                                            _isDialogOpen = true;
+                                            final selectedProduct =
+                                                await showDialog(
+                                              context: context,
+                                              builder: (context) =>
+                                                  ProductSelectionModal(
+                                                products: filteredProducts,
+                                                barcode: query,
+                                              ),
+                                            );
+                                            _isDialogOpen = false;
+
+                                            if (selectedProduct != null) {
+                                              // Process the selected product
+                                              product = selectedProduct;
+
+                                              // Check if the selected product has stock
+                                              Stock? stock = null;
+                                              if (product.stock != null &&
+                                                  product.stock!.isNotEmpty) {
+                                                // Use the first available stock
+                                                List<Stock> availableStocks =
+                                                    product.stock!
+                                                        .where((stock) =>
+                                                            stock.quantity !=
+                                                                null &&
+                                                            stock.quantity! > 0)
+                                                        .toList();
+
+                                                if (availableStocks
+                                                    .isNotEmpty) {
+                                                  stock = availableStocks.first;
+                                                }
+                                              }
+
+                                              if (product.unit == 'KGS' &&
+                                                  prefix == '000' &&
+                                                  query.length == 14) {
+                                                // Weight-based product
+                                                String weightKg = lastFive!
+                                                    .substring(0,
+                                                        2); // First 2 digits = KG
+                                                String weightGrams =
+                                                    lastFive.substring(2,
+                                                        5); // Last 3 digits = Grams
+                                                double totalWeight =
+                                                    double.parse(weightKg) +
+                                                        (double.parse(
+                                                                weightGrams) /
+                                                            1000);
+
+                                                double? stockPrice =
+                                                    stock != null
+                                                        ? (double.tryParse(
+                                                                stock.price ??
+                                                                    "0") ??
+                                                            0)
+                                                        : null;
+
+                                                localProductProvider.addToCart(
+                                                  product: product,
+                                                  quantity: totalWeight,
+                                                  price: stockPrice,
+                                                  selectedStock: stock,
+                                                );
+
+                                                showScaffold(
+                                                  context: context,
+                                                  message: 'Added To Cart',
+                                                );
+                                              } else if (product.unit ==
+                                                      'PCS' &&
+                                                  prefix == '000' &&
+                                                  query.length == 14) {
+                                                // Count-based product
+                                                int quantity = int.parse(
+                                                    lastFive!); // Last 5 digits represent quantity
+
+                                                double? stockPrice =
+                                                    stock != null
+                                                        ? (double.tryParse(
+                                                                stock.price ??
+                                                                    "0") ??
+                                                            0)
+                                                        : null;
+
+                                                localProductProvider.addToCart(
+                                                  product: product,
+                                                  quantity: quantity,
+                                                  price: stockPrice,
+                                                  selectedStock: stock,
+                                                );
+
+                                                showScaffold(
+                                                  context: context,
+                                                  message: 'Added To Cart',
+                                                );
+                                              } else {
+                                                double? stockPrice =
+                                                    stock != null
+                                                        ? (double.tryParse(
+                                                                stock.price ??
+                                                                    "0") ??
+                                                            0)
+                                                        : null;
+
+                                                localProductProvider.addToCart(
+                                                  product: product,
+                                                  price: stockPrice,
+                                                  selectedStock: stock,
+                                                );
 
                                                 showScaffold(
                                                   context: context,
@@ -606,9 +903,23 @@ class _BillingPageState extends State<BillingPage> {
                                               _focusTextField();
                                             }
                                           } else {
-                                            // Single product found, use existing logic
-                                            GetProduct product =
-                                                filteredProducts.first;
+                                            // Single product found with no or single stock
+                                            // Use the default stock if available
+                                            Stock? stock = null;
+                                            if (product.stock != null &&
+                                                product.stock!.isNotEmpty) {
+                                              List<Stock> availableStocks =
+                                                  product.stock!
+                                                      .where((stock) =>
+                                                          stock.quantity !=
+                                                              null &&
+                                                          stock.quantity! > 0)
+                                                      .toList();
+
+                                              if (availableStocks.isNotEmpty) {
+                                                stock = availableStocks.first;
+                                              }
+                                            }
 
                                             if (product.unit == 'KGS' &&
                                                 prefix == '000' &&
@@ -625,9 +936,17 @@ class _BillingPageState extends State<BillingPage> {
                                                   (double.parse(weightGrams) /
                                                       1000);
 
+                                              double? stockPrice = stock != null
+                                                  ? (double.tryParse(
+                                                          stock.price ?? "0") ??
+                                                      0)
+                                                  : null;
+
                                               localProductProvider.addToCart(
                                                 product: product,
                                                 quantity: totalWeight,
+                                                price: stockPrice,
+                                                selectedStock: stock,
                                               );
 
                                               showScaffold(
@@ -641,9 +960,17 @@ class _BillingPageState extends State<BillingPage> {
                                               int quantity = int.parse(
                                                   lastFive!); // Last 5 digits represent quantity
 
+                                              double? stockPrice = stock != null
+                                                  ? (double.tryParse(
+                                                          stock.price ?? "0") ??
+                                                      0)
+                                                  : null;
+
                                               localProductProvider.addToCart(
                                                 product: product,
                                                 quantity: quantity,
+                                                price: stockPrice,
+                                                selectedStock: stock,
                                               );
 
                                               showScaffold(
@@ -651,8 +978,17 @@ class _BillingPageState extends State<BillingPage> {
                                                 message: 'Added To Cart',
                                               );
                                             } else {
+                                              double? stockPrice = stock != null
+                                                  ? (double.tryParse(
+                                                          stock.price ?? "0") ??
+                                                      0)
+                                                  : null;
+
                                               localProductProvider.addToCart(
-                                                  product: product);
+                                                product: product,
+                                                price: stockPrice,
+                                                selectedStock: stock,
+                                              );
 
                                               showScaffold(
                                                 context: context,
@@ -1034,6 +1370,7 @@ class _BillingPageState extends State<BillingPage> {
                                           unitPrice: item.price.toString(),
                                           productUnit: item.product.unit,
                                           product: item.product,
+                                          selectedStock: item.selectedStock,
                                         ),
                                       ),
                                     ),
@@ -2550,6 +2887,7 @@ class _BillingPageState extends State<BillingPage> {
         List<Map<String, dynamic>> items = [];
 
         for (var item in cartItems) {
+          debugPrint("item ${item.price}");
           items.add({
             'product_id': item.product.productId,
             'quantity': item.quantity,
@@ -3214,6 +3552,195 @@ class ProductSelectionModal extends StatelessWidget {
                       builder: (context) =>
                           AddProductWithBarcodeModal(barcode: barcode),
                     );
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Add this class after the ProductSelectionModal class
+class StockSelectionModal extends StatelessWidget {
+  final GetProduct product;
+  final List<Stock> stockOptions;
+
+  const StockSelectionModal({
+    Key? key,
+    required this.product,
+    required this.stockOptions,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        constraints: BoxConstraints(
+          maxWidth: 500,
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              spreadRadius: 5,
+              blurRadius: 7,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Multiple Stock Options Available',
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s16,
+                    0.21,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Product: ${product.productName}',
+              style: buildCustomStyle(
+                FontWeightManager.bold,
+                FontSize.s16,
+                0.21,
+                ColorManager.textColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Stock list
+            Expanded(
+              child: MouseRegion(
+                cursor: SystemMouseCursors.grab,
+                child: ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(context).copyWith(
+                    dragDevices: {
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.stylus,
+                      PointerDeviceKind.trackpad,
+                    },
+                  ),
+                  child: ListView.builder(
+                    itemCount: stockOptions.length,
+                    physics: const BouncingScrollPhysics(),
+                    itemBuilder: (context, index) {
+                      final stock = stockOptions[index];
+                      return BuildBoxShadowContainer(
+                        circleRadius: 7,
+                        margin: const EdgeInsets.symmetric(vertical: 5),
+                        color: Colors.white,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          title: Text(
+                            'Stock ID: ${stock.id}',
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s14,
+                              0.21,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Text(
+                                'Price: ₹${stock.price ?? "0.00"}',
+                                style: const TextStyle(
+                                    fontSize: 14, fontWeight: FontWeight.w500),
+                              ),
+                              Text(
+                                'MRP: ₹${stock.mrp ?? "0.00"}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              Text(
+                                'Available Quantity: ${stock.quantity ?? 0}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                          trailing: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: ColorManager.kPrimaryColor,
+                              foregroundColor: Colors.white,
+                              textStyle: const TextStyle(fontSize: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                            ),
+                            onPressed: () {
+                              // Return both product and selected stock
+                              Navigator.pop(context, {
+                                'product': product,
+                                'stock': stock,
+                              });
+                            },
+                            child: const Text('Choose'),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // Close Button
+                CustomRoundButton(
+                  title: "Cancel",
+                  fontSize: FontSize.s12,
+                  height: MediaQuery.of(context).size.height * .05,
+                  width: 120,
+                  textColor: Colors.blue,
+                  borderColor: Colors.blue,
+                  boxColor: Colors.white,
+                  fct: () {
+                    Navigator.pop(context);
+                  },
+                ),
+                const SizedBox(width: 10),
+                // Add Product Button
+                CustomRoundButton(
+                  title: "Add New Stock",
+                  fontSize: FontSize.s12,
+                  height: MediaQuery.of(context).size.height * .05,
+                  width: 120,
+                  fct: () {
                     Navigator.pop(context);
                   },
                 ),

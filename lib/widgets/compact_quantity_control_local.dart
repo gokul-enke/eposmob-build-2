@@ -15,6 +15,7 @@ class CompactQuantityControlLocal extends StatefulWidget {
   final String? unitPrice;
   final String? productUnit;
   final Function()? onQuantityChanged;
+  final Stock? selectedStock;
 
   const CompactQuantityControlLocal({
     Key? key,
@@ -26,6 +27,7 @@ class CompactQuantityControlLocal extends StatefulWidget {
     this.productUnit,
     this.cartItemId,
     this.onQuantityChanged,
+    this.selectedStock,
   }) : super(key: key);
 
   @override
@@ -113,6 +115,7 @@ class _CompactQuantityControlLocalState
           product: widget.product!,
           quantity: difference,
           isIncreamentUsingCompactQuantityControl: true,
+          selectedStock: widget.selectedStock,
         ); // Pass the difference
       } else if (newQuantity < widget.quantity) {
         // Calculate difference for decrements too

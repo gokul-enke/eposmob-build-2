@@ -23,15 +23,24 @@ class HiveLocalCartItem {
   @HiveField(2)
   num quantity;
 
-  // Store serialized product as JSON string
   @HiveField(3)
+  double? mrp;
+
+  // Store serialized product as JSON string
+  @HiveField(4)
   final HiveStringValue serializedProduct;
+
+  // Store serialized selected stock as JSON string
+  @HiveField(4)
+  final HiveStringValue? serializedSelectedStock;
 
   HiveLocalCartItem({
     required this.productId,
     this.quantity = 1,
     this.price,
+    this.mrp,
     required this.serializedProduct,
+    this.serializedSelectedStock,
   });
 }
 
@@ -91,7 +100,7 @@ class HiveProduct extends HiveObject {
 
   @HiveField(3)
   final String? barcode;
-  
+
   @HiveField(4)
   final HiveStringValue serializedData;
 
@@ -126,7 +135,7 @@ class HiveGetProduct extends HiveObject {
   final HiveProductCategory? category;
 
   @HiveField(6)
-  final String? numberOfProductsAvailble;
+  final String? numberOfProductsAvailable;
 
   @HiveField(7)
   final String? rating;
@@ -156,7 +165,7 @@ class HiveGetProduct extends HiveObject {
     this.productSlug,
     this.barcode,
     this.category,
-    this.numberOfProductsAvailble,
+    this.numberOfProductsAvailable,
     this.rating,
     this.price,
     this.unit,
@@ -174,19 +183,20 @@ class HiveGetProduct extends HiveObject {
       productName: product.productName,
       productSlug: product.productSlug,
       barcode: product.barcode,
-      category: product.category != null 
-          ? HiveProductCategory.fromProductCategory(product.category!) 
+      category: product.category != null
+          ? HiveProductCategory.fromProductCategory(product.category!)
           : null,
-      numberOfProductsAvailble: product.numberOfProductsAvailble,
+      numberOfProductsAvailable: product.numberOfProductsAvailable,
       rating: product.rating,
       unit: product.unit,
       currency: product.currency,
       description: product.description?.toString(),
-      price: product.price != null 
-          ? HiveProductPrice.fromProductPrice(product.price!) 
+      price: product.price != null
+          ? HiveProductPrice.fromProductPrice(product.price!)
           : null,
-      attachment: product.attachment?.map((e) => 
-          HiveAttachment.fromAttachment(e)).toList(),
+      attachment: product.attachment
+          ?.map((e) => HiveAttachment.fromAttachment(e))
+          .toList(),
       isSelected: product.isSelected,
     );
   }
@@ -200,7 +210,7 @@ class HiveGetProduct extends HiveObject {
       productSlug: productSlug,
       barcode: barcode,
       category: category?.toProductCategory(),
-      numberOfProductsAvailble: numberOfProductsAvailble,
+      numberOfProductsAvailable: numberOfProductsAvailable,
       rating: rating,
       unit: unit,
       currency: currency,
@@ -215,7 +225,7 @@ class HiveGetProduct extends HiveObject {
 class HiveProductCategory extends HiveObject {
   @HiveField(0)
   final String? name;
-  
+
   @HiveField(1)
   final String? slug;
 
@@ -243,13 +253,13 @@ class HiveProductCategory extends HiveObject {
 class HiveProductPrice extends HiveObject {
   @HiveField(0)
   final String? oldPrice;
-  
+
   @HiveField(1)
   final String? price;
-  
+
   @HiveField(2)
   final String? percentage;
-  
+
   @HiveField(3)
   final String? totalPrice;
 
@@ -283,31 +293,31 @@ class HiveProductPrice extends HiveObject {
 class HiveAttachment extends HiveObject {
   @HiveField(0)
   final int? id;
-  
+
   @HiveField(1)
   final int? productId;
-  
+
   @HiveField(2)
   final int? userId;
-  
+
   @HiveField(3)
   final String? title;
-  
+
   @HiveField(4)
   final int? isPrimary;
-  
+
   @HiveField(5)
   final String? fileType;
-  
+
   @HiveField(6)
   final String? filePath;
-  
+
   @HiveField(7)
   final String? status;
-  
+
   @HiveField(8)
   final String? alt;
-  
+
   @HiveField(9)
   final String? description;
 
@@ -353,4 +363,4 @@ class HiveAttachment extends HiveObject {
       description: description,
     );
   }
-} 
+}

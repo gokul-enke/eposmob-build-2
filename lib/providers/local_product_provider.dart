@@ -11,12 +11,16 @@ import '../resources/app_url.dart';
 class LocalCartItem {
   final GetProduct product;
   double? price;
+  double? mrp;
   num quantity;
+  final Stock? selectedStock;
 
   LocalCartItem({
     required this.product,
     this.quantity = 1,
     this.price,
+    this.mrp,
+    this.selectedStock,
   });
 }
 
@@ -133,7 +137,8 @@ class LocalProductProvider extends ChangeNotifier {
   Future<void> _initConfirmedOrdersBox() async {
     try {
       if (!Hive.isBoxOpen('confirmed_orders')) {
-        _confirmedOrdersBox = await Hive.openBox<HiveSavedOrder>('confirmed_orders');
+        _confirmedOrdersBox =
+            await Hive.openBox<HiveSavedOrder>('confirmed_orders');
       } else {
         _confirmedOrdersBox = Hive.box<HiveSavedOrder>('confirmed_orders');
       }
@@ -148,18 +153,28 @@ class LocalProductProvider extends ChangeNotifier {
   // Load confirmed orders from Hive
   void _loadConfirmedOrdersFromHive() {
     if (!_isConfirmedBoxInitialized) return;
-    
+
     _confirmedOrders.clear();
     try {
       for (var hiveSavedOrder in _confirmedOrdersBox.values) {
-        List<LocalCartItem> orderItems = hiveSavedOrder.items.map((hiveCartItem) {
+        List<LocalCartItem> orderItems =
+            hiveSavedOrder.items.map((hiveCartItem) {
           final productJson = json.decode(hiveCartItem.serializedProduct.value);
           final product = GetProduct.fromJson(productJson);
+
+          // Deserialize selected stock if it exists
+          Stock? selectedStock;
+          if (hiveCartItem.serializedSelectedStock != null) {
+            final stockJson =
+                json.decode(hiveCartItem.serializedSelectedStock!.value);
+            selectedStock = Stock.fromJson(stockJson);
+          }
 
           return LocalCartItem(
             product: product,
             quantity: hiveCartItem.quantity,
             price: hiveCartItem.price,
+            selectedStock: selectedStock,
           );
         }).toList();
 
@@ -189,19 +204,27 @@ class LocalProductProvider extends ChangeNotifier {
       });
       return;
     }
-    
+
     try {
       _confirmedOrdersBox.clear();
       for (var order in _confirmedOrders) {
-        List<HiveLocalCartItem> hiveItems = order.items
-            .map((item) => HiveLocalCartItem(
-                  productId: item.product.productId!,
-                  quantity: item.quantity,
-                  price: item.price,
-                  serializedProduct:
-                      HiveStringValue(json.encode(item.product.toJson())),
-                ))
-            .toList();
+        List<HiveLocalCartItem> hiveItems = order.items.map((item) {
+          // Serialize selected stock if it exists
+          HiveStringValue? serializedStock;
+          if (item.selectedStock != null) {
+            serializedStock =
+                HiveStringValue(json.encode(item.selectedStock!.toJson()));
+          }
+
+          return HiveLocalCartItem(
+            productId: item.product.productId!,
+            quantity: item.quantity,
+            price: item.price,
+            serializedProduct:
+                HiveStringValue(json.encode(item.product.toJson())),
+            serializedSelectedStock: serializedStock,
+          );
+        }).toList();
 
         final hiveSavedOrder = HiveSavedOrder(
           id: order.id,
@@ -239,10 +262,19 @@ class LocalProductProvider extends ChangeNotifier {
       final productJson = json.decode(hiveCartItem.serializedProduct.value);
       final product = GetProduct.fromJson(productJson);
 
+      // Deserialize selected stock if it exists
+      Stock? selectedStock;
+      if (hiveCartItem.serializedSelectedStock != null) {
+        final stockJson =
+            json.decode(hiveCartItem.serializedSelectedStock!.value);
+        selectedStock = Stock.fromJson(stockJson);
+      }
+
       _cartItems.add(LocalCartItem(
         product: product,
         quantity: hiveCartItem.quantity,
         price: hiveCartItem.price,
+        selectedStock: selectedStock,
       ));
     }
     notifyListeners();
@@ -256,10 +288,19 @@ class LocalProductProvider extends ChangeNotifier {
         final productJson = json.decode(hiveCartItem.serializedProduct.value);
         final product = GetProduct.fromJson(productJson);
 
+        // Deserialize selected stock if it exists
+        Stock? selectedStock;
+        if (hiveCartItem.serializedSelectedStock != null) {
+          final stockJson =
+              json.decode(hiveCartItem.serializedSelectedStock!.value);
+          selectedStock = Stock.fromJson(stockJson);
+        }
+
         return LocalCartItem(
           product: product,
           quantity: hiveCartItem.quantity,
           price: hiveCartItem.price,
+          selectedStock: selectedStock,
         );
       }).toList();
 
@@ -297,12 +338,20 @@ class LocalProductProvider extends ChangeNotifier {
   void _saveCartToHive() {
     _cartItemsBox.clear();
     for (var cartItem in _cartItems) {
+      // Serialize selected stock if it exists
+      HiveStringValue? serializedStock;
+      if (cartItem.selectedStock != null) {
+        serializedStock =
+            HiveStringValue(json.encode(cartItem.selectedStock!.toJson()));
+      }
+
       final hiveCartItem = HiveLocalCartItem(
         productId: cartItem.product.productId!,
         quantity: cartItem.quantity,
         price: cartItem.price,
         serializedProduct:
             HiveStringValue(json.encode(cartItem.product.toJson())),
+        serializedSelectedStock: serializedStock,
       );
       _cartItemsBox.add(hiveCartItem);
     }
@@ -312,15 +361,23 @@ class LocalProductProvider extends ChangeNotifier {
   void _saveSavedOrdersToHive() {
     _savedOrdersBox.clear();
     for (var order in _savedOrders) {
-      List<HiveLocalCartItem> hiveItems = order.items
-          .map((item) => HiveLocalCartItem(
-                productId: item.product.productId!,
-                quantity: item.quantity,
-                price: item.price,
-                serializedProduct:
-                    HiveStringValue(json.encode(item.product.toJson())),
-              ))
-          .toList();
+      List<HiveLocalCartItem> hiveItems = order.items.map((item) {
+        // Serialize selected stock if it exists
+        HiveStringValue? serializedStock;
+        if (item.selectedStock != null) {
+          serializedStock =
+              HiveStringValue(json.encode(item.selectedStock!.toJson()));
+        }
+
+        return HiveLocalCartItem(
+          productId: item.product.productId!,
+          quantity: item.quantity,
+          price: item.price,
+          serializedProduct:
+              HiveStringValue(json.encode(item.product.toJson())),
+          serializedSelectedStock: serializedStock,
+        );
+      }).toList();
 
       final hiveSavedOrder = HiveSavedOrder(
         id: order.id,
@@ -494,12 +551,13 @@ class LocalProductProvider extends ChangeNotifier {
     _filteredProducts = result;
     _updatePagination();
     setPage(page);
-    
+
     // Make sure UI updates by calling notifyListeners
     notifyListeners();
-    
+
     // Debug info to help diagnose issues
-    debugPrint("Category filter applied: $categoryId - Products count: ${result.length}");
+    debugPrint(
+        "Category filter applied: $categoryId - Products count: ${result.length}");
   }
 
   /// Searches through the filtered products using [query] on the product name.
@@ -557,34 +615,53 @@ class LocalProductProvider extends ChangeNotifier {
     GetProduct? product,
     num? quantity = 1,
     double? price,
+    double? mrp,
     int? productId,
     bool? isIncreamentUsingCompactQuantityControl = false,
+    Stock? selectedStock,
   }) {
     debugPrint("addToCart");
     debugPrint(product.toString());
     debugPrint(quantity.toString());
     debugPrint(price.toString());
+    debugPrint(mrp.toString());
     debugPrint(productId.toString());
+    debugPrint(selectedStock.toString());
 
     if (productId != null) {
       product = _products.firstWhere((p) => p.productId == productId);
     }
 
-    int index = _cartItems
-        .indexWhere((item) => item.product.productId == product!.productId);
+    int index = _cartItems.indexWhere((item) =>
+        item.product.productId == product!.productId &&
+        (item.selectedStock?.id == selectedStock?.id ||
+            (item.selectedStock == null && selectedStock == null)));
 
     if (index != -1) {
-      // If the product already exists in cart, just update the quantity and price
+      // If the product already exists in cart with the same stock, just update the quantity and price
       _cartItems[index].quantity +=
           quantity!; // Increment by the specified quantity
       if (price != null) {
         _cartItems[index].price = price; // Update the price if provided
+      } else if (selectedStock != null && selectedStock.price != null) {
+        _cartItems[index].price =
+            double.tryParse(selectedStock.price!); // Use stock price
       } else {
         // Safely handle null product price
         _cartItems[index].price = _cartItems[index].price ??
             (product!.price?.price != null
                 ? double.tryParse(product.price!.price!)
                 : 0.0);
+      }
+
+      if (mrp != null) {
+        _cartItems[index].mrp = mrp;
+      } else if (selectedStock != null && selectedStock.mrp != null) {
+        _cartItems[index].mrp =
+            double.tryParse(selectedStock.mrp!); // Use stock price
+      } else {
+        _cartItems[index].mrp = _cartItems[index].mrp ??
+            (product!.mrp != null ? double.tryParse(product.mrp!) : 0.0);
       }
 
       if (!isIncreamentUsingCompactQuantityControl!) {
@@ -595,10 +672,21 @@ class LocalProductProvider extends ChangeNotifier {
     } else {
       // Safely handle null product price when adding new cart item
       double productPrice = 0.0;
+      double productMrp = 0.0;
       if (price != null) {
         productPrice = price;
+      } else if (selectedStock != null && selectedStock.price != null) {
+        productPrice = double.tryParse(selectedStock.price!) ?? 0.0;
       } else if (product!.price?.price != null) {
         productPrice = double.tryParse(product.price!.price!) ?? 0.0;
+      }
+
+      if (mrp != null) {
+        productMrp = mrp;
+      } else if (selectedStock != null && selectedStock.mrp != null) {
+        productMrp = double.tryParse(selectedStock.mrp!) ?? 0.0;
+      } else if (product!.mrp != null) {
+        productMrp = double.tryParse(product.mrp!) ?? 0.0;
       }
 
       // Insert at the beginning of the array instead of appending
@@ -608,6 +696,7 @@ class LocalProductProvider extends ChangeNotifier {
             product: product!,
             quantity: quantity!,
             price: productPrice,
+            selectedStock: selectedStock,
           ));
     }
     resetSelectedProduct();
@@ -745,6 +834,7 @@ class LocalProductProvider extends ChangeNotifier {
               product: item.product,
               quantity: item.quantity,
               price: item.price,
+              selectedStock: item.selectedStock,
             ))
         .toList();
 
@@ -777,11 +867,11 @@ class LocalProductProvider extends ChangeNotifier {
     try {
       // Find the order in saved orders
       int index = _savedOrders.indexWhere((o) => o.id == orderId);
-      
+
       if (index != -1) {
         // Get the order
         SavedOrder order = _savedOrders[index];
-        
+
         // Create a new order with "CONF-" prefix for order number
         SavedOrder confirmedOrder = SavedOrder(
           id: order.id,
@@ -794,19 +884,19 @@ class LocalProductProvider extends ChangeNotifier {
           total: order.total,
           deliveryMethod: order.deliveryMethod,
         );
-        
+
         // Add to confirmed orders
         _confirmedOrders.add(confirmedOrder);
-        
+
         // Remove from saved orders
         _savedOrders.removeAt(index);
-        
+
         // Save both lists
         _saveSavedOrdersToHive();
         _saveConfirmedOrdersToHive();
-        
+
         notifyListeners();
-        
+
         return confirmedOrder;
       }
       return null;
@@ -874,6 +964,7 @@ class LocalProductProvider extends ChangeNotifier {
               product: item.product,
               quantity: item.quantity,
               price: item.price,
+              selectedStock: item.selectedStock,
             ))
         .toList();
 
@@ -944,6 +1035,7 @@ class LocalProductProvider extends ChangeNotifier {
           product: item.product,
           quantity: item.quantity,
           price: item.price,
+          selectedStock: item.selectedStock,
         ));
       }
 
@@ -977,6 +1069,7 @@ class LocalProductProvider extends ChangeNotifier {
                 product: item.product,
                 quantity: item.quantity,
                 price: item.price,
+                selectedStock: item.selectedStock,
               ))
           .toList();
 
@@ -1016,6 +1109,67 @@ class LocalProductProvider extends ChangeNotifier {
 
     _saveSavedOrdersToHive();
     notifyListeners();
+  }
+
+  /// Checks if a product has available stock
+  bool hasAvailableStock(GetProduct product, {num quantity = 1}) {
+    if (product.stock == null || product.stock!.isEmpty) {
+      // If stock isn't tracked, assume it's available
+      return true;
+    }
+
+    // Check if at least one stock entry has enough quantity
+    return product.stock!
+        .any((stock) => stock.quantity != null && stock.quantity! >= quantity);
+  }
+
+  /// Gets the available stock quantity for a product
+  num getAvailableStockQuantity(GetProduct product) {
+    if (product.stock == null || product.stock!.isEmpty) {
+      // If stock isn't tracked, return a large number
+      return 9999;
+    }
+
+    // Sum all stock quantities
+    return product.stock!.fold(0, (sum, stock) => sum + (stock.quantity ?? 0));
+  }
+
+  /// Gets a list of available stock options for a product
+  List<Stock> getStockOptions(GetProduct product) {
+    if (product.stock == null) {
+      return [];
+    }
+    return product.stock!
+        .where((stock) => stock.quantity != null && stock.quantity! > 0)
+        .toList();
+  }
+
+  /// Selects the optimal stock entry based on quantity needed
+  Stock? selectStockForQuantity(GetProduct product, num quantity) {
+    if (product.stock == null || product.stock!.isEmpty) {
+      return null;
+    }
+
+    // First try to find a stock entry with exact or more quantity
+    var availableStocks = product.stock!
+        .where((stock) => stock.quantity != null && stock.quantity! >= quantity)
+        .toList();
+
+    if (availableStocks.isNotEmpty) {
+      // Sort by price if available, otherwise return the first one
+      availableStocks.sort((a, b) {
+        if (a.price == null || b.price == null) return 0;
+        return (double.tryParse(a.price!) ?? 0)
+            .compareTo(double.tryParse(b.price!) ?? 0);
+      });
+      return availableStocks.first;
+    }
+
+    // If no single stock entry has enough quantity, return the one with most quantity
+    var sortedStocks = List<Stock>.from(product.stock!);
+    sortedStocks.sort((a, b) => (b.quantity ?? 0).compareTo(a.quantity ?? 0));
+
+    return sortedStocks.isNotEmpty ? sortedStocks.first : null;
   }
 
   // End of LocalProductProvider

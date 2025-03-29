@@ -11,12 +11,14 @@ class GetProductModel {
   final String? status; // this field seems to be missing in your JSON
   final Links? links; // links field is currently unused
   final Meta? meta; // Rename pagination to meta
+  final Pagination? pagination;
 
   GetProductModel({
     this.product,
     this.status,
     this.links,
     this.meta, // Update constructor accordingly
+    this.pagination,
   });
 
   factory GetProductModel.fromJson(Map<String, dynamic> json) =>
@@ -30,6 +32,9 @@ class GetProductModel {
             ? null
             : Links.fromJson(json["links"]), // Assuming this exists in your API
         meta: json["meta"] == null ? null : Meta.fromJson(json["meta"]),
+        pagination: json["pagination"] == null 
+            ? null 
+            : Pagination.fromJson(json["pagination"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -39,6 +44,7 @@ class GetProductModel {
         "status": status, // Don't forget to serialize status back
         "links": links?.toJson(), // Serialize links if necessary
         "meta": meta?.toJson(), // Update for meta
+        "pagination": pagination?.toJson(),
       };
 }
 
@@ -49,7 +55,7 @@ class GetProduct {
   final String? productSlug;
   final String? barcode;
   final ProductCategory? category;
-  final String? numberOfProductsAvailble;
+  final String? numberOfProductsAvailable;
   final String? rating;
   final String? unit;
   final String? currency;
@@ -61,6 +67,7 @@ class GetProduct {
   final dynamic names; // Change to dynamic
   final List<ProductProp>? productProps;
   final WeightInfo? weightInfo;
+  final List<Stock>? stock;
 
   GetProduct({
     this.productId,
@@ -69,7 +76,7 @@ class GetProduct {
     this.productSlug,
     this.barcode,
     this.category,
-    this.numberOfProductsAvailble,
+    this.numberOfProductsAvailable,
     this.rating,
     this.price,
     this.mrp,
@@ -80,6 +87,7 @@ class GetProduct {
     this.names,
     this.productProps,
     this.weightInfo,
+    this.stock,
   });
 
   factory GetProduct.fromJson(Map<String, dynamic> json) => GetProduct(
@@ -95,7 +103,9 @@ class GetProduct {
         category: json["category"] == null
             ? null
             : ProductCategory.fromJson(json["category"]),
-        numberOfProductsAvailble: json["number_of_products_availble"],
+        numberOfProductsAvailable: json["number_of_products_available"] != null
+            ? json["number_of_products_available"].toString()
+            : null,
         rating: json["rating"],
         unit: json["unit"],
         currency: json["currency"],
@@ -107,7 +117,7 @@ class GetProduct {
             ? []
             : List<Attachment>.from(
                 json["attachment"]!.map((x) => Attachment.fromJson(x))),
-        names: json["names"], // Keep as dynamic
+        names: json["names"],
         productProps: json["product_props"] == null
             ? []
             : List<ProductProp>.from(
@@ -115,6 +125,10 @@ class GetProduct {
         weightInfo: json["weight_info"] == null
             ? null
             : WeightInfo.fromJson(json["weight_info"]),
+        stock: json["stock"] == null
+            ? []
+            : List<Stock>.from(
+                json["stock"]!.map((x) => Stock.fromJson(x))),
       );
 
   Map<String, dynamic> toJson() => {
@@ -124,7 +138,7 @@ class GetProduct {
         "product_slug": productSlug,
         "barcode": barcode,
         "category": category?.toJson(),
-        "number_of_products_availble": numberOfProductsAvailble,
+        "number_of_products_available": numberOfProductsAvailable,
         "rating": rating,
         "price": price?.toJson(),
         "mrp": mrp,
@@ -139,6 +153,9 @@ class GetProduct {
             ? []
             : List<dynamic>.from(productProps!.map((x) => x.toJson())),
         "weight_info": weightInfo?.toJson(),
+        "stock": stock == null
+            ? []
+            : List<dynamic>.from(stock!.map((x) => x.toJson())),
       };
 }
 
@@ -381,6 +398,70 @@ class Meta {
   Map<String, dynamic> toJson() => {
         "current_page": currentPage,
         "last_page": lastPage,
+        "total": total,
+      };
+}
+
+class Stock {
+  final int? id;
+  final int? productId;
+  final num? quantity;
+  final String? price;
+  final String? mrp;
+  final String? purchasePrice;
+
+  Stock({
+    this.id,
+    this.productId,
+    this.quantity,
+    this.price,
+    this.mrp,
+    this.purchasePrice,
+  });
+
+  factory Stock.fromJson(Map<String, dynamic> json) => Stock(
+        id: json["id"],
+        productId: json["product_id"],
+        quantity: json["quantity"],
+        price: json["price"],
+        mrp: json["mrp"],
+        purchasePrice: json["purchase_price"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "product_id": productId,
+        "quantity": quantity,
+        "price": price,
+        "mrp": mrp,
+        "purchase_price": purchasePrice,
+      };
+}
+
+class Pagination {
+  final int? currentPage;
+  final int? lastPage;
+  final int? perPage;
+  final int? total;
+
+  Pagination({
+    this.currentPage,
+    this.lastPage,
+    this.perPage,
+    this.total,
+  });
+
+  factory Pagination.fromJson(Map<String, dynamic> json) => Pagination(
+        currentPage: json["current_page"],
+        lastPage: json["last_page"],
+        perPage: json["per_page"],
+        total: json["total"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "current_page": currentPage,
+        "last_page": lastPage,
+        "per_page": perPage,
         "total": total,
       };
 }

@@ -204,7 +204,7 @@ class HiveGetProductAdapter extends TypeAdapter<HiveGetProduct> {
       productSlug: fields[3] as String?,
       barcode: fields[4] as String?,
       category: fields[5] as HiveProductCategory?,
-      numberOfProductsAvailble: fields[6] as String?,
+      numberOfProductsAvailable: fields[6] as String?,
       rating: fields[7] as String?,
       price: fields[11] as HiveProductPrice?,
       unit: fields[8] as String?,
@@ -232,7 +232,7 @@ class HiveGetProductAdapter extends TypeAdapter<HiveGetProduct> {
       ..writeByte(5)
       ..write(obj.category)
       ..writeByte(6)
-      ..write(obj.numberOfProductsAvailble)
+      ..write(obj.numberOfProductsAvailable)
       ..writeByte(7)
       ..write(obj.rating)
       ..writeByte(8)
