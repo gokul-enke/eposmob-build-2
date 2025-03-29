@@ -2174,7 +2174,7 @@ class _BillingPageState extends State<BillingPage> {
     setState(() {
       isLoadingSaveOrder = true; // Indicate that loading has started
     });
-    debugPrint("Save Order pressed");
+    debugPrint("Save Order and Print pressed");
     try {
       if (Provider.of<LocalProductProvider>(context, listen: false)
           .cartItems
@@ -2191,30 +2191,47 @@ class _BillingPageState extends State<BillingPage> {
 
       // Check if we're editing an existing order
       SavedOrder? currentOrder = localProductProvider.currentOrder;
+      SavedOrder? orderToUse;
 
       if (currentOrder != null) {
-        // Update existing order
-        localProductProvider.updateSavedOrder(
-          currentOrder.id,
-          customerName: selectedCustomer?.name,
-          customerPhone: selectedCustomerPhone ?? mobileNumberText,
-          comment: _commentController.text,
-          deliveryMethod: deliveryMethod,
-        );
+        // We're editing an existing order, move it to confirmed orders
+        orderToUse =
+            localProductProvider.moveToConfirmedOrders(currentOrder.id);
 
-        showScaffold(
-          context: context,
-          message: "Order Updated Successfully",
-        );
+        if (orderToUse != null) {
+          showScaffold(
+            context: context,
+            message: "Order moved to confirmed orders",
+          );
+        } else {
+          // If the order couldn't be moved (shouldn't happen), create a new confirmed order
+          // Get customer name if available
+          String? customerName;
+          if (selectedCustomer != null) {
+            customerName = selectedCustomer!.name;
+          }
+
+          orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
+            customerName: customerName,
+            customerPhone: selectedCustomerPhone ?? mobileNumberText,
+            comment: _commentController.text,
+            deliveryMethod: deliveryMethod,
+          );
+
+          showScaffold(
+            context: context,
+            message: "Order saved to confirmed orders",
+          );
+        }
       } else {
-        // Save as new order
+        // Create a new confirmed order
         // Get customer name if available
         String? customerName;
         if (selectedCustomer != null) {
           customerName = selectedCustomer!.name;
         }
 
-        localProductProvider.saveCurrentCartAsOrder(
+        orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
           customerName: customerName,
           customerPhone: selectedCustomerPhone ?? mobileNumberText,
           comment: _commentController.text,
@@ -2223,19 +2240,14 @@ class _BillingPageState extends State<BillingPage> {
 
         showScaffold(
           context: context,
-          message: "Order Saved Successfully",
+          message: "Order saved to confirmed orders",
         );
       }
 
       try {
-        // Get the current order being saved and print it
-        final localSavedOrder = localProductProvider.currentOrder ??
-            (localProductProvider.savedOrders.isNotEmpty
-                ? localProductProvider.savedOrders.last
-                : null);
-
-        if (localSavedOrder != null) {
-          printFromSavedOrder(localSavedOrder);
+        // Print the order that was just confirmed
+        if (orderToUse != null) {
+          printFromSavedOrder(orderToUse);
         }
       } catch (error) {
         debugPrint(error.toString());

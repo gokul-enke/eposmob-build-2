@@ -43,6 +43,7 @@ void main() async {
   await Hive.openBox<HiveProduct>('products');
   await Hive.openBox<HiveLocalCartItem>('cart_items');
   await Hive.openBox<HiveSavedOrder>('saved_orders');
+  await Hive.openBox<HiveSavedOrder>('confirmed_orders');
 
   Get.put(SideBarController());
 

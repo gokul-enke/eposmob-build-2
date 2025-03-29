@@ -253,6 +253,16 @@ class SideMenu extends StatelessWidget {
                   sideBarController.index.value == 11,
             ),
           ),
+          // Obx(
+          //   () => DrawerListTile(
+          //     iconPath: ImageAssets.saleIcon,
+          //     title: 'Confirmed Orders',
+          //     onTap: () {
+          //       sideBarController.index.value = 56;
+          //     },
+          //     selected: sideBarController.index.value == 56,
+          //   ),
+          // ),
           Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.saleIcon,

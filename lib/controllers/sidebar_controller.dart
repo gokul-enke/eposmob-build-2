@@ -56,6 +56,7 @@ import '../screens/product/widgets/stock_details.dart';
 import '../screens/sales/widgets/sales_order_details.dart';
 import '../widgets/category_list.dart';
 import 'package:pos_machine/screens/suppliers/supplier_list.dart';
+import 'package:pos_machine/screens/sales/confirmed_orders.dart';
 
 class SideBarController extends GetxController {
   RxInt index = 46.obs;
@@ -121,5 +122,6 @@ class SideBarController extends GetxController {
     BillingPageRefactored(), // 53 Billing Page
     BillingNewPage(), // 54 Billing New Page
     PrinterSettings(), // 55 Printer Settings
+    ConfirmedOrdersScreen(), // 56 Confirmed Orders
   ];
 }

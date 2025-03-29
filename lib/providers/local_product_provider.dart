@@ -73,6 +73,8 @@ class LocalProductProvider extends ChangeNotifier {
       Hive.box<HiveLocalCartItem>('cart_items');
   final Box<HiveSavedOrder> _savedOrdersBox =
       Hive.box<HiveSavedOrder>('saved_orders');
+  late Box<HiveSavedOrder> _confirmedOrdersBox;
+  bool _isConfirmedBoxInitialized = false;
 
   // The complete list of products loaded locally.
   List<GetProduct> _products = [];
@@ -99,6 +101,10 @@ class LocalProductProvider extends ChangeNotifier {
   final List<SavedOrder> _savedOrders = [];
   List<SavedOrder> get savedOrders => _savedOrders;
 
+  // List of confirmed orders
+  final List<SavedOrder> _confirmedOrders = [];
+  List<SavedOrder> get confirmedOrders => _confirmedOrders;
+
   // Currently loaded order (for editing)
   SavedOrder? _currentOrder;
   SavedOrder? get currentOrder => _currentOrder;
@@ -120,6 +126,100 @@ class LocalProductProvider extends ChangeNotifier {
     _loadProductsFromHive();
     _loadCartFromHive();
     _loadSavedOrdersFromHive();
+    _initConfirmedOrdersBox();
+  }
+
+  // Initialize the confirmed orders box safely
+  Future<void> _initConfirmedOrdersBox() async {
+    try {
+      if (!Hive.isBoxOpen('confirmed_orders')) {
+        _confirmedOrdersBox = await Hive.openBox<HiveSavedOrder>('confirmed_orders');
+      } else {
+        _confirmedOrdersBox = Hive.box<HiveSavedOrder>('confirmed_orders');
+      }
+      _isConfirmedBoxInitialized = true;
+      _loadConfirmedOrdersFromHive();
+    } catch (e) {
+      debugPrint("Error initializing confirmed orders box: $e");
+      _isConfirmedBoxInitialized = false;
+    }
+  }
+
+  // Load confirmed orders from Hive
+  void _loadConfirmedOrdersFromHive() {
+    if (!_isConfirmedBoxInitialized) return;
+    
+    _confirmedOrders.clear();
+    try {
+      for (var hiveSavedOrder in _confirmedOrdersBox.values) {
+        List<LocalCartItem> orderItems = hiveSavedOrder.items.map((hiveCartItem) {
+          final productJson = json.decode(hiveCartItem.serializedProduct.value);
+          final product = GetProduct.fromJson(productJson);
+
+          return LocalCartItem(
+            product: product,
+            quantity: hiveCartItem.quantity,
+            price: hiveCartItem.price,
+          );
+        }).toList();
+
+        _confirmedOrders.add(SavedOrder(
+          id: hiveSavedOrder.id,
+          orderNumber: hiveSavedOrder.orderNumber,
+          items: orderItems,
+          customerName: hiveSavedOrder.customerName,
+          customerPhone: hiveSavedOrder.customerPhone,
+          comment: hiveSavedOrder.comment,
+          createdAt: hiveSavedOrder.createdAt,
+          total: hiveSavedOrder.total,
+          deliveryMethod: hiveSavedOrder.deliveryMethod,
+        ));
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error loading confirmed orders: $e");
+    }
+  }
+
+  // Save confirmed orders to Hive
+  void _saveConfirmedOrdersToHive() {
+    if (!_isConfirmedBoxInitialized) {
+      _initConfirmedOrdersBox().then((_) {
+        _saveConfirmedOrdersToHive();
+      });
+      return;
+    }
+    
+    try {
+      _confirmedOrdersBox.clear();
+      for (var order in _confirmedOrders) {
+        List<HiveLocalCartItem> hiveItems = order.items
+            .map((item) => HiveLocalCartItem(
+                  productId: item.product.productId!,
+                  quantity: item.quantity,
+                  price: item.price,
+                  serializedProduct:
+                      HiveStringValue(json.encode(item.product.toJson())),
+                ))
+            .toList();
+
+        final hiveSavedOrder = HiveSavedOrder(
+          id: order.id,
+          orderNumber: order.orderNumber,
+          items: hiveItems,
+          customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          comment: order.comment,
+          createdAt: order.createdAt,
+          total: order.total,
+          deliveryMethod: order.deliveryMethod,
+        );
+
+        _confirmedOrdersBox.add(hiveSavedOrder);
+      }
+    } catch (e) {
+      debugPrint("Error saving confirmed orders: $e");
+    }
   }
 
   // Load products from Hive
@@ -620,6 +720,135 @@ class LocalProductProvider extends ChangeNotifier {
       debugPrint("No product found for barcode: $barCode");
     }
     return filteredProducts;
+  }
+
+  /// Saves the current cart as a confirmed order
+  SavedOrder saveCurrentCartAsConfirmedOrder({
+    String? customerName,
+    String? customerPhone,
+    String? comment,
+    String? deliveryMethod,
+  }) {
+    if (_cartItems.isEmpty) {
+      throw Exception("Cannot save an empty cart as confirmed order");
+    }
+
+    // Generate a unique ID for the order (timestamp-based)
+    final String orderId = DateTime.now().millisecondsSinceEpoch.toString();
+
+    // Calculate total
+    double total = cartTotal;
+
+    // Create a deep copy of cart items to prevent modification
+    List<LocalCartItem> orderItems = _cartItems
+        .map((item) => LocalCartItem(
+              product: item.product,
+              quantity: item.quantity,
+              price: item.price,
+            ))
+        .toList();
+
+    // Generate sequential order number - use "CONF-" prefix for confirmed orders
+    String orderNumber = generateConfirmedOrderNumber();
+
+    // Create the confirmed order
+    final SavedOrder order = SavedOrder(
+      id: orderId,
+      orderNumber: orderNumber,
+      items: orderItems,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      comment: comment,
+      createdAt: DateTime.now().toIso8601String(),
+      total: total,
+      deliveryMethod: deliveryMethod,
+    );
+
+    // Add to confirmed orders list
+    _confirmedOrders.add(order);
+    _saveConfirmedOrdersToHive();
+    notifyListeners();
+
+    return order;
+  }
+
+  /// Moves an existing saved order to confirmed orders
+  SavedOrder? moveToConfirmedOrders(String orderId) {
+    try {
+      // Find the order in saved orders
+      int index = _savedOrders.indexWhere((o) => o.id == orderId);
+      
+      if (index != -1) {
+        // Get the order
+        SavedOrder order = _savedOrders[index];
+        
+        // Create a new order with "CONF-" prefix for order number
+        SavedOrder confirmedOrder = SavedOrder(
+          id: order.id,
+          orderNumber: "CONF-${order.orderNumber.split('-')[1]}",
+          items: order.items,
+          customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          comment: order.comment,
+          createdAt: order.createdAt,
+          total: order.total,
+          deliveryMethod: order.deliveryMethod,
+        );
+        
+        // Add to confirmed orders
+        _confirmedOrders.add(confirmedOrder);
+        
+        // Remove from saved orders
+        _savedOrders.removeAt(index);
+        
+        // Save both lists
+        _saveSavedOrdersToHive();
+        _saveConfirmedOrdersToHive();
+        
+        notifyListeners();
+        
+        return confirmedOrder;
+      }
+      return null;
+    } catch (e) {
+      debugPrint("Error moving order to confirmed orders: $e");
+      return null;
+    }
+  }
+
+  /// Generates sequential order numbers in format CONF-1, CONF-2, etc. for confirmed orders
+  String generateConfirmedOrderNumber() {
+    // Find the highest existing order number
+    int highestNumber = 0;
+
+    for (var order in _confirmedOrders) {
+      // Extract the number part from the orderNumber (e.g., "CONF-5" -> 5)
+      String numPart = order.orderNumber.split('-')[1];
+      int orderNum = int.tryParse(numPart) ?? 0;
+
+      if (orderNum > highestNumber) {
+        highestNumber = orderNum;
+      }
+    }
+
+    // Return next number in sequence
+    return 'CONF-${highestNumber + 1}';
+  }
+
+  /// Finds a confirmed order by its ID
+  SavedOrder? findConfirmedOrderById(String orderId) {
+    try {
+      return _confirmedOrders.firstWhere((order) => order.id == orderId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Deletes a confirmed order
+  void deleteConfirmedOrder(String orderId) {
+    _confirmedOrders.removeWhere((o) => o.id == orderId);
+    _saveConfirmedOrdersToHive();
+    notifyListeners();
   }
 
   /// Saves the current cart as an order
