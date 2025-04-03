@@ -441,6 +441,7 @@ class GridSelectionProvider extends ChangeNotifier {
     required String productName,
     required String sellingPrice,
     required String mrp,
+    required String quantity,
     required String unit,
     required String barcode,
     required String accessToken,
@@ -451,6 +452,7 @@ class GridSelectionProvider extends ChangeNotifier {
       'category_id': categoryId,
       'mrp': mrp,
       'barcode': barcode,
+      'quantity': quantity,
       'unit': unit,
     };
 
@@ -974,8 +976,7 @@ class GridSelectionProvider extends ChangeNotifier {
       queryParameters['filter_name'] = filterName;
     }
 
-    final uri =
-        Uri.parse(APPUrl.listStock).replace(queryParameters: queryParameters);
+    final uri = Uri.parse(APPUrl.listStock);
 
     try {
       final response = await http.get(
@@ -986,7 +987,7 @@ class GridSelectionProvider extends ChangeNotifier {
         },
       ).timeout(const Duration(seconds: 15));
 
-      // debugPrint('inside listSTockAPI ${response.statusCode}');
+      debugPrint('inside listSTockAPI ${response.statusCode}');
 
       if (response.statusCode == 200) {
         if (response.body.isNotEmpty) {
@@ -999,24 +1000,25 @@ class GridSelectionProvider extends ChangeNotifier {
             listStockModelDataList = listStockModel.data;
             filteredStockList =
                 List<ListStockModelData>.from(listStockModelDataList!);
-            // debugPrint("categoryListModel.pagination?.toString()");
-            // debugPrint(listStockModel.pagination?.toString());
 
             stockCurrentPage = listStockModel.pagination?.currentPage ?? 1;
-            stockTotalPages = listStockModel.pagination?.lastPage ?? 1;
+            // Calculate total pages based on total items and per_page
+            int totalItems = listStockModel.pagination?.lastPage ?? 0;
+            int itemsPerPage = listStockModel.pagination?.perPage ?? 20;
+            stockTotalPages = (totalItems / itemsPerPage).ceil();
+
             notifyListeners();
           } catch (e) {
-            // debugPrint('Error parsing JSON data: $e');
-            // debugPrint('JSON structure: ${jsonData.runtimeType}');
+            debugPrint('Error parsing JSON data: $e');
             if (jsonData is Map) {
               jsonData.forEach((key, value) {
-                // debugPrint('Key: $key, Value type: ${value.runtimeType}');
+                debugPrint('Key: $key, Value type: ${value.runtimeType}');
               });
             }
             throw Exception('Failed to parse stock list data: $e');
           }
         } else {
-          // debugPrint('Empty response body');
+          debugPrint('Empty response body');
           throw Exception('Received empty response');
         }
       } else {
@@ -1025,7 +1027,7 @@ class GridSelectionProvider extends ChangeNotifier {
         throw Exception('Failed to load stock list');
       }
     } catch (error) {
-      // debugPrint('Error in listSTockAPI: $error');
+      debugPrint('Error in listSTockAPI: $error');
       rethrow;
     }
   }

@@ -141,37 +141,37 @@ class StockDetailsWidget extends StatelessWidget {
                         style: buildCustomStyle(FontWeightManager.semiBold,
                             FontSize.s18, 0.30, ColorManager.textColor),
                       ),
-                      BuildDetailRow(
-                        title1: "Product Name",
-                        content1: stockDetails?.productName ?? "",
-                        title2: "Product Slug",
-                        content2: stockDetails?.product?.slug ?? "",
-                      ),
-                      BuildDetailRow(
-                        title1: "Product Price",
-                        content1:
-                            stockDetails?.product?.price?.toString() ?? "",
-                        title2: "Available Stock",
-                        content2: stockDetails?.quantity?.toString() ?? "",
-                      ),
-                      BuildDetailRow(
-                        title1: "Sell Currency",
-                        content1: stockDetails?.product?.currency ?? "",
-                        title2: "",
-                        content2: "",
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        "Product Stock Details",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s18, 0.30, ColorManager.textColor),
-                      ),
-                      BuildDetailRow(
-                        title1: "Store Name",
-                        content1: stockDetails?.storeName ?? "",
-                        title2: "Product Quantity",
-                        content2: stockDetails?.quantity?.toString() ?? "",
-                      ),
+                      // BuildDetailRow(
+                      //   title1: "Product Name",
+                      //   content1: stockDetails?.productName ?? "",
+                      //   title2: "Product Slug",
+                      //   content2: stockDetails?.product?.slug ?? "",
+                      // ),
+                      // BuildDetailRow(
+                      //   title1: "Product Price",
+                      //   content1:
+                      //       stockDetails?.product?.price?.toString() ?? "",
+                      //   title2: "Available Stock",
+                      //   content2: stockDetails?.quantity?.toString() ?? "",
+                      // ),
+                      // BuildDetailRow(
+                      //   title1: "Sell Currency",
+                      //   content1: stockDetails?.product?.currency ?? "",
+                      //   title2: "",
+                      //   content2: "",
+                      // ),
+                      // const SizedBox(height: 20),
+                      // Text(
+                      //   "Product Stock Details",
+                      //   style: buildCustomStyle(FontWeightManager.semiBold,
+                      //       FontSize.s18, 0.30, ColorManager.textColor),
+                      // ),
+                      // BuildDetailRow(
+                      //   title1: "Store Name",
+                      //   content1: stockDetails?.storeName ?? "",
+                      //   title2: "Product Quantity",
+                      //   content2: stockDetails?.quantity?.toString() ?? "",
+                      // ),
                       BuildDetailRow(
                         title1: "Product Unit",
                         content1: stockDetails?.unit ?? "",
@@ -185,26 +185,26 @@ class StockDetailsWidget extends StatelessWidget {
                         content2:
                             stockDetails?.wholesalePrice?.toString() ?? "",
                       ),
-                      BuildDetailRow(
-                        title1: "Wholesale Min Unit",
-                        content1:
-                            stockDetails?.wholesaleMinUnit?.toString() ?? "",
-                        title2: "Expiry Date",
-                        content2: stockDetails?.expiryDate ?? "",
-                      ),
-                      BuildDetailRow(
-                        title1: "Batch Number",
-                        content1: stockDetails?.batchNumber ?? "",
-                        title2: "",
-                        content2: "",
-                      ),
+                      // BuildDetailRow(
+                      //   title1: "Wholesale Min Unit",
+                      //   content1:
+                      //       stockDetails?.wholesaleMinUnit?.toString() ?? "",
+                      //   title2: "Expiry Date",
+                      //   content2: stockDetails?.expiryDate ?? "",
+                      // ),
+                      // BuildDetailRow(
+                      //   title1: "Batch Number",
+                      //   content1: stockDetails?.batchNumber ?? "",
+                      //   title2: "",
+                      //   content2: "",
+                      // ),
                       const SizedBox(height: 20),
                       Text(
                         "Product Properties",
                         style: buildCustomStyle(FontWeightManager.semiBold,
                             FontSize.s18, 0.30, ColorManager.textColor),
                       ),
-                      ...buildProductProperties(stockDetails?.stockProperties),
+                      // ...buildProductProperties(stockDetails?.stockProperties),
                       const SizedBox(height: 50),
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0),

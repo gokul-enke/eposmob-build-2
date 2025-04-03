@@ -146,6 +146,7 @@ class BillingCartItemsTable extends StatelessWidget {
                                   // When focus is lost, update the price
                                   localProductProvider.updateItemPrice(
                                     item.product.productId!,
+                                    item.selectedStock,
                                     double.tryParse(controller.text) ??
                                         item.price!,
                                   );
@@ -169,6 +170,7 @@ class BillingCartItemsTable extends StatelessWidget {
                                   // Update when user presses enter
                                   localProductProvider.updateItemPrice(
                                     item.product.productId!,
+                                    item.selectedStock,
                                     double.tryParse(newPrice) ?? item.price!,
                                   );
                                 },
@@ -194,8 +196,8 @@ class BillingCartItemsTable extends StatelessWidget {
                               width: 15,
                             ),
                             onPressed: () {
-                              localProductProvider
-                                  .removeFromCart(item.product.productId!);
+                              localProductProvider.removeFromCart(
+                                  item.product.productId!, item.selectedStock);
                             },
                           ),
                         )),
@@ -210,4 +212,4 @@ class BillingCartItemsTable extends StatelessWidget {
       },
     );
   }
-} 
+}

@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
-import '../../controllers/sidebar_controller.dart';
 
 import '../../models/list_stock.dart';
 import '../../providers/auth_model.dart';
@@ -24,8 +22,9 @@ class AddStockScreen extends StatefulWidget {
 
 class _AddStockScreenState extends State<AddStockScreen> {
   final TextEditingController stockNameController = TextEditingController();
-
+  ListStockModelData? selectedStock;
   bool initLoading = false;
+
   @override
   void initState() {
     loadInitData();
@@ -88,25 +87,157 @@ class _AddStockScreenState extends State<AddStockScreen> {
     loadInitData();
   }
 
-  // loadData() async {
-  //   setState(() {
-  //     initLoading = true;
-  //   });
-  //   String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-  //   GridSelectionProvider gridSelectionProvider =
-  //       Provider.of<GridSelectionProvider>(context, listen: false);
-  //   await gridSelectionProvider.listSTockAPI(accessToken: accessToken ?? '');
-  //   setState(() {
-  //     initLoading = false;
-  //   });
-  // }
+  void _showStockDetails(ListStockModelData stock) {
+    setState(() {
+      selectedStock = stock;
+    });
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        elevation: 8,
+        backgroundColor: Colors.white,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width / 2,
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Stock Details',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.black),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    _buildDetailRow('Product Name', stock.productName ?? 'N/A'),
+                    _buildDetailRow('Store Name', stock.storeName ?? 'N/A'),
+                    _buildDetailRow('Quantity', stock.qty?.toString() ?? 'N/A'),
+                    _buildDetailRow('Unit', stock.unit ?? 'N/A'),
+                    _buildDetailRow(
+                        'Retail Price', stock.retailPrice?.toString() ?? 'N/A'),
+                    _buildDetailRow('Wholesale Price',
+                        stock.wholesalePrice?.toString() ?? 'N/A'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  CustomRoundButton(
+                    title: "Close",
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    borderColor: ColorManager.kPrimaryColor,
+                    fct: () => Navigator.pop(context),
+                    height: 45,
+                    width: 120,
+                    fontSize: FontSize.s12,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(
+              '$label: ',
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s14,
+                0.20,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.20,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTableHeader(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s12,
+          0.18,
+          ColorManager.kPrimaryColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTableCell(String text) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s9,
+          0.13,
+          Colors.black,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-
-    SideBarController sideBarController = Get.put(SideBarController());
+    final bool isSmallScreen = size.width < 600;
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
@@ -123,7 +254,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
             color: Colors.white),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-          child: ListView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -133,28 +265,22 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s20, 0.30, ColorManager.textColor),
                   ),
-                  CustomRoundButton(
-                    title: "Add Product Stock",
-                    fct: () {
-                      sideBarController.index.value = 18;
-                    },
-                    fontSize: 12,
-                    height: 45,
-                    width: 200,
-                  ),
                 ],
               ),
-              const SizedBox(
-                height: 15,
-              ),
+              const SizedBox(height: 15),
+              Row(
+                children: [
+                  Expanded(
+                    child: Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      alignment: WrapAlignment.start,
+                      crossAxisAlignment: WrapCrossAlignment.end,
+                      children: [
               SizedBox(
-                height: 90,
-                child: Row(
-                  // scrollDirection: Axis.horizontal,
-                  // physics: const BouncingScrollPhysics(),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10.0),
+                          width: isSmallScreen
+                              ? size.width * 0.8
+                              : size.width * 0.3,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -172,7 +298,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
                           ),
                           buildColumnWidgetForTextFields(
                             height: 45,
-                            width: 120,
+                                width: isSmallScreen
+                                    ? size.width * 0.8
+                                    : size.width * 0.3,
                             onchanged: (value) {},
                             controller: stockNameController,
                             size: size,
@@ -181,456 +309,186 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         ],
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10.0, top: 30),
-                      child: CustomRoundButton(
+                        CustomRoundButton(
                         title: "Search",
                         fct: () => {searchStocks(1)},
                         height: 45,
-                        width: size.width * 0.09,
+                          width: isSmallScreen
+                              ? size.width * 0.4
+                              : size.width * 0.15,
                         fontSize: FontSize.s12,
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10.0, top: 30),
-                      child: CustomRoundButton(
+                        CustomRoundButton(
                         title: "Reset",
                         boxColor: Colors.white,
                         textColor: ColorManager.kPrimaryColor,
                         fct: resetSearch,
                         height: 45,
-                        width: size.width * 0.09,
+                          width: isSmallScreen
+                              ? size.width * 0.4
+                              : size.width * 0.15,
                         fontSize: FontSize.s12,
+                        ),
+                      ],
                       ),
                     ),
                   ],
-                ),
               ),
-              // Row(
-              //   mainAxisAlignment: MainAxisAlignment.end,
-              //   children: [
-              //     // Text(
-              //     //   "Product Stock List  ",
-              //     //   style: buildCustomStyle(FontWeightManager.semiBold,
-              //     //       FontSize.s20, 0.30, ColorManager.textColor),
-              //     // ),
-              //     Row(
-              //       mainAxisAlignment: MainAxisAlignment.end,
-              //       children: [
-              //         // SizedBox(
-              //         //   height: 45,
-              //         //   width: 180, //size.width * 0.5,
-              //         //   child: TextField(
-              //         //     cursorColor: ColorManager.kPrimaryColor,
-              //         //     cursorHeight: 13,
-              //         //     //  controller: searchTextController,
-              //         //     onChanged: (value) {
-              //         //       Provider.of<GridSelectionProvider>(context,
-              //         //               listen: false)
-              //         //           .searchStocks(value);
-              //         //     },
-              //         //     style: buildCustomStyle(FontWeightManager.medium,
-              //         //         FontSize.s10, 0.18, ColorManager.textColor),
-              //         //     decoration: decoration.copyWith(
-              //         //         hintText: "Search    ",
-              //         //         hintStyle: buildCustomStyle(
-              //         //             FontWeightManager.medium,
-              //         //             FontSize.s10,
-              //         //             0.18,
-              //         //             ColorManager.textColor),
-              //         //         // prefixIcon: const Icon(
-              //         //         //   Icons.search,
-              //         //         //   color: Colors.black,
-              //         //         //   size: 35,
-              //         //         // ),
-              //         //         prefixIconColor: Colors.black),
-              //         //   ),
-              //         // ),
-              //         const SizedBox(
-              //           width: 10,
-              //         ),
-              //         CustomRoundButton(
-              //           title: "Add Product Stock",
-              //           fct: () {
-              //             sideBarController.index.value = 18;
-              //           },
-              //           fontSize: 12,
-              //           height: 45,
-              //           width: 200,
-              //         ),
-              //       ],
-              //     ),
-              //   ],
-              // ),
-              initLoading
-                  ? SizedBox(
-                      height: size.height,
-                      child: const Center(
-                          child: CircularProgressIndicator.adaptive()))
+              const SizedBox(height: 20),
+              Expanded(
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: initLoading
+                          ? const Center(
+                              child: CircularProgressIndicator.adaptive())
                   : Consumer<GridSelectionProvider>(
                       builder: (context, gridProvider, child) {
-                        List<ListStockModelData>? listStockModelDataList =
+                                List<ListStockModelData>?
+                                    listStockModelDataList =
                             gridProvider.getListStockModelDataList;
 
+                                if (listStockModelDataList == null ||
+                                    listStockModelDataList.isEmpty) {
+                                  return const Center(
+                                      child: Text("No stock data available"));
+                                }
+
                         return BuildBoxShadowContainer(
-                          // height: size.height, //120,
-                          margin: const EdgeInsets.only(top: 20),
+                                  margin: const EdgeInsets.only(top: 5),
                           circleRadius: 7,
-                          offsetValue: const Offset(1, 1),
+                                  offsetValue: const Offset(2, 2),
+                                  blurRadius: 8.0,
+                                  color: Colors.white,
+                                  child: Column(
+                                    children: [
+                                      // Fixed table header
+                                      Container(
+                                        decoration: const BoxDecoration(
+                                          color: ColorManager.tableBGColor,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black12,
+                                              offset: Offset(0, 2),
+                                              blurRadius: 2.0,
+                                            ),
+                                          ],
+                                        ),
                           child: Table(
                             columnWidths: const {
-                              0: FractionColumnWidth(0.01),
-                              1: FractionColumnWidth(0.04),
-                              2: FractionColumnWidth(0.04),
-                              3: FractionColumnWidth(0.01),
-                              4: FractionColumnWidth(0.04),
-                              5: FractionColumnWidth(0.04),
-                              6: FractionColumnWidth(0.07),
-                            },
-                            border: const TableBorder.symmetric(
-                                outside: BorderSide(
-                                    color: ColorManager.tableBOrderColor,
-                                    width: 0.3),
-                                inside: BorderSide(
-                                    color: ColorManager.tableBOrderColor,
-                                    width: 0.8)),
-                            defaultVerticalAlignment:
-                                TableCellVerticalAlignment.middle,
+                                            0: FlexColumnWidth(0.5),  // No
+                                            1: FlexColumnWidth(2.0),  // Product Name
+                                            2: FlexColumnWidth(2.0),  // Store Name
+                                            3: FlexColumnWidth(0.8),  // Quantity
+                                            4: FlexColumnWidth(0.8),  // Unit
+                                            5: FlexColumnWidth(1.2),  // Retail Price
+                                            6: FlexColumnWidth(1.2),  // Wholesale Price
+                                            7: FlexColumnWidth(1.0),  // Action
+                                          },
+                                          border: null,
+                                          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                             children: [
                               TableRow(
-                                  decoration: const BoxDecoration(
-                                      color: ColorManager.tableBGColor),
                                   children: [
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                              child: Text(
-                                            "No",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.18,
-                                              ColorManager.kPrimaryColor,
+                                                _buildTableHeader('No'),
+                                                _buildTableHeader('Product Name'),
+                                                _buildTableHeader('Store Name'),
+                                                _buildTableHeader('Quantity'),
+                                                _buildTableHeader('Unit'),
+                                                _buildTableHeader('Retail Price'),
+                                                _buildTableHeader('Wholesale Price'),
+                                                _buildTableHeader('Action'),
+                                              ],
                                             ),
-                                          )),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                              child: Text(
-                                            "Product Name",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.18,
-                                              ColorManager.kPrimaryColor,
-                                            ),
-                                          )),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                              child: Text(
-                                            "Store Name",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.18,
-                                              ColorManager.kPrimaryColor,
-                                            ),
-                                          )),
-                                        )),
-                                    // TableCell(
-                                    //     verticalAlignment:
-                                    //         TableCellVerticalAlignment.middle,
-                                    //     child: Padding(
-                                    //       padding: const EdgeInsets.all(15.0),
-                                    //       child: Center(
-                                    //           child: Text(
-                                    //         "User Name",
-                                    //         style: buildCustomStyle(
-                                    //           FontWeightManager.medium,
-                                    //           FontSize.s12,
-                                    //           0.18,
-                                    //           ColorManager.kPrimaryColor,
-                                    //         ),
-                                    //       )),
-                                    //     )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                              child: Text(
-                                            "Quantity",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.18,
-                                              ColorManager.kPrimaryColor,
-                                            ),
-                                          )),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                              child: Text(
-                                            "Retail Price",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.18,
-                                              ColorManager.kPrimaryColor,
-                                            ),
-                                          )),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                              child: Text(
-                                            "Wholesale Price",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.18,
-                                              ColorManager.kPrimaryColor,
-                                            ),
-                                          )),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                              child: Text(
-                                            "Action",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.18,
-                                              ColorManager.kPrimaryColor,
-                                            ),
-                                          )),
-                                        )),
-                                  ]),
-
-                              // Map your order data to table rows here
-                              ...listStockModelDataList!
-                                  .asMap()
-                                  .entries
-                                  .map((entry) {
+                                          ],
+                                        ),
+                                      ),
+                                      // Scrollable table body
+                                      Expanded(
+                                        child: SingleChildScrollView(
+                                          scrollDirection: Axis.vertical,
+                                          child: Table(
+                                            columnWidths: const {
+                                              0: FlexColumnWidth(0.5),  // No
+                                              1: FlexColumnWidth(2.0),  // Product Name
+                                              2: FlexColumnWidth(2.0),  // Store Name
+                                              3: FlexColumnWidth(0.8),  // Quantity
+                                              4: FlexColumnWidth(0.8),  // Unit
+                                              5: FlexColumnWidth(1.2),  // Retail Price
+                                              6: FlexColumnWidth(1.2),  // Wholesale Price
+                                              7: FlexColumnWidth(1.0),  // Action
+                                            },
+                                            border: null,
+                                            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                            children: [
+                                              // Table Rows
+                                              ...listStockModelDataList.asMap().entries.map((entry) {
                                 final int index = entry.key;
                                 final stock = entry.value;
                                 return TableRow(
+                                                  decoration: BoxDecoration(
+                                                    color: index % 2 == 0 
+                                                        ? Colors.white 
+                                                        : Colors.grey.withOpacity(0.1),
+                                                  ),
                                   children: [
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
+                                                    _buildTableCell('${index + 1}'),
+                                                    _buildTableCell('${stock.productName}'),
+                                                    _buildTableCell('${stock.storeName}'),
+                                                    _buildTableCell('${stock.qty}'),
+                                                    _buildTableCell('${stock.unit}'),
+                                                    _buildTableCell('${stock.retailPrice}'),
+                                                    _buildTableCell('${stock.wholesalePrice}'),
+                                                    Center(
                                         child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                            child: Text(
-                                              "${index + 1}",
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s9,
-                                                0.13,
-                                                Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                            child: Text(
-                                              "${stock.productName}",
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s9,
-                                                0.13,
-                                                Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                            child: Text(
-                                              "${stock.storeName}",
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s9,
-                                                0.13,
-                                                Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                        )),
-                                    // TableCell(
-                                    //     verticalAlignment:
-                                    //         TableCellVerticalAlignment.middle,
-                                    //     child: Padding(
-                                    //       padding: const EdgeInsets.all(15.0),
-                                    //       child: Center(
-                                    //         child: Text(
-                                    //           "${stock.userName}",
-                                    //           style: buildCustomStyle(
-                                    //             FontWeightManager.medium,
-                                    //             FontSize.s9,
-                                    //             0.13,
-                                    //             Colors.black,
-                                    //           ),
-                                    //         ),
-                                    //       ),
-                                    //     )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                            child: Text(
-                                              "${stock.quantity}",
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s9,
-                                                0.13,
-                                                Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                            child: Text(
-                                              "${stock.retailPrice}",
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s9,
-                                                0.13,
-                                                Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                            child: Text(
-                                              "${stock.wholesalePrice}",
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s9,
-                                                0.13,
-                                                Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                        )),
-                                    TableCell(
-                                        verticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(15.0),
-                                          child: Center(
-                                            child: Row(
-                                              children: [
-                                                BuildBoxShadowContainer(
-                                                    margin:
-                                                        const EdgeInsets.only(
-                                                            left: 5, right: 5),
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: BuildBoxShadowContainer(
+                                                          margin: const EdgeInsets.only(left: 5, right: 5),
                                                     circleRadius: 5,
                                                     child: IconButton(
                                                       icon: Icon(
                                                         Icons.visibility,
                                                         size: 18,
-                                                        color: ColorManager
-                                                            .kPrimaryColor
-                                                            .withOpacity(0.9),
+                                                              color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                                                            ),
+                                                            onPressed: () => _showStockDetails(stock),
+                                                            constraints: const BoxConstraints(
+                                                              minWidth: 36,
+                                                              minHeight: 36,
+                                                            ),
+                                                            padding: EdgeInsets.zero,
+                                                          ),
+                                                        ),
                                                       ),
-                                                      onPressed: () {
-                                                        gridProvider
-                                                            .callStockDetails(
-                                                                accessToken:
-                                                                    accessToken ??
-                                                                        '',
-                                                                stockId:
-                                                                    stock.id ??
-                                                                        0);
-                                                        sideBarController
-                                                            .index.value = 33;
-                                                      },
-                                                    )),
-                                                // BuildBoxShadowContainer(
-                                                //     margin:
-                                                //         const EdgeInsets.only(
-                                                //             left: 5, right: 5),
-                                                //     circleRadius: 5,
-                                                //     color: Colors.red
-                                                //         .withOpacity(0.9),
-                                                //     child: IconButton(
-                                                //       icon: const Icon(
-                                                //         Icons.delete,
-                                                //         size: 18,
-                                                //         color: Colors.white,
-                                                //       ),
-                                                //       onPressed: () {},
-                                                //     )),
-                                              ],
-                                            ),
-                                          ),
-                                        )),
+                                                    ),
                                   ],
                                 );
                               }).toList(),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
                             ],
                           ),
                         );
                       },
+                            ),
                     ),
+                    const SizedBox(height: 10),
               PaginationControl(
-                currentPage:
-                    Provider.of<GridSelectionProvider>(context, listen: true)
+                      currentPage: Provider.of<GridSelectionProvider>(context,
+                              listen: true)
                         .stockCurrentPage,
-                totalPages:
-                    Provider.of<GridSelectionProvider>(context, listen: true)
+                      totalPages: Provider.of<GridSelectionProvider>(context,
+                              listen: true)
                         .stockTotalPages,
                 onPageChanged: (int page) {
                   searchStocks(page);
                 },
-              )
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),

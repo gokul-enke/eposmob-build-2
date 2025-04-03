@@ -1016,6 +1016,7 @@ class _BillingNewPageState extends State<BillingNewPage> {
                                   // When focus is lost, update the price
                                   localProductProvider.updateItemPrice(
                                     item.product.productId!,
+                                    item.selectedStock,
                                     double.tryParse(controller.text) ??
                                         item.price!,
                                   );
@@ -1039,6 +1040,7 @@ class _BillingNewPageState extends State<BillingNewPage> {
                                   // Update when user presses enter
                                   localProductProvider.updateItemPrice(
                                     item.product.productId!,
+                                    item.selectedStock,
                                     double.tryParse(newPrice) ?? item.price!,
                                   );
                                 },
@@ -1074,8 +1076,8 @@ class _BillingNewPageState extends State<BillingNewPage> {
                               width: 15,
                             ),
                             onPressed: () {
-                              localProductProvider
-                                  .removeFromCart(item.product.productId!);
+                              localProductProvider.removeFromCart(
+                                  item.product.productId!, item.selectedStock);
                             },
                           ),
                         )),

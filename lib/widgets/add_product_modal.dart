@@ -17,10 +17,9 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:provider/provider.dart';
 
 class AddProductWithBarcodeModal extends StatefulWidget {
-  final String barcode;
+  final String? barcode;
 
-  const AddProductWithBarcodeModal({Key? key, required this.barcode})
-      : super(key: key);
+  const AddProductWithBarcodeModal({Key? key, this.barcode}) : super(key: key);
 
   @override
   State<AddProductWithBarcodeModal> createState() =>
@@ -30,9 +29,12 @@ class AddProductWithBarcodeModal extends StatefulWidget {
 class _AddProductWithBarcodeModalState
     extends State<AddProductWithBarcodeModal> {
   final GlobalKey<FormState> formKey = GlobalKey<FormState>(); // Step 1
-  TextEditingController? _productBarcodeController;
+  final TextEditingController _productBarcodeController =
+      TextEditingController();
   final TextEditingController _productNameController = TextEditingController();
   final TextEditingController _productMRPController = TextEditingController();
+  final TextEditingController _productQuantityController =
+      TextEditingController();
   final TextEditingController _productSellingPriceController =
       TextEditingController();
   bool isLoading = false;
@@ -42,15 +44,18 @@ class _AddProductWithBarcodeModalState
 
   @override
   void initState() {
-    _productBarcodeController = TextEditingController(text: widget.barcode);
+    if (widget.barcode != null) {
+      _productBarcodeController.text = widget.barcode!;
+    }
     super.initState();
   }
 
   @override
   void dispose() {
-    _productBarcodeController?.dispose();
+    _productBarcodeController.dispose();
     _productNameController.dispose();
     _productMRPController.dispose();
+    _productQuantityController.dispose();
     _productSellingPriceController.dispose();
     isLoading = false;
     selectedUnit = null;
@@ -107,7 +112,9 @@ class _AddProductWithBarcodeModalState
                 ],
               ),
               Text(
-                "No product was found with the barcode ${widget.barcode} , would you like to create a new product?",
+                widget.barcode != null
+                    ? "No product was found with the barcode ${widget.barcode} , would you like to create a new product?"
+                    : "Create a new product with custom barcode",
                 style: const TextStyle(fontSize: 16, color: Colors.black54),
               ),
               const SizedBox(height: 16),
@@ -147,8 +154,13 @@ class _AddProductWithBarcodeModalState
                       }
                       return null;
                     },
+                    onchanged: (value) {
+                      if (isValidatedOnce) {
+                        formKey.currentState!.validate();
+                      }
+                    },
                     hintText: 'Barcode',
-                    readOnly: true,
+                    readOnly: widget.barcode != null,
                     size: size,
                     width: size.width / 4.5,
                   ),
@@ -321,6 +333,37 @@ class _AddProductWithBarcodeModalState
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Product MRP TextField
+                  buildColumnWidgetForTextFields(
+                    width: size.width / 4.5,
+                    autofocus: true,
+                    isStarRed: true,
+                    controller: _productQuantityController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,2}$')),
+                    ],
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'This field is required';
+                      }
+                      return null;
+                    },
+                    onchanged: (value) {
+                      if (isValidatedOnce) {
+                        formKey.currentState!.validate();
+                      }
+                    },
+                    hintText: 'Quantity',
+                    size: size,
+                  ),
+                ],
+              ),
 
               const SizedBox(height: 16),
 
@@ -372,7 +415,8 @@ class _AddProductWithBarcodeModalState
                             sellingPrice: _productSellingPriceController.text,
                             mrp: _productMRPController.text,
                             unit: selectedUnit!,
-                            barcode: _productBarcodeController!.text,
+                            quantity: _productQuantityController.text,
+                            barcode: _productBarcodeController.text,
                             accessToken: accessToken ?? "",
                           )
                               .then((value) {
@@ -395,6 +439,10 @@ class _AddProductWithBarcodeModalState
                                   _productSellingPriceController.text),
                               quantity: 1,
                             );
+
+                            Provider.of<LocalProductProvider>(context,
+                                    listen: false)
+                                .refreshProducts();
 
                             Navigator.pop(context);
                             showScaffold(

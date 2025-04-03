@@ -89,8 +89,8 @@ class APPUrl {
   static String addToStock = '$baseURL/api/v1/product/add-stock';
   static String getTaxtDetails = '$baseURL/api/v1/tax/get-category-tax';
   static String addPurchaseStock = '$baseURL/api/v1/purchases/add-stock';
-  // static String listStock = '$baseURL/api/v1/product/list-stocks';
-  static String listStock = '$baseURL/api/v1/stock-searchbar';
+  static String listStock = '$baseURL/api/v1/product/list-stocks';
+  // static String listStock = '$baseURL/api/v1/stock-searchbar';
   static String detailsOfStock = '$baseURL/api/v1/product/stock-details';
   static String listPurchaseItems =
       '$baseURL/api/v1/purchases/list-purchase-items';

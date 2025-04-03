@@ -577,8 +577,8 @@ class LocalProductProvider extends ChangeNotifier {
     // Check if the product already exists in the list
     int index = _products.indexWhere((p) => p.productId == product.productId);
     if (index == -1) {
-      // If the product does not exist, add it to the list
-      _products.add(product);
+      // If the product does not exist, add it to the first position in the list
+      _products.insert(0, product);
       _saveProductsToHive();
       notifyListeners(); // Notify listeners about the change
       debugPrint("Product added: $product");
@@ -709,9 +709,13 @@ class LocalProductProvider extends ChangeNotifier {
     return _cartItems;
   }
 
-  void removeFromCart(int productId) {
-    int index =
-        _cartItems.indexWhere((item) => item.product.productId == productId);
+  void removeFromCart(int productId, Stock? selectedStock) {
+    // Add selectedStock parameter
+    int index = _cartItems.indexWhere((item) =>
+        item.product.productId == productId &&
+        (item.selectedStock?.id == selectedStock?.id ||
+            (item.selectedStock == null && selectedStock == null)));
+
     if (index != -1) {
       _cartItems.removeAt(index);
       _saveCartToHive();
@@ -719,11 +723,15 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
-  void updateItemPrice(int productId, double newPrice) {
-    int index =
-        _cartItems.indexWhere((item) => item.product.productId == productId);
+  void updateItemPrice(int productId, Stock? selectedStock, double newPrice) {
+    // Add selectedStock
+    int index = _cartItems.indexWhere((item) =>
+        item.product.productId == productId &&
+        (item.selectedStock?.id == selectedStock?.id ||
+            (item.selectedStock == null && selectedStock == null)));
+
     if (index != -1) {
-      _cartItems[index].price = newPrice; // Assuming price is mutable
+      _cartItems[index].price = newPrice;
       _saveCartToHive();
       notifyListeners();
     }
@@ -731,9 +739,12 @@ class LocalProductProvider extends ChangeNotifier {
 
   /// Decrements the quantity of the product in the cart.
   /// If the quantity becomes less than 1, the product is removed from the cart.
-  void decrementCartItem(int productId) {
-    int index =
-        _cartItems.indexWhere((item) => item.product.productId == productId);
+  void decrementCartItem(int productId, Stock? selectedStock) {
+    int index = _cartItems.indexWhere((item) =>
+        item.product.productId == productId &&
+        (item.selectedStock?.id == selectedStock?.id ||
+            (item.selectedStock == null && selectedStock == null)));
+
     if (index != -1) {
       if (_cartItems[index].quantity > 1) {
         _cartItems[index].quantity--;

@@ -46,116 +46,59 @@ class ListStockModel {
 }
 
 class ListStockModelData {
-  final int? id;
-  final int? productId;
-  final int? storeId;
-  final int? userId;
-  final int? quantity;
-  final String? unit;
-  final double? purchaseRate;
-  final double? retailPrice;
-  final double? wholesalePrice;
-  final int? wholesaleMinUnit;
-  final String? expiryDate;
-  final String? batchNumber;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
   final String? productName;
+  final String? categoryName;
+  final String? supplierName;
+  final int? qty;
+  final String? retailPrice;
+  final String? wholesalePrice;
+  final String? purchaseRate;
+  final String? mrp;
+  final String? unit;
   final String? storeName;
-  final ProductDetails? product;
-  final StoreDetails? store;
-  final String? userName;
-  final List<dynamic>? stockProperties;
-
-  final UserDetails? user;
+  final String? rack;
 
   ListStockModelData({
-    this.id,
-    this.productId,
-    this.storeId,
-    this.userId,
-    this.quantity,
-    this.unit,
-    this.purchaseRate,
+    this.productName,
+    this.categoryName,
+    this.supplierName,
+    this.qty,
     this.retailPrice,
     this.wholesalePrice,
-    this.wholesaleMinUnit,
-    this.expiryDate,
-    this.batchNumber,
-    this.createdAt,
-    this.updatedAt,
-    this.productName,
+    this.purchaseRate,
+    this.mrp,
+    this.unit,
     this.storeName,
-    this.product,
-    this.store,
-    this.userName,
-    this.stockProperties,
-    this.user,
+    this.rack,
   });
 
   factory ListStockModelData.fromJson(Map<String, dynamic> json) =>
       ListStockModelData(
-        id: json["id"],
-        productId: json["product_id"],
-        storeId: json["store_id"],
-        userId: json["user_id"],
-        quantity: json["quantity"],
-        unit: json["unit"],
-        purchaseRate: (json["purchase_rate"] is int)
-            ? (json["purchase_rate"] as int).toDouble()
-            : json["purchase_rate"],
-        retailPrice: (json["retail_price"] is int)
-            ? (json["retail_price"] as int).toDouble()
-            : json["retail_price"],
-        wholesalePrice: (json["wholesale_price"] is int)
-            ? (json["wholesale_price"] as int).toDouble()
-            : json["wholesale_price"],
-        wholesaleMinUnit: json["wholesale_min_unit"],
-        expiryDate: json["expiry_date"],
-        //  == null
-        //     ? null
-        //     : DateTime.parse(json["expiry_date"]),
-        batchNumber: json["batch_number"],
-        createdAt: json["created_at"] == null
-            ? null
-            : DateTime.parse(json["created_at"]),
-        updatedAt: json["updated_at"] == null
-            ? null
-            : DateTime.parse(json["updated_at"]),
         productName: json["product_name"],
+        categoryName: json["category_name"],
+        supplierName: json["supplier_name"],
+        qty: json["qty"],
+        retailPrice: json["retail_price"],
+        wholesalePrice: json["wholesale_price"],
+        purchaseRate: json["purchase_rate"],
+        mrp: json["mrp"],
+        unit: json["unit"],
         storeName: json["store_name"],
-        product: json["product"] == null
-            ? null
-            : ProductDetails.fromJson(json["product"]),
-        store:
-            json["store"] == null ? null : StoreDetails.fromJson(json["store"]),
-        userName: json["user_name"],
-        stockProperties: json["stock_properties"] == null
-            ? []
-            : List<dynamic>.from(json["stock_properties"]!.map((x) => x)),
-        user: json["user"] == null ? null : UserDetails.fromJson(json["user"]),
+        rack: json["rack"],
       );
 
   Map<String, dynamic> toJson() => {
-        "id": id,
-        "product_id": productId,
-        "store_id": storeId,
-        "user_id": userId,
-        "quantity": quantity,
-        "unit": unit,
-        "purchase_rate": purchaseRate,
+        "product_name": productName,
+        "category_name": categoryName,
+        "supplier_name": supplierName,
+        "qty": qty,
         "retail_price": retailPrice,
         "wholesale_price": wholesalePrice,
-        "wholesale_min_unit": wholesaleMinUnit,
-        "expiry_date": expiryDate,
-        //  "${expiryDate!.year.toString().padLeft(4, '0')}-${expiryDate!.month.toString().padLeft(2, '0')}-${expiryDate!.day.toString().padLeft(2, '0')}",
-        "batch_number": batchNumber,
-        "created_at": createdAt?.toIso8601String(),
-        "updated_at": updatedAt?.toIso8601String(),
-        "product_name": productName,
+        "purchase_rate": purchaseRate,
+        "mrp": mrp,
+        "unit": unit,
         "store_name": storeName,
-        "product": product?.toJson(),
-        "store": store?.toJson(),
+        "rack": rack,
       };
 }
 

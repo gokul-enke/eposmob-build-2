@@ -122,7 +122,8 @@ class _CompactQuantityControlLocalState
         final num difference = widget.quantity - newQuantity;
         // Call decrementCartItem for each item to remove
         for (int i = 0; i < difference; i++) {
-          localProductProvider.decrementCartItem(widget.productId);
+          localProductProvider.decrementCartItem(
+              widget.productId, widget.selectedStock);
         }
       }
     } finally {

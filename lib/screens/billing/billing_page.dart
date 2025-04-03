@@ -1,17 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
-import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/delivery_method.dart';
@@ -34,8 +31,10 @@ import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
 import 'package:pos_machine/widgets/horizontal_product_view_local.dart';
+import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:pos_machine/widgets/sidebar_product_list.dart';
+import 'package:pos_machine/widgets/stock_selection_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
@@ -43,10 +42,10 @@ class BillingPage extends StatefulWidget {
   const BillingPage({super.key});
 
   @override
-  State<BillingPage> createState() => _BillingPageState();
+  State<BillingPage> createState() => BillingPageState();
 }
 
-class _BillingPageState extends State<BillingPage> {
+class BillingPageState extends State<BillingPage> {
   final TextEditingController mobileNumberTextController =
       TextEditingController();
   final TextEditingController coupenCodeTextController =
@@ -100,7 +99,6 @@ class _BillingPageState extends State<BillingPage> {
   bool isLoadingSaveOrderAndPrint = false;
   bool isLoadingAddItem = false;
 
-  bool _isDialogOpen = false;
   Timer? _debounce;
   Timer? _debounceTimer;
 
@@ -535,7 +533,6 @@ class _BillingPageState extends State<BillingPage> {
 
                                             if (availableStocks.length > 1) {
                                               // Show stock selection modal
-                                              _isDialogOpen = true;
                                               final result = await showDialog(
                                                 context: context,
                                                 builder: (context) =>
@@ -544,7 +541,6 @@ class _BillingPageState extends State<BillingPage> {
                                                   stockOptions: availableStocks,
                                                 ),
                                               );
-                                              _isDialogOpen = false;
 
                                               if (result != null) {
                                                 // Process the selected product and stock
@@ -765,143 +761,6 @@ class _BillingPageState extends State<BillingPage> {
                                               barcodeController.clear();
                                               _focusTextField();
                                             }
-                                          } else if (filteredProducts.length >
-                                              1) {
-                                            // If there are multiple products with the same barcode, show product selection
-                                            _isDialogOpen = true;
-                                            final selectedProduct =
-                                                await showDialog(
-                                              context: context,
-                                              builder: (context) =>
-                                                  ProductSelectionModal(
-                                                products: filteredProducts,
-                                                barcode: query,
-                                              ),
-                                            );
-                                            _isDialogOpen = false;
-
-                                            if (selectedProduct != null) {
-                                              // Process the selected product
-                                              product = selectedProduct;
-
-                                              // Check if the selected product has stock
-                                              Stock? stock = null;
-                                              if (product.stock != null &&
-                                                  product.stock!.isNotEmpty) {
-                                                // Use the first available stock
-                                                List<Stock> availableStocks =
-                                                    product.stock!
-                                                        .where((stock) =>
-                                                            stock.quantity !=
-                                                                null &&
-                                                            stock.quantity! > 0)
-                                                        .toList();
-
-                                                if (availableStocks
-                                                    .isNotEmpty) {
-                                                  stock = availableStocks.first;
-                                                }
-                                              }
-
-                                              if (product.unit == 'KGS' &&
-                                                  prefix == '000' &&
-                                                  query.length == 14) {
-                                                // Weight-based product
-                                                String weightKg = lastFive!
-                                                    .substring(0,
-                                                        2); // First 2 digits = KG
-                                                String weightGrams =
-                                                    lastFive.substring(2,
-                                                        5); // Last 3 digits = Grams
-                                                double totalWeight =
-                                                    double.parse(weightKg) +
-                                                        (double.parse(
-                                                                weightGrams) /
-                                                            1000);
-
-                                                double? stockPrice =
-                                                    stock != null
-                                                        ? (double.tryParse(
-                                                                stock.price ??
-                                                                    "0") ??
-                                                            0)
-                                                        : null;
-
-                                                localProductProvider.addToCart(
-                                                  product: product,
-                                                  quantity: totalWeight,
-                                                  price: stockPrice,
-                                                  selectedStock: stock,
-                                                );
-
-                                                showScaffold(
-                                                  context: context,
-                                                  message: 'Added To Cart',
-                                                );
-                                              } else if (product.unit ==
-                                                      'PCS' &&
-                                                  prefix == '000' &&
-                                                  query.length == 14) {
-                                                // Count-based product
-                                                int quantity = int.parse(
-                                                    lastFive!); // Last 5 digits represent quantity
-
-                                                double? stockPrice =
-                                                    stock != null
-                                                        ? (double.tryParse(
-                                                                stock.price ??
-                                                                    "0") ??
-                                                            0)
-                                                        : null;
-
-                                                localProductProvider.addToCart(
-                                                  product: product,
-                                                  quantity: quantity,
-                                                  price: stockPrice,
-                                                  selectedStock: stock,
-                                                );
-
-                                                showScaffold(
-                                                  context: context,
-                                                  message: 'Added To Cart',
-                                                );
-                                              } else {
-                                                double? stockPrice =
-                                                    stock != null
-                                                        ? (double.tryParse(
-                                                                stock.price ??
-                                                                    "0") ??
-                                                            0)
-                                                        : null;
-
-                                                localProductProvider.addToCart(
-                                                  product: product,
-                                                  price: stockPrice,
-                                                  selectedStock: stock,
-                                                );
-
-                                                showScaffold(
-                                                  context: context,
-                                                  message: 'Added To Cart',
-                                                );
-                                              }
-
-                                              // Clear input fields
-                                              setState(() {
-                                                _autocompleteProductKey =
-                                                    GlobalKey();
-                                                quantityController.clear();
-                                                barcodeController.clear();
-                                                selectedProductIdController
-                                                    .clear();
-                                                unitPriceController.clear();
-                                              });
-                                              _focusTextField();
-                                            } else {
-                                              // User cancelled selection
-                                              barcodeController.clear();
-                                              _focusTextField();
-                                            }
                                           } else {
                                             // Single product found with no or single stock
                                             // Use the default stock if available
@@ -1009,16 +868,14 @@ class _BillingPageState extends State<BillingPage> {
                                             _focusTextField();
                                           }
                                         } else {
-                                          _isDialogOpen =
-                                              true; // Set dialog state to open
+// Set dialog state to open
                                           await showDialog(
                                             context: context,
                                             builder: (context) =>
                                                 AddProductWithBarcodeModal(
                                                     barcode: query),
                                           );
-                                          _isDialogOpen =
-                                              false; // Reset dialog state
+// Reset dialog state
 
                                           barcodeController.clear();
                                           _focusTextField();
@@ -1424,6 +1281,7 @@ class _BillingPageState extends State<BillingPage> {
                                               localProductProvider
                                                   .updateItemPrice(
                                                 item.product.productId!,
+                                                item.selectedStock,
                                                 double.tryParse(
                                                         controller.text) ??
                                                     item.price!,
@@ -1455,6 +1313,7 @@ class _BillingPageState extends State<BillingPage> {
                                               localProductProvider
                                                   .updateItemPrice(
                                                 item.product.productId!,
+                                                item.selectedStock,
                                                 double.tryParse(newPrice) ??
                                                     item.price!,
                                               );
@@ -1501,7 +1360,8 @@ class _BillingPageState extends State<BillingPage> {
                                         visualDensity: VisualDensity.compact,
                                         onPressed: () {
                                           localProductProvider.removeFromCart(
-                                              item.product.productId!);
+                                              item.product.productId!,
+                                              item.selectedStock);
                                         },
                                       ),
                                     ),
@@ -1584,7 +1444,7 @@ class _BillingPageState extends State<BillingPage> {
         ),
         BuildPaymentRow(
           amount:
-              "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal ?? 0.00)}",
+              "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
           title: "Net amount",
           color: ColorManager.textColor,
         ),
@@ -1595,14 +1455,14 @@ class _BillingPageState extends State<BillingPage> {
         ),
         BuildPaymentRow(
           amount:
-              "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount ?? 0.00)}",
+              "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)}",
           title: "Discount",
           color: ColorManager.textColor,
         ),
         GestureDetector(
           child: BuildPaymentRow(
             amount:
-                "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax ?? 0.00)}",
+                "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}",
             title: "GST",
             color: ColorManager.kPrimaryColor,
           ),
@@ -2584,9 +2444,7 @@ class _BillingPageState extends State<BillingPage> {
 
       try {
         // Print the order that was just confirmed
-        if (orderToUse != null) {
-          printFromSavedOrder(orderToUse);
-        }
+        printFromSavedOrder(orderToUse);
       } catch (error) {
         debugPrint(error.toString());
       }
@@ -2892,6 +2750,7 @@ class _BillingPageState extends State<BillingPage> {
             'product_id': item.product.productId,
             'quantity': item.quantity,
             'price': item.price,
+            'stock_id': item.selectedStock?.id,
           });
         }
 
@@ -2976,9 +2835,8 @@ class _BillingPageState extends State<BillingPage> {
   void _getBalanceAmount() {
     // debugPrint(_paidAmountController.text);
     num netTotal = Provider.of<LocalProductProvider>(context, listen: false)
-            .priceSummary!
-            .netTotal ??
-        0.00;
+        .priceSummary!
+        .netTotal;
     double paidAmount = double.tryParse(_paidAmountController.text) ?? 0.00;
     double balanceAmount = paidAmount - netTotal;
     if (balanceAmount < 0) {
@@ -3105,650 +2963,5 @@ class _BillingPageState extends State<BillingPage> {
         message: "Failed to print saved order. Please try again.",
       );
     }
-  }
-}
-
-/// A widget to display saved orders in a horizontal scrollable list
-class HorizontalSavedOrdersView extends StatefulWidget {
-  final Function(String) onOrderSelected;
-
-  const HorizontalSavedOrdersView({
-    Key? key,
-    required this.onOrderSelected,
-  }) : super(key: key);
-
-  @override
-  State<HorizontalSavedOrdersView> createState() =>
-      _HorizontalSavedOrdersViewState();
-}
-
-class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
-  final ScrollController _scrollController = ScrollController();
-  bool _isHovering = false;
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<LocalProductProvider>(
-      builder: (context, provider, child) {
-        return SizedBox(
-          height: 60,
-          child: MouseRegion(
-            cursor: SystemMouseCursors.grab,
-            child: ScrollConfiguration(
-              behavior: ScrollConfiguration.of(context).copyWith(
-                dragDevices: {
-                  PointerDeviceKind.mouse,
-                  PointerDeviceKind.touch,
-                  PointerDeviceKind.stylus,
-                  PointerDeviceKind.trackpad,
-                },
-              ),
-              child: ListView.builder(
-                controller: _scrollController,
-                physics: const BouncingScrollPhysics(),
-                scrollDirection: Axis.horizontal,
-                itemCount: provider.savedOrders.length +
-                    1, // +1 for the new order button
-                itemBuilder: (context, index) {
-                  // New Order button as the first item
-                  if (index == 0) {
-                    return _buildNewOrderButton(context, provider);
-                  }
-
-                  // Saved orders
-                  final order = provider.savedOrders[index - 1];
-                  String time = _formatTimeWith12Hour(order.createdAt);
-
-                  return Padding(
-                    padding:
-                        const EdgeInsets.only(right: 10.0, bottom: 1, top: 1),
-                    child: BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      color: provider.currentOrder?.id == order.id
-                          ? Colors.white
-                          : Colors.white,
-                      border: provider.currentOrder?.id == order.id
-                          ? Border.all(
-                              color: ColorManager.kPrimaryColor, width: 2)
-                          : null,
-                      width: 140,
-                      child: InkWell(
-                        onTap: () => widget.onOrderSelected(order.id),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      order.orderNumber,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  Text(
-                                    time,
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 5),
-                                  GestureDetector(
-                                    onTap: () {
-                                      if (context.findAncestorStateOfType<
-                                              _BillingPageState>() !=
-                                          null) {
-                                        context
-                                            .findAncestorStateOfType<
-                                                _BillingPageState>()!
-                                            .printFromSavedOrder(order);
-                                      }
-                                    },
-                                    child: const Icon(
-                                      Icons.print,
-                                      size: 14,
-                                      color: Colors.blue,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "₹${order.total.toStringAsFixed(2)}",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        "Items: ${order.items.length}",
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      GestureDetector(
-                                        onTap: () {
-                                          _showDeleteConfirmationDialog(
-                                              context, provider, order);
-                                        },
-                                        child: const Icon(
-                                          Icons.delete_outline,
-                                          size: 14,
-                                          color: ColorManager.kButtonRed,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildNewOrderButton(
-      BuildContext context, LocalProductProvider provider) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 10.0, bottom: 1, left: 5, top: 1),
-      child: BuildBoxShadowContainer(
-        circleRadius: 7,
-        color: Colors.white,
-        width: 60,
-        child: InkWell(
-          onTap: () {
-            // If currently editing an order and cart has items, update it
-            if (provider.currentOrder != null &&
-                provider.cartItems.isNotEmpty) {
-              provider.updateSavedOrder(
-                provider.currentOrder!.id,
-                customerName: null,
-                customerPhone: null,
-                comment: null,
-                deliveryMethod: null,
-              );
-            }
-
-            // If cart has items, save as new order
-            else if (provider.cartItems.isNotEmpty) {
-              try {
-                provider.saveCurrentCartAsOrder();
-                showScaffold(
-                  context: context,
-                  message: "Order Saved Successfully",
-                );
-              } catch (e) {
-                // Swallow exception if cart is empty
-              }
-            }
-
-            // Clear cart and reset current order
-            provider.clearCart();
-            if (provider.currentOrder != null) {
-              String orderId = provider.currentOrder!.id;
-              provider.loadOrderForEditing(orderId);
-              provider.clearCart();
-            }
-            (context as Element).markNeedsBuild();
-          },
-          child: const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.add_circle,
-                  size: 30,
-                  color: ColorManager.kPrimaryColor,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _formatTimeWith12Hour(String isoDate) {
-    // Convert ISO date string to DateTime
-    DateTime dateTime = DateTime.parse(isoDate);
-
-    // Format time in 12-hour format with AM/PM
-    String formattedTime = DateFormat('h:mm a').format(dateTime);
-
-    return formattedTime;
-  }
-
-  void _showDeleteConfirmationDialog(
-      BuildContext context, LocalProductProvider provider, SavedOrder order) {
-    DeleteConfirmationDialog.show(
-      context: context,
-      title: "Delete Order",
-      itemName: order.orderNumber,
-      message: "This order will be permanently removed from your saved orders.",
-      onDelete: () {
-        // Delete the order
-        provider.deleteSavedOrder(order.id);
-
-        // Show success message
-        showScaffold(
-          context: context,
-          message: "Order deleted successfully",
-        );
-      },
-    );
-  }
-}
-
-/// Modal dialog to select a product when multiple products match the same barcode
-class ProductSelectionModal extends StatelessWidget {
-  final List<GetProduct> products;
-  final String barcode;
-
-  const ProductSelectionModal({
-    Key? key,
-    required this.products,
-    required this.barcode,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        constraints: BoxConstraints(
-          maxWidth: 500,
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              spreadRadius: 5,
-              blurRadius: 7,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Multiple Products Found',
-                  style: buildCustomStyle(
-                    FontWeightManager.bold,
-                    FontSize.s16,
-                    0.21,
-                    ColorManager.kPrimaryColor,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Barcode: $barcode',
-              style: buildCustomStyle(
-                FontWeightManager.bold,
-                FontSize.s16,
-                0.21,
-                ColorManager.textColor,
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Product list
-            Expanded(
-              child: MouseRegion(
-                cursor: SystemMouseCursors.grab,
-                child: ScrollConfiguration(
-                  behavior: ScrollConfiguration.of(context).copyWith(
-                    dragDevices: {
-                      PointerDeviceKind.mouse,
-                      PointerDeviceKind.touch,
-                      PointerDeviceKind.stylus,
-                      PointerDeviceKind.trackpad,
-                    },
-                  ),
-                  child: ListView.builder(
-                    itemCount: products.length,
-                    physics: const BouncingScrollPhysics(),
-                    itemBuilder: (context, index) {
-                      final product = products[index];
-                      return BuildBoxShadowContainer(
-                        circleRadius: 7,
-                        margin: const EdgeInsets.symmetric(vertical: 5),
-                        color: Colors.white,
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          title: Text(
-                            product.productName ?? 'Unknown Product',
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s14,
-                              0.21,
-                              ColorManager.textColor,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 4),
-                              Text(
-                                'Price: ₹${product.price?.price ?? 0.00}',
-                                style: const TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w500),
-                              ),
-                              Text(
-                                'MRP: ₹${product.mrp ?? 0.00}',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              Text(
-                                'Unit: ${product.unit ?? ""}',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ],
-                          ),
-                          trailing: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: ColorManager.kPrimaryColor,
-                              foregroundColor: Colors.white,
-                              textStyle: const TextStyle(fontSize: 12),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                            ),
-                            onPressed: () {
-                              Navigator.pop(context, product);
-                            },
-                            child: const Text('Choose'),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                // Close Button
-                CustomRoundButton(
-                  title: "Close",
-                  fontSize: FontSize.s12,
-                  height: MediaQuery.of(context).size.height * .05,
-                  width: 120,
-                  textColor: Colors.blue,
-                  borderColor: Colors.blue,
-                  boxColor: Colors.white,
-                  fct: () async {
-                    Navigator.pop(context, null);
-                  },
-                ),
-                const SizedBox(width: 10),
-                // Add Product Button
-                CustomRoundButton(
-                  title: "Add Product",
-                  fontSize: FontSize.s12,
-                  height: MediaQuery.of(context).size.height * .05,
-                  width: 120,
-                  fct: () async {
-                    await showDialog(
-                      context: context,
-                      builder: (context) =>
-                          AddProductWithBarcodeModal(barcode: barcode),
-                    );
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Add this class after the ProductSelectionModal class
-class StockSelectionModal extends StatelessWidget {
-  final GetProduct product;
-  final List<Stock> stockOptions;
-
-  const StockSelectionModal({
-    Key? key,
-    required this.product,
-    required this.stockOptions,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        constraints: BoxConstraints(
-          maxWidth: 500,
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              spreadRadius: 5,
-              blurRadius: 7,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Multiple Stock Options Available',
-                  style: buildCustomStyle(
-                    FontWeightManager.bold,
-                    FontSize.s16,
-                    0.21,
-                    ColorManager.kPrimaryColor,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Product: ${product.productName}',
-              style: buildCustomStyle(
-                FontWeightManager.bold,
-                FontSize.s16,
-                0.21,
-                ColorManager.textColor,
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Stock list
-            Expanded(
-              child: MouseRegion(
-                cursor: SystemMouseCursors.grab,
-                child: ScrollConfiguration(
-                  behavior: ScrollConfiguration.of(context).copyWith(
-                    dragDevices: {
-                      PointerDeviceKind.mouse,
-                      PointerDeviceKind.touch,
-                      PointerDeviceKind.stylus,
-                      PointerDeviceKind.trackpad,
-                    },
-                  ),
-                  child: ListView.builder(
-                    itemCount: stockOptions.length,
-                    physics: const BouncingScrollPhysics(),
-                    itemBuilder: (context, index) {
-                      final stock = stockOptions[index];
-                      return BuildBoxShadowContainer(
-                        circleRadius: 7,
-                        margin: const EdgeInsets.symmetric(vertical: 5),
-                        color: Colors.white,
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          title: Text(
-                            'Stock ID: ${stock.id}',
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s14,
-                              0.21,
-                              ColorManager.textColor,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 4),
-                              Text(
-                                'Price: ₹${stock.price ?? "0.00"}',
-                                style: const TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w500),
-                              ),
-                              Text(
-                                'MRP: ₹${stock.mrp ?? "0.00"}',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              Text(
-                                'Available Quantity: ${stock.quantity ?? 0}',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ],
-                          ),
-                          trailing: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: ColorManager.kPrimaryColor,
-                              foregroundColor: Colors.white,
-                              textStyle: const TextStyle(fontSize: 12),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                            ),
-                            onPressed: () {
-                              // Return both product and selected stock
-                              Navigator.pop(context, {
-                                'product': product,
-                                'stock': stock,
-                              });
-                            },
-                            child: const Text('Choose'),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                // Close Button
-                CustomRoundButton(
-                  title: "Cancel",
-                  fontSize: FontSize.s12,
-                  height: MediaQuery.of(context).size.height * .05,
-                  width: 120,
-                  textColor: Colors.blue,
-                  borderColor: Colors.blue,
-                  boxColor: Colors.white,
-                  fct: () {
-                    Navigator.pop(context);
-                  },
-                ),
-                const SizedBox(width: 10),
-                // Add Product Button
-                CustomRoundButton(
-                  title: "Add New Stock",
-                  fontSize: FontSize.s12,
-                  height: MediaQuery.of(context).size.height * .05,
-                  width: 120,
-                  fct: () {
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

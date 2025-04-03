@@ -1,11 +1,23 @@
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
-import '../providers/local_product_provider.dart';
-import '../resources/color_manager.dart';
-import '../components/build_dialog_box.dart';
+import 'dart:ui';
 
-class HorizontalSavedOrdersView extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/cart_provider.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/screens/billing/billing_page.dart';
+import 'package:provider/provider.dart';
+import '../../models/list_sales_order.dart';
+import '../../providers/sales_provider.dart';
+
+/// A widget to display saved orders in a horizontal scrollable list
+class HorizontalSavedOrdersView extends StatefulWidget {
   final Function(String) onOrderSelected;
 
   const HorizontalSavedOrdersView({
@@ -14,108 +26,162 @@ class HorizontalSavedOrdersView extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<HorizontalSavedOrdersView> createState() =>
+      _HorizontalSavedOrdersViewState();
+}
+
+class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
+  final ScrollController _scrollController = ScrollController();
+  bool _isHovering = false;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<LocalProductProvider>(
       builder: (context, provider, child) {
-        if (provider.savedOrders.isEmpty) {
-          return SizedBox(
-            height: 60,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                _buildNewOrderButton(context, provider),
-              ],
-            ),
-          );
-        }
-
         return SizedBox(
           height: 60,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount:
-                provider.savedOrders.length + 1, // +1 for the new order button
-            itemBuilder: (context, index) {
-              // First item is the new order button
-              if (index == 0) {
-                return _buildNewOrderButton(context, provider);
-              }
+          child: MouseRegion(
+            cursor: SystemMouseCursors.grab,
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.stylus,
+                  PointerDeviceKind.trackpad,
+                },
+              ),
+              child: ListView.builder(
+                controller: _scrollController,
+                physics: const BouncingScrollPhysics(),
+                scrollDirection: Axis.horizontal,
+                itemCount: provider.savedOrders.length +
+                    1, // +1 for the new order button
+                itemBuilder: (context, index) {
+                  // New Order button as the first item
+                  if (index == 0) {
+                    return _buildNewOrderButton(context, provider);
+                  }
 
-              // Adjust index for actual order items
-              final orderIndex = index - 1;
-              final order = provider.savedOrders[orderIndex];
-              // Format time from ISO date string to 12-hour format with AM/PM
-              String time = _formatTimeWith12Hour(order.createdAt);
+                  // Saved orders
+                  final order = provider.savedOrders[index - 1];
+                  String time = _formatTimeWith12Hour(order.createdAt);
 
-              return GestureDetector(
-                onTap: () => onOrderSelected(order.id),
-                child: Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
-                        spreadRadius: 1,
-                        blurRadius: 5,
-                        offset: const Offset(0, 3),
+                  return Padding(
+                    padding:
+                        const EdgeInsets.only(right: 10.0, bottom: 1, top: 1),
+                    child: BuildBoxShadowContainer(
+                      circleRadius: 7,
+                      color: provider.currentOrder?.id == order.id
+                          ? Colors.white
+                          : Colors.white,
+                      border: provider.currentOrder?.id == order.id
+                          ? Border.all(
+                              color: ColorManager.kPrimaryColor, width: 2)
+                          : null,
+                      width: 140,
+                      child: InkWell(
+                        onTap: () => widget.onOrderSelected(order.id),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      order.orderNumber,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    time,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (context.findAncestorStateOfType<
+                                              BillingPageState>() !=
+                                          null) {
+                                        context
+                                            .findAncestorStateOfType<
+                                                BillingPageState>()!
+                                            .printFromSavedOrder(order);
+                                      }
+                                    },
+                                    child: const Icon(
+                                      Icons.print,
+                                      size: 14,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    "₹${order.total.toStringAsFixed(2)}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        "Items: ${order.items.length}",
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      GestureDetector(
+                                        onTap: () {
+                                          _showDeleteConfirmationDialog(
+                                              context, provider, order);
+                                        },
+                                        child: const Icon(
+                                          Icons.delete_outline,
+                                          size: 14,
+                                          color: ColorManager.kButtonRed,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            order.orderNumber,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(
-                            width: 10,
-                          ),
-                          Text(
-                            "₹${order.total.toStringAsFixed(2)}",
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Items: ${order.items.length}",
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(
-                            width: 10,
-                          ),
-                          Text(
-                            time,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
         );
       },
@@ -124,68 +190,61 @@ class HorizontalSavedOrdersView extends StatelessWidget {
 
   Widget _buildNewOrderButton(
       BuildContext context, LocalProductProvider provider) {
-    return GestureDetector(
-      onTap: () {
-        // If currently editing an order and cart has items, update it
-        if (provider.currentOrder != null && provider.cartItems.isNotEmpty) {
-          provider.updateSavedOrder(
-            provider.currentOrder!.id,
-            customerName: null,
-            customerPhone: null,
-            comment: null,
-            deliveryMethod: null,
-          );
-        }
-        // If cart has items, save as new order
-        else if (provider.cartItems.isNotEmpty) {
-          try {
-            provider.saveCurrentCartAsOrder();
+    return Padding(
+      padding: const EdgeInsets.only(right: 10.0, bottom: 1, left: 5, top: 1),
+      child: BuildBoxShadowContainer(
+        circleRadius: 7,
+        color: Colors.white,
+        width: 60,
+        child: InkWell(
+          onTap: () {
+            // If currently editing an order and cart has items, update it
+            if (provider.currentOrder != null &&
+                provider.cartItems.isNotEmpty) {
+              provider.updateSavedOrder(
+                provider.currentOrder!.id,
+                customerName: null,
+                customerPhone: null,
+                comment: null,
+                deliveryMethod: null,
+              );
+            }
 
-            // Show feedback
-            showScaffold(
-              context: context,
-              message: "Order Saved Successfully",
-            );
-          } catch (e) {
-            // Swallow exception if cart is empty
-          }
-        }
+            // If cart has items, save as new order
+            else if (provider.cartItems.isNotEmpty) {
+              try {
+                provider.saveCurrentCartAsOrder();
+                showScaffold(
+                  context: context,
+                  message: "Order Saved Successfully",
+                );
+              } catch (e) {
+                // Swallow exception if cart is empty
+              }
+            }
 
-        // Clear cart and reset current order
-        provider.clearCart();
-        // Reset current order using proper method
-        if (provider.currentOrder != null) {
-          // Create a temporary order ID before clearing
-          String orderId = provider.currentOrder!.id;
-          // Need to manually clear the current order reference
-          provider.loadOrderForEditing(orderId);
-          provider.clearCart();
-        }
-        provider.notifyListeners();
-
-        // Update UI
-        (context as Element).markNeedsBuild();
-      },
-      child: Container(
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: const Offset(0, 3),
+            // Clear cart and reset current order
+            provider.clearCart();
+            if (provider.currentOrder != null) {
+              String orderId = provider.currentOrder!.id;
+              provider.loadOrderForEditing(orderId);
+              provider.clearCart();
+            }
+            (context as Element).markNeedsBuild();
+          },
+          child: const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.add_circle,
+                  size: 30,
+                  color: ColorManager.kPrimaryColor,
+                ),
+              ],
             ),
-          ],
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.add,
-            color: ColorManager.textColor,
-            size: 30,
           ),
         ),
       ),
@@ -201,4 +260,24 @@ class HorizontalSavedOrdersView extends StatelessWidget {
 
     return formattedTime;
   }
-} 
+
+  void _showDeleteConfirmationDialog(
+      BuildContext context, LocalProductProvider provider, SavedOrder order) {
+    DeleteConfirmationDialog.show(
+      context: context,
+      title: "Delete Order",
+      itemName: order.orderNumber,
+      message: "This order will be permanently removed from your saved orders.",
+      onDelete: () {
+        // Delete the order
+        provider.deleteSavedOrder(order.id);
+
+        // Show success message
+        showScaffold(
+          context: context,
+          message: "Order deleted successfully",
+        );
+      },
+    );
+  }
+}
