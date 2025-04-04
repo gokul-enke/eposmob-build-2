@@ -24,113 +24,67 @@ class InvoiceListScreen extends StatefulWidget {
 
 class _InvoiceListScreenState extends State<InvoiceListScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
-  bool initLoading = false;
+  bool isInitialized = false;
   final TextEditingController searchTextController = TextEditingController();
-  List<Invoice>? invoiceListDetails = [];
-  ListInvoiceModel? invoiceData;
 
   @override
   void initState() {
     super.initState();
-    loadInitData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadInvoices();
+    });
   }
 
-  Future<void> loadInitData() async {
-    setState(() {
-      initLoading = true;
-    });
-
+  Future<void> loadInvoices() async {
+    if (isInitialized) return;
+    
     try {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-
-      // Check if accessToken is null
-      if (accessToken == null) {
-        throw Exception("Access token is null");
+      final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+      
+      if (accessToken == null || accessToken.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Authentication token is missing")),
+        );
+        return;
       }
-
-      InvoiceProvider invoiceProvider =
-          Provider.of<InvoiceProvider>(context, listen: false);
-
-      final response =
-          await invoiceProvider.listAllInvoices(accessToken: accessToken);
-
-      // Check if response is null or has unexpected format
-      if (response == null) {
-        throw Exception("Response is null");
-      }
-
-      if (response['status'] == 'success') {
-        ListInvoiceModel listInvoiceModel = ListInvoiceModel.fromJson(response);
-        setState(() {
-          invoiceData = listInvoiceModel;
-          invoiceListDetails = listInvoiceModel.data.invoices;
-        });
-      } else {
-        showScaffold(context: context, message: "Data Not Found");
-      }
-    } catch (error) {
-      // debugPrint("Error loading invoices: $error");
-      // debugPrint("Stack Trace: $stackTrace");
-    } finally {
+      
+      await Provider.of<InvoiceProvider>(context, listen: false).listAllInvoices(accessToken: accessToken);
       setState(() {
-        initLoading = false;
+        isInitialized = true;
       });
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error loading invoices: $error")),
+      );
     }
   }
 
-  Future<void> searchInvoices(int page) async {
-    setState(() {
-      initLoading = true;
-    });
-
-    try {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-
-      // Check if accessToken is null
-      if (accessToken == null) {
-        throw Exception("Access token is null");
-      }
-
-      InvoiceProvider invoiceProvider =
-          Provider.of<InvoiceProvider>(context, listen: false);
-
-      final response =
-          await invoiceProvider.listAllInvoices(accessToken: accessToken);
-
-      // Check if response is null or has unexpected format
-      if (response == null) {
-        throw Exception("Response is null");
-      }
-
-      if (response['status'] == 'success') {
-        ListInvoiceModel listInvoiceModel = ListInvoiceModel.fromJson(response);
-        setState(() {
-          invoiceListDetails = listInvoiceModel.data.invoices;
-        });
-      } else {
-        showScaffold(context: context, message: "Data Not Found");
-      }
-    } catch (error) {
-      // debugPrint("Error loading invoices: $error");
-      // debugPrint("Stack Trace: $stackTrace");
-    } finally {
-      setState(() {
-        initLoading = false;
-      });
-    }
+  void searchInvoices() {
+    debugPrint("Searching for: ${searchTextController.text}");
+    InvoiceProvider provider = Provider.of<InvoiceProvider>(context, listen: false);
+    provider.applyFilters(name: searchTextController.text);
   }
 
   void resetSearch() {
+    debugPrint("Resetting search");
     setState(() {
       searchTextController.clear();
     });
+    
+    Provider.of<InvoiceProvider>(context, listen: false).resetFilters();
   }
 
   Future<void> refreshData() async {
-    resetSearch();
-    loadInitData();
+    debugPrint("Refreshing data");
+    final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    if (accessToken == null || accessToken.isEmpty) return;
+    
+    // Reset search field when refreshing
+    setState(() {
+      searchTextController.clear();
+    });
+    
+    await Provider.of<InvoiceProvider>(context, listen: false).listAllInvoices(accessToken: accessToken);
   }
 
   @override
@@ -206,24 +160,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           Padding(
             padding: const EdgeInsets.only(left: 10.0, top: 30),
             child: CustomRoundButton(
-              title: "Search",
-              fct: () {
-                // Implement search functionality here
-              },
-              height: 45,
-              width: size.width * 0.09,
-              fontSize: FontSize.s12,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 10.0, top: 30),
-            child: CustomRoundButton(
               title: "Reset",
               boxColor: Colors.white,
               textColor: ColorManager.kPrimaryColor,
-              fct: () {
-                // Implement reset functionality here
-              },
+              fct: resetSearch,
               height: 45,
               width: size.width * 0.09,
               fontSize: FontSize.s12,
@@ -254,9 +194,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             child: TextFormField(
               controller: searchTextController,
               onChanged: (value) {
-                setState(() {
-                  // Update state if needed
-                });
+                searchInvoices();
               },
               cursorColor: ColorManager.kPrimaryColor,
               cursorHeight: 13,
@@ -277,98 +215,146 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 
   Widget _buildInvoiceTable() {
     return Expanded(
-      child: Column(
-        children: [
-          Expanded(
-            child: initLoading
-                ? const Center(child: CircularProgressIndicator.adaptive())
-                : BuildBoxShadowContainer(
-                    margin: const EdgeInsets.only(top: 5),
-                    circleRadius: 7,
-                    offsetValue: const Offset(2, 2),
-                    blurRadius: 8.0,
-                    color: Colors.white,
-                    child: Column(
-                      children: [
-                        // Fixed table header
-                        Container(
-                          decoration: const BoxDecoration(
-                            color: ColorManager.tableBGColor,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black12,
-                                offset: Offset(0, 2),
-                                blurRadius: 2.0,
-                              ),
-                            ],
-                          ),
-                          child: Table(
-                            columnWidths: const {
-                              0: FlexColumnWidth(2.0), // Name
-                              1: FlexColumnWidth(1.5), // Invoice Number
-                              2: FlexColumnWidth(1.0), // Type
-                              3: FlexColumnWidth(1.5), // Invoice Date
-                              4: FlexColumnWidth(1.5), // Due Date
-                              5: FlexColumnWidth(1.0), // Amount
-                              6: FlexColumnWidth(1.0), // Status
-                              7: FlexColumnWidth(1.0), // Action
-                            },
-                            border: null,
-                            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                            children: [
-                              TableRow(
-                                children: [
-                                  _buildTableHeader("Name"),
-                                  _buildTableHeader("Invoice Number"),
-                                  _buildTableHeader("Type"),
-                                  _buildTableHeader("Invoice Date"),
-                                  _buildTableHeader("Due Date"),
-                                  _buildTableHeader("Amount"),
-                                  _buildTableHeader("Status"),
-                                  _buildTableHeader("Action"),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Scrollable table body
-                        Expanded(
-                          child: MouseRegion(
-                            cursor: SystemMouseCursors.grab,
-                            child: ScrollConfiguration(
-                              behavior: ScrollConfiguration.of(context).copyWith(
-                                dragDevices: {
-                                  PointerDeviceKind.mouse,
-                                  PointerDeviceKind.touch,
-                                  PointerDeviceKind.stylus,
-                                  PointerDeviceKind.trackpad,
-                                },
-                              ),
-                              child: SingleChildScrollView(
-                                physics: const BouncingScrollPhysics(),
-                                scrollDirection: Axis.vertical,
-                                child: Table(
-                                  columnWidths: const {
-                                    0: FlexColumnWidth(2.0), // Name
-                                    1: FlexColumnWidth(1.5), // Invoice Number
-                                    2: FlexColumnWidth(1.0), // Type
-                                    3: FlexColumnWidth(1.5), // Invoice Date
-                                    4: FlexColumnWidth(1.5), // Due Date
-                                    5: FlexColumnWidth(1.0), // Amount
-                                    6: FlexColumnWidth(1.0), // Status
-                                    7: FlexColumnWidth(1.0), // Action
-                                  },
-                                  border: null,
-                                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                                  children: _buildTableRows(),
+      child: Consumer<InvoiceProvider>(
+        builder: (context, invoiceProvider, child) {
+          final isLoading = invoiceProvider.isLoading;
+          final invoiceList = invoiceProvider.invoiceListDetails;
+          
+          return Column(
+            children: [
+              Expanded(
+                child: isLoading
+                  ? const Center(child: CircularProgressIndicator.adaptive())
+                  : BuildBoxShadowContainer(
+                      margin: const EdgeInsets.only(top: 5),
+                      circleRadius: 7,
+                      offsetValue: const Offset(2, 2),
+                      blurRadius: 8.0,
+                      color: Colors.white,
+                      child: Column(
+                        children: [
+                          // Fixed table header
+                          Container(
+                            decoration: const BoxDecoration(
+                              color: ColorManager.tableBGColor,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black12,
+                                  offset: Offset(0, 2),
+                                  blurRadius: 2.0,
                                 ),
+                              ],
+                            ),
+                            child: Table(
+                              columnWidths: const {
+                                0: FlexColumnWidth(2.0), // Name
+                                1: FlexColumnWidth(1.5), // Invoice Number
+                                2: FlexColumnWidth(1.0), // Type
+                                3: FlexColumnWidth(1.5), // Invoice Date
+                                4: FlexColumnWidth(1.5), // Due Date
+                                5: FlexColumnWidth(1.0), // Amount
+                                6: FlexColumnWidth(1.0), // Status
+                                7: FlexColumnWidth(1.0), // Action
+                              },
+                              border: null,
+                              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                              children: [
+                                TableRow(
+                                  children: [
+                                    _buildTableHeader("Name"),
+                                    _buildTableHeader("Invoice Number"),
+                                    _buildTableHeader("Type"),
+                                    _buildTableHeader("Invoice Date"),
+                                    _buildTableHeader("Due Date"),
+                                    _buildTableHeader("Amount"),
+                                    _buildTableHeader("Status"),
+                                    _buildTableHeader("Action"),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Scrollable table body
+                          Expanded(
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.grab,
+                              child: ScrollConfiguration(
+                                behavior: ScrollConfiguration.of(context).copyWith(
+                                  dragDevices: {
+                                    PointerDeviceKind.mouse,
+                                    PointerDeviceKind.touch,
+                                    PointerDeviceKind.stylus,
+                                    PointerDeviceKind.trackpad,
+                                  },
+                                ),
+                                child: invoiceList == null || invoiceList.isEmpty
+                                  ? _buildNoInvoicesFoundUI()
+                                  : SingleChildScrollView(
+                                    physics: const BouncingScrollPhysics(),
+                                    scrollDirection: Axis.vertical,
+                                    child: Table(
+                                      columnWidths: const {
+                                        0: FlexColumnWidth(2.0), // Name
+                                        1: FlexColumnWidth(1.5), // Invoice Number
+                                        2: FlexColumnWidth(1.0), // Type
+                                        3: FlexColumnWidth(1.5), // Invoice Date
+                                        4: FlexColumnWidth(1.5), // Due Date
+                                        5: FlexColumnWidth(1.0), // Amount
+                                        6: FlexColumnWidth(1.0), // Status
+                                        7: FlexColumnWidth(1.0), // Action
+                                      },
+                                      border: null,
+                                      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                      children: _buildTableRows(invoiceList),
+                                    ),
+                                  ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
+              ),
+            ],
+          );
+        }
+      ),
+    );
+  }
+
+  Widget _buildNoInvoicesFoundUI() {
+    return Container(
+      height: double.infinity,
+      width: double.infinity,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.receipt_long,
+            size: 60,
+            color: ColorManager.kPrimaryColor.withOpacity(0.7),
+          ),
+          const SizedBox(height: 15),
+          Text(
+            'No invoices found',
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s18,
+              0.27,
+              ColorManager.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Try adjusting your search criteria',
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.20,
+              Colors.grey,
+            ),
           ),
         ],
       ),
@@ -391,8 +377,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-  List<TableRow> _buildTableRows() {
-    return invoiceListDetails?.asMap().entries.map((entry) {
+  List<TableRow> _buildTableRows(List<Invoice>? invoices) {
+    return invoices?.asMap().entries.map((entry) {
           final int index = entry.key;
           final invoice = entry.value;
           return TableRow(
@@ -470,12 +456,18 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }
 
   Widget _buildPaginationControls() {
-    return PaginationControl(
-      currentPage: invoiceData?.data.currentPage ?? 1,
-      totalPages: invoiceData?.data.lastPage ?? 1,
-      onPageChanged: (int page) {
-        searchInvoices(page);
-      },
+    return Consumer<InvoiceProvider>(
+      builder: (context, invoiceProvider, child) {
+        debugPrint("Building pagination controls: currentPage=${invoiceProvider.currentPage}, totalPages=${invoiceProvider.totalPages}");
+        return PaginationControl(
+          currentPage: invoiceProvider.currentPage,
+          totalPages: invoiceProvider.totalPages,
+          onPageChanged: (int page) {
+            debugPrint("Page changed to: $page");
+            invoiceProvider.goToPage(page);
+          },
+        );
+      }
     );
   }
 }

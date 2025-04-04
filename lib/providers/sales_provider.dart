@@ -83,8 +83,7 @@ class SalesProvider with ChangeNotifier {
     }
     if (page != null) queryParameters['page'] = page.toString();
 
-    final uri = Uri.parse(APPUrl.getListOrder)
-        .replace(queryParameters: queryParameters);
+    final uri = Uri.parse(APPUrl.getListOrder);
 
     try {
       final response = await http.get(
@@ -95,19 +94,19 @@ class SalesProvider with ChangeNotifier {
         },
       ).timeout(const Duration(seconds: 15));
 
-      // debugPrint('fetchOrders response status code: ${response.statusCode}');
+      debugPrint('fetchOrders response status code: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         if (response.body.isNotEmpty) {
           final jsonData = json.decode(response.body);
-          // debugPrint('Received JSON data: ${jsonData.toString()}');
+          debugPrint('Received JSON data: ${jsonData.toString()}');
           try {
             ListSalesOrderModel listSalesOrderModel =
                 ListSalesOrderModel.fromJson(jsonData);
             currentPage = listSalesOrderModel.pagination?.currentPage ?? 1;
             totalPages = listSalesOrderModel.pagination?.totalPages ?? 1;
-            // debugPrint(listSalesOrderModel.pagination!.currentPage.toString());
-            // debugPrint(listSalesOrderModel.pagination!.totalPages.toString());
+            debugPrint(listSalesOrderModel.pagination!.currentPage.toString());
+            debugPrint(listSalesOrderModel.pagination!.totalPages.toString());
             _orders = listSalesOrderModel.data ?? [];
             notifyListeners();
           } catch (e) {

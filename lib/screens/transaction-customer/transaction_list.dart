@@ -32,8 +32,12 @@ class _CustomerTransactionListScreenState
   final SideBarController sideBarController = Get.put(SideBarController());
   bool initLoading = false;
   List<ListTransaction>? listTransaction = [];
+  List<ListTransaction>? allTransactions = []; // Store all transactions for filtering
   String searchAmount = '';
   DateTime? selectedDate;
+  int currentPage = 1;
+  int totalPages = 1;
+  final int itemsPerPage = 20;
 
   @override
   void initState() {
@@ -60,7 +64,8 @@ class _CustomerTransactionListScreenState
       if (value['status'] == 'success') {
         ListTransactionModel listTransactionModel =
             ListTransactionModel.fromJson(value);
-        listTransaction = listTransactionModel.data?.transactions ?? [];
+        allTransactions = listTransactionModel.data?.transactions ?? [];
+        applyFilters();
       } else {
         showScaffold(context: context, message: "Data Not Found");
       }
@@ -73,36 +78,60 @@ class _CustomerTransactionListScreenState
     }
   }
 
-  Future<void> searchTransactions(int page) async {
-    setState(() {
-      initLoading = true;
-    });
-
-    try {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      InvoiceProvider invoiceProvider =
-          Provider.of<InvoiceProvider>(context, listen: false);
-
-      final value = await invoiceProvider.listAllTransaction(
-        type: null,
-        accessToken: accessToken ?? "",
-      );
-
-      if (value['status'] == 'success') {
-        ListTransactionModel listTransactionModel =
-            ListTransactionModel.fromJson(value);
-        listTransaction = listTransactionModel.data?.transactions ?? [];
-      } else {
-        showScaffold(context: context, message: "Data Not Found");
-      }
-    } catch (error) {
-      // debugPrint(error.toString());
-    } finally {
+  void applyFilters() {
+    if (allTransactions == null || allTransactions!.isEmpty) {
       setState(() {
-        initLoading = false;
+        listTransaction = [];
+        totalPages = 1;
       });
+      return;
     }
+
+    // Apply filters
+    List<ListTransaction> filteredList = [...allTransactions!];
+    
+    if (searchAmount.isNotEmpty) {
+      filteredList = filteredList.where((transaction) => 
+        transaction.amount != null && 
+        transaction.amount!.contains(searchAmount)
+      ).toList();
+    }
+    
+    if (selectedDate != null) {
+      // Assuming transactions have a date field that can be compared
+      // If you have a createdAt or date field, replace this with the actual field
+      filteredList = filteredList.where((transaction) {
+        // Implement date filtering logic here
+        // Example (assuming transaction.date exists):
+        // DateTime transactionDate = DateTime.parse(transaction.date!);
+        // return transactionDate.year == selectedDate!.year &&
+        //     transactionDate.month == selectedDate!.month &&
+        //     transactionDate.day == selectedDate!.day;
+        return true; // Replace with actual implementation
+      }).toList();
+    }
+
+    // Calculate pagination
+    totalPages = (filteredList.length / itemsPerPage).ceil();
+    totalPages = totalPages == 0 ? 1 : totalPages;
+    
+    // Ensure current page is valid
+    if (currentPage > totalPages) {
+      currentPage = totalPages;
+    }
+    
+    // Apply pagination
+    int startIndex = (currentPage - 1) * itemsPerPage;
+    int endIndex = startIndex + itemsPerPage;
+    
+    if (startIndex >= filteredList.length) {
+      listTransaction = [];
+    } else {
+      endIndex = endIndex > filteredList.length ? filteredList.length : endIndex;
+      listTransaction = filteredList.sublist(startIndex, endIndex);
+    }
+    
+    setState(() {});
   }
 
   void resetSearch() {
@@ -110,7 +139,9 @@ class _CustomerTransactionListScreenState
       amountRefController.clear();
       searchAmount = '';
       selectedDate = null;
+      currentPage = 1;
     });
+    applyFilters();
   }
 
   Future<void> refreshData() async {
@@ -228,7 +259,9 @@ class _CustomerTransactionListScreenState
                                   onchanged: (value) {
                                     setState(() {
                                       searchAmount = value!;
+                                      currentPage = 1; // Reset to first page on search
                                     });
+                                    applyFilters();
                                   },
                                   controller: amountRefController,
                                   size: size,
@@ -265,22 +298,17 @@ class _CustomerTransactionListScreenState
                                   child: Center(
                                     child: CalendarPickerTableCell(
                                       onDateSelected: (DateTime date) {
-                                        selectedDate = date;
+                                        setState(() {
+                                          selectedDate = date;
+                                          currentPage = 1; // Reset to first page on date change
+                                        });
+                                        applyFilters();
                                       },
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                          CustomRoundButton(
-                            title: "Search",
-                            fct: searchTransactions,
-                            height: 45,
-                            width: isSmallScreen
-                                ? size.width * 0.4
-                                : size.width * 0.09,
-                            fontSize: FontSize.s12,
                           ),
                           CustomRoundButton(
                             title: "Reset",
@@ -371,99 +399,128 @@ class _CustomerTransactionListScreenState
                                             physics:
                                                 const BouncingScrollPhysics(),
                                             scrollDirection: Axis.vertical,
-                                            child: Table(
-                                              columnWidths: const {
-                                                0: FlexColumnWidth(0.5), // No
-                                                1: FlexColumnWidth(2.0), // Name
-                                                2: FlexColumnWidth(1.0), // Type
-                                                3: FlexColumnWidth(1.5), // Amount
-                                                4: FlexColumnWidth(1.0), // Status
-                                                5: FlexColumnWidth(1.0), // Action
-                                              },
-                                              border: null,
-                                              defaultVerticalAlignment:
-                                                  TableCellVerticalAlignment.middle,
-                                              children: [
-                                                // Table Rows
-                                                ...listTransaction!
-                                                    .where((transaction) {
-                                                  return transaction.amount!
-                                                      .contains(searchAmount);
-                                                })
-                                                    .toList()
-                                                    .asMap()
-                                                    .entries
-                                                    .map((entry) {
-                                                  final int index = entry.key;
-                                                  final transaction = entry.value;
-                                                  return TableRow(
-                                                    decoration: BoxDecoration(
-                                                      color: index % 2 == 0
-                                                          ? Colors.white
-                                                          : Colors.grey
-                                                              .withOpacity(0.1),
-                                                    ),
+                                            child: listTransaction == null || listTransaction!.isEmpty
+                                              ? Container(
+                                                  height: 300,
+                                                  width: double.infinity,
+                                                  alignment: Alignment.center,
+                                                  child: Column(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    crossAxisAlignment: CrossAxisAlignment.center,
                                                     children: [
-                                                      _buildTableCell(
-                                                          '${index + 1}'),
-                                                      _buildTableCell("Name"),
-                                                      _buildTableCell(
-                                                          "${transaction.type}"),
-                                                      _buildTableCell(
-                                                          "${transaction.currency} ${transaction.amount}"),
-                                                      _buildTableCell(
-                                                          "${transaction.status}"),
-                                                      Center(
-                                                        child: Padding(
-                                                          padding:
-                                                              const EdgeInsets.all(
-                                                                  8.0),
-                                                          child:
-                                                              BuildBoxShadowContainer(
-                                                            margin:
-                                                                const EdgeInsets
-                                                                        .only(
-                                                                    left: 5,
-                                                                    right: 5),
-                                                            circleRadius: 5,
-                                                            child: IconButton(
-                                                              icon: Icon(
-                                                                Icons.visibility,
-                                                                size: 18,
-                                                                color: ColorManager
-                                                                    .kPrimaryColor
-                                                                    .withOpacity(
-                                                                        0.9),
-                                                              ),
-                                                              onPressed: () {
-                                                                invoiceProvider
-                                                                    .callDetailsOfTransaction(
-                                                                  id: transaction
-                                                                          .id ??
-                                                                      0,
-                                                                  accessToken:
-                                                                      token ?? "",
-                                                                );
-                                                                sideBarController
-                                                                    .index
-                                                                    .value = 30;
-                                                              },
-                                                              constraints:
-                                                                  const BoxConstraints(
-                                                                minWidth: 36,
-                                                                minHeight: 36,
-                                                              ),
-                                                              padding:
-                                                                  EdgeInsets.zero,
-                                                            ),
-                                                          ),
+                                                      Icon(
+                                                        Icons.receipt_long,
+                                                        size: 60,
+                                                        color: ColorManager.kPrimaryColor.withOpacity(0.7),
+                                                      ),
+                                                      const SizedBox(height: 15),
+                                                      Text(
+                                                        'No transactions found',
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager.medium,
+                                                          FontSize.s18,
+                                                          0.27,
+                                                          ColorManager.textColor,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                        'Try adjusting your search criteria',
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager.regular,
+                                                          FontSize.s14,
+                                                          0.20,
+                                                          Colors.grey,
                                                         ),
                                                       ),
                                                     ],
-                                                  );
-                                                }).toList(),
-                                              ],
-                                            ),
+                                                  ),
+                                                )
+                                              : Table(
+                                                columnWidths: const {
+                                                  0: FlexColumnWidth(0.5), // No
+                                                  1: FlexColumnWidth(2.0), // Name
+                                                  2: FlexColumnWidth(1.0), // Type
+                                                  3: FlexColumnWidth(1.5), // Amount
+                                                  4: FlexColumnWidth(1.0), // Status
+                                                  5: FlexColumnWidth(1.0), // Action
+                                                },
+                                                border: null,
+                                                defaultVerticalAlignment:
+                                                    TableCellVerticalAlignment.middle,
+                                                children: [
+                                                  // Table Rows
+                                                  ...listTransaction!.asMap().entries.map((entry) {
+                                                    final int index = entry.key;
+                                                    final transaction = entry.value;
+                                                    return TableRow(
+                                                      decoration: BoxDecoration(
+                                                        color: index % 2 == 0
+                                                            ? Colors.white
+                                                            : Colors.grey
+                                                                .withOpacity(0.1),
+                                                      ),
+                                                      children: [
+                                                        _buildTableCell(
+                                                            '${index + 1 + (currentPage - 1) * itemsPerPage}'),
+                                                        _buildTableCell("Name"),
+                                                        _buildTableCell(
+                                                            "${transaction.type}"),
+                                                        _buildTableCell(
+                                                            "${transaction.currency} ${transaction.amount}"),
+                                                        _buildTableCell(
+                                                            "${transaction.status}"),
+                                                        Center(
+                                                          child: Padding(
+                                                            padding:
+                                                                const EdgeInsets.all(
+                                                                    8.0),
+                                                            child:
+                                                                BuildBoxShadowContainer(
+                                                              margin:
+                                                                  const EdgeInsets
+                                                                          .only(
+                                                                      left: 5,
+                                                                      right: 5),
+                                                              circleRadius: 5,
+                                                              child: IconButton(
+                                                                icon: Icon(
+                                                                  Icons.visibility,
+                                                                  size: 18,
+                                                                  color: ColorManager
+                                                                      .kPrimaryColor
+                                                                      .withOpacity(
+                                                                          0.9),
+                                                                ),
+                                                                onPressed: () {
+                                                                  invoiceProvider
+                                                                      .callDetailsOfTransaction(
+                                                                    id: transaction
+                                                                            .id ??
+                                                                        0,
+                                                                    accessToken:
+                                                                        token ?? "",
+                                                                  );
+                                                                  sideBarController
+                                                                      .index
+                                                                      .value = 30;
+                                                                },
+                                                                constraints:
+                                                                    const BoxConstraints(
+                                                                  minWidth: 36,
+                                                                  minHeight: 36,
+                                                                ),
+                                                                padding:
+                                                                    EdgeInsets.zero,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    );
+                                                  }).toList(),
+                                                ],
+                                              ),
                                           ),
                                         ),
                                       ),
@@ -474,10 +531,13 @@ class _CustomerTransactionListScreenState
                       ),
                       const SizedBox(height: 10),
                       PaginationControl(
-                        currentPage: invoiceProvider.currentPage,
-                        totalPages: invoiceProvider.totalPages,
+                        currentPage: currentPage,
+                        totalPages: totalPages,
                         onPageChanged: (int page) {
-                          searchTransactions(page);
+                          setState(() {
+                            currentPage = page;
+                          });
+                          applyFilters();
                         },
                       ),
                     ],

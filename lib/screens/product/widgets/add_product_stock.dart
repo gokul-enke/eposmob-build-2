@@ -22,7 +22,7 @@ import '../../../components/build_round_button.dart';
 import '../../../components/build_title.dart';
 import '../../../controllers/sidebar_controller.dart';
 
-import '../../../models/category_list.dart';
+import '../../../models/category_list.dart' as category_models;
 import '../../../models/get_product.dart';
 
 import '../../../models/get_store.dart';
@@ -89,7 +89,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   // Track the selected unit
   GetProduct? selectedValue;
   String? selected;
-  Category? selectedValueCategory;
+  category_models.Category? selectedValueCategory;
   final TextEditingController textEditingController = TextEditingController();
 
   Map<String, dynamic> apiBodyData = {};
@@ -377,7 +377,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         gridSelectionProvider.getCategoryProductList;
 
     // Access the category list
-    List<Category>? categoryList = categoryProvider.category;
+    List<category_models.Category>? categoryList = categoryProvider.category;
 
     return SafeArea(
       child: Container(
@@ -477,7 +477,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                             height: size.height * .07,
                                             width: size.width / 3,
                                             child: DropdownButtonFormField<
-                                                Category>(
+                                                category_models.Category>(
                                               decoration: const InputDecoration(
                                                 border: InputBorder
                                                     .none, // Remove the underline
@@ -500,9 +500,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                 ),
                                               ),
                                               items: categoryList!
-                                                  .map((Category category) {
+                                                  .map((category_models.Category category) {
                                                     return DropdownMenuItem<
-                                                            Category>(
+                                                            category_models.Category>(
                                                         value: category,
                                                         child: category
                                                                     .categoryName ==
@@ -539,7 +539,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                   })
                                                   .toSet()
                                                   .toList(),
-                                              onChanged: (Category?
+                                              onChanged: (category_models.Category?
                                                   selectedCategory) async {
                                                 if (selectedCategory != null) {
                                                   // Update the selected category in the provider

@@ -25,110 +25,60 @@ class ReceiptListScreen extends StatefulWidget {
 class _ReceiptListScreenState extends State<ReceiptListScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
   final TextEditingController searchTextController = TextEditingController();
-  bool initLoading = false;
-  List<Receipt>? receiptList = [];
-  ReceiptData? receiptData;
+  bool isInitialized = false;
 
   @override
   void initState() {
-    loadInitData();
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadReceipts();
+    });
   }
 
-  void loadInitData() async {
-    debugPrint("📌 loadInitData started");
+  Future<void> loadReceipts() async {
+    if (isInitialized) return;
+    
     try {
-      setState(() {
-        initLoading = true;
-      });
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint("📌 Access token length: ${accessToken?.length ?? 0}");
-
-      InvoiceProvider invoiceProvider =
-          Provider.of<InvoiceProvider>(context, listen: false);
-
-      debugPrint("📌 Calling invoiceProvider.listAllReceipts");
-      final value = await invoiceProvider.listAllReceipts(
-          accessToken: accessToken ?? "", page: 1);
-
-      debugPrint(
-          "📌 API response received: ${value != null ? 'not null' : 'null'}");
-
-      if (value != null && value['status'] == 'success') {
-        debugPrint("📌 Response status: success");
-        ReceiptResponse receiptResponse = ReceiptResponse.fromJson(value);
-        setState(() {
-          receiptData = receiptResponse.data;
-          receiptList = receiptResponse.data.data;
-          debugPrint("📌 Loaded ${receiptList?.length ?? 0} receipts");
-        });
-      } else {
-        debugPrint("📌 Response status: not success, value: $value");
-        showScaffold(context: context, message: "Data Not Found");
+      final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+      
+      if (accessToken == null || accessToken.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Authentication token is missing")),
+        );
+        return;
       }
-    } catch (error) {
-      debugPrint("❌ Receipt listing error: ${error.toString()}");
-      showScaffold(context: context, message: "Error fetching receipts");
-    } finally {
+      
+      // Load all receipts for local pagination
+      await Provider.of<InvoiceProvider>(context, listen: false).loadAllReceipts(accessToken);
       setState(() {
-        initLoading = false;
+        isInitialized = true;
       });
-      debugPrint("📌 loadInitData finished");
+    } catch (error) {
+      debugPrint("Error loading receipts: $error");
+      showScaffold(context: context, message: "Error fetching receipts: $error");
     }
   }
 
-  Future<void> searchReceipts(int page) async {
-    debugPrint("📌 searchReceipts started with page: $page");
-    try {
-      setState(() {
-        initLoading = true;
-      });
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      InvoiceProvider invoiceProvider =
-          Provider.of<InvoiceProvider>(context, listen: false);
-
-      debugPrint("📌 Calling invoiceProvider.listAllReceipts");
-      final value = await invoiceProvider.listAllReceipts(
-          accessToken: accessToken ?? "", page: page);
-
-      debugPrint(
-          "📌 API response received: ${value != null ? 'not null' : 'null'}");
-
-      if (value != null && value['status'] == 'success') {
-        debugPrint("📌 Response status: success");
-        ReceiptResponse receiptResponse = ReceiptResponse.fromJson(value);
-        setState(() {
-          receiptData = receiptResponse.data;
-          receiptList = receiptResponse.data.data;
-          debugPrint("📌 Loaded ${receiptList?.length ?? 0} receipts");
-        });
-      } else {
-        debugPrint("📌 Response status: not success, value: $value");
-        showScaffold(context: context, message: "Data Not Found");
-      }
-    } catch (error) {
-      debugPrint("❌ Receipt listing error: ${error.toString()}");
-      showScaffold(context: context, message: "Error fetching receipts");
-    } finally {
-      setState(() {
-        initLoading = false;
-      });
-      debugPrint("📌 searchReceipts finished");
-    }
+  void searchReceipts() {
+    final String searchText = searchTextController.text.trim();
+    debugPrint("Searching for receipts with name: '$searchText'");
+    
+    InvoiceProvider provider = Provider.of<InvoiceProvider>(context, listen: false);
+    provider.applyReceiptFilters(name: searchText, page: 1);
   }
 
   void resetSearch() {
     setState(() {
       searchTextController.clear();
-      loadInitData();
     });
+    Provider.of<InvoiceProvider>(context, listen: false).resetReceiptFilters();
   }
 
   Future<void> refreshData() async {
-    resetSearch();
-    loadInitData();
+    final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    if (accessToken == null || accessToken.isEmpty) return;
+    
+    await Provider.of<InvoiceProvider>(context, listen: false).loadAllReceipts(accessToken);
   }
 
   @override
@@ -207,18 +157,6 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
           Padding(
             padding: const EdgeInsets.only(left: 10.0, top: 30),
             child: CustomRoundButton(
-              title: "Search",
-              fct: () {
-                searchReceipts(1); // Start search from page 1
-              },
-              height: 45,
-              width: size.width * 0.09,
-              fontSize: FontSize.s12,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 10.0, top: 30),
-            child: CustomRoundButton(
               title: "Reset",
               boxColor: Colors.white,
               textColor: ColorManager.kPrimaryColor,
@@ -253,9 +191,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
             child: TextFormField(
               controller: searchTextController,
               onChanged: (value) {
-                setState(() {
-                  // Update state if needed
-                });
+                searchReceipts();
               },
               cursorColor: ColorManager.kPrimaryColor,
               cursorHeight: 13,
@@ -307,150 +243,193 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
   }
 
   Widget _buildReceiptTable() {
-    return initLoading
-        ? const Center(child: CircularProgressIndicator.adaptive())
-        : BuildBoxShadowContainer(
-            margin: const EdgeInsets.only(top: 5),
-            circleRadius: 7,
-            offsetValue: const Offset(2, 2),
-            blurRadius: 8.0,
-            color: Colors.white,
-            child: Column(
-              children: [
-                // Fixed table header
-                Container(
-                  decoration: const BoxDecoration(
-                    color: ColorManager.tableBGColor,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12,
-                        offset: Offset(0, 2),
-                        blurRadius: 2.0,
-                      ),
-                    ],
-                  ),
-                  child: Table(
-                    columnWidths: const {
-                      0: FlexColumnWidth(2.0), // Customer Name
-                      1: FlexColumnWidth(1.0), // Receipt Number
-                      2: FlexColumnWidth(1.5), // Amount
-                      3: FlexColumnWidth(2.0), // Payment Reference
-                      4: FlexColumnWidth(1.5), // Status
-                      5: FlexColumnWidth(1.0), // Payment Method
-                      6: FlexColumnWidth(1.0), // Action
-                    },
-                    border: null,
-                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                    children: [
-                      TableRow(
-                        children: [
-                          _buildTableHeader("Customer Name"),
-                          _buildTableHeader("Receipt Number"),
-                          _buildTableHeader("Amount"),
-                          _buildTableHeader("Payment Reference"),
-                          _buildTableHeader("Status"),
-                          _buildTableHeader("Payment Method"),
-                          _buildTableHeader("Action"),
+    return Consumer<InvoiceProvider>(
+      builder: (context, invoiceProvider, child) {
+        final isLoading = invoiceProvider.isLoading;
+        final receiptList = invoiceProvider.getListReceipt;
+        
+        return isLoading 
+            ? const Center(child: CircularProgressIndicator.adaptive())
+            : BuildBoxShadowContainer(
+                margin: const EdgeInsets.only(top: 5),
+                circleRadius: 7,
+                offsetValue: const Offset(2, 2),
+                blurRadius: 8.0,
+                color: Colors.white,
+                child: Column(
+                  children: [
+                    // Fixed table header
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: ColorManager.tableBGColor,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            offset: Offset(0, 2),
+                            blurRadius: 2.0,
+                          ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-                // Scrollable table body
-                Expanded(
-                  child: receiptList == null || receiptList!.isEmpty
-                      ? const Center(child: Text("No receipts available"))
-                      : MouseRegion(
-                          cursor: SystemMouseCursors.grab,
-                          child: ScrollConfiguration(
-                            behavior: ScrollConfiguration.of(context).copyWith(
-                              dragDevices: {
-                                PointerDeviceKind.mouse,
-                                PointerDeviceKind.touch,
-                                PointerDeviceKind.stylus,
-                                PointerDeviceKind.trackpad,
-                              },
-                            ),
-                            child: SingleChildScrollView(
-                              physics: const BouncingScrollPhysics(),
-                              scrollDirection: Axis.vertical,
-                              child: Table(
-                                columnWidths: const {
-                                  0: FlexColumnWidth(2.0), // Customer Name
-                                  1: FlexColumnWidth(1.0), // Receipt Number
-                                  2: FlexColumnWidth(1.5), // Amount
-                                  3: FlexColumnWidth(2.0), // Payment Reference
-                                  4: FlexColumnWidth(1.5), // Status
-                                  5: FlexColumnWidth(1.0), // Payment Method
-                                  6: FlexColumnWidth(1.0), // Action
-                                },
-                                border: null,
-                                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                      child: Table(
+                        columnWidths: const {
+                          0: FlexColumnWidth(2.0), // Customer Name
+                          1: FlexColumnWidth(1.0), // Receipt Number
+                          2: FlexColumnWidth(1.5), // Amount
+                          3: FlexColumnWidth(2.0), // Payment Reference
+                          4: FlexColumnWidth(1.5), // Status
+                          5: FlexColumnWidth(1.0), // Payment Method
+                          6: FlexColumnWidth(1.0), // Action
+                        },
+                        border: null,
+                        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                        children: [
+                          TableRow(
+                            children: [
+                              _buildTableHeader("Customer Name"),
+                              _buildTableHeader("Receipt Number"),
+                              _buildTableHeader("Amount"),
+                              _buildTableHeader("Payment Reference"),
+                              _buildTableHeader("Status"),
+                              _buildTableHeader("Payment Method"),
+                              _buildTableHeader("Action"),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Scrollable table body
+                    Expanded(
+                      child: receiptList == null || receiptList.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  ...receiptList!.asMap().entries.map((entry) {
-                                    final int index = entry.key;
-                                    final receipt = entry.value;
-                                    return TableRow(
-                                      decoration: BoxDecoration(
-                                        color: index % 2 == 0
-                                            ? Colors.white
-                                            : Colors.grey.withOpacity(0.1),
-                                      ),
-                                      children: [
-                                        _buildTableCell(receipt.customer.user.name.toString()),
-                                        _buildTableCell(receipt.receiptNumber),
-                                        _buildTableCell(receipt.amount),
-                                        _buildTableCell(receipt.paymentReference),
-                                        _buildTableCell(receipt.receiptStatus),
-                                        _buildTableCell(receipt.paymentMethod),
-                                        Center(
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(8.0),
-                                            child: BuildBoxShadowContainer(
-                                              margin: const EdgeInsets.only(left: 5, right: 5),
-                                              circleRadius: 5,
-                                              child: IconButton(
-                                                icon: Icon(
-                                                  Icons.visibility,
-                                                  size: 18,
-                                                  color: ColorManager.kPrimaryColor.withOpacity(0.9),
-                                                ),
-                                                onPressed: () {
-                                                  String? token = Provider.of<AuthModel>(context, listen: false).token;
-                                                  InvoiceProvider invoiceProvider = Provider.of<InvoiceProvider>(context, listen: false);
-                                                  invoiceProvider.callDetailsOfReceipt(
-                                                      id: receipt.id, accessToken: token ?? "");
-                                                  sideBarController.index.value = 48;
-                                                },
-                                                constraints: const BoxConstraints(
-                                                  minWidth: 36,
-                                                  minHeight: 36,
-                                                ),
-                                                padding: EdgeInsets.zero,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  }).toList(),
+                                  Icon(
+                                    Icons.receipt_long,
+                                    size: 60,
+                                    color: ColorManager.kPrimaryColor.withOpacity(0.7),
+                                  ),
+                                  const SizedBox(height: 15),
+                                  Text(
+                                    'No receipts available',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s18,
+                                      0.27,
+                                      ColorManager.textColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Try adjusting your search criteria',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      FontSize.s14,
+                                      0.20,
+                                      Colors.grey,
+                                    ),
+                                  ),
                                 ],
                               ),
+                            )
+                          : MouseRegion(
+                              cursor: SystemMouseCursors.grab,
+                              child: ScrollConfiguration(
+                                behavior: ScrollConfiguration.of(context).copyWith(
+                                  dragDevices: {
+                                    PointerDeviceKind.mouse,
+                                    PointerDeviceKind.touch,
+                                    PointerDeviceKind.stylus,
+                                    PointerDeviceKind.trackpad,
+                                  },
+                                ),
+                                child: SingleChildScrollView(
+                                  physics: const BouncingScrollPhysics(),
+                                  scrollDirection: Axis.vertical,
+                                  child: Table(
+                                    columnWidths: const {
+                                      0: FlexColumnWidth(2.0), // Customer Name
+                                      1: FlexColumnWidth(1.0), // Receipt Number
+                                      2: FlexColumnWidth(1.5), // Amount
+                                      3: FlexColumnWidth(2.0), // Payment Reference
+                                      4: FlexColumnWidth(1.5), // Status
+                                      5: FlexColumnWidth(1.0), // Payment Method
+                                      6: FlexColumnWidth(1.0), // Action
+                                    },
+                                    border: null,
+                                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                    children: [
+                                      ...receiptList.asMap().entries.map((entry) {
+                                        final int index = entry.key;
+                                        final receipt = entry.value;
+                                        return TableRow(
+                                          decoration: BoxDecoration(
+                                            color: index % 2 == 0
+                                                ? Colors.white
+                                                : Colors.grey.withOpacity(0.1),
+                                          ),
+                                          children: [
+                                            _buildTableCell(receipt.customer.user.name.toString()),
+                                            _buildTableCell(receipt.receiptNumber),
+                                            _buildTableCell(receipt.amount),
+                                            _buildTableCell(receipt.paymentReference),
+                                            _buildTableCell(receipt.receiptStatus),
+                                            _buildTableCell(receipt.paymentMethod),
+                                            Center(
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(8.0),
+                                                child: BuildBoxShadowContainer(
+                                                  margin: const EdgeInsets.only(left: 5, right: 5),
+                                                  circleRadius: 5,
+                                                  child: IconButton(
+                                                    icon: Icon(
+                                                      Icons.visibility,
+                                                      size: 18,
+                                                      color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                                                    ),
+                                                    onPressed: () {
+                                                      String? token = Provider.of<AuthModel>(context, listen: false).token;
+                                                      InvoiceProvider invoiceProvider = Provider.of<InvoiceProvider>(context, listen: false);
+                                                      invoiceProvider.callDetailsOfReceipt(
+                                                          id: receipt.id, accessToken: token ?? "");
+                                                      sideBarController.index.value = 48;
+                                                    },
+                                                    constraints: const BoxConstraints(
+                                                      minWidth: 36,
+                                                      minHeight: 36,
+                                                    ),
+                                                    padding: EdgeInsets.zero,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      }).toList(),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
+              );
+      },
+    );
   }
 
   Widget _buildPaginationControls() {
-    return PaginationControl(
-      currentPage: receiptData?.currentPage ?? 1,
-      totalPages: receiptData?.lastPage ?? 1,
-      onPageChanged: (int page) {
-        searchReceipts(page);
+    return Consumer<InvoiceProvider>(
+      builder: (context, invoiceProvider, child) {
+        return PaginationControl(
+          currentPage: invoiceProvider.receiptCurrentPage,
+          totalPages: invoiceProvider.receiptTotalPages,
+          onPageChanged: (int page) {
+            invoiceProvider.goToReceiptPage(page);
+          },
+        );
       },
     );
   }

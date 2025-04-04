@@ -6,16 +6,27 @@ import '../resources/app_url.dart';
 
 class SupplierProvider with ChangeNotifier {
   List<Supplier>? _supplierList;
+  List<Supplier>? _allSuppliers = []; // Store all suppliers for local filtering
   bool _isLoading = false;
   Supplier? _selectedSupplier;
-
+  
+  // Pagination properties
+  int _currentPage = 1;
+  int _totalPages = 1;
+  int _itemsPerPage = 20;
+  String? _filterName;
+  
   List<Supplier>? get supplierList => _supplierList;
   bool get isLoading => _isLoading;
   Supplier? get selectedSupplier => _selectedSupplier;
+  int get currentPage => _currentPage;
+  int get totalPages => _totalPages;
+  int get itemsPerPage => _itemsPerPage;
 
   // Default constructor
   SupplierProvider() {
     _supplierList = [];
+    _allSuppliers = [];
   }
 
   // Select a supplier
@@ -28,6 +39,95 @@ class SupplierProvider with ChangeNotifier {
   void clearSelectedSupplier() {
     _selectedSupplier = null;
     notifyListeners();
+  }
+  
+  // Apply local pagination and filtering
+  void applyFiltersLocally({
+    String? supplierName,
+    int page = 1,
+  }) {
+    if (_allSuppliers == null || _allSuppliers!.isEmpty) {
+      _supplierList = [];
+      _currentPage = 1;
+      _totalPages = 1;
+      notifyListeners();
+      return;
+    }
+
+    // Save filter values
+    _filterName = supplierName;
+    _currentPage = page;
+
+    // Apply filters
+    List<Supplier> filteredList = [..._allSuppliers!];
+    
+    if (supplierName != null && supplierName.isNotEmpty) {
+      filteredList = filteredList.where((supplier) => 
+        supplier.name.toLowerCase().contains(supplierName.toLowerCase())
+      ).toList();
+    }
+
+    // Calculate pagination
+    _totalPages = (filteredList.length / _itemsPerPage).ceil();
+    _totalPages = _totalPages == 0 ? 1 : _totalPages;
+    
+    // Ensure current page is valid
+    if (_currentPage > _totalPages) {
+      _currentPage = _totalPages;
+    }
+    
+    // Apply pagination
+    int startIndex = (_currentPage - 1) * _itemsPerPage;
+    int endIndex = startIndex + _itemsPerPage;
+    
+    if (startIndex >= filteredList.length) {
+      _supplierList = [];
+    } else {
+      endIndex = endIndex > filteredList.length ? filteredList.length : endIndex;
+      _supplierList = filteredList.sublist(startIndex, endIndex);
+    }
+    
+    notifyListeners();
+  }
+
+  // Reset filters and pagination
+  void resetFilters() {
+    _filterName = null;
+    _currentPage = 1;
+    
+    if (_allSuppliers != null && _allSuppliers!.isNotEmpty) {
+      // Apply pagination without any filters to show all suppliers
+      _supplierList = [];
+      
+      List<Supplier> filteredList = [..._allSuppliers!];
+      
+      // Calculate pagination
+      _totalPages = (filteredList.length / _itemsPerPage).ceil();
+      _totalPages = _totalPages == 0 ? 1 : _totalPages;
+      
+      // Apply pagination
+      int startIndex = 0; // Start from first page
+      int endIndex = startIndex + _itemsPerPage;
+      
+      if (startIndex >= filteredList.length) {
+        _supplierList = [];
+      } else {
+        endIndex = endIndex > filteredList.length ? filteredList.length : endIndex;
+        _supplierList = filteredList.sublist(startIndex, endIndex);
+      }
+    }
+    
+    notifyListeners();
+  }
+
+  // Change page
+  void goToPage(int page) {
+    if (page < 1 || page > _totalPages) return;
+    
+    applyFiltersLocally(
+      supplierName: _filterName,
+      page: page
+    );
   }
 
   // Fetch all suppliers from API
@@ -60,8 +160,11 @@ class SupplierProvider with ChangeNotifier {
         final jsonData = json.decode(response.body);
         SupplierResponse supplierResponse = SupplierResponse.fromJson(jsonData);
         
-        _supplierList = supplierResponse.data;
-        debugPrint('Fetched ${_supplierList?.length ?? 0} suppliers');
+        // Store all suppliers for local filtering and pagination
+        _allSuppliers = supplierResponse.data;
+        applyFiltersLocally(supplierName: supplierName);
+        
+        debugPrint('Fetched ${_allSuppliers?.length ?? 0} suppliers');
         
         _isLoading = false;
         notifyListeners();
@@ -93,9 +196,11 @@ class SupplierProvider with ChangeNotifier {
     notifyListeners();
 
     final Map<String, dynamic> apiBodyData = {
-      'name': name,
-      'email': email,
-      'phone': phone,
+      'user': {
+        'name': name,
+        'email': email,
+        'phone': phone,
+      },
       'address': address,
       'product_categories': productCategories,
     };

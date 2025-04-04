@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_detail_row.dart';
-import 'package:pos_machine/models/list_stock.dart';
+import 'package:pos_machine/models/list_stock.dart' as stock_models;
 
 import 'package:provider/provider.dart';
 
@@ -26,7 +26,7 @@ class StockDetailsWidget extends StatelessWidget {
     GridSelectionProvider gridSelectionProvider =
         Provider.of<GridSelectionProvider>(context);
 
-    ListStockModelData? stockDetails =
+    stock_models.ListStockModelData? stockDetails =
         gridSelectionProvider.getViewStockModelData;
 
     List<Widget> buildProductProperties(productProps) {

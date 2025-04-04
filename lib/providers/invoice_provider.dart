@@ -8,7 +8,7 @@ import 'package:pos_machine/models/get_invoice_account_type.dart';
 import 'package:pos_machine/models/get_voucher_account_type.dart';
 import 'package:pos_machine/models/invoice_details.dart';
 import 'package:pos_machine/models/list_invoice.dart';
-import 'package:pos_machine/models/list_receipt.dart';
+import 'package:pos_machine/models/list_receipt.dart' as receipt_list;
 import 'package:pos_machine/models/receipt_details.dart';
 
 import '../models/get_payment_method.dart';
@@ -19,21 +19,32 @@ import '../models/list_transaction.dart';
 import '../resources/app_url.dart';
 
 class InvoiceProvider extends ChangeNotifier {
-  bool isLoading = false;
+  bool _isLoading = false;
   ListTransaction? listTransaction;
   Invoice? listInvoice;
   InvoiceDetails? invoiceDetails;
-  List<Receipt>? receiptListDetails;
+  List<receipt_list.Receipt>? receiptListDetails;
   ReceiptDetails? receiptDetails;
   List<ListTransaction>? transactionListDetails;
   List<Invoice>? invoiceListDetails;
+  
+  // Store all invoices for local filtering and pagination
+  List<Invoice>? _allInvoices;
+  List<Invoice>? get allInvoices => _allInvoices;
+  
+  // Store all receipts for local filtering and pagination
+  List<receipt_list.Receipt>? _allReceipts;
+  List<receipt_list.Receipt>? get allReceipts => _allReceipts;
+  receipt_list.ReceiptData? _receiptData;
+  receipt_list.ReceiptData? get receiptData => _receiptData;
+  
   Map<String, String>? paymentList;
   Map<String, String>? getVoucherAccountTypesModelData = {};
   Map<String, String>? getInvoiceAccountTypesModelData = {};
   List<GetUsersModelData>? getUsersList = [];
   ListTransaction? get getListTransaction => listTransaction;
   Invoice? get getListInvoice => listInvoice;
-  List<Receipt>? get getListReceipt => receiptListDetails;
+  List<receipt_list.Receipt>? get getListReceipt => receiptListDetails;
   InvoiceDetails? get getInvoiceDetails => invoiceDetails;
   ReceiptDetails? get getReceiptDetails => receiptDetails;
   List<GetUsersModelData>? get getUsersListAPI => getUsersList;
@@ -42,10 +53,214 @@ class InvoiceProvider extends ChangeNotifier {
   Map<String, String>? get getInvoiceAccountTypes =>
       getInvoiceAccountTypesModelData;
   Map<String, String>? get getPaymentType => paymentList;
+  
+  // Pagination properties
+  int _currentPage = 1;
+  int _totalPages = 1;
+  int _itemsPerPage = 20;
+  String? _filterName;
+  
+  // Receipt pagination properties
+  int _receiptCurrentPage = 1;
+  int _receiptTotalPages = 1;
+  int _receiptItemsPerPage = 20;
+  String? _receiptFilterName;
+  
+  // Getters for pagination
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
-  final int _currentPage = 1;
-  final int _totalPages = 1;
+  int get itemsPerPage => _itemsPerPage;
+  bool get isLoading => _isLoading;
+  
+  // Getters for receipt pagination
+  int get receiptCurrentPage => _receiptCurrentPage;
+  int get receiptTotalPages => _receiptTotalPages;
+  int get receiptItemsPerPage => _receiptItemsPerPage;
+  
+  // Navigation methods
+  void goToPage(int page) {
+    if (page < 1 || page > _totalPages) return;
+    
+    applyFiltersLocally(
+      filterName: _filterName,
+      page: page
+    );
+  }
+  
+  // Receipt navigation methods
+  void goToReceiptPage(int page) {
+    if (page < 1 || page > _receiptTotalPages) return;
+    
+    applyReceiptFiltersLocally(
+      filterName: _receiptFilterName,
+      page: page
+    );
+  }
+  
+  void applyFilters({String? name, int page = 1}) {
+    _filterName = name;
+    _currentPage = page;
+    applyFiltersLocally(filterName: name, page: page);
+  }
+  
+  void applyReceiptFilters({String? name, int page = 1}) {
+    _receiptFilterName = name;
+    _receiptCurrentPage = page;
+    applyReceiptFiltersLocally(filterName: name, page: page);
+  }
+  
+  void resetFilters() {
+    _filterName = null;
+    _currentPage = 1;
+    applyFiltersLocally(page: 1);
+  }
+  
+  void resetReceiptFilters() {
+    _receiptFilterName = null;
+    _receiptCurrentPage = 1;
+    applyReceiptFiltersLocally(page: 1);
+  }
+  
+  // Apply filters locally
+  void applyFiltersLocally({String? filterName, int page = 1}) {
+    debugPrint("applyFiltersLocally: filterName=$filterName, page=$page");
+    debugPrint("_allInvoices: ${_allInvoices?.length ?? 0} invoices");
+    
+    if (_allInvoices == null || _allInvoices!.isEmpty) {
+      debugPrint("No invoices available for filtering");
+      invoiceListDetails = [];
+      _currentPage = 1;
+      _totalPages = 1;
+      notifyListeners();
+      return;
+    }
+    
+    // Filter invoices
+    List<Invoice> filteredInvoices = [..._allInvoices!];
+    debugPrint("Starting with ${filteredInvoices.length} invoices");
+    
+    if (filterName != null && filterName.isNotEmpty) {
+      filteredInvoices = filteredInvoices.where((invoice) {
+        final bool matchesName = invoice.customer.user.name.toLowerCase().contains(filterName.toLowerCase());
+        return matchesName;
+      }).toList();
+      debugPrint("After name filter: ${filteredInvoices.length} invoices match '$filterName'");
+    }
+    
+    // Update total pages
+    _totalPages = (filteredInvoices.length / _itemsPerPage).ceil();
+    _totalPages = _totalPages == 0 ? 1 : _totalPages;
+    debugPrint("Total pages: $_totalPages (${filteredInvoices.length} items / $_itemsPerPage per page)");
+    
+    // Adjust current page if it's out of bounds
+    if (page > _totalPages) {
+      _currentPage = _totalPages;
+      debugPrint("Adjusted current page to $_currentPage (was $page)");
+    } else {
+      _currentPage = page;
+      debugPrint("Set current page to $_currentPage");
+    }
+    
+    // Paginate
+    int startIndex = (_currentPage - 1) * _itemsPerPage;
+    int endIndex = startIndex + _itemsPerPage;
+    debugPrint("Pagination: startIndex=$startIndex, endIndex=$endIndex");
+    
+    if (startIndex >= filteredInvoices.length) {
+      // If start index is out of bounds, show empty list
+      debugPrint("Start index out of bounds, showing empty list");
+      invoiceListDetails = [];
+    } else {
+      // Ensure end index doesn't exceed list length
+      endIndex = endIndex > filteredInvoices.length ? filteredInvoices.length : endIndex;
+      debugPrint("Taking items $startIndex to $endIndex");
+      invoiceListDetails = filteredInvoices.sublist(startIndex, endIndex);
+      debugPrint("Final list has ${invoiceListDetails?.length ?? 0} invoices");
+    }
+    
+    notifyListeners();
+  }
+  
+  // Apply receipt filters locally
+  void applyReceiptFiltersLocally({String? filterName, int page = 1}) {
+    debugPrint("applyReceiptFiltersLocally: filterName=$filterName, page=$page");
+    debugPrint("_allReceipts: ${_allReceipts?.length ?? 0} receipts");
+    
+    if (_allReceipts == null || _allReceipts!.isEmpty) {
+      debugPrint("No receipts available for filtering");
+      receiptListDetails = [];
+      _receiptCurrentPage = 1;
+      _receiptTotalPages = 1;
+      notifyListeners();
+      return;
+    }
+    
+    // Filter receipts
+    List<receipt_list.Receipt> filteredReceipts = [..._allReceipts!];
+    debugPrint("Starting with ${filteredReceipts.length} receipts");
+    
+    if (filterName != null && filterName.isNotEmpty) {
+      filteredReceipts = filteredReceipts.where((receipt) {
+        final bool matchesName = receipt.customer.user.name.toLowerCase().contains(filterName.toLowerCase());
+        return matchesName;
+      }).toList();
+      debugPrint("After name filter: ${filteredReceipts.length} receipts match '$filterName'");
+    }
+    
+    // Update total pages
+    _receiptTotalPages = (filteredReceipts.length / _receiptItemsPerPage).ceil();
+    _receiptTotalPages = _receiptTotalPages == 0 ? 1 : _receiptTotalPages;
+    debugPrint("Total pages: $_receiptTotalPages (${filteredReceipts.length} items / $_receiptItemsPerPage per page)");
+    
+    // Adjust current page if it's out of bounds
+    if (page > _receiptTotalPages) {
+      _receiptCurrentPage = _receiptTotalPages;
+      debugPrint("Adjusted current page to $_receiptCurrentPage (was $page)");
+    } else {
+      _receiptCurrentPage = page;
+      debugPrint("Set current page to $_receiptCurrentPage");
+    }
+    
+    // Paginate
+    int startIndex = (_receiptCurrentPage - 1) * _receiptItemsPerPage;
+    int endIndex = startIndex + _receiptItemsPerPage;
+    debugPrint("Pagination: startIndex=$startIndex, endIndex=$endIndex");
+    
+    if (startIndex >= filteredReceipts.length) {
+      // If start index is out of bounds, show empty list
+      debugPrint("Start index out of bounds, showing empty list");
+      receiptListDetails = [];
+    } else {
+      // Ensure end index doesn't exceed list length
+      endIndex = endIndex > filteredReceipts.length ? filteredReceipts.length : endIndex;
+      debugPrint("Taking items $startIndex to $endIndex");
+      receiptListDetails = filteredReceipts.sublist(startIndex, endIndex);
+      debugPrint("Final list has ${receiptListDetails?.length ?? 0} receipts");
+    }
+    
+    // Update receipt data for pagination controls
+    if (_receiptData != null) {
+      _receiptData?.currentPage = _receiptCurrentPage;
+      _receiptData?.lastPage = _receiptTotalPages;
+      _receiptData?.perPage = _receiptItemsPerPage;
+      _receiptData?.total = filteredReceipts.length;
+    }
+    
+    notifyListeners();
+  }
+  
+  // Update pagination info from response
+  void updatePaginationFromResponse(dynamic response) {
+    if (response != null && response['status'] == 'success') {
+      final data = response['data'];
+      if (data != null) {
+        _currentPage = data['current_page'] ?? 1;
+        _totalPages = data['last_page'] ?? 1;
+        _itemsPerPage = data['per_page'] ?? 20;
+        notifyListeners();
+      }
+    }
+  }
 
   String? getUserUpOnId(int value) {
     var user = getUsersList!.firstWhere((e) => e.id == value,
@@ -309,26 +524,65 @@ class InvoiceProvider extends ChangeNotifier {
 
   Future<dynamic> listAllInvoices({
     required String accessToken,
+    String? name,
+    int? page,
+    int? perPage,
   }) async {
-    final url = Uri.parse(APPUrl.listAllInvoices);
+    debugPrint("listAllInvoices called: name=$name, page=$page");
+    _isLoading = true;
+    notifyListeners();
+    
+    final queryParams = {
+      'page': '1',  // Always fetch all invoices for local pagination
+      'per_page': '1000',  // Get a large number for local filtering
+    };
+    
+    final uri = Uri.parse(APPUrl.listAllInvoices).replace(queryParameters: queryParams);
+    debugPrint("Fetching invoices from: $uri");
+    
     try {
       final response = await http.get(
-        url,
+        uri,
         headers: {
           'Authorization': 'Bearer $accessToken',
         },
       );
-      // debugPrint('inside ${response.statusCode}');
+      
       if (response.statusCode == 200) {
-        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         ListInvoiceModel listInvoiceModel = ListInvoiceModel.fromJson(jsonData);
 
-        invoiceListDetails = listInvoiceModel.data.invoices;
+        // Store all invoices for local filtering
+        _allInvoices = listInvoiceModel.data.invoices;
+        debugPrint("Received ${_allInvoices?.length ?? 0} invoices from API");
+        
+        // Set filter name if provided
+        if (name != null) {
+          _filterName = name;
+          debugPrint("Setting filter name to: $name");
+        }
+        
+        // Apply filters based on current state
+        applyFiltersLocally(
+          filterName: _filterName,
+          page: page ?? 1
+        );
+        
+        _isLoading = false;
         notifyListeners();
-        return json.decode(response.body);
-      } else {}
-    } finally {}
+        return jsonData;
+      } else {
+        debugPrint("Error fetching invoices: ${response.statusCode}");
+        _isLoading = false;
+        notifyListeners();
+        return {'status': 'error', 'message': 'Failed to fetch invoices'};
+      }
+    } catch (e) {
+      debugPrint("Exception fetching invoices: $e");
+      _isLoading = false;
+      notifyListeners();
+      return {'status': 'error', 'message': e.toString()};
+    }
   }
 
   //          *********************** CALL DETAILS OF INVOICE API ***************************************************
@@ -366,11 +620,22 @@ class InvoiceProvider extends ChangeNotifier {
   Future<dynamic> listAllReceipts({
     required String accessToken,
     int page = 1,
+    bool loadAll = false, // Add parameter to load all receipts
   }) async {
-    debugPrint("🔍 Calling listAllReceipts with page: $page");
-    final url = Uri.parse(
-        "${APPUrl.listAllReceipts}?page=$page"); // Update the URL to point to receipts with pagination
+    _isLoading = true;
+    notifyListeners();
+    
+    debugPrint("🔍 Calling listAllReceipts with page: $page, loadAll: $loadAll");
+    
+    final queryParameters = <String, String>{
+      'page': page.toString(),
+      // If loadAll is true, request a large page size to get all receipts
+      if (loadAll) 'per_page': '1000',
+    };
+    
+    final url = Uri.parse(APPUrl.listAllReceipts).replace(queryParameters: queryParameters);
     debugPrint("🔍 URL: $url");
+    
     try {
       debugPrint("🔍 Token: ${accessToken.substring(0, min(10, accessToken.length))}...");
       final response = await http.get(
@@ -384,21 +649,47 @@ class InvoiceProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         debugPrint("🔍 Response body preview: ${response.body.substring(0, min(100, response.body.length))}...");
         final jsonData = json.decode(response.body);
-        ReceiptResponse receiptResponse = ReceiptResponse.fromJson(jsonData);
+        receipt_list.ReceiptResponse receiptResponse = receipt_list.ReceiptResponse.fromJson(jsonData);
 
-        receiptListDetails = receiptResponse
-            .data.data; // Update this to point to the receipts data
+        if (loadAll) {
+          // Store all receipts for local filtering and pagination
+          _allReceipts = receiptResponse.data.data;
+          _receiptData = receiptResponse.data;
+          applyReceiptFiltersLocally(page: 1);
+        } else {
+          receiptListDetails = receiptResponse.data.data;
+          _receiptData = receiptResponse.data;
+          
+          // Update pagination info
+          _receiptCurrentPage = receiptResponse.data.currentPage;
+          _receiptTotalPages = receiptResponse.data.lastPage;
+          _receiptItemsPerPage = receiptResponse.data.perPage.toInt();
+        }
+        
+        _isLoading = false;
         notifyListeners();
-        return json.decode(response.body);
+        return jsonData;
       } else {
+        _isLoading = false;
+        notifyListeners();
         debugPrint("❌ Error fetching receipts: ${response.reasonPhrase}");
         debugPrint("❌ Error body: ${response.body}");
         return {'status': 'error', 'message': 'Failed to fetch receipts'};
       }
     } catch (e) {
+      _isLoading = false;
+      notifyListeners();
       debugPrint("❌ Exception in listAllReceipts: $e");
       return {'status': 'error', 'message': e.toString()};
     }
+  }
+  
+  // Load all receipts for local filtering and pagination
+  Future<void> loadAllReceipts(String accessToken) async {
+    await listAllReceipts(
+      accessToken: accessToken,
+      loadAll: true,
+    );
   }
 
   //          *********************** CALL DETAILS OF RECEIPT API ***************************************************

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../models/get_product.dart';
-import '../models/list_stock.dart';
+import '../models/list_stock.dart' as stock_models;
 import '../resources/app_url.dart';
 import 'package:http/http.dart' as http;
 
@@ -28,17 +28,17 @@ class GridSelectionProvider extends ChangeNotifier {
   List<GetProduct>? get getSelectedProductList => selectedProductList;
   List<GetProduct>? get getCategoryProductList => categoryProductList;
   List<GetProduct>? get getSelectedProductListAPI => selectedProductListAPI;
-  List<ListStockModelData>? listStockModelDataList = [];
-  List<ListStockModelData>? filteredStockList = [];
-  List<ListStockModelData>? get getListStockModelDataList =>
+  List<stock_models.ListStockModelData>? listStockModelDataList = [];
+  List<stock_models.ListStockModelData>? filteredStockList = [];
+  List<stock_models.ListStockModelData>? get getListStockModelDataList =>
       filteredStockList ?? listStockModelDataList;
-  ListStockModelData? viewStockModelData;
+  stock_models.ListStockModelData? viewStockModelData;
   int currentPage = 1;
   int totalPages = 1;
   int stockCurrentPage = 1;
   int stockTotalPages = 1;
 
-  ListStockModelData? get getViewStockModelData => viewStockModelData;
+  stock_models.ListStockModelData? get getViewStockModelData => viewStockModelData;
   String productNameFromProductId(int value) {
     var product = productList!.firstWhere(
       (product) => product.productId == value,
@@ -996,10 +996,10 @@ class GridSelectionProvider extends ChangeNotifier {
 
           // Detailed error handling for JSON parsing
           try {
-            ListStockModel listStockModel = ListStockModel.fromJson(jsonData);
+            stock_models.ListStockModel listStockModel = stock_models.ListStockModel.fromJson(jsonData);
             listStockModelDataList = listStockModel.data;
             filteredStockList =
-                List<ListStockModelData>.from(listStockModelDataList!);
+                List<stock_models.ListStockModelData>.from(listStockModelDataList!);
 
             stockCurrentPage = listStockModel.pagination?.currentPage ?? 1;
             // Calculate total pages based on total items and per_page
@@ -1049,8 +1049,8 @@ class GridSelectionProvider extends ChangeNotifier {
         // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
 
-        ListStockModelData listStockModel =
-            ListStockModelData.fromJson(jsonData["data"]);
+        stock_models.ListStockModelData listStockModel =
+            stock_models.ListStockModelData.fromJson(jsonData["data"]);
         //  listStockModelDataList = listStockModel.data;
         // ListStockModelData? stockDetails = listStockModelDataList!.firstWhere(
         //   (element) => element.id == stockId,

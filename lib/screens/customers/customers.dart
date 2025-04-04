@@ -205,7 +205,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                 buildColumnWidgetForTextFields(
                                   height: 45,
                                   width: 120,
-                                  onchanged: (value) {},
+                                  onchanged: (value) {
+                                    searchCustomers();
+                                  },
                                   controller: customerNameController,
                                   size: size,
                                   hintText: 'Name',
@@ -233,7 +235,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                 buildColumnWidgetForTextFields(
                                   height: 45,
                                   width: 120,
-                                  onchanged: (value) {},
+                                  onchanged: (value) {
+                                    searchCustomers();
+                                  },
                                   controller: customerEmailController,
                                   size: size,
                                   hintText: 'Email',
@@ -261,24 +265,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                 buildColumnWidgetForTextFields(
                                   height: 45,
                                   width: 120,
-                                  onchanged: (value) {},
+                                  onchanged: (value) {
+                                    searchCustomers();
+                                  },
                                   controller: customerPhoneController,
                                   size: size,
                                   hintText: 'Phone',
                                 ),
                               ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 10.0, top: 30),
-                            child: CustomRoundButton(
-                              title: "Search",
-                              fct: () {
-                                searchCustomers();
-                              },
-                              height: 45,
-                              width: size.width * 0.09,
-                              fontSize: FontSize.s12,
                             ),
                           ),
                           Padding(
@@ -371,29 +365,54 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                               child: SingleChildScrollView(
                                                 physics: const BouncingScrollPhysics(),
                                                 scrollDirection: Axis.vertical,
-                                                child: Table(
-                                                  columnWidths: const {
-                                                    0: FlexColumnWidth(0.5), // No
-                                                    1: FlexColumnWidth(2.0), // Name
-                                                    2: FlexColumnWidth(2.0), // Email
-                                                    3: FlexColumnWidth(1.5), // Phone
-                                                    4: FlexColumnWidth(1.0), // Action
-                                                  },
-                                                  border: null,
-                                                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                                                  children: customerList == null || customerList.isEmpty
-                                                    ? [
-                                                        TableRow(
-                                                          children: [
-                                                            _buildTableCell(''),
-                                                            _buildTableCell('No customers found'),
-                                                            _buildTableCell(''),
-                                                            _buildTableCell(''),
-                                                            _buildTableCell(''),
-                                                          ],
-                                                        )
-                                                      ]
-                                                    : customerList.asMap().entries.map((entry) {
+                                                child: customerList == null || customerList.isEmpty
+                                                  ? Container(
+                                                      height: 300,
+                                                      width: double.infinity,
+                                                      alignment: Alignment.center,
+                                                      child: Column(
+                                                        mainAxisAlignment: MainAxisAlignment.center,
+                                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                                        children: [
+                                                          Icon(
+                                                            Icons.person_search,
+                                                            size: 60,
+                                                            color: ColorManager.kPrimaryColor.withOpacity(0.7),
+                                                          ),
+                                                          const SizedBox(height: 15),
+                                                          Text(
+                                                            'No customers found',
+                                                            style: buildCustomStyle(
+                                                              FontWeightManager.medium,
+                                                              FontSize.s18,
+                                                              0.27,
+                                                              ColorManager.textColor,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(height: 8),
+                                                          Text(
+                                                            'Try adjusting your search criteria',
+                                                            style: buildCustomStyle(
+                                                              FontWeightManager.regular,
+                                                              FontSize.s14,
+                                                              0.20,
+                                                              Colors.grey,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    )
+                                                  : Table(
+                                                      columnWidths: const {
+                                                        0: FlexColumnWidth(0.5), // No
+                                                        1: FlexColumnWidth(2.0), // Name
+                                                        2: FlexColumnWidth(2.0), // Email
+                                                        3: FlexColumnWidth(1.5), // Phone
+                                                        4: FlexColumnWidth(1.0), // Action
+                                                      },
+                                                      border: null,
+                                                      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                                      children: customerList.asMap().entries.map((entry) {
                                       final int index = entry.key;
                                                         final customer = entry.value;
                                       return TableRow(
