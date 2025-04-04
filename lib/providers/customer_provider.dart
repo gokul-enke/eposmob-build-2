@@ -10,10 +10,25 @@ import '../resources/app_url.dart';
 
 class CustomerProvider extends ChangeNotifier {
   List<CustomerListModelData>? customerList = [];
+  List<CustomerListModelData>? _allCustomers = []; // Store all customers for local filtering
   CustomerListModelData? selectedCustomer;
+  
+  // Pagination properties
+  int _currentPage = 1;
+  int _totalPages = 1;
+  int _itemsPerPage = 20;
+  String? _filterName;
+  String? _filterEmail;
+  String? _filterPhone;
+  bool _isLoading = false;
 
+  // Getters
   List<CustomerListModelData>? get getCustomerList => customerList;
   CustomerListModelData? get getSelectedCustomer => selectedCustomer;
+  int get currentPage => _currentPage;
+  int get totalPages => _totalPages;
+  int get itemsPerPage => _itemsPerPage;
+  bool get isLoading => _isLoading;
 
   // Select a customer
   void selectCustomer(CustomerListModelData customer) {
@@ -21,13 +36,97 @@ class CustomerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Call details of a customer
-  // void callCustomerDetails({required int customerId}) {
-  //   CustomerListModelData customer =
-  //       customerList!.firstWhere((element) => element.id == customerId);
-  //   selectedCustomer = customer;
-  //   notifyListeners();
-  // }
+  // Apply local pagination and filtering
+  void applyFiltersLocally({
+    String? filterName,
+    String? filterEmail,
+    String? filterPhone,
+    int page = 1,
+  }) {
+    if (_allCustomers == null || _allCustomers!.isEmpty) {
+      customerList = [];
+      _currentPage = 1;
+      _totalPages = 1;
+      notifyListeners();
+      return;
+    }
+
+    // Save filter values
+    _filterName = filterName;
+    _filterEmail = filterEmail;
+    _filterPhone = filterPhone;
+    _currentPage = page;
+
+    // Apply filters
+    List<CustomerListModelData> filteredList = [..._allCustomers!];
+    
+    if (filterName != null && filterName.isNotEmpty) {
+      filteredList = filteredList.where((customer) => 
+        customer.name != null && 
+        customer.name!.toLowerCase().contains(filterName.toLowerCase())
+      ).toList();
+    }
+    
+    if (filterEmail != null && filterEmail.isNotEmpty) {
+      filteredList = filteredList.where((customer) => 
+        customer.email != null && 
+        customer.email!.toLowerCase().contains(filterEmail.toLowerCase())
+      ).toList();
+    }
+    
+    if (filterPhone != null && filterPhone.isNotEmpty) {
+      filteredList = filteredList.where((customer) => 
+        customer.phone != null && 
+        customer.phone!.contains(filterPhone)
+      ).toList();
+    }
+
+    // Calculate pagination
+    _totalPages = (filteredList.length / _itemsPerPage).ceil();
+    _totalPages = _totalPages == 0 ? 1 : _totalPages;
+    
+    // Ensure current page is valid
+    if (_currentPage > _totalPages) {
+      _currentPage = _totalPages;
+    }
+    
+    // Apply pagination
+    int startIndex = (_currentPage - 1) * _itemsPerPage;
+    int endIndex = startIndex + _itemsPerPage;
+    
+    if (startIndex >= filteredList.length) {
+      customerList = [];
+    } else {
+      endIndex = endIndex > filteredList.length ? filteredList.length : endIndex;
+      customerList = filteredList.sublist(startIndex, endIndex);
+    }
+    
+    notifyListeners();
+  }
+
+  // Reset filters and pagination
+  void resetFilters() {
+    _filterName = null;
+    _filterEmail = null;
+    _filterPhone = null;
+    _currentPage = 1;
+    
+    if (_allCustomers != null && _allCustomers!.isNotEmpty) {
+      applyFiltersLocally(page: 1);
+    }
+  }
+
+  // Change page
+  void goToPage(int page) {
+    if (page < 1 || page > _totalPages) return;
+    
+    applyFiltersLocally(
+      filterName: _filterName,
+      filterEmail: _filterEmail,
+      filterPhone: _filterPhone,
+      page: page
+    );
+  }
 
   //                 *********************** LIST CUSTOMER API ***************************************************
 
@@ -39,12 +138,18 @@ class CustomerProvider extends ChangeNotifier {
     String? filterAgeRange,
     bool sortAscending = false,
     int page = 1,
+    bool loadAll = false, // Add parameter to load all customers
   }) async {
+    _isLoading = true;
+    notifyListeners();
+    
     debugPrint("listCustomer API called");
 
     final queryParameters = <String, String>{
       'page': page.toString(),
       if (sortAscending) 'sort_asc': 'true',
+      // If loadAll is true, request a large page size to get all customers
+      if (loadAll) 'per_page': '1000',
     };
 
     if (filterName != null && filterName.isNotEmpty) {
@@ -79,37 +184,45 @@ class CustomerProvider extends ChangeNotifier {
         final jsonData = json.decode(response.body);
         CustomerListModel customerListModel =
             CustomerListModel.fromJson(jsonData);
-        customerList = customerListModel.data;
+            
+        if (loadAll) {
+          // Store all customers for local filtering and pagination
+          _allCustomers = customerListModel.data;
+          applyFiltersLocally(page: 1);
+        } else {
+          customerList = customerListModel.data;
+          notifyListeners();
+        }
+        
+        _isLoading = false;
         notifyListeners();
         return jsonData;
-      } else if (response.statusCode >= 400) {
-        debugPrint("API error in listCustomer: ${response.reasonPhrase}");
-        if (response.body.isNotEmpty) {
-          try {
-            final errorJson = json.decode(response.body);
-            debugPrint("Error response: $errorJson");
-            // Return the error response instead of throwing an exception
-            return {
-              "status": "error",
-              "message": "Customers Not Found.Try Again!",
-              "errors": errorJson
-            };
-          } catch (e) {
-            debugPrint("Could not parse error response: $e");
-          }
-        }
-        return {"status": "error", "message": "Customers Not Found.Try Again!"};
       } else {
-        debugPrint("Unexpected status code: ${response.statusCode}");
+        debugPrint('Error in API response: ${response.reasonPhrase}');
+        _isLoading = false;
+        notifyListeners();
         return {
           "status": "error",
-          "message": "Failed to load data, Try Again Later!"
+          "message": "Failed to load customers: ${response.reasonPhrase}",
         };
       }
     } catch (error) {
-      debugPrint("Exception in listCustomer: $error");
-      return {"status": "error", "message": error.toString()};
-    } finally {}
+      debugPrint('Exception in listCustomer: $error');
+      _isLoading = false;
+      notifyListeners();
+      return {
+        "status": "error",
+        "message": "Error: $error",
+      };
+    }
+  }
+  
+  // Load all customers for local filtering
+  Future<void> loadAllCustomers(String accessToken) async {
+    await listCustomer(
+      accessToken: accessToken,
+      loadAll: true,
+    );
   }
 
   //                 *********************** ADD CUSTOMER API ***************************************************

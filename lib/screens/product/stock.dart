@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
@@ -277,62 +279,62 @@ class _AddStockScreenState extends State<AddStockScreen> {
                       alignment: WrapAlignment.start,
                       crossAxisAlignment: WrapCrossAlignment.end,
                       children: [
-              SizedBox(
+                        SizedBox(
                           width: isSmallScreen
                               ? size.width * 0.8
                               : size.width * 0.3,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              "Stock Name ",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  "Stock Name ",
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s14,
+                                    0.27,
+                                    Colors.black.withOpacity(0.6),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                          buildColumnWidgetForTextFields(
-                            height: 45,
+                              buildColumnWidgetForTextFields(
+                                height: 45,
                                 width: isSmallScreen
                                     ? size.width * 0.8
                                     : size.width * 0.3,
-                            onchanged: (value) {},
-                            controller: stockNameController,
-                            size: size,
-                            hintText: 'Stock Name',
+                                onchanged: (value) {},
+                                controller: stockNameController,
+                                size: size,
+                                hintText: 'Stock Name',
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
                         CustomRoundButton(
-                        title: "Search",
-                        fct: () => {searchStocks(1)},
-                        height: 45,
+                          title: "Search",
+                          fct: () => {searchStocks(1)},
+                          height: 45,
                           width: isSmallScreen
                               ? size.width * 0.4
                               : size.width * 0.15,
-                        fontSize: FontSize.s12,
-                      ),
+                          fontSize: FontSize.s12,
+                        ),
                         CustomRoundButton(
-                        title: "Reset",
-                        boxColor: Colors.white,
-                        textColor: ColorManager.kPrimaryColor,
-                        fct: resetSearch,
-                        height: 45,
+                          title: "Reset",
+                          boxColor: Colors.white,
+                          textColor: ColorManager.kPrimaryColor,
+                          fct: resetSearch,
+                          height: 45,
                           width: isSmallScreen
                               ? size.width * 0.4
                               : size.width * 0.15,
-                        fontSize: FontSize.s12,
+                          fontSize: FontSize.s12,
                         ),
                       ],
-                      ),
                     ),
-                  ],
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               Expanded(
@@ -342,11 +344,11 @@ class _AddStockScreenState extends State<AddStockScreen> {
                       child: initLoading
                           ? const Center(
                               child: CircularProgressIndicator.adaptive())
-                  : Consumer<GridSelectionProvider>(
-                      builder: (context, gridProvider, child) {
+                          : Consumer<GridSelectionProvider>(
+                              builder: (context, gridProvider, child) {
                                 List<ListStockModelData>?
                                     listStockModelDataList =
-                            gridProvider.getListStockModelDataList;
+                                    gridProvider.getListStockModelDataList;
 
                                 if (listStockModelDataList == null ||
                                     listStockModelDataList.isEmpty) {
@@ -354,9 +356,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                       child: Text("No stock data available"));
                                 }
 
-                        return BuildBoxShadowContainer(
+                                return BuildBoxShadowContainer(
                                   margin: const EdgeInsets.only(top: 5),
-                          circleRadius: 7,
+                                  circleRadius: 7,
                                   offsetValue: const Offset(2, 2),
                                   blurRadius: 8.0,
                                   color: Colors.white,
@@ -374,29 +376,37 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                             ),
                                           ],
                                         ),
-                          child: Table(
-                            columnWidths: const {
-                                            0: FlexColumnWidth(0.5),  // No
-                                            1: FlexColumnWidth(2.0),  // Product Name
-                                            2: FlexColumnWidth(2.0),  // Store Name
-                                            3: FlexColumnWidth(0.8),  // Quantity
-                                            4: FlexColumnWidth(0.8),  // Unit
-                                            5: FlexColumnWidth(1.2),  // Retail Price
-                                            6: FlexColumnWidth(1.2),  // Wholesale Price
-                                            7: FlexColumnWidth(1.0),  // Action
+                                        child: Table(
+                                          columnWidths: const {
+                                            0: FlexColumnWidth(0.5), // No
+                                            1: FlexColumnWidth(
+                                                2.0), // Product Name
+                                            2: FlexColumnWidth(
+                                                2.0), // Store Name
+                                            3: FlexColumnWidth(0.8), // Quantity
+                                            4: FlexColumnWidth(0.8), // Unit
+                                            5: FlexColumnWidth(
+                                                1.2), // Retail Price
+                                            6: FlexColumnWidth(
+                                                1.2), // Wholesale Price
+                                            7: FlexColumnWidth(1.0), // Action
                                           },
                                           border: null,
-                                          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                            children: [
-                              TableRow(
-                                  children: [
+                                          defaultVerticalAlignment:
+                                              TableCellVerticalAlignment.middle,
+                                          children: [
+                                            TableRow(
+                                              children: [
                                                 _buildTableHeader('No'),
-                                                _buildTableHeader('Product Name'),
+                                                _buildTableHeader(
+                                                    'Product Name'),
                                                 _buildTableHeader('Store Name'),
                                                 _buildTableHeader('Quantity'),
                                                 _buildTableHeader('Unit'),
-                                                _buildTableHeader('Retail Price'),
-                                                _buildTableHeader('Wholesale Price'),
+                                                _buildTableHeader(
+                                                    'Retail Price'),
+                                                _buildTableHeader(
+                                                    'Wholesale Price'),
                                                 _buildTableHeader('Action'),
                                               ],
                                             ),
@@ -405,86 +415,140 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                       ),
                                       // Scrollable table body
                                       Expanded(
-                                        child: SingleChildScrollView(
-                                          scrollDirection: Axis.vertical,
-                                          child: Table(
-                                            columnWidths: const {
-                                              0: FlexColumnWidth(0.5),  // No
-                                              1: FlexColumnWidth(2.0),  // Product Name
-                                              2: FlexColumnWidth(2.0),  // Store Name
-                                              3: FlexColumnWidth(0.8),  // Quantity
-                                              4: FlexColumnWidth(0.8),  // Unit
-                                              5: FlexColumnWidth(1.2),  // Retail Price
-                                              6: FlexColumnWidth(1.2),  // Wholesale Price
-                                              7: FlexColumnWidth(1.0),  // Action
-                                            },
-                                            border: null,
-                                            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                                            children: [
-                                              // Table Rows
-                                              ...listStockModelDataList.asMap().entries.map((entry) {
-                                final int index = entry.key;
-                                final stock = entry.value;
-                                return TableRow(
-                                                  decoration: BoxDecoration(
-                                                    color: index % 2 == 0 
-                                                        ? Colors.white 
-                                                        : Colors.grey.withOpacity(0.1),
-                                                  ),
-                                  children: [
-                                                    _buildTableCell('${index + 1}'),
-                                                    _buildTableCell('${stock.productName}'),
-                                                    _buildTableCell('${stock.storeName}'),
-                                                    _buildTableCell('${stock.qty}'),
-                                                    _buildTableCell('${stock.unit}'),
-                                                    _buildTableCell('${stock.retailPrice}'),
-                                                    _buildTableCell('${stock.wholesalePrice}'),
-                                                    Center(
-                                        child: Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: BuildBoxShadowContainer(
-                                                          margin: const EdgeInsets.only(left: 5, right: 5),
-                                                    circleRadius: 5,
-                                                    child: IconButton(
-                                                      icon: Icon(
-                                                        Icons.visibility,
-                                                        size: 18,
-                                                              color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                                        child: MouseRegion(
+                                          cursor: SystemMouseCursors.grab,
+                                          child: ScrollConfiguration(
+                                            behavior:
+                                                ScrollConfiguration.of(context)
+                                                    .copyWith(
+                                              dragDevices: {
+                                                PointerDeviceKind.mouse,
+                                                PointerDeviceKind.touch,
+                                                PointerDeviceKind.stylus,
+                                                PointerDeviceKind.trackpad,
+                                              },
+                                            ),
+                                            child: SingleChildScrollView(
+                                              physics:
+                                                  const BouncingScrollPhysics(),
+                                              scrollDirection: Axis.vertical,
+                                              child: Table(
+                                                columnWidths: const {
+                                                  0: FlexColumnWidth(0.5), // No
+                                                  1: FlexColumnWidth(
+                                                      2.0), // Product Name
+                                                  2: FlexColumnWidth(
+                                                      2.0), // Store Name
+                                                  3: FlexColumnWidth(
+                                                      0.8), // Quantity
+                                                  4: FlexColumnWidth(
+                                                      0.8), // Unit
+                                                  5: FlexColumnWidth(
+                                                      1.2), // Retail Price
+                                                  6: FlexColumnWidth(
+                                                      1.2), // Wholesale Price
+                                                  7: FlexColumnWidth(
+                                                      1.0), // Action
+                                                },
+                                                border: null,
+                                                defaultVerticalAlignment:
+                                                    TableCellVerticalAlignment
+                                                        .middle,
+                                                children: [
+                                                  // Table Rows
+                                                  ...listStockModelDataList
+                                                      .asMap()
+                                                      .entries
+                                                      .map((entry) {
+                                                    final int index = entry.key;
+                                                    final stock = entry.value;
+                                                    return TableRow(
+                                                      decoration: BoxDecoration(
+                                                        color: index % 2 == 0
+                                                            ? Colors.white
+                                                            : Colors.grey
+                                                                .withOpacity(
+                                                                    0.1),
+                                                      ),
+                                                      children: [
+                                                        _buildTableCell(
+                                                            '${index + 1}'),
+                                                        _buildTableCell(
+                                                            '${stock.productName}'),
+                                                        _buildTableCell(
+                                                            '${stock.storeName}'),
+                                                        _buildTableCell(
+                                                            '${stock.qty}'),
+                                                        _buildTableCell(
+                                                            '${stock.unit}'),
+                                                        _buildTableCell(
+                                                            '${stock.retailPrice}'),
+                                                        _buildTableCell(
+                                                            '${stock.wholesalePrice}'),
+                                                        Center(
+                                                          child: Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(8.0),
+                                                            child:
+                                                                BuildBoxShadowContainer(
+                                                              margin:
+                                                                  const EdgeInsets
+                                                                      .only(
+                                                                      left: 5,
+                                                                      right: 5),
+                                                              circleRadius: 5,
+                                                              child: IconButton(
+                                                                icon: Icon(
+                                                                  Icons
+                                                                      .visibility,
+                                                                  size: 18,
+                                                                  color: ColorManager
+                                                                      .kPrimaryColor
+                                                                      .withOpacity(
+                                                                          0.9),
+                                                                ),
+                                                                onPressed: () =>
+                                                                    _showStockDetails(
+                                                                        stock),
+                                                                constraints:
+                                                                    const BoxConstraints(
+                                                                  minWidth: 36,
+                                                                  minHeight: 36,
+                                                                ),
+                                                                padding:
+                                                                    EdgeInsets
+                                                                        .zero,
+                                                              ),
                                                             ),
-                                                            onPressed: () => _showStockDetails(stock),
-                                                            constraints: const BoxConstraints(
-                                                              minWidth: 36,
-                                                              minHeight: 36,
-                                                            ),
-                                                            padding: EdgeInsets.zero,
                                                           ),
                                                         ),
-                                                      ),
-                                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                                            ],
+                                                      ],
+                                                    );
+                                                  }).toList(),
+                                                ],
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
-                            ],
-                          ),
-                        );
-                      },
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
                     ),
                     const SizedBox(height: 10),
-              PaginationControl(
+                    PaginationControl(
                       currentPage: Provider.of<GridSelectionProvider>(context,
                               listen: true)
-                        .stockCurrentPage,
+                          .stockCurrentPage,
                       totalPages: Provider.of<GridSelectionProvider>(context,
                               listen: true)
-                        .stockTotalPages,
-                onPageChanged: (int page) {
-                  searchStocks(page);
-                },
+                          .stockTotalPages,
+                      onPageChanged: (int page) {
+                        searchStocks(page);
+                      },
                     ),
                   ],
                 ),

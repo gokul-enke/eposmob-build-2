@@ -1,5 +1,5 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/category_list.dart';
@@ -10,10 +10,8 @@ import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:provider/provider.dart';
-
 import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
-import '../../controllers/sidebar_controller.dart';
 import '../../models/get_product.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
@@ -261,8 +259,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   @override
   Widget build(BuildContext context) {
-    //  Size size = MediaQuery.of(context).size;
-    SideBarController sideBarController = Get.put(SideBarController());
     CategoryProvider categoryProvider =
         Provider.of<CategoryProvider>(context, listen: false);
 
@@ -325,6 +321,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 25),
 
                     // First row of filters - Name, Category, Price, Barcode
@@ -847,98 +844,125 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                   ),
                                   // Scrollable table body
                                   Expanded(
-                                    child: SingleChildScrollView(
-                                      scrollDirection: Axis.vertical,
-                                      child: Table(
-                                        columnWidths: const {
-                                          0: FractionColumnWidth(0.05), // No
-                                          1: FractionColumnWidth(
-                                              0.20), // Product Name
-                                          2: FractionColumnWidth(
-                                              0.15), // Category Name
-                                          3: FractionColumnWidth(0.10), // Price
-                                          4: FractionColumnWidth(0.10), // MRP
-                                          5: FractionColumnWidth(0.10), // Unit
-                                          6: FractionColumnWidth(
-                                              0.15), // Barcode
-                                          7: FractionColumnWidth(
-                                              0.15), // Action
-                                        },
-                                        border: null,
-                                        defaultVerticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        children: [
-                                          ...productList
-                                              .asMap()
-                                              .entries
-                                              .map((entry) {
-                                            int index = entry.key;
-                                            var product = entry.value;
-                                            String categoryName =
-                                                product.category != null
-                                                    ? product.category!.name ??
-                                                        'Unknown'
-                                                    : 'No Category';
+                                    child: MouseRegion(
+                                      cursor: SystemMouseCursors.grab,
+                                      child: ScrollConfiguration(
+                                        behavior:
+                                            ScrollConfiguration.of(context)
+                                                .copyWith(
+                                          dragDevices: {
+                                            PointerDeviceKind.mouse,
+                                            PointerDeviceKind.touch,
+                                            PointerDeviceKind.stylus,
+                                            PointerDeviceKind.trackpad,
+                                          },
+                                        ),
+                                        child: SingleChildScrollView(
+                                          physics:
+                                              const BouncingScrollPhysics(),
+                                          scrollDirection: Axis.vertical,
+                                          child: Table(
+                                            columnWidths: const {
+                                              0: FractionColumnWidth(
+                                                  0.05), // No
+                                              1: FractionColumnWidth(
+                                                  0.20), // Product Name
+                                              2: FractionColumnWidth(
+                                                  0.15), // Category Name
+                                              3: FractionColumnWidth(
+                                                  0.10), // Price
+                                              4: FractionColumnWidth(
+                                                  0.10), // MRP
+                                              5: FractionColumnWidth(
+                                                  0.10), // Unit
+                                              6: FractionColumnWidth(
+                                                  0.15), // Barcode
+                                              7: FractionColumnWidth(
+                                                  0.15), // Action
+                                            },
+                                            border: null,
+                                            defaultVerticalAlignment:
+                                                TableCellVerticalAlignment
+                                                    .middle,
+                                            children: [
+                                              ...productList
+                                                  .asMap()
+                                                  .entries
+                                                  .map((entry) {
+                                                int index = entry.key;
+                                                var product = entry.value;
+                                                String categoryName =
+                                                    product.category != null
+                                                        ? product.category!
+                                                                .name ??
+                                                            'Unknown'
+                                                        : 'No Category';
 
-                                            return TableRow(
-                                              decoration: BoxDecoration(
-                                                color: index % 2 == 0
-                                                    ? Colors.white
-                                                    : Colors.grey
-                                                        .withOpacity(0.1),
-                                              ),
-                                              children: [
-                                                _buildTableCell("${index + 1}"),
-                                                _buildTableCell(
-                                                    "${product.productName}"),
-                                                _buildTableCell(categoryName),
-                                                _buildTableCell(
-                                                    "${product.price?.price ?? 'N/A'}"),
-                                                _buildTableCell(
-                                                    "${product.mrp ?? 'N/A'}"),
-                                                _buildTableCell(
-                                                    "${product.unit ?? 'N/A'}"),
-                                                _buildTableCell(
-                                                    "${product.barcode ?? 'N/A'}"),
-                                                Center(
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            8.0),
-                                                    child:
-                                                        BuildBoxShadowContainer(
-                                                      margin:
-                                                          const EdgeInsets.only(
-                                                              left: 5,
-                                                              right: 5),
-                                                      circleRadius: 5,
-                                                      child: IconButton(
-                                                        icon: Icon(
-                                                          Icons.visibility,
-                                                          size: 18,
-                                                          color: ColorManager
-                                                              .kPrimaryColor
-                                                              .withOpacity(0.9),
-                                                        ),
-                                                        onPressed: () {
-                                                          _showProductDetails(
-                                                              product);
-                                                        },
-                                                        constraints:
-                                                            const BoxConstraints(
-                                                          minWidth: 36,
-                                                          minHeight: 36,
-                                                        ),
+                                                return TableRow(
+                                                  decoration: BoxDecoration(
+                                                    color: index % 2 == 0
+                                                        ? Colors.white
+                                                        : Colors.grey
+                                                            .withOpacity(0.1),
+                                                  ),
+                                                  children: [
+                                                    _buildTableCell(
+                                                        "${index + 1}"),
+                                                    _buildTableCell(
+                                                        "${product.productName}"),
+                                                    _buildTableCell(
+                                                        categoryName),
+                                                    _buildTableCell(
+                                                        "${product.price?.price ?? 'N/A'}"),
+                                                    _buildTableCell(
+                                                        "${product.mrp ?? 'N/A'}"),
+                                                    _buildTableCell(
+                                                        "${product.unit ?? 'N/A'}"),
+                                                    _buildTableCell(
+                                                        "${product.barcode ?? 'N/A'}"),
+                                                    Center(
+                                                      child: Padding(
                                                         padding:
-                                                            EdgeInsets.zero,
+                                                            const EdgeInsets
+                                                                .all(8.0),
+                                                        child:
+                                                            BuildBoxShadowContainer(
+                                                          margin:
+                                                              const EdgeInsets
+                                                                  .only(
+                                                                  left: 5,
+                                                                  right: 5),
+                                                          circleRadius: 5,
+                                                          child: IconButton(
+                                                            icon: Icon(
+                                                              Icons.visibility,
+                                                              size: 18,
+                                                              color: ColorManager
+                                                                  .kPrimaryColor
+                                                                  .withOpacity(
+                                                                      0.9),
+                                                            ),
+                                                            onPressed: () {
+                                                              _showProductDetails(
+                                                                  product);
+                                                            },
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                              minWidth: 36,
+                                                              minHeight: 36,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                          ),
+                                                        ),
                                                       ),
                                                     ),
-                                                  ),
-                                                ),
-                                              ],
-                                            );
-                                          }).toList(),
-                                        ],
+                                                  ],
+                                                );
+                                              }).toList(),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),

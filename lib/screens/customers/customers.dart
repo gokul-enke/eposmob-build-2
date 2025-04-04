@@ -6,6 +6,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:provider/provider.dart';
+import 'dart:ui';
 
 import '../../controllers/sidebar_controller.dart';
 import '../../models/customer_list.dart';
@@ -22,109 +23,53 @@ class CustomersScreen extends StatefulWidget {
 }
 
 class _CustomersScreenState extends State<CustomersScreen> {
-  bool isInitLoading = false;
-  List<CustomerListModelData>? customerList = [];
   final customerNameController = TextEditingController();
   final customerEmailController = TextEditingController();
   final customerPhoneController = TextEditingController();
-  final customerAgeRangeController = TextEditingController();
-  bool initLoading = false;
+  bool isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    getCustomersDetails();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadCustomers();
+    });
   }
 
-  void getCustomersDetails() async {
+  Future<void> loadCustomers() async {
+    if (isInitialized) return;
+    
     try {
-      setState(() {
-        isInitLoading = true;
-      });
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint("Getting customer details with token: ${accessToken?.substring(0, 10)}...");
+      final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
       
-      var response = await CustomerProvider().listCustomer(
-        accessToken: accessToken ?? "",
-        page: 1,
-      );
-      
-      debugPrint("Customer list API response: $response");
-      if (response["status"] == "success") {
-        CustomerListModel customerListModel =
-            CustomerListModel.fromJson(response);
-
-        setState(() {
-          customerList = customerListModel.data;
-        });
-        debugPrint("Successfully loaded ${customerList?.length ?? 0} customers");
-      } else {
-        debugPrint("Error loading customers: ${response["message"]}");
-        // Show the error message to the user
+      if (accessToken == null || accessToken.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response["message"] ?? "Failed to load customers")),
+          const SnackBar(content: Text("Authentication token is missing")),
         );
+        return;
       }
-    } catch (error) {
-      debugPrint("Exception in getCustomersDetails: $error");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $error")),
-      );
-    } finally {
+      
+      // Load all customers for local pagination
+      await Provider.of<CustomerProvider>(context, listen: false).loadAllCustomers(accessToken);
       setState(() {
-        isInitLoading = false;
+        isInitialized = true;
       });
+    } catch (error) {
+      debugPrint("Error loading customers: $error");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error loading customers: $error")),
+      );
     }
   }
 
-  void searchCustomer(page) async {
-    debugPrint("searchCustomer called with page: $page");
-    try {
-      setState(() {
-        initLoading = true;
-      });
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint("Searching customers with filters - Name: ${customerNameController.text}, Email: ${customerEmailController.text}, Phone: ${customerPhoneController.text}");
-      
-      var response = await CustomerProvider().listCustomer(
-        accessToken: accessToken ?? "",
-        page: page,
+  void searchCustomers() {
+    CustomerProvider provider = Provider.of<CustomerProvider>(context, listen: false);
+    provider.applyFiltersLocally(
         filterName: customerNameController.text,
         filterEmail: customerEmailController.text,
         filterPhone: customerPhoneController.text,
-      );
-      
-      debugPrint("Search response: $response");
-      if (response["status"] == "success") {
-        CustomerListModel customerListModel =
-            CustomerListModel.fromJson(response);
-
-        setState(() {
-          customerList = customerListModel.data;
-        });
-        debugPrint("Search found ${customerList?.length ?? 0} customers");
-      } else {
-        debugPrint("Search error: ${response["message"]}");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response["message"] ?? "Search failed")),
-        );
-        // If there are no customers found, set an empty list
-        setState(() {
-          customerList = [];
-        });
-      }
-    } catch (error) {
-      debugPrint("Exception in searchCustomer: $error");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $error")),
-      );
-    } finally {
-      setState(() {
-        initLoading = false;
-      });
-    }
+      page: 1,
+    );
   }
 
   void resetSearch() {
@@ -133,17 +78,51 @@ class _CustomersScreenState extends State<CustomersScreen> {
       customerEmailController.clear();
       customerPhoneController.clear();
     });
-    getCustomersDetails();
+    Provider.of<CustomerProvider>(context, listen: false).resetFilters();
   }
 
   Future<void> refreshData() async {
-    resetSearch();
+    final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    if (accessToken == null || accessToken.isEmpty) return;
+    
+    await Provider.of<CustomerProvider>(context, listen: false).loadAllCustomers(accessToken);
+  }
+
+  Widget _buildTableHeader(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s12,
+          0.18,
+          ColorManager.kPrimaryColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTableCell(String text) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s9,
+          0.13,
+          Colors.black,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     SideBarController sideBarController = Get.put(SideBarController());
-    CustomerProvider customerProvider = Provider.of<CustomerProvider>(context);
     Size size = MediaQuery.of(context).size;
 
     return SafeArea(
@@ -290,40 +269,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
                               ],
                             ),
                           ),
-                          // Padding(
-                          //   padding: const EdgeInsets.only(left: 10.0),
-                          //   child: Column(
-                          //     crossAxisAlignment: CrossAxisAlignment.start,
-                          //     children: [
-                          //       Padding(
-                          //         padding: const EdgeInsets.all(8.0),
-                          //         child: Text(
-                          //           "Age Range",
-                          //           style: buildCustomStyle(
-                          //             FontWeightManager.regular,
-                          //             FontSize.s14,
-                          //             0.27,
-                          //             Colors.black.withOpacity(0.6),
-                          //           ),
-                          //         ),
-                          //       ),
-                          //       buildColumnWidgetForTextFields(
-                          //         height: 45,
-                          //         width: 120,
-                          //         onchanged: (value) {},
-                          //         controller: customerAgeRangeController,
-                          //         size: size,
-                          //         hintText: 'Age Range',
-                          //       ),
-                          //     ],
-                          //   ),
-                          // ),
                           Padding(
                             padding: const EdgeInsets.only(left: 10.0, top: 30),
                             child: CustomRoundButton(
                               title: "Search",
                               fct: () {
-                                searchCustomer(1);
+                                searchCustomers();
                               },
                               height: 45,
                               width: size.width * 0.09,
@@ -349,270 +300,162 @@ class _CustomersScreenState extends State<CustomersScreen> {
                     ),
                     const SizedBox(height: 20),
                     SizedBox(
-                      child: Column(
+                      height: 500, // Set a fixed height or adjust as needed
+                      child: Consumer<CustomerProvider>(
+                        builder: (context, customerProvider, child) {
+                          final isLoading = customerProvider.isLoading;
+                          final customerList = customerProvider.getCustomerList;
+                          
+                          return Column(
                         children: [
-                          BuildBoxShadowContainer(
+                              Expanded(
+                                child: isLoading
+                                  ? const Center(child: CircularProgressIndicator.adaptive())
+                                  : BuildBoxShadowContainer(
                               width: size.width,
                               margin: const EdgeInsets.only(top: 20),
                               circleRadius: 7,
                               offsetValue: const Offset(1, 1),
-                              child: Center(
+                                    blurRadius: 8.0,
+                                    color: Colors.white,
+                                    child: Column(
+                                      children: [
+                                        // Fixed table header
+                                        Container(
+                                          decoration: const BoxDecoration(
+                                            color: ColorManager.tableBGColor,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black12,
+                                                offset: Offset(0, 2),
+                                                blurRadius: 2.0,
+                                              ),
+                                            ],
+                                          ),
                                 child: Table(
                                   columnWidths: const {
-                                    0: FractionColumnWidth(0.10),
-                                    1: FractionColumnWidth(0.25),
-                                    2: FractionColumnWidth(0.25),
-                                    3: FractionColumnWidth(0.25),
-                                    4: FractionColumnWidth(0.15),
-                                  },
-                                  border: const TableBorder.symmetric(
-                                      outside: BorderSide(
-                                          color: ColorManager.tableBOrderColor,
-                                          width: 0.3),
-                                      inside: BorderSide(
-                                          color: ColorManager.tableBOrderColor,
-                                          width: 0.8)),
-                                  defaultVerticalAlignment:
-                                      TableCellVerticalAlignment.middle,
+                                              0: FlexColumnWidth(0.5), // No
+                                              1: FlexColumnWidth(2.0), // Name
+                                              2: FlexColumnWidth(2.0), // Email
+                                              3: FlexColumnWidth(1.5), // Phone
+                                              4: FlexColumnWidth(1.0), // Action
+                                            },
+                                            border: null,
+                                            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                                   children: [
                                     TableRow(
-                                        decoration: const BoxDecoration(
-                                            color: ColorManager.tableBGColor),
                                         children: [
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                    child: Text(
-                                                  "No",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.18,
-                                                    ColorManager.kPrimaryColor,
-                                                  ),
-                                                )),
-                                              )),
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                    child: Text(
-                                                  "Name",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.18,
-                                                    ColorManager.kPrimaryColor,
-                                                  ),
-                                                )),
-                                              )),
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                    child: Text(
-                                                  "Email",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.18,
-                                                    ColorManager.kPrimaryColor,
-                                                  ),
-                                                )),
-                                              )),
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                    child: Text(
-                                                  "Phone No.",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.18,
-                                                    ColorManager.kPrimaryColor,
-                                                  ),
-                                                )),
-                                              )),
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                    child: Text(
-                                                  "Action",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.18,
-                                                    ColorManager.kPrimaryColor,
-                                                  ),
-                                                )),
-                                              )),
-                                        ]),
-                                    // Map your order data to table rows here
-                                    ...customerList!
-                                        .toList()
-                                        .asMap()
-                                        .entries
-                                        .map((entry) {
-                                      CustomerListModelData customer =
-                                          entry.value;
+                                                  _buildTableHeader('No'),
+                                                  _buildTableHeader('Name'),
+                                                  _buildTableHeader('Email'),
+                                                  _buildTableHeader('Phone No.'),
+                                                  _buildTableHeader('Action'),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        // Scrollable table body
+                                        Expanded(
+                                          child: MouseRegion(
+                                            cursor: SystemMouseCursors.grab,
+                                            child: ScrollConfiguration(
+                                              behavior: ScrollConfiguration.of(context).copyWith(
+                                                dragDevices: {
+                                                  PointerDeviceKind.mouse,
+                                                  PointerDeviceKind.touch,
+                                                  PointerDeviceKind.stylus,
+                                                  PointerDeviceKind.trackpad,
+                                                },
+                                              ),
+                                              child: SingleChildScrollView(
+                                                physics: const BouncingScrollPhysics(),
+                                                scrollDirection: Axis.vertical,
+                                                child: Table(
+                                                  columnWidths: const {
+                                                    0: FlexColumnWidth(0.5), // No
+                                                    1: FlexColumnWidth(2.0), // Name
+                                                    2: FlexColumnWidth(2.0), // Email
+                                                    3: FlexColumnWidth(1.5), // Phone
+                                                    4: FlexColumnWidth(1.0), // Action
+                                                  },
+                                                  border: null,
+                                                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                                  children: customerList == null || customerList.isEmpty
+                                                    ? [
+                                                        TableRow(
+                                                          children: [
+                                                            _buildTableCell(''),
+                                                            _buildTableCell('No customers found'),
+                                                            _buildTableCell(''),
+                                                            _buildTableCell(''),
+                                                            _buildTableCell(''),
+                                                          ],
+                                                        )
+                                                      ]
+                                                    : customerList.asMap().entries.map((entry) {
                                       final int index = entry.key;
-
+                                                        final customer = entry.value;
                                       return TableRow(
+                                                          decoration: BoxDecoration(
+                                                            color: index % 2 == 0
+                                                                ? Colors.white
+                                                                : Colors.grey.withOpacity(0.1),
+                                                          ),
                                         children: [
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
+                                                            _buildTableCell('${index + 1 + (customerProvider.currentPage - 1) * customerProvider.itemsPerPage}'),
+                                                            _buildTableCell(customer.name ?? ''),
+                                                            _buildTableCell(customer.email ?? ''),
+                                                            _buildTableCell(customer.phone ?? ''),
+                                                            Center(
                                               child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                  child: Text(
-                                                    "${index + 1}",
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager.medium,
-                                                      FontSize.s9,
-                                                      0.13,
-                                                      Colors.black,
-                                                    ),
-                                                  ),
-                                                ),
-                                              )),
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                  child: Text(
-                                                    customer.name ?? "",
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager.medium,
-                                                      FontSize.s9,
-                                                      0.13,
-                                                      Colors.black,
-                                                    ),
-                                                  ),
-                                                ),
-                                              )),
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                  child: Text(
-                                                    customer.email ?? "",
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager.medium,
-                                                      FontSize.s9,
-                                                      0.13,
-                                                      Colors.black,
-                                                    ),
-                                                  ),
-                                                ),
-                                              )),
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                  child: Text(
-                                                    customer.phone ?? "",
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager.medium,
-                                                      FontSize.s9,
-                                                      0.13,
-                                                      Colors.black,
-                                                    ),
-                                                  ),
-                                                ),
-                                              )),
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                  child: Row(
-                                                    children: [
-                                                      BuildBoxShadowContainer(
-                                                          margin:
-                                                              const EdgeInsets
-                                                                  .only(
-                                                                  left: 5,
-                                                                  right: 5),
+                                                                padding: const EdgeInsets.all(8.0),
+                                                                child: BuildBoxShadowContainer(
+                                                                  margin: const EdgeInsets.only(left: 5, right: 5),
                                                           circleRadius: 5,
                                                           child: IconButton(
                                                             icon: Icon(
                                                               Icons.visibility,
                                                               size: 18,
-                                                              color: ColorManager
-                                                                  .kPrimaryColor
-                                                                  .withOpacity(
-                                                                      0.9),
+                                                                      color: ColorManager.kPrimaryColor.withOpacity(0.9),
                                                             ),
                                                             onPressed: () {
-                                                              customerProvider
-                                                                  .selectCustomer(
-                                                                      customerList![
-                                                                          index]);
-                                                              sideBarController
-                                                                  .index
-                                                                  .value = 38;
-                                                            },
-                                                          )),
-                                                    ],
-                                                  ),
-                                                ),
-                                              )),
+                                                                      customerProvider.selectCustomer(customerList[index]);
+                                                                      sideBarController.index.value = 38;
+                                                                    },
+                                                                    constraints: const BoxConstraints(
+                                                                      minWidth: 36,
+                                                                      minHeight: 36,
+                                                                    ),
+                                                                    padding: EdgeInsets.zero,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
                                         ],
                                       );
                                     }).toList(),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                   ],
                                 ),
-                              )),
+                                  ),
+                              ),
+                              const SizedBox(height: 10),
                           PaginationControl(
-                            currentPage: 1,
-                            totalPages: 1,
+                                currentPage: customerProvider.currentPage,
+                                totalPages: customerProvider.totalPages,
                             onPageChanged: (int page) {
-                              // Handle pagination if needed
+                                  customerProvider.goToPage(page);
                             },
                           ),
                           const SizedBox(height: 25),
                         ],
+                          );
+                        },
                       ),
                     ),
                   ],

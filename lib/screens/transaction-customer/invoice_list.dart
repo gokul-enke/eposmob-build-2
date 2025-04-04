@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:ui';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/models/list_invoice.dart';
@@ -156,13 +157,15 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           child: Padding(
             padding:
                 const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-            child: ListView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(size),
                 const SizedBox(height: 15),
                 _buildSearchBar(size),
-                _buildInvoiceTable(),
                 const SizedBox(height: 20),
+                _buildInvoiceTable(),
+                const SizedBox(height: 10),
                 _buildPaginationControls(),
               ],
             ),
@@ -273,81 +276,137 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }
 
   Widget _buildInvoiceTable() {
-    return BuildBoxShadowContainer(
-      margin: const EdgeInsets.only(top: 20),
-      circleRadius: 7,
-      offsetValue: const Offset(1, 1),
-      child: Table(
-        columnWidths: const {
-          0: FractionColumnWidth(0.06),
-          1: FractionColumnWidth(0.06),
-          2: FractionColumnWidth(0.06),
-          3: FractionColumnWidth(0.06),
-          4: FractionColumnWidth(0.06),
-          5: FractionColumnWidth(0.05),
-          6: FractionColumnWidth(0.05),
-          7: FractionColumnWidth(0.05),
-        },
-        border: const TableBorder.symmetric(
-          outside: BorderSide(color: ColorManager.tableBOrderColor, width: 0.3),
-          inside: BorderSide(color: ColorManager.tableBOrderColor, width: 0.8),
-        ),
-        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+    return Expanded(
+      child: Column(
         children: [
-          _buildTableHeader(),
-          ..._buildTableRows(),
+          Expanded(
+            child: initLoading
+                ? const Center(child: CircularProgressIndicator.adaptive())
+                : BuildBoxShadowContainer(
+                    margin: const EdgeInsets.only(top: 5),
+                    circleRadius: 7,
+                    offsetValue: const Offset(2, 2),
+                    blurRadius: 8.0,
+                    color: Colors.white,
+                    child: Column(
+                      children: [
+                        // Fixed table header
+                        Container(
+                          decoration: const BoxDecoration(
+                            color: ColorManager.tableBGColor,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black12,
+                                offset: Offset(0, 2),
+                                blurRadius: 2.0,
+                              ),
+                            ],
+                          ),
+                          child: Table(
+                            columnWidths: const {
+                              0: FlexColumnWidth(2.0), // Name
+                              1: FlexColumnWidth(1.5), // Invoice Number
+                              2: FlexColumnWidth(1.0), // Type
+                              3: FlexColumnWidth(1.5), // Invoice Date
+                              4: FlexColumnWidth(1.5), // Due Date
+                              5: FlexColumnWidth(1.0), // Amount
+                              6: FlexColumnWidth(1.0), // Status
+                              7: FlexColumnWidth(1.0), // Action
+                            },
+                            border: null,
+                            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                            children: [
+                              TableRow(
+                                children: [
+                                  _buildTableHeader("Name"),
+                                  _buildTableHeader("Invoice Number"),
+                                  _buildTableHeader("Type"),
+                                  _buildTableHeader("Invoice Date"),
+                                  _buildTableHeader("Due Date"),
+                                  _buildTableHeader("Amount"),
+                                  _buildTableHeader("Status"),
+                                  _buildTableHeader("Action"),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Scrollable table body
+                        Expanded(
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.grab,
+                            child: ScrollConfiguration(
+                              behavior: ScrollConfiguration.of(context).copyWith(
+                                dragDevices: {
+                                  PointerDeviceKind.mouse,
+                                  PointerDeviceKind.touch,
+                                  PointerDeviceKind.stylus,
+                                  PointerDeviceKind.trackpad,
+                                },
+                              ),
+                              child: SingleChildScrollView(
+                                physics: const BouncingScrollPhysics(),
+                                scrollDirection: Axis.vertical,
+                                child: Table(
+                                  columnWidths: const {
+                                    0: FlexColumnWidth(2.0), // Name
+                                    1: FlexColumnWidth(1.5), // Invoice Number
+                                    2: FlexColumnWidth(1.0), // Type
+                                    3: FlexColumnWidth(1.5), // Invoice Date
+                                    4: FlexColumnWidth(1.5), // Due Date
+                                    5: FlexColumnWidth(1.0), // Amount
+                                    6: FlexColumnWidth(1.0), // Status
+                                    7: FlexColumnWidth(1.0), // Action
+                                  },
+                                  border: null,
+                                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                  children: _buildTableRows(),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
         ],
       ),
     );
   }
 
-  TableRow _buildTableHeader() {
-    return TableRow(
-      decoration: const BoxDecoration(color: ColorManager.tableBGColor),
-      children: [
-        _buildTableCell("Name"),
-        _buildTableCell("Invoice Number"),
-        _buildTableCell("Type"),
-        _buildTableCell("Invoice Date"),
-        _buildTableCell("Due Date"),
-        _buildTableCell("Amount"),
-        _buildTableCell("Status"),
-        _buildTableCell("Action"),
-      ],
-    );
-  }
-
-  TableCell _buildTableCell(String title) {
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Center(
-          child: Text(
-            title,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s12,
-              0.18,
-              ColorManager.kPrimaryColor,
-            ),
-          ),
+  Widget _buildTableHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+      child: Text(
+        title,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s12,
+          0.18,
+          ColorManager.kPrimaryColor,
         ),
       ),
     );
   }
 
   List<TableRow> _buildTableRows() {
-    return invoiceListDetails?.map((invoice) {
+    return invoiceListDetails?.asMap().entries.map((entry) {
+          final int index = entry.key;
+          final invoice = entry.value;
           return TableRow(
+            decoration: BoxDecoration(
+              color: index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.1),
+            ),
             children: [
-              _buildInvoiceCell(invoice.customer.user.name.toString()),
-              _buildInvoiceCell(invoice.invoiceNumber),
-              _buildInvoiceCell(invoice.type),
-              _buildInvoiceCell(invoice.invoiceDate),
-              _buildInvoiceCell(invoice.dueDate),
-              _buildInvoiceCell(invoice.amount.toString()),
-              _buildInvoiceCell(invoice.status),
+              _buildTableCell(invoice.customer.user.name.toString()),
+              _buildTableCell(invoice.invoiceNumber),
+              _buildTableCell(invoice.type),
+              _buildTableCell(invoice.invoiceDate),
+              _buildTableCell(invoice.dueDate),
+              _buildTableCell(invoice.amount.toString()),
+              _buildTableCell(invoice.status),
               _buildActionCell(invoice.id),
             ],
           );
@@ -355,20 +414,19 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         [];
   }
 
-  TableCell _buildInvoiceCell(String content) {
+  TableCell _buildTableCell(String content) {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Center(
-          child: Text(
-            content,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s9,
-              0.13,
-              Colors.black,
-            ),
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          content,
+          textAlign: TextAlign.center,
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s9,
+            0.13,
+            Colors.black,
           ),
         ),
       ),
@@ -378,32 +436,33 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   TableCell _buildActionCell(int transactionId) {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Center(
-          child: Row(
-            children: [
-              BuildBoxShadowContainer(
-                margin: const EdgeInsets.only(left: 5, right: 5),
-                circleRadius: 5,
-                child: IconButton(
-                  icon: Icon(
-                    Icons.visibility,
-                    size: 18,
-                    color: ColorManager.kPrimaryColor.withOpacity(0.9),
-                  ),
-                  onPressed: () {
-                    String? token =
-                        Provider.of<AuthModel>(context, listen: false).token;
-                    InvoiceProvider invoiceProvider =
-                        Provider.of<InvoiceProvider>(context, listen: false);
-                    invoiceProvider.callDetailsOfInvoice(
-                        id: transactionId, accessToken: token ?? "");
-                    sideBarController.index.value = 31;
-                  },
-                ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: BuildBoxShadowContainer(
+            margin: const EdgeInsets.only(left: 5, right: 5),
+            circleRadius: 5,
+            child: IconButton(
+              icon: Icon(
+                Icons.visibility,
+                size: 18,
+                color: ColorManager.kPrimaryColor.withOpacity(0.9),
               ),
-            ],
+              onPressed: () {
+                String? token =
+                    Provider.of<AuthModel>(context, listen: false).token;
+                InvoiceProvider invoiceProvider =
+                    Provider.of<InvoiceProvider>(context, listen: false);
+                invoiceProvider.callDetailsOfInvoice(
+                    id: transactionId, accessToken: token ?? "");
+                sideBarController.index.value = 31;
+              },
+              constraints: const BoxConstraints(
+                minWidth: 36,
+                minHeight: 36,
+              ),
+              padding: EdgeInsets.zero,
+            ),
           ),
         ),
       ),
