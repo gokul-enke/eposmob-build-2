@@ -10,6 +10,7 @@ import 'package:websafe_svg/websafe_svg.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
+import '../widgets/user_switcher.dart';
 
 class SideMenuMobile extends StatelessWidget {
   const SideMenuMobile({Key? key}) : super(key: key);
@@ -48,6 +49,13 @@ class SideMenuMobile extends StatelessWidget {
                     ],
                   ),
                 ),
+              ),
+              const SizedBox(
+                height: 20,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                child: const UserSwitcher(),
               ),
               const SizedBox(
                 height: 20,

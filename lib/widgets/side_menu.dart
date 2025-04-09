@@ -4,7 +4,6 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/responsive.dart';
-import 'package:pos_machine/screens/kiosk/kiosk.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
@@ -20,6 +19,7 @@ import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
 import '../screens/login/login.dart';
 import 'drawer_list_tile_expandable.dart';
+import '../widgets/user_switcher.dart';
 
 class CollapsibleSidebar extends StatefulWidget {
   final Widget child;
@@ -126,56 +126,13 @@ class SideMenu extends StatelessWidget {
           const SizedBox(
             height: 20,
           ),
-          // SizedBox(
-          //   height: 300,
-          //   child: Row(
-          //     children: [
-          //       NavigationRail(destinations: [
-          //         NavigationRailDestination(
-          //             icon: WebsafeSvg.asset(
-          //               ImageAssets.homeIcon,
-          //             ),
-          //             label: Text(
-          //               "Home",
-          //               style: TextStyle(color: Colors.black),
-          //             )),
-          //         NavigationRailDestination(
-          //             icon: WebsafeSvg.asset(
-          //               ImageAssets.homeIcon,
-          //             ),
-          //             label: Text("Home")),
-          //         NavigationRailDestination(
-          //             icon: WebsafeSvg.asset(
-          //               ImageAssets.homeIcon,
-          //             ),
-          //             label: Text("Home")),
-          //         NavigationRailDestination(
-          //             icon: WebsafeSvg.asset(
-          //               ImageAssets.homeIcon,
-          //             ),
-          //             label: Text("Home")),
-          //       ], selectedIndex: 0)
-          //     ],
-          //   ),
-          // ),
-          // RoundButtonWithIcon(
-          //   title: 'Home',
-          //   fct: () {},
-          //   size: size,
-          //   iconPath: ImageAssets.homeIcon,
-          // ),
-          // Obx(
-          //   () => DrawerListTile(
-          //     iconPath: ImageAssets.homeIcon,
-          //     title: 'Demo Home',
-          //     onTap: () {
-          //       // debugPrint(" 'Home',${sideBarController.index.value}");
-          //       sideBarController.index.value = 0;
-          //     },
-          //     selected: sideBarController.index.value == 0,
-          //   ),
-          // ),
-
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 15.0),
+            child: UserSwitcher(),
+          ),
+          const SizedBox(
+            height: 20,
+          ),
           Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.homeIcon,
@@ -187,17 +144,6 @@ class SideMenu extends StatelessWidget {
               selected: sideBarController.index.value == 46,
             ),
           ),
-          // Obx(
-          //   () => DrawerListTile(
-          //     iconPath: ImageAssets.homeIcon,
-          //     title: 'Home Old',
-          //     onTap: () {
-          //       // debugPrint(" 'Home Old',${sideBarController.index.value}");
-          //       sideBarController.index.value = 45;
-          //     },
-          //     selected: sideBarController.index.value == 45,
-          //   ),
-          // ),
           Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.barcodeIcon,
@@ -209,17 +155,6 @@ class SideMenu extends StatelessWidget {
               selected: sideBarController.index.value == 54,
             ),
           ),
-          // Obx(
-          //   () => DrawerListTile(
-          //     iconPath: ImageAssets.homeIcon,
-          //     title: 'Kiosk',
-          //     onTap: () {
-          //       Get.to(() => const KioskScreen());
-          //     },
-          //     selected: sideBarController.index.value == 900,
-          //   ),
-          // ),
-
           Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.dashBoardIcon,
@@ -270,14 +205,6 @@ class SideMenu extends StatelessWidget {
           ),
           Obx(
             () => DrawerListTile(
-              // onTapTitle1: () {
-              //   sideBarController.index.value = 12;
-              // },
-              // onTapTitle2: () {
-              //   sideBarController.index.value = 13;
-              // },
-              // listTitle1: "Category",
-              // listTitle2: "Category Properties",
               iconPath: ImageAssets.creditCardIcon,
               title: 'Category',
               onTap: () {
@@ -332,57 +259,18 @@ class SideMenu extends StatelessWidget {
               selected: sideBarController.index.value == 52,
             ),
           ),
-          // Obx(
-          //   () => DrawerListTileExpandableColumn(
-          //       onTapTitle1: () {
-          //         sideBarController.index.value = 19;
-          //       },
-          //       onTapTitle2: () {
-          //         sideBarController.index.value = 26;
-          //       },
-          //       listTitle1: "Purchase",
-          //       listTitle2: "Purchase Voucher",
-          //       iconPath: ImageAssets.cardIcon,
-          //       title: 'Purchase',
-          //       onTap: () async {
-          //         sideBarController.index.value = 19;
-          //         // debugPrint(" 'Purchase',${sideBarController.index.value}");
-          //       },
-          //       selected: sideBarController.index.value == 19 ||
-          //           sideBarController.index.value == 29 ||
-          //           sideBarController.index.value == 20 ||
-          //           sideBarController.index.value == 26 ||
-          //           sideBarController.index.value == 37 ||
-          //           sideBarController.index.value == 36),
-          // ),
-          // Obx(
-          //   () => DrawerListTile(
-          //     iconPath: ImageAssets.cartIcon,
-          //     title: 'Cart',
-          //     items: Provider.of<Cart>(context, listen: true).getCartItems,
-          //     onTap: () {
-          //       sideBarController.index.value = 3;
-          //       // debugPrint(" 'Cart',${sideBarController.index.value}");
-          //     },
-          //     selected: sideBarController.index.value == 3,
-          //   ),
-          // ),
           Obx(
             () => DrawerListTileExpandableColumn(
               onTapTitle1: () {
                 sideBarController.index.value = 21;
               },
-              // onTapTitle2: () {
-              //   sideBarController.index.value = 22;
-              // },
-              onTapTitle3: () {
-                sideBarController.index.value = 23;
-              },
               onTapTitle2: () {
                 sideBarController.index.value = 47;
               },
+              onTapTitle3: () {
+                sideBarController.index.value = 23;
+              },
               listTitle1: "Invoice",
-              // listTitle2: "Voucher",
               listTitle3: "Transactions",
               listTitle2: "Receipts",
               iconPath: ImageAssets.transactionIcon,
@@ -403,17 +291,6 @@ class SideMenu extends StatelessWidget {
                   sideBarController.index.value == 47,
             ),
           ),
-          // Obx(
-          //   () => DrawerListTile(
-          //     iconPath: ImageAssets.transactionIcon,
-          //     title: 'Transaction',
-          //     onTap: () {
-          //       sideBarController.index.value = 4;
-          //       // debugPrint(" 'Transaction',${sideBarController.index.value}");
-          //     },
-          //     selected: sideBarController.index.value == 4,
-          //   ),
-          // ),
           Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.customerIcon,
@@ -427,60 +304,6 @@ class SideMenu extends StatelessWidget {
                   sideBarController.index.value == 38,
             ),
           ),
-          // Obx(
-          //   () => DrawerListTile(
-          //     iconPath: ImageAssets.cardIcon,
-          //     title: 'Loyalty Card',
-          //     onTap: () {
-          //       sideBarController.index.value = 6;
-          //       // debugPrint(" 'Loyality Card',${sideBarController.index.value}");
-          //     },
-          //     selected: sideBarController.index.value == 6,
-          //   ),
-          // ),
-          // Obx(
-          //   () => DrawerListTileExpandableColumn(
-          //       onTapTitle1: () {
-          //         sideBarController.index.value = 39;
-          //       },
-          //       onTapTitle2: () {
-          //         sideBarController.index.value = 40;
-          //       },
-          //       onTapTitle3: () {
-          //         sideBarController.index.value = 41;
-          //       },
-          //       onTapTitle4: () {
-          //         sideBarController.index.value = 42;
-          //       },
-          //       listTitle1: "Account Book",
-          //       listTitle2: "Product Sales Report",
-          //       listTitle3: "Sales Report",
-          //       listTitle4: "Supplier Sales Report",
-          //       icon: Icons.bar_chart,
-          //       title: 'Reports',
-          //       onTap: () {
-          //         sideBarController.index.value = 39;
-          //         // debugPrint(" 'Reports',${sideBarController.index.value}");
-          //       },
-          //       selected: sideBarController.index.value == 39 ||
-          //           sideBarController.index.value == 40 ||
-          //           sideBarController.index.value == 41 ||
-          //           sideBarController.index.value == 42),
-          // ),
-          // Obx(
-          //   () => DrawerListTileExpandableColumn(
-          //       onTapTitle1: () {
-          //         sideBarController.index.value = 43;
-          //       },
-          //       listTitle1: "Location Management",
-          //       icon: Icons.settings,
-          //       title: 'Settings',
-          //       onTap: () {
-          //         sideBarController.index.value = 43;
-          //         // debugPrint(" 'Settings',${sideBarController.index.value}");
-          //       },
-          //       selected: sideBarController.index.value == 43),
-          // ),
           const SizedBox(
             height: 15,
           ),
@@ -505,32 +328,6 @@ class SideMenu extends StatelessWidget {
               selected: sideBarController.index.value == 55,
             ),
           ),
-
-          // Obx(
-          //   () => DrawerListTile(
-          //     iconPath: ImageAssets.notificationIcon,
-          //     title: 'Notifications',
-          //     items: 3,
-          //     onTap: () {
-          //       sideBarController.index.value = 7;
-          //       // debugPrint(" 'Notifications',${sideBarController.index.value}");
-          //     },
-          //     selected: sideBarController.index.value == 7,
-          //   ),
-          // ),
-
-          // Obx(
-          //   () => DrawerListTile(
-          //     iconPath: ImageAssets.supportIcon,
-          //     title: 'Support',
-          //     onTap: () {
-          //       sideBarController.index.value = 8;
-          //       // debugPrint(" 'Support',${sideBarController.index.value}");
-          //     },
-          //     selected: sideBarController.index.value == 8,
-          //   ),
-          // ),
-
           DrawerListTile(
             iconPath: ImageAssets.logoutIcon,
             title: 'Logout',

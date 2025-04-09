@@ -1,7 +1,8 @@
 class APPUrl {
   // static String baseURL = "https://epos.enke.ae";
+  static String baseURL = "https://hypersouq.enke.in";
   // static String baseURL = "https://epos.mevcakes.com";
-  static String baseURL = "https://kmstoys.enke.in";
+  // static String baseURL = "https://kmstoys.enke.in";
   // static String baseURL = "https://open-poems-sneeze.loca.lt";
   // static String baseURL = "http://localhost:8000";
   // static String baseURL = "https://icy-goats-brake.loca.lt";
@@ -90,6 +91,7 @@ class APPUrl {
   static String getTaxtDetails = '$baseURL/api/v1/tax/get-category-tax';
   static String addPurchaseStock = '$baseURL/api/v1/purchases/add-stock';
   static String listStock = '$baseURL/api/v1/product/list-stocks';
+  static String updateStockDetails = '$baseURL/api/v1/product/update-stock';
   // static String listStock = '$baseURL/api/v1/stock-searchbar';
   static String detailsOfStock = '$baseURL/api/v1/product/stock-details';
   static String listPurchaseItems =
@@ -135,4 +137,8 @@ class APPUrl {
       '$baseURL/api/v1/logistics/list-delivery-methods';
   static String getPaymentGateways =
       '$baseURL/api/v1/payment-gateway/list-payment-gateways';
+
+  static String listSalesExecutives = '$baseURL/api/v1/list-sales-executives';
+  static String getRacksDataValues =
+      '$baseURL/api/v1/master-data-values?code=RACKS';
 }

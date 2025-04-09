@@ -28,15 +28,29 @@ class GridSelectionProvider extends ChangeNotifier {
   List<GetProduct>? get getSelectedProductList => selectedProductList;
   List<GetProduct>? get getCategoryProductList => categoryProductList;
   List<GetProduct>? get getSelectedProductListAPI => selectedProductListAPI;
+  
+  // Stock related properties
   List<stock_models.ListStockModelData>? listStockModelDataList = [];
+  List<stock_models.ListStockModelData>? _allStocks = []; // Store all stocks for local filtering
   List<stock_models.ListStockModelData>? filteredStockList = [];
   List<stock_models.ListStockModelData>? get getListStockModelDataList =>
       filteredStockList ?? listStockModelDataList;
   stock_models.ListStockModelData? viewStockModelData;
+  
+  // Pagination properties
   int currentPage = 1;
   int totalPages = 1;
   int stockCurrentPage = 1;
   int stockTotalPages = 1;
+  int _stockItemsPerPage = 20;
+  String? _stockFilterName;
+  String? _stockFilterCategory;
+  bool _stockIsLoading = false;
+
+  // Getters for stock pagination
+  int get stockItemsPerPage => _stockItemsPerPage;
+  bool get stockIsLoading => _stockIsLoading;
+  String? get stockFilterCategory => _stockFilterCategory;
 
   stock_models.ListStockModelData? get getViewStockModelData => viewStockModelData;
   String productNameFromProductId(int value) {
@@ -46,6 +60,8 @@ class GridSelectionProvider extends ChangeNotifier {
 
     return product.productName ?? "";
   }
+
+  List<stock_models.ListStockModelData>? get allStocks => _allStocks;
 
   GridSelectionProvider() {
     listAllProducts(categoryId: 0);
@@ -74,19 +90,14 @@ class GridSelectionProvider extends ChangeNotifier {
   }
 
   void searchStocks(String query) {
-    if (query.isEmpty) {
-      filteredStockList = listStockModelDataList;
-    } else {
-      filteredStockList = listStockModelDataList?.where((stock) {
-        final productNameLower = stock.productName?.toLowerCase() ?? '';
-        final storeNameLower = stock.storeName?.toLowerCase() ?? '';
-        final queryLower = query.toLowerCase();
-
-        return productNameLower.contains(queryLower) ||
-            storeNameLower.contains(queryLower);
-      }).toList();
+    if (_allStocks == null || _allStocks!.isEmpty) {
+      return;
     }
-    notifyListeners();
+    
+    applyStockFiltersLocally(
+      filterName: query,
+      page: 1
+    );
   }
 
   List<GetProduct> searchProducts(String query) {
@@ -967,16 +978,22 @@ class GridSelectionProvider extends ChangeNotifier {
     required String accessToken,
     String? filterName,
     int? page,
+    bool loadAll = false, // Add parameter to load all stocks
   }) async {
+    _stockIsLoading = true;
+    notifyListeners();
+    
     final queryParameters = <String, String>{
-      'page': page.toString(),
+      'page': (page ?? 1).toString(),
+      // If loadAll is true, request a large page size to get all stocks
+      if (loadAll) 'per_page': '1000',
     };
 
     if (filterName != null && filterName.isNotEmpty) {
       queryParameters['filter_name'] = filterName;
     }
 
-    final uri = Uri.parse(APPUrl.listStock);
+    final uri = Uri.parse(APPUrl.listStock).replace(queryParameters: queryParameters);
 
     try {
       final response = await http.get(
@@ -997,15 +1014,21 @@ class GridSelectionProvider extends ChangeNotifier {
           // Detailed error handling for JSON parsing
           try {
             stock_models.ListStockModel listStockModel = stock_models.ListStockModel.fromJson(jsonData);
-            listStockModelDataList = listStockModel.data;
-            filteredStockList =
-                List<stock_models.ListStockModelData>.from(listStockModelDataList!);
-
-            stockCurrentPage = listStockModel.pagination?.currentPage ?? 1;
-            // Calculate total pages based on total items and per_page
-            int totalItems = listStockModel.pagination?.lastPage ?? 0;
-            int itemsPerPage = listStockModel.pagination?.perPage ?? 20;
-            stockTotalPages = (totalItems / itemsPerPage).ceil();
+            
+            if (loadAll) {
+              // Store all stocks for local filtering and pagination
+              _allStocks = listStockModel.data;
+              applyStockFiltersLocally(page: 1);
+            } else {
+              listStockModelDataList = listStockModel.data;
+              filteredStockList = List<stock_models.ListStockModelData>.from(listStockModelDataList!);
+              
+              stockCurrentPage = listStockModel.pagination?.currentPage ?? 1;
+              // Calculate total pages based on total items and per_page
+              int totalItems = listStockModel.pagination?.lastPage ?? 0;
+              int itemsPerPage = listStockModel.pagination?.perPage ?? 20;
+              stockTotalPages = (totalItems / itemsPerPage).ceil();
+            }
 
             notifyListeners();
           } catch (e) {
@@ -1029,8 +1052,110 @@ class GridSelectionProvider extends ChangeNotifier {
     } catch (error) {
       debugPrint('Error in listSTockAPI: $error');
       rethrow;
+    } finally {
+      _stockIsLoading = false;
+      notifyListeners();
     }
   }
+  
+  // Load all stocks for local filtering
+  Future<void> loadAllStocks(String accessToken) async {
+    try {
+      await listSTockAPI(
+        accessToken: accessToken,
+        loadAll: true,
+      );
+    } catch (error) {
+      debugPrint('Error loading all stocks: $error');
+      rethrow;
+    }
+  }
+  
+  // Apply local pagination and filtering for stocks
+  void applyStockFiltersLocally({
+    String? filterName,
+    String? filterCategory,
+    int page = 1,
+  }) {
+    if (_allStocks == null || _allStocks!.isEmpty) {
+      listStockModelDataList = [];
+      filteredStockList = [];
+      stockCurrentPage = 1;
+      stockTotalPages = 1;
+      notifyListeners();
+      return;
+    }
+
+    // Save filter values
+    _stockFilterName = filterName;
+    _stockFilterCategory = filterCategory;
+    stockCurrentPage = page;
+
+    // Apply filters
+    List<stock_models.ListStockModelData> filteredList = [..._allStocks!];
+    
+    if (filterName != null && filterName.isNotEmpty) {
+      filteredList = filteredList.where((stock) => 
+        stock.productName != null && 
+        stock.productName!.toLowerCase().contains(filterName.toLowerCase())
+      ).toList();
+    }
+    
+    // Apply category filter
+    if (filterCategory != null && filterCategory.isNotEmpty && filterCategory != "0") {
+      filteredList = filteredList.where((stock) => 
+        stock.categoryName != null && 
+        stock.categoryName!.toLowerCase() == filterCategory.toLowerCase()
+      ).toList();
+    }
+
+    // Calculate pagination
+    stockTotalPages = (filteredList.length / _stockItemsPerPage).ceil();
+    stockTotalPages = stockTotalPages == 0 ? 1 : stockTotalPages;
+    
+    // Ensure current page is valid
+    if (stockCurrentPage > stockTotalPages) {
+      stockCurrentPage = stockTotalPages;
+    }
+    
+    // Apply pagination
+    int startIndex = (stockCurrentPage - 1) * _stockItemsPerPage;
+    int endIndex = startIndex + _stockItemsPerPage;
+    
+    if (startIndex >= filteredList.length) {
+      listStockModelDataList = [];
+      filteredStockList = [];
+    } else {
+      endIndex = endIndex > filteredList.length ? filteredList.length : endIndex;
+      listStockModelDataList = filteredList.sublist(startIndex, endIndex);
+      filteredStockList = List<stock_models.ListStockModelData>.from(listStockModelDataList!);
+    }
+    
+    notifyListeners();
+  }
+  
+  // Reset stock filters and pagination
+  void resetStockFilters() {
+    _stockFilterName = null;
+    _stockFilterCategory = null;
+    stockCurrentPage = 1;
+    
+    if (_allStocks != null && _allStocks!.isNotEmpty) {
+      applyStockFiltersLocally(page: 1);
+    }
+  }
+  
+  // Change stock page
+  void goToStockPage(int page) {
+    if (page < 1 || page > stockTotalPages) return;
+    
+    applyStockFiltersLocally(
+      filterName: _stockFilterName,
+      filterCategory: _stockFilterCategory,
+      page: page
+    );
+  }
+
   //          *********************** CALL VIEW STOCK DETAILS  API ***************************************************
 
   void callStockDetails(
@@ -1062,5 +1187,50 @@ class GridSelectionProvider extends ChangeNotifier {
         // return error;
       }
     } finally {}
+  }
+
+  //          *********************** UPDATE STOCK DETAILS API ***************************************************
+  
+  Future<bool> updateStockDetails({
+    required int stockId,
+    required String retailPrice,
+    required String mrp,
+    required String purchasePrice,
+    required String quantity,
+    required String rack,
+    required String accessToken,
+  }) async {
+    try {
+      final url = Uri.parse('${APPUrl.updateStockDetails}/$stockId');
+      
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({
+          'retail_price': retailPrice,
+          'mrp': mrp,
+          'purchase_price': purchasePrice,
+          'quantity': quantity,
+          'rack': rack,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['status'] == 'success') {
+          // Refresh the stock list after successful update
+          await loadAllStocks(accessToken);
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (e) {
+      debugPrint('Error updating stock details: $e');
+      return false;
+    }
   }
 }

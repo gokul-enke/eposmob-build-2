@@ -501,6 +501,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 onchanged: (value) {
                                   searchProducts(1);
                                 },
+                                margin: const EdgeInsets.only(left: 5),
                                 controller: barcodeController,
                                 size: size,
                                 hintText: 'Barcode',
@@ -535,6 +536,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               const SizedBox(height: 8),
                               BuildBoxShadowContainer(
                                 circleRadius: 7,
+                                margin: const EdgeInsets.only(left: 5),
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 15),
                                 height: 45,

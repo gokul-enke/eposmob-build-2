@@ -46,9 +46,12 @@ class ListStockModel {
 }
 
 class ListStockModelData {
+  final int? stockId;
+  final String? barCode;
   final String? productName;
   final String? categoryName;
   final String? supplierName;
+  final String? orderDate;
   final int? qty;
   final String? retailPrice;
   final String? wholesalePrice;
@@ -59,9 +62,12 @@ class ListStockModelData {
   final String? rack;
 
   ListStockModelData({
+    this.stockId,
+    this.barCode,
     this.productName,
     this.categoryName,
     this.supplierName,
+    this.orderDate,
     this.qty,
     this.retailPrice,
     this.wholesalePrice,
@@ -74,9 +80,12 @@ class ListStockModelData {
 
   factory ListStockModelData.fromJson(Map<String, dynamic> json) =>
       ListStockModelData(
+        stockId: json["id"],
+        barCode: json["barcode"],
         productName: json["product_name"],
         categoryName: json["category_name"],
         supplierName: json["supplier_name"],
+        orderDate: json["order_date"],
         qty: json["qty"],
         retailPrice: json["retail_price"],
         wholesalePrice: json["wholesale_price"],
@@ -88,9 +97,12 @@ class ListStockModelData {
       );
 
   Map<String, dynamic> toJson() => {
+        "id": stockId,
+        "barcode": barCode,
         "product_name": productName,
         "category_name": categoryName,
         "supplier_name": supplierName,
+        "order_date": orderDate,
         "qty": qty,
         "retail_price": retailPrice,
         "wholesale_price": wholesalePrice,
