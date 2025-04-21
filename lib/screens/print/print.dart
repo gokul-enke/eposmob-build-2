@@ -317,7 +317,7 @@ class _PrintPageState extends State<PrintPage> {
       bytes += _buildHeader(generator, settings, appSettings!);
 
       // Item Table Header
-      bytes += _buildTableHeader(generator, settings);
+      // bytes += _buildTableHeader(generator, settings);
 
       // Cart Items
       bytes += _buildCartItems(generator, widget.cartItems, settings);
@@ -501,11 +501,36 @@ class _PrintPageState extends State<PrintPage> {
       Generator generator, List<dynamic> cartItems, ReceiptSettings settings) {
     List<int> bytes = [];
 
+    // Add table headers once at the top
+    bytes += generator.row([
+      PosColumn(
+          text: '#SL',
+          width: 2,
+          styles: const PosStyles(align: PosAlign.left, bold: true)),
+      PosColumn(
+          text: 'MRP',
+          width: 2,
+          styles: const PosStyles(align: PosAlign.left, bold: true)),
+      PosColumn(
+          text: 'QTY',
+          width: 2,
+          styles: const PosStyles(align: PosAlign.left, bold: true)),
+      PosColumn(
+          text: 'RATE',
+          width: 3,
+          styles: const PosStyles(align: PosAlign.left, bold: true)),
+      PosColumn(
+          text: 'TOTAL',
+          width: 3,
+          styles: const PosStyles(align: PosAlign.left, bold: true)),
+    ]);
+
+    bytes += generator.hr();
+
     for (var i = 0; i < cartItems.length; i++) {
       var item = cartItems[i];
 
       // Handle different models based on data source
-      String slNumber = '';
       String productName = '';
       String mrp = '';
       String quantity = '';
@@ -514,14 +539,12 @@ class _PrintPageState extends State<PrintPage> {
 
       // Adapt the model based on whether it's from local storage or current cart
       if (widget.isFromLocalStorage) {
-        slNumber = (i + 1).toString();
         productName = item['productName'] ?? '';
         mrp = item['mrp'] ?? '0.00';
         quantity = item['quantity'] ?? '0';
         unitPrice = item['unitPrice'] ?? '0.00';
         totalPrice = item['totalPrice'] ?? '0.00';
       } else {
-        slNumber = (i + 1).toString();
         productName = item.productName ?? '';
         mrp = item.mrp ?? '0.00';
         quantity = item.quantity?.toString() ?? '0';
@@ -529,119 +552,75 @@ class _PrintPageState extends State<PrintPage> {
         totalPrice = item.totalPrice?.toString() ?? '0.00';
       }
 
-      List<PosColumn> columns = [];
-      int totalWidth = 0;
+      // Display the product name with serial number on one or two lines based on length
+      String slNumber = (i + 1).toString();
+      if (productName.length <= 28) {
+        // Display on one line if it fits
+        bytes += generator.row([
+          PosColumn(
+              text: '#$slNumber',
+              width: 2,
+              styles: const PosStyles(align: PosAlign.left)),
+          PosColumn(
+              text: productName,
+              width: 10,
+              styles: const PosStyles(align: PosAlign.left)),
+        ]);
+      } else {
+        // Split across two lines if longer
+        bytes += generator.row([
+          PosColumn(
+              text: '#$slNumber',
+              width: 2,
+              styles: const PosStyles(align: PosAlign.left)),
+          PosColumn(
+              text: productName.substring(0, 28),
+              width: 10,
+              styles: const PosStyles(align: PosAlign.left)),
+        ]);
 
-      // Always add SL# column
-      columns.add(PosColumn(
-          text: slNumber,
-          width: 1,
-          styles: const PosStyles(align: PosAlign.center)));
-      totalWidth += 1;
+        // For continuation lines, add spaces instead of serial number
+        String secondLine = productName.substring(28);
 
-      // Always add PARTICULARS column
-      columns.add(PosColumn(
-          text: productName.length > 15
-              ? productName.substring(0, 15)
-              : productName,
-          width: 3));
-      totalWidth += 3;
-
-      // Always add MRP column
-      columns.add(PosColumn(
-          text: mrp, width: 2, styles: const PosStyles(align: PosAlign.right)));
-      totalWidth += 2;
-
-      // Always add QTY column
-      columns.add(PosColumn(
-          text: quantity,
-          width: 2,
-          styles: const PosStyles(align: PosAlign.right)));
-      totalWidth += 2;
-
-      // Always add RATE column
-      columns.add(PosColumn(
-          text: unitPrice,
-          width: 2,
-          styles: const PosStyles(align: PosAlign.right)));
-      totalWidth += 2;
-
-      // Always add TOTAL column
-      columns.add(PosColumn(
-          text: totalPrice,
-          width: 2,
-          styles: const PosStyles(align: PosAlign.right)));
-      totalWidth += 2;
-
-      // Adjust if total width is not 12
-      if (totalWidth < 12 && columns.isNotEmpty) {
-        // Add remaining width to the first column
-        columns[0] = PosColumn(
-          text: columns[0].text,
-          width: columns[0].width + (12 - totalWidth),
-          styles: columns[0].styles,
-        );
-      }
-
-      bytes += generator.row(columns);
-
-      // If product name is long, add additional lines to show the full name
-      if (productName.length > 15) {
-        int startIndex = 15;
-        while (startIndex < productName.length) {
-          int endIndex = startIndex + 24 < productName.length
-              ? startIndex + 24
-              : productName.length;
-          String namePart = productName.substring(startIndex, endIndex);
-
-          // Create a new row with proper column alignment
-          List<PosColumn> continuationColumns = [];
-          int currentWidth = 0;
-
-          // Always add empty column for SL#
-          continuationColumns.add(PosColumn(
-              text: '',
-              width: 1,
-              styles: const PosStyles(align: PosAlign.center)));
-          currentWidth += 1;
-
-          // Always add the continuation text in the PARTICULARS column
-          continuationColumns.add(PosColumn(
-              text: namePart,
-              width: 3,
-              styles: const PosStyles(align: PosAlign.left)));
-          currentWidth += 3;
-
-          // Always add empty columns for the rest of the fields
-          continuationColumns.add(PosColumn(text: '', width: 2));
-          currentWidth += 2;
-
-          continuationColumns.add(PosColumn(text: '', width: 2));
-          currentWidth += 2;
-
-          continuationColumns.add(PosColumn(text: '', width: 2));
-          currentWidth += 2;
-
-          continuationColumns.add(PosColumn(text: '', width: 2));
-          currentWidth += 2;
-
-          // Adjust if total width is not 12
-          if (currentWidth < 12 && continuationColumns.isNotEmpty) {
-            // Add remaining width to the product name column (index 1)
-            continuationColumns[1] = PosColumn(
-              text: continuationColumns[1].text,
-              width: continuationColumns[1].width + (12 - currentWidth),
-              styles: continuationColumns[1].styles,
-            );
-          }
-
-          bytes += generator.row(continuationColumns);
-          startIndex = endIndex;
+        // If second line is too long, truncate with ellipsis
+        if (secondLine.length > 30) {
+          secondLine = secondLine.substring(0, 27) + '...';
         }
+
+        bytes += generator.row([
+          PosColumn(
+              text: '',
+              width: 2,
+              styles: const PosStyles(align: PosAlign.left)),
+          PosColumn(
+              text: secondLine,
+              width: 10,
+              styles: const PosStyles(align: PosAlign.left)),
+        ]);
       }
+
+      // Display item details in tabular format with indent to align with product name
+      bytes += generator.row([
+        PosColumn(
+            text: '', width: 2, styles: const PosStyles(align: PosAlign.left)),
+        PosColumn(
+            text: mrp, width: 2, styles: const PosStyles(align: PosAlign.left)),
+        PosColumn(
+            text: quantity,
+            width: 2,
+            styles: const PosStyles(align: PosAlign.left)),
+        PosColumn(
+            text: unitPrice,
+            width: 3,
+            styles: const PosStyles(align: PosAlign.left)),
+        PosColumn(
+            text: totalPrice,
+            width: 3,
+            styles: const PosStyles(align: PosAlign.left)),
+      ]);
     }
 
-    return bytes + generator.hr();
+    return bytes;
   }
 
   List<int> _buildTotalAmount(Generator generator, ReceiptSettings settings) {
@@ -665,34 +644,18 @@ class _PrintPageState extends State<PrintPage> {
     //   ]);
     // }
 
-    // Display item count
-    if (settings.showMRPTotal) {
-      bytes += generator.row([
-        PosColumn(
-            text: 'Items',
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
-        PosColumn(
-            text: widget.cartItems.length.toString(),
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
-      ]);
-    }
-
     if (settings.showNetAmount) {
       bytes += generator.row([
         PosColumn(
             text: 'Net Total',
             width: 6,
             styles: const PosStyles(
-                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+                align: PosAlign.left, bold: true, height: PosTextSize.size2)),
         PosColumn(
             text: widget.formattedTotal,
             width: 6,
             styles: const PosStyles(
-                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+                align: PosAlign.right, bold: true, height: PosTextSize.size2)),
       ]);
     }
 
@@ -736,6 +699,23 @@ class _PrintPageState extends State<PrintPage> {
           styles: const PosStyles(align: PosAlign.center));
       bytes += generator.hr();
     }
+
+    // Display item count
+    if (settings.showMRPTotal) {
+      bytes += generator.row([
+        PosColumn(
+            text: 'Items',
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+        PosColumn(
+            text: widget.cartItems.length.toString(),
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+      ]);
+    }
+    bytes += generator.hr();
 
     return bytes;
   }

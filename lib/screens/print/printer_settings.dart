@@ -69,6 +69,7 @@ class ReceiptSettings {
   bool showMRPTotal;
   bool showSaved;
   bool showAmountInWords;
+  bool showItemsCount;
 
   // Additional settings
   bool showThankYouMessage;
@@ -100,6 +101,7 @@ class ReceiptSettings {
     this.showMRPTotal = true,
     this.showSaved = true,
     this.showAmountInWords = true,
+    this.showItemsCount = true,
     this.showThankYouMessage = true,
     this.showQRCode = true,
     this.showTermsConditions = true,
@@ -136,6 +138,7 @@ class ReceiptSettings {
       'showMRPTotal': showMRPTotal,
       'showSaved': showSaved,
       'showAmountInWords': showAmountInWords,
+      'showItemsCount': showItemsCount,
       'showThankYouMessage': showThankYouMessage,
       'showQRCode': showQRCode,
       'showTermsConditions': showTermsConditions,
@@ -172,6 +175,7 @@ class ReceiptSettings {
       showMRPTotal: json['showMRPTotal'] ?? true,
       showSaved: json['showSaved'] ?? true,
       showAmountInWords: json['showAmountInWords'] ?? true,
+      showItemsCount: json['showItemsCount'] ?? true,
       showThankYouMessage: json['showThankYouMessage'] ?? true,
       showQRCode: json['showQRCode'] ?? true,
       showTermsConditions: json['showTermsConditions'] ?? true,
