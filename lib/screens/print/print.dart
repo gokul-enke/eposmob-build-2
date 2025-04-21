@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:get/get.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
@@ -12,10 +15,15 @@ import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
+import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/screens/print/printer_settings.dart';
 import 'package:pos_machine/models/get_app_settings.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:share_plus/share_plus.dart';
+import 'package:open_file/open_file.dart';
 
 class PrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
@@ -49,12 +57,16 @@ class _PrintPageState extends State<PrintPage> {
   bool _isScanning = false;
   bool _isLoading = true;
   ReceiptTemplate? selectedTemplate;
+  String selectedPaperSize = '80mm'; // Default to 80mm thermal paper
 
   static const Color primaryColor = Color(0XFF3C92F5);
   static const Color accentColor = Color(0xFF4CAF50);
   static const Color textPrimaryColor = Color(0xFF2C3E50);
   static const Color textSecondaryColor = Color(0xFF7F8C8D);
   static const Color backgroundColor = Color(0xFFF5F6FA);
+
+  // List of available paper sizes
+  final List<String> paperSizes = ['80mm', '58mm', 'A5', 'A4'];
 
   @override
   void initState() {
@@ -64,6 +76,8 @@ class _PrintPageState extends State<PrintPage> {
           Provider.of<AuthModel>(context, listen: false).token;
       Provider.of<PaymentGatewaysProvider>(context, listen: false)
           .fetchPaymentGateways(accessToken: accessToken!);
+      // Load saved paper size first so auto-print uses correct method
+      _loadDefaultPaperSize();
       _loadDefaultPrinter();
       _loadReceiptTemplate();
     });
@@ -172,8 +186,14 @@ class _PrintPageState extends State<PrintPage> {
     final prefs = await SharedPreferences.getInstance();
     final defaultPrinterJson = prefs.getString('default_printer');
 
+    debugPrint("===== PRINTER DEBUG =====");
+    debugPrint("Loading default printer from preferences...");
+    debugPrint("Found saved printer: ${defaultPrinterJson != null ? 'YES' : 'NO'}");
+    
     if (defaultPrinterJson != null) {
       final Map<String, dynamic> printerData = json.decode(defaultPrinterJson);
+      debugPrint("Saved printer data: $printerData");
+      
       setState(() {
         selectedPrinter = BluetoothPrinter(
           deviceName: printerData['deviceName'],
@@ -186,23 +206,33 @@ class _PrintPageState extends State<PrintPage> {
         );
         _isLoading = false;
       });
+      
+      debugPrint("Loaded printer: ${selectedPrinter?.deviceName ?? 'None'} (${selectedPrinter?.typePrinter.toString() ?? 'Unknown type'})");
+      debugPrint("Address: ${selectedPrinter?.address ?? 'N/A'}");
+      debugPrint("VendorID: ${selectedPrinter?.vendorId ?? 'N/A'}, ProductID: ${selectedPrinter?.productId ?? 'N/A'}");
 
-      // If we have a default printer, automatically print
+      // If we have a default printer, automatically print using correct method
       if (selectedPrinter != null) {
         final appSettingsProvider =
             Provider.of<AppSettingsProvider>(context, listen: false);
         final appSettings = appSettingsProvider.appSettings;
-        printReceipt(
-            appSettings!.customerCarePhone, appSettings.customerCareEmail);
+        _handlePrinting(appSettings!.customerCarePhone, appSettings.customerCareEmail);
       }
     } else {
       setState(() {
         _isLoading = false;
       });
+      debugPrint("No default printer saved in preferences");
     }
+    debugPrint("=======================");
   }
 
   Future<void> _saveDefaultPrinter(BluetoothPrinter printer) async {
+    debugPrint("===== PRINTER DEBUG =====");
+    debugPrint("Saving printer as default: ${printer.deviceName} (${printer.typePrinter})");
+    debugPrint("Address: ${printer.address ?? 'N/A'}");
+    debugPrint("VendorID: ${printer.vendorId ?? 'N/A'}, ProductID: ${printer.productId ?? 'N/A'}");
+    
     final prefs = await SharedPreferences.getInstance();
     final printerData = {
       'deviceName': printer.deviceName,
@@ -212,6 +242,8 @@ class _PrintPageState extends State<PrintPage> {
       'typePrinter': printer.typePrinter.toString(),
     };
     await prefs.setString('default_printer', json.encode(printerData));
+    debugPrint("Printer saved to preferences: $printerData");
+    debugPrint("=======================");
   }
 
   void selectPrinter(BluetoothPrinter printer) {
@@ -288,7 +320,9 @@ class _PrintPageState extends State<PrintPage> {
 
   Future<void> printReceipt(
       String customerCareNumber, String customerCareEmail) async {
+    debugPrint("===== THERMAL PRINTING DEBUG =====");
     if (selectedPrinter == null) {
+      debugPrint("ERROR: No printer selected for thermal printing");
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -298,13 +332,34 @@ class _PrintPageState extends State<PrintPage> {
       return;
     }
 
+    debugPrint("Printing receipt with thermal printer:");
+    debugPrint("Printer: ${selectedPrinter!.deviceName} (${selectedPrinter!.typePrinter})");
+    debugPrint("Paper size: $selectedPaperSize");
+    
     try {
       // Connect to the printer
+      debugPrint("Connecting to printer...");
       await _connectToPrinter();
+      debugPrint("Connected successfully");
 
       // Generate receipt
       final profile = await CapabilityProfile.load();
-      final generator = Generator(PaperSize.mm80, profile);
+      
+      // Select appropriate paper size based on selection
+      PaperSize paperSize;
+      if (selectedPaperSize == '80mm') {
+        paperSize = PaperSize.mm80;
+        debugPrint("Using 80mm paper size configuration");
+      } else if (selectedPaperSize == '58mm') {
+        paperSize = PaperSize.mm58;
+        debugPrint("Using 58mm paper size configuration");
+      } else {
+        // Default to 80mm for any other value
+        paperSize = PaperSize.mm80;
+        debugPrint("Using default 80mm paper size configuration");
+      }
+      
+      final generator = Generator(paperSize, profile);
       List<int> bytes = [];
 
       // Get settings from template or use defaults
@@ -315,9 +370,6 @@ class _PrintPageState extends State<PrintPage> {
 
       // Header
       bytes += _buildHeader(generator, settings, appSettings!);
-
-      // Item Table Header
-      // bytes += _buildTableHeader(generator, settings);
 
       // Cart Items
       bytes += _buildCartItems(generator, widget.cartItems, settings);
@@ -342,10 +394,12 @@ class _PrintPageState extends State<PrintPage> {
 
       // Cut the receipt
       bytes += generator.cut();
-
+      
+      debugPrint("Receipt generated, sending to printer...");
       // Print receipt
       await printerManager.send(
           type: selectedPrinter!.typePrinter, bytes: bytes);
+      debugPrint("Print job sent successfully");
 
       if (mounted) {
         showScaffold(context: context, message: "Print job sent successfully");
@@ -354,9 +408,17 @@ class _PrintPageState extends State<PrintPage> {
         sideBarController.index.value = 46;
       }
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint("ERROR printing receipt: ${e.toString()}");
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: "Error printing: ${e.toString()}",
+        );
+      }
     } finally {
+      debugPrint("Disconnecting from printer...");
       await _disconnectPrinter();
+      debugPrint("==========================");
     }
   }
 
@@ -739,7 +801,23 @@ class _PrintPageState extends State<PrintPage> {
     final paymentGatewaysProvider =
         Provider.of<PaymentGatewaysProvider>(context, listen: false);
     final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
-        .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY");
+        .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY", 
+        orElse: () => PaymentGateway(
+          id: 0,
+          name: "",
+          code: "",
+          label: "",
+          link: "",
+          image: "",
+          status: "",
+          isWebActive: 0,
+          isAndroidActive: 0,
+          isIosActive: 0,
+          contactEmail: "",
+          contactPhone: "",
+          createdAt: "",
+          updatedAt: "",
+        ));
     List<int> bytes = [];
 
     bytes += generator.emptyLines(1);
@@ -859,6 +937,55 @@ class _PrintPageState extends State<PrintPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Paper Size Selection Card
+            Card(
+              elevation: 2,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [accentColor.withOpacity(0.1), Colors.white],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Paper Size',
+                      style: TextStyle(
+                        color: textPrimaryColor,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: selectedPaperSize,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      items: paperSizes.map((String size) {
+                        return DropdownMenuItem<String>(
+                          value: size,
+                          child: Text(size),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedPaperSize = newValue!;
+                          _saveDefaultPaperSize(selectedPaperSize);
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             Card(
               elevation: 2,
               child: Container(
@@ -1004,7 +1131,7 @@ class _PrintPageState extends State<PrintPage> {
             ElevatedButton.icon(
               onPressed: () => selectedPrinter == null
                   ? null
-                  : printReceipt(appSettings.customerCarePhone,
+                  : _handlePrinting(appSettings.customerCarePhone,
                       appSettings.customerCareEmail),
               icon: const Icon(Icons.receipt_long),
               label: const Text(
@@ -1048,6 +1175,640 @@ class _PrintPageState extends State<PrintPage> {
               ),
       ),
     );
+  }
+
+  // Function to handle printing based on selected paper size
+  Future<void> _handlePrinting(
+      String customerCareNumber, String customerCareEmail) async {
+    debugPrint("===== PRINTING DEBUG =====");
+    debugPrint("Starting print job with:");
+    debugPrint("Selected printer: ${selectedPrinter?.deviceName ?? 'None'} (${selectedPrinter?.typePrinter.toString() ?? 'Unknown'})");
+    debugPrint("Selected paper size: $selectedPaperSize");
+    
+    if (selectedPaperSize == '80mm' || selectedPaperSize == '58mm') {
+      // Use thermal printer for thermal paper sizes
+      debugPrint("Using thermal printing method for $selectedPaperSize paper");
+      await printReceipt(customerCareNumber, customerCareEmail);
+    } else {
+      // Use PDF generation for A4/A5 paper sizes
+      debugPrint("Using PDF generation method for $selectedPaperSize paper");
+      await generateAndPrintPDF(customerCareNumber, customerCareEmail);
+    }
+    debugPrint("========================");
+  }
+
+  // Method for PDF generation and printing to standard printers
+  Future<void> generateAndPrintPDF(
+      String customerCareNumber, String customerCareEmail) async {
+    try {
+      if (mounted) {
+        showScaffold(
+          context: context,
+          message: "Preparing ${selectedPaperSize} document for printing...",
+        );
+      }
+
+      // Create a PDF document
+      final pdf = pw.Document();
+
+      // Get settings from template or use defaults
+      final settings = selectedTemplate?.settings ?? ReceiptSettings();
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      final appSettings = appSettingsProvider.appSettings;
+      final paymentGatewaysProvider =
+          Provider.of<PaymentGatewaysProvider>(context, listen: false);
+      final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
+          .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY", 
+          orElse: () => PaymentGateway(
+            id: 0,
+            name: "",
+            code: "",
+            label: "",
+            link: "",
+            image: "",
+            status: "",
+            isWebActive: 0,
+            isAndroidActive: 0,
+            isIosActive: 0,
+            contactEmail: "",
+            contactPhone: "",
+            createdAt: "",
+            updatedAt: "",
+          ));
+
+      // Determine page format based on paper size
+      PdfPageFormat pageFormat = selectedPaperSize == 'A4'
+          ? PdfPageFormat.a4
+          : PdfPageFormat.a5;
+
+      // Define styles with adjustments for A5 vs A4
+      final headerStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5' ? 16.0 : 18.0,
+        fontWeight: pw.FontWeight.bold,
+      );
+      final subheaderStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5' ? 12.0 : 14.0,
+        fontWeight: pw.FontWeight.bold,
+      );
+      final bodyStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5' ? 7.0 : 11.0,
+      );
+      final smallStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5' ? 7.0 : 9.0,
+      );
+      final tableHeaderStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
+        fontWeight: pw.FontWeight.bold,
+      );
+
+      // Add page to the PDF document
+      pdf.addPage(
+        pw.Page(
+          pageFormat: pageFormat,
+          margin: const pw.EdgeInsets.all(40),
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Header with store information
+                pw.Center(
+                  child: pw.Column(
+                    children: [
+                      // Store name
+                      if (settings.showStoreName)
+                        pw.Text(
+                          settings.storeName.isNotEmpty ? settings.storeName : 'STORE NAME',
+                          style: headerStyle,
+                        ),
+                        
+                      // Store description
+                      if (settings.showDescription)
+                        pw.Text(
+                          settings.description.isNotEmpty ? settings.description : 'Mini Supermarket',
+                          style: pw.TextStyle(
+                            fontSize: 12.0,
+                            fontStyle: pw.FontStyle.italic,
+                          ),
+                        ),
+                        
+                      // Store address
+                      if (settings.showStoreAddress)
+                        pw.Text(
+                          settings.storeAddress.isNotEmpty ? settings.storeAddress : 'Shop Address',
+                          style: bodyStyle,
+                        ),
+                        
+                      // FSSAI info
+                      if (settings.showFssaiInfo)
+                        pw.Text(
+                          settings.fssaiInfo.isNotEmpty ? settings.fssaiInfo : 'Fssai: xxxx',
+                          style: bodyStyle,
+                        ),
+                        
+                      // Contact information
+                      if (settings.showTel)
+                        pw.Text(
+                          settings.telephone.isNotEmpty
+                              ? settings.telephone
+                              : 'TEL: ${appSettings!.customerCarePhone}',
+                          style: bodyStyle,
+                        ),
+                        
+                      if (settings.showEmail)
+                        pw.Text(
+                          settings.email.isNotEmpty
+                              ? settings.email
+                              : 'Email: ${appSettings!.customerCareEmail}',
+                          style: bodyStyle,
+                        ),
+                    ],
+                  ),
+                ),
+
+                pw.SizedBox(height: 20),
+
+                // Invoice information in a framed box
+                pw.Container(
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(width: 1, color: PdfColors.grey300),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
+                  ),
+                  padding: const pw.EdgeInsets.all(10),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Text('INVOICE', style: subheaderStyle),
+                          pw.Text('No: ${widget.orderNumber}', style: subheaderStyle),
+                        ],
+                      ),
+                      pw.SizedBox(height: 5),
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Text('Date: ${DateHelper.formatISODate(widget.orderDate)}', style: bodyStyle),
+                          pw.Text('Time: ${DateHelper.formatISODateToIST(widget.orderDate)}', style: bodyStyle),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                pw.SizedBox(height: 15),
+
+                // Items table in a framed box
+                pw.Container(
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(width: 1, color: PdfColors.grey300),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
+                  ),
+                  padding: const pw.EdgeInsets.all(10),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('ITEM DETAILS', style: subheaderStyle),
+                      pw.SizedBox(height: 10),
+                      _buildPdfItemsTable(tableHeaderStyle, bodyStyle),
+                    ],
+                  ),
+                ),
+
+                pw.SizedBox(height: 15),
+
+                // Summary in a framed box
+                pw.Container(
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(width: 1, color: PdfColors.grey300),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
+                  ),
+                  padding: const pw.EdgeInsets.all(10),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('ORDER SUMMARY', style: subheaderStyle),
+                      pw.SizedBox(height: 10),
+                      _buildPdfSummary(bodyStyle),
+                    ],
+                  ),
+                ),
+
+                pw.SizedBox(height: 10),
+
+                // Amount in words
+                if (settings.showAmountInWords)
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 10),
+                    decoration: const pw.BoxDecoration(
+                      border: pw.Border(
+                        top: pw.BorderSide(color: PdfColors.grey300),
+                        bottom: pw.BorderSide(color: PdfColors.grey300),
+                      ),
+                    ),
+                    child: pw.Text(
+                      'Amount in words: ${AmountHelper().convertNumberToWords(double.parse(widget.formattedTotal))} Only.',
+                      style: pw.TextStyle(
+                        fontSize: 10.0,
+                        fontStyle: pw.FontStyle.italic,
+                      ),
+                    ),
+                  ),
+
+                pw.Spacer(),
+
+                // Footer section
+                pw.Column(
+                  children: [
+                    // Thank You message
+                    if (settings.showThankYouMessage)
+                      pw.Center(
+                        child: pw.Text(
+                          settings.thankYouMessage.isNotEmpty
+                              ? settings.thankYouMessage
+                              : 'Thank You... Visit Again',
+                          style: subheaderStyle,
+                        ),
+                      ),
+
+                    pw.SizedBox(height: 10),
+
+                    // QR Code for payment if selected
+                    if (settings.showQRCode && manualPaymentGateway.link.isNotEmpty)
+                      pw.Center(
+                        child: pw.Column(
+                          children: [
+                            pw.BarcodeWidget(
+                              barcode: pw.Barcode.qrCode(),
+                              data: 'upi://pay?pa=${manualPaymentGateway.link}&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS&t=c&st=1&se=1&sd=1',
+                              width: 80,
+                              height: 80,
+                            ),
+                            pw.SizedBox(height: 5),
+                            pw.Text(
+                              settings.qrCodeMessage.isNotEmpty
+                                  ? settings.qrCodeMessage
+                                  : 'Scan this QR code to Pay',
+                              style: smallStyle,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    pw.SizedBox(height: 10),
+
+                    // Terms & Conditions
+                    if (settings.showTermsConditions)
+                      pw.Container(
+                        alignment: pw.Alignment.centerLeft,
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              'Terms & Conditions:',
+                              style: pw.TextStyle(
+                                fontSize: 10.0,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                            pw.SizedBox(height: 5),
+                            ..._buildTermsConditionsList(
+                              settings.termsConditions.isNotEmpty
+                                  ? settings.termsConditions
+                                  : '1. Replace or Return only within 7 Days of Purchase.\n2. Replace only with Bill.\n3. Warranty as per manufacturer\'s terms and conditions.',
+                              smallStyle
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      // Save PDF to a temporary file
+      final output = await getTemporaryDirectory();
+      final file = File('${output.path}/Receipt-${widget.orderNumber}.pdf');
+      await file.writeAsBytes(await pdf.save());
+      
+      debugPrint("PDF saved to: ${file.path}");
+      debugPrint("File exists: ${await file.exists()}");
+      debugPrint("File size: ${await file.length()} bytes");
+
+      // Determine if running on Windows
+      final bool isWindows = Platform.isWindows;
+      
+      if (isWindows) {
+        await _handleWindowsPdf(file);
+      } else {
+        // Try to open the PDF directly for non-Windows platforms
+        try {
+          final result = await OpenFile.open(file.path);
+          debugPrint("OpenFile result type: ${result.type}");
+          debugPrint("OpenFile result message: ${result.message}");
+          
+          if (result.type != 'done') {
+            // If opening fails, try to share it instead (for mobile platforms)
+            debugPrint("Opening PDF failed, trying share fallback...");
+            if (!isWindows) {
+              await _sharePdfFallback(file);
+            } else {
+              // For Windows, we already handled above
+              _showFileLocationInfo(file);
+            }
+          } else {
+            if (mounted) {
+              showScaffold(context: context, message: "PDF opened for printing");
+              Navigator.pop(context);
+              SideBarController sideBarController = Get.put(SideBarController());
+              sideBarController.index.value = 46;
+            }
+          }
+        } catch (e) {
+          debugPrint("Error when opening PDF: $e");
+          // Fallback to sharing if opening fails (for mobile platforms)
+          if (!isWindows) {
+            await _sharePdfFallback(file);
+          } else {
+            // For Windows, we already handled above
+            _showFileLocationInfo(file);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error generating PDF: $e");
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: "Error generating PDF: ${e.toString()}",
+        );
+      }
+    }
+  }
+  
+  // Windows-specific handling for PDF
+  Future<void> _handleWindowsPdf(File file) async {
+    try {
+      // First try to open with the default Windows PDF viewer
+      final result = await OpenFile.open(file.path);
+      
+      // Always close the page on Windows, regardless of result
+      if (mounted) {
+        showScaffold(context: context, message: "PDF created successfully");
+        Navigator.pop(context);
+        SideBarController sideBarController = Get.put(SideBarController());
+        sideBarController.index.value = 46;
+      }
+    } catch (e) {
+      debugPrint("Windows PDF handling error: $e");
+      // Still close the page on error
+      if (mounted) {
+        showScaffold(context: context, message: "PDF created successfully");
+        Navigator.pop(context);
+        SideBarController sideBarController = Get.put(SideBarController());
+        sideBarController.index.value = 46;
+      }
+    }
+  }
+  
+  // Show information about file location (for Windows) - Now unused but kept for reference
+  void _showFileLocationInfo(File file) {
+    if (mounted) {
+      // Just close the page instead of showing dialog
+      Navigator.pop(context);
+      SideBarController sideBarController = Get.put(SideBarController());
+      sideBarController.index.value = 46;
+    }
+  }
+  
+  // Fallback method to share PDF if direct opening fails (for mobile platforms)
+  Future<void> _sharePdfFallback(File file) async {
+    try {
+      debugPrint("Attempting to share PDF as fallback...");
+      // Only try to share on non-Windows platforms
+      if (!Platform.isWindows) {
+        await Share.shareFiles(
+          [file.path],
+          subject: 'Receipt #${widget.orderNumber}',
+          text: 'Your receipt for order #${widget.orderNumber}',
+        );
+        
+        if (mounted) {
+          showScaffold(context: context, message: "PDF shared. Please open it to print");
+          Navigator.pop(context);
+          SideBarController sideBarController = Get.put(SideBarController());
+          sideBarController.index.value = 46;
+        }
+      } else {
+        // For Windows, show the file location
+        _showFileLocationInfo(file);
+      }
+    } catch (e) {
+      debugPrint("Error sharing PDF fallback: $e");
+      if (mounted) {
+        if (Platform.isWindows) {
+          // Show file location on Windows
+          _showFileLocationInfo(file);
+        } else {
+          showScaffoldError(
+            context: context,
+            message: "Unable to open or share PDF: ${e.toString()}. Please check app permissions.",
+          );
+        }
+      }
+    }
+  }
+
+  pw.Widget _buildPdfItemsTable(pw.TextStyle headerStyle, pw.TextStyle contentStyle) {
+    // Create headers for the table
+    final tableHeaders = [
+      'SL#',
+      'PARTICULARS',
+      'MRP',
+      'QTY',
+      'RATE',
+      'TOTAL',
+    ];
+
+    // Create table data
+    List<List<String>> tableData = [];
+    for (var i = 0; i < widget.cartItems.length; i++) {
+      var item = widget.cartItems[i];
+
+      // Handle different models based on data source
+      String productName = '';
+      String mrp = '';
+      String quantity = '';
+      String unitPrice = '';
+      String totalPrice = '';
+
+      // Adapt the model based on whether it's from local storage or current cart
+      if (widget.isFromLocalStorage) {
+        productName = item['productName'] ?? '';
+        mrp = item['mrp'] ?? '0.00';
+        quantity = item['quantity'] ?? '0';
+        unitPrice = item['unitPrice'] ?? '0.00';
+        totalPrice = item['totalPrice'] ?? '0.00';
+      } else {
+        productName = item.productName ?? '';
+        mrp = item.mrp ?? '0.00';
+        quantity = item.quantity?.toString() ?? '0';
+        unitPrice = item.unitPrice?.toString() ?? '0.00';
+        totalPrice = item.totalPrice?.toString() ?? '0.00';
+      }
+
+      tableData.add([
+        (i + 1).toString(),
+        productName,
+        mrp,
+        quantity,
+        unitPrice,
+        totalPrice,
+      ]);
+    }
+
+    return pw.Table.fromTextArray(
+      headers: tableHeaders,
+      data: tableData,
+      headerStyle: headerStyle,
+      headerDecoration: const pw.BoxDecoration(
+        color: PdfColors.grey200,
+      ),
+      headerHeight: 25,
+      cellStyle: contentStyle,
+      cellHeight: 25,
+      cellAlignments: {
+        0: pw.Alignment.centerLeft,
+        1: pw.Alignment.centerLeft,
+        2: pw.Alignment.centerRight,
+        3: pw.Alignment.centerRight,
+        4: pw.Alignment.centerRight,
+        5: pw.Alignment.centerRight,
+      },
+      cellPadding: const pw.EdgeInsets.all(5),
+      border: const pw.TableBorder(
+        horizontalInside: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+        verticalInside: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+      ),
+    );
+  }
+
+  pw.Widget _buildPdfSummary(pw.TextStyle style) {
+    double savedTotal = double.tryParse(widget.savedTotal ?? '0.0') ?? 0.0;
+    double formattedTotal = double.tryParse(widget.formattedTotal) ?? 0.0;
+    double totalMRP = savedTotal + formattedTotal;
+
+    return pw.Column(
+      children: [
+        // Summary rows
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('Total Items:', style: style),
+            pw.Text(widget.cartItems.length.toString(), style: style),
+          ],
+        ),
+        pw.SizedBox(height: 5),
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('Total MRP:', style: style),
+            pw.Text(totalMRP.toStringAsFixed(2), style: style),
+          ],
+        ),
+        pw.SizedBox(height: 5),
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('You Saved:', style: style),
+            pw.Text(savedTotal.toStringAsFixed(2), style: style),
+          ],
+        ),
+        pw.SizedBox(height: 5),
+        pw.Divider(color: PdfColors.grey300),
+        pw.SizedBox(height: 5),
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('Net Total:', 
+              style: pw.TextStyle(
+                fontSize: 12.0,
+                fontWeight: pw.FontWeight.bold,
+              )
+            ),
+            pw.Text(formattedTotal.toStringAsFixed(2),
+              style: pw.TextStyle(
+                fontSize: 12.0,
+                fontWeight: pw.FontWeight.bold,
+              )
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  List<pw.Widget> _buildTermsConditionsList(String termsText, pw.TextStyle style) {
+    List<String> terms = termsText.split('\n');
+    List<pw.Widget> termWidgets = [];
+    
+    for (int i = 0; i < terms.length; i++) {
+      termWidgets.add(
+        pw.Text(
+          terms[i],
+          style: style,
+        ),
+      );
+      
+      if (i < terms.length - 1) {
+        termWidgets.add(pw.SizedBox(height: 2));
+      }
+    }
+    
+    return termWidgets;
+  }
+
+  Future<void> _loadDefaultPaperSize() async {
+    debugPrint("===== PAPER SIZE DEBUG =====");
+    debugPrint("Loading default paper size from preferences...");
+    
+    final prefs = await SharedPreferences.getInstance();
+    final defaultPaperSize = prefs.getString('default_paper_size');
+    
+    debugPrint("Found saved paper size: ${defaultPaperSize ?? 'None (will use default 80mm)'}");
+
+    if (defaultPaperSize != null) {
+      setState(() {
+        // Handle migration from 'Thermal' to '80mm'
+        if (defaultPaperSize == 'Thermal') {
+          selectedPaperSize = '80mm';
+          debugPrint("Converting legacy 'Thermal' value to '80mm'");
+          // Update stored preference to new value
+          _saveDefaultPaperSize('80mm');
+        } else {
+          selectedPaperSize = defaultPaperSize;
+          debugPrint("Set selected paper size to: $selectedPaperSize");
+        }
+      });
+    } else {
+      debugPrint("No saved paper size, using default: $selectedPaperSize");
+    }
+    debugPrint("===========================");
+  }
+
+  Future<void> _saveDefaultPaperSize(String paperSize) async {
+    debugPrint("===== PAPER SIZE DEBUG =====");
+    debugPrint("Saving paper size as default: $paperSize");
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('default_paper_size', paperSize);
+    
+    debugPrint("Paper size saved to preferences");
+    debugPrint("===========================");
   }
 }
 

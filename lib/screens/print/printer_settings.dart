@@ -254,6 +254,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   bool isEditing = false;
   final ScrollController _templatesScrollController = ScrollController();
   List<FocusNode> _focusNodes = [];
+  String selectedPaperSize = '80mm';
+
+  // List of available paper sizes
+  final List<String> paperSizes = ['80mm', '58mm', 'A5', 'A4'];
 
   @override
   void initState() {
@@ -279,6 +283,26 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     final prefs = await SharedPreferences.getInstance();
     final defaultPrinterJson = prefs.getString('default_printer');
     final templatesJson = prefs.getString('receipt_templates');
+    final defaultPaperSize = prefs.getString('default_paper_size');
+
+    if (defaultPaperSize != null) {
+      setState(() {
+        // Migrate from 'Thermal' to '80mm'
+        if (defaultPaperSize == 'Thermal') {
+          selectedPaperSize = '80mm';
+          // Update the stored preference
+          _saveDefaultPaperSize('80mm');
+        } else {
+          selectedPaperSize = defaultPaperSize;
+        }
+      });
+    } else {
+      // Default to 80mm if no preference is set
+      setState(() {
+        selectedPaperSize = '80mm';
+      });
+      _saveDefaultPaperSize('80mm');
+    }
 
     if (defaultPrinterJson != null) {
       final Map<String, dynamic> printerData = json.decode(defaultPrinterJson);
@@ -582,6 +606,18 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           message: "Error clearing local storage: ${e.toString()}",
         );
       }
+    }
+  }
+
+  Future<void> _saveDefaultPaperSize(String paperSize) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('default_paper_size', paperSize);
+    
+    if (mounted) {
+      showScaffold(
+        context: context,
+        message: "Default paper size saved",
+      );
     }
   }
 
@@ -1155,7 +1191,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             if (selectedTemplate!.settings.showDescription)
               _buildTextEditField(
                 label: 'Store Description Content',
-                value: selectedTemplate!.settings.description,
+                value: selectedTemplate!
+                    .settings.description,
                 onChanged: (value) {
                   final newSettings = selectedTemplate!.settings;
                   newSettings.description = value;
@@ -1171,10 +1208,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                 _updateSelectedTemplateSettings(newSettings);
               },
             ),
-            if (selectedTemplate!.settings.showStoreAddress)
+            if (selectedTemplate!
+                .settings.showStoreAddress)
               _buildTextEditField(
                 label: 'Store Address Content',
-                value: selectedTemplate!.settings.storeAddress,
+                value: selectedTemplate!
+                    .settings.storeAddress,
                 onChanged: (value) {
                   final newSettings = selectedTemplate!.settings;
                   newSettings.storeAddress = value;
@@ -2079,15 +2118,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                          // const SizedBox(height: 4),
-                                          // Text(
-                                          //   selectedPrinter!.address ??
-                                          //       'No address',
-                                          //   style: const TextStyle(
-                                          //     color: ColorManager.kGreyColor,
-                                          //     fontSize: 14,
-                                          //   ),
-                                          // ),
                                           const SizedBox(height: 4),
                                           Text(
                                             'Type: ${selectedPrinter!.typePrinter}',
@@ -2097,6 +2127,45 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                             ),
                                           ),
                                         ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'Default Paper Size:',
+                                      style: TextStyle(
+                                        color: ColorManager.kTitleTextColor,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: Colors.grey[300]!),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                                      child: DropdownButton<String>(
+                                        value: selectedPaperSize,
+                                        underline: const SizedBox(),
+                                        items: paperSizes.map((String size) {
+                                          return DropdownMenuItem<String>(
+                                            value: size,
+                                            child: Text(size),
+                                          );
+                                        }).toList(),
+                                        onChanged: (String? newValue) {
+                                          if (newValue != null) {
+                                            setState(() {
+                                              selectedPaperSize = newValue;
+                                            });
+                                            _saveDefaultPaperSize(newValue);
+                                          }
+                                        },
                                       ),
                                     ),
                                   ],
