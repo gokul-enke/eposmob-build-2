@@ -40,6 +40,7 @@ class ReceiptSettings {
   bool showTel;
   bool showEmail;
   bool showInvoiceNumber;
+  bool showInvoiceTitle;
   bool showStoreAddress;
   bool showFssaiInfo;
 
@@ -50,6 +51,7 @@ class ReceiptSettings {
   String fssaiInfo;
   String telephone;
   String email;
+  String invoiceTitle;
 
   // Date Header settings
   bool showDateHeader;
@@ -87,6 +89,7 @@ class ReceiptSettings {
     this.showTel = true,
     this.showEmail = true,
     this.showInvoiceNumber = true,
+    this.showInvoiceTitle = true,
     this.showStoreAddress = true,
     this.showFssaiInfo = true,
     this.showDateHeader = true,
@@ -111,11 +114,87 @@ class ReceiptSettings {
     this.fssaiInfo = 'Fssai: xxxx',
     this.telephone = 'TEL: 123-456-7890',
     this.email = 'Email: example@store.com',
+    this.invoiceTitle = 'INVOICE',
     this.thankYouMessage = 'Thank You... Visit Again',
     this.termsConditions =
         '1. Replace within 7 Days of Purchase\n2. Replace only with Bill',
     this.qrCodeMessage = 'Scan this QR code to Pay',
   });
+
+  // Add copyWith method to create a copy with some properties changed
+  ReceiptSettings copyWith({
+    bool? showStoreName,
+    bool? showDescription,
+    bool? showTel,
+    bool? showEmail,
+    bool? showInvoiceNumber,
+    bool? showInvoiceTitle,
+    bool? showStoreAddress,
+    bool? showFssaiInfo,
+    bool? showDateHeader,
+    bool? showSLNumber,
+    bool? showParticulars,
+    bool? showMRP,
+    bool? showQty,
+    bool? showRate,
+    bool? showTotal,
+    bool? showDiscount,
+    bool? showNetAmount,
+    bool? showMRPTotal,
+    bool? showSaved,
+    bool? showAmountInWords,
+    bool? showItemsCount,
+    bool? showThankYouMessage,
+    bool? showQRCode,
+    bool? showTermsConditions,
+    String? storeName,
+    String? description,
+    String? storeAddress,
+    String? telephone,
+    String? email,
+    String? fssaiInfo,
+    String? invoiceTitle,
+    String? thankYouMessage,
+    String? qrCodeMessage,
+    String? termsConditions,
+  }) {
+    return ReceiptSettings(
+      showStoreName: showStoreName ?? this.showStoreName,
+      showDescription: showDescription ?? this.showDescription,
+      showTel: showTel ?? this.showTel,
+      showEmail: showEmail ?? this.showEmail,
+      showInvoiceNumber: showInvoiceNumber ?? this.showInvoiceNumber,
+      showInvoiceTitle: showInvoiceTitle ?? this.showInvoiceTitle,
+      showStoreAddress: showStoreAddress ?? this.showStoreAddress,
+      showFssaiInfo: showFssaiInfo ?? this.showFssaiInfo,
+      showDateHeader: showDateHeader ?? this.showDateHeader,
+      showSLNumber: showSLNumber ?? this.showSLNumber,
+      showParticulars: showParticulars ?? this.showParticulars,
+      showMRP: showMRP ?? this.showMRP,
+      showQty: showQty ?? this.showQty,
+      showRate: showRate ?? this.showRate,
+      showTotal: showTotal ?? this.showTotal,
+      showDiscount: showDiscount ?? this.showDiscount,
+      showNetAmount: showNetAmount ?? this.showNetAmount,
+      showMRPTotal: showMRPTotal ?? this.showMRPTotal,
+      showSaved: showSaved ?? this.showSaved,
+      showAmountInWords: showAmountInWords ?? this.showAmountInWords,
+      showItemsCount: showItemsCount ?? this.showItemsCount,
+      showThankYouMessage: showThankYouMessage ?? this.showThankYouMessage,
+      showQRCode: showQRCode ?? this.showQRCode,
+      showTermsConditions: showTermsConditions ?? this.showTermsConditions,
+      storeName: storeName ?? this.storeName,
+      description: description ?? this.description,
+      storeAddress: storeAddress ?? this.storeAddress,
+      telephone: telephone ?? this.telephone,
+      email: email ?? this.email,
+      fssaiInfo: fssaiInfo ?? this.fssaiInfo,
+      invoiceTitle: invoiceTitle ?? this.invoiceTitle,
+      thankYouMessage: thankYouMessage ?? this.thankYouMessage,
+      termsConditions: termsConditions ?? this.termsConditions,
+      qrCodeMessage: qrCodeMessage ?? this.qrCodeMessage,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -124,6 +203,7 @@ class ReceiptSettings {
       'showTel': showTel,
       'showEmail': showEmail,
       'showInvoiceNumber': showInvoiceNumber,
+      'showInvoiceTitle': showInvoiceTitle,
       'showStoreAddress': showStoreAddress,
       'showFssaiInfo': showFssaiInfo,
       'showDateHeader': showDateHeader,
@@ -148,6 +228,7 @@ class ReceiptSettings {
       'fssaiInfo': fssaiInfo,
       'telephone': telephone,
       'email': email,
+      'invoiceTitle': invoiceTitle,
       'thankYouMessage': thankYouMessage,
       'termsConditions': termsConditions,
       'qrCodeMessage': qrCodeMessage,
@@ -161,6 +242,7 @@ class ReceiptSettings {
       showTel: json['showTel'] ?? true,
       showEmail: json['showEmail'] ?? true,
       showInvoiceNumber: json['showInvoiceNumber'] ?? true,
+      showInvoiceTitle: json['showInvoiceTitle'] ?? true,
       showStoreAddress: json['showStoreAddress'] ?? true,
       showFssaiInfo: json['showFssaiInfo'] ?? true,
       showDateHeader: json['showDateHeader'] ?? true,
@@ -185,6 +267,7 @@ class ReceiptSettings {
       fssaiInfo: json['fssaiInfo'] ?? 'Fssai: xxxx',
       telephone: json['telephone'] ?? 'TEL: 123-456-7890',
       email: json['email'] ?? 'Email: example@store.com',
+      invoiceTitle: json['invoiceTitle'] ?? 'INVOICE',
       thankYouMessage: json['thankYouMessage'] ?? 'Thank You... Visit Again',
       termsConditions: json['termsConditions'] ??
           '1. Replace within 7 Days of Purchase\n2. Replace only with Bill',
@@ -756,28 +839,25 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                 style: const TextStyle(fontSize: 12),
                 textAlign: TextAlign.center,
               ),
+            if (settings.showInvoiceTitle)
+              Text(
+                settings.invoiceTitle.isNotEmpty
+                    ? settings.invoiceTitle
+                    : 'INVOICE',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+                textAlign: TextAlign.center,
+              ),
             if (settings.showInvoiceNumber)
-              const Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'INVOICE',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'INV No: 12345',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+              const Text(
+                'INV No: 12345',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+                textAlign: TextAlign.center,
               ),
             const SizedBox(height: 8),
             const Divider(),
@@ -1278,6 +1358,25 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                 },
               ),
             _buildSwitchTile(
+              'Invoice Title',
+              selectedTemplate!.settings.showInvoiceTitle,
+              (value) {
+                final newSettings = selectedTemplate!.settings;
+                newSettings.showInvoiceTitle = value;
+                _updateSelectedTemplateSettings(newSettings);
+              },
+            ),
+            if (selectedTemplate!.settings.showInvoiceTitle)
+              _buildTextEditField(
+                label: 'Invoice Title Content',
+                value: selectedTemplate!.settings.invoiceTitle,
+                onChanged: (value) {
+                  final newSettings = selectedTemplate!.settings;
+                  newSettings.invoiceTitle = value;
+                  _updateSelectedTemplateSettings(newSettings);
+                },
+              ),
+            _buildSwitchTile(
               'Invoice Number',
               selectedTemplate!.settings.showInvoiceNumber,
               (value) {
@@ -1687,15 +1786,31 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                     },
                                   ),
                                   _buildSwitchTile(
-                                    'Invoice Number',
-                                    selectedTemplate!
-                                        .settings.showInvoiceNumber,
+                                    'Invoice Title',
+                                    selectedTemplate!.settings.showInvoiceTitle,
                                     (value) {
-                                      final newSettings =
-                                          selectedTemplate!.settings;
+                                      final newSettings = selectedTemplate!.settings;
+                                      newSettings.showInvoiceTitle = value;
+                                      _updateSelectedTemplateSettings(newSettings);
+                                    },
+                                  ),
+                                  if (selectedTemplate!.settings.showInvoiceTitle)
+                                    _buildTextEditField(
+                                      label: 'Invoice Title Content',
+                                      value: selectedTemplate!.settings.invoiceTitle,
+                                      onChanged: (value) {
+                                        final newSettings = selectedTemplate!.settings;
+                                        newSettings.invoiceTitle = value;
+                                        _updateSelectedTemplateSettings(newSettings);
+                                      },
+                                    ),
+                                  _buildSwitchTile(
+                                    'Invoice Number',
+                                    selectedTemplate!.settings.showInvoiceNumber,
+                                    (value) {
+                                      final newSettings = selectedTemplate!.settings;
                                       newSettings.showInvoiceNumber = value;
-                                      _updateSelectedTemplateSettings(
-                                          newSettings);
+                                      _updateSelectedTemplateSettings(newSettings);
                                     },
                                   ),
                                 ],

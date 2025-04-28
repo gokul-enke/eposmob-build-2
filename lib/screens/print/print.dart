@@ -276,52 +276,95 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   Future<void> _loadReceiptTemplate() async {
+    debugPrint("===== TEMPLATE DEBUG =====");
+    debugPrint("Loading receipt template from preferences...");
+    
     final prefs = await SharedPreferences.getInstance();
     final templatesJson = prefs.getString('receipt_templates');
-
+    
+    debugPrint("Found templates in prefs: ${templatesJson != null ? 'YES' : 'NO'}");
+    
+    ReceiptTemplate defaultTemplate;
+    
     if (templatesJson != null) {
       try {
         final List<dynamic> decodedData = json.decode(templatesJson);
+        debugPrint("Successfully decoded template data, found ${decodedData.length} templates");
+        
         final List<ReceiptTemplate> loadedTemplates = decodedData
             .map((template) => ReceiptTemplate.fromJson(template))
             .toList();
 
         // Find default template
-        final defaultTemplate = loadedTemplates.firstWhere(
+        defaultTemplate = loadedTemplates.firstWhere(
           (template) => template.isDefault,
           orElse: () => loadedTemplates.isNotEmpty
               ? loadedTemplates.first
-              : ReceiptTemplate(
-                  name: 'Default Template',
-                  settings: ReceiptSettings(),
-                  isDefault: true,
-                ),
+              : _createDefaultTemplate(),
         );
-
-        setState(() {
-          selectedTemplate = defaultTemplate;
-        });
+        
+        debugPrint("Found default template: ${defaultTemplate.name}");
       } catch (e) {
-        print('Error decoding templates: $e');
-        // Create a default template if none exists
-        setState(() {
-          selectedTemplate = ReceiptTemplate(
-            name: 'Default Template',
-            settings: ReceiptSettings(),
-            isDefault: true,
-          );
-        });
+        debugPrint("ERROR decoding templates: $e");
+        // Create a default template with appropriate settings
+        defaultTemplate = _createDefaultTemplate();
       }
     } else {
-      // Create a default template if none exists
-      setState(() {
-        selectedTemplate = ReceiptTemplate(
-          name: 'Default Template',
-          settings: ReceiptSettings(),
-          isDefault: true,
-        );
-      });
+      debugPrint("No templates found in preferences, creating default");
+      // Create a default template with appropriate settings
+      defaultTemplate = _createDefaultTemplate();
     }
+    
+    // Apply paper size-specific settings
+    final settings = _updateSettingsForPaperSize(defaultTemplate.settings);
+    defaultTemplate = ReceiptTemplate(
+      name: defaultTemplate.name,
+      settings: settings,
+      isDefault: defaultTemplate.isDefault,
+    );
+    
+    setState(() {
+      selectedTemplate = defaultTemplate;
+    });
+    
+    debugPrint("Final template settings after paper size adjustment:");
+    debugPrint("showQRCode: ${defaultTemplate.settings.showQRCode}");
+    debugPrint("showTermsConditions: ${defaultTemplate.settings.showTermsConditions}");
+    debugPrint("=======================");
+  }
+
+  ReceiptTemplate _createDefaultTemplate() {
+    final bool isSpecialPaperSize = selectedPaperSize == 'A4' || selectedPaperSize == 'A5';
+    
+    return ReceiptTemplate(
+      name: 'Default Template',
+      settings: ReceiptSettings(
+        showStoreName: true,
+        showDescription: true,
+        showTel: true,
+        showEmail: true,
+        showInvoiceNumber: true,
+        showStoreAddress: true,
+        showFssaiInfo: true,
+        showDateHeader: true,
+        showSLNumber: true,
+        showParticulars: true,
+        showMRP: true,
+        showQty: true,
+        showRate: true,
+        showTotal: true,
+        showDiscount: true,
+        showNetAmount: true,
+        showMRPTotal: true,
+        showSaved: true,
+        showAmountInWords: true,
+        showItemsCount: true,
+        showThankYouMessage: true,
+        showQRCode: !isSpecialPaperSize, // false for A4/A5
+        showTermsConditions: !isSpecialPaperSize, // false for A4/A5
+      ),
+      isDefault: true,
+    );
   }
 
   Future<void> printReceipt(
@@ -342,6 +385,9 @@ class _PrintPageState extends State<PrintPage> {
     debugPrint(
         "Printer: ${selectedPrinter!.deviceName} (${selectedPrinter!.typePrinter})");
     debugPrint("Paper size: $selectedPaperSize");
+    
+    // Print template settings debug info
+    _debugPrintTemplateSettings();
 
     try {
       // Connect to the printer
@@ -369,8 +415,13 @@ class _PrintPageState extends State<PrintPage> {
       final generator = Generator(paperSize, profile);
       List<int> bytes = [];
 
-      // Get settings from template or use defaults
+      // Get settings from template or use defaults - respect user settings
       final settings = selectedTemplate?.settings ?? ReceiptSettings();
+      
+      debugPrint("Using user settings for printing:");
+      debugPrint("showQRCode: ${settings.showQRCode}");
+      debugPrint("showTermsConditions: ${settings.showTermsConditions}");
+      
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
       final appSettings = appSettingsProvider.appSettings;
@@ -389,14 +440,26 @@ class _PrintPageState extends State<PrintPage> {
         bytes += _buildThankYouMessage(generator, settings);
       }
 
-      // QR Code
+      // Debug: Check QR code setting
+      debugPrint("QR Code setting from user: ${settings.showQRCode}");
+      
+      // QR Code - respect user setting without paper size check
       if (settings.showQRCode) {
+        debugPrint("Adding QR code to receipt");
         bytes += _buildQRCode(generator, customerCareNumber, settings);
+      } else {
+        debugPrint("Skipping QR code, disabled in settings");
       }
 
-      // Terms & Conditions
+      // Debug: Check Terms setting
+      debugPrint("Terms & Conditions setting from user: ${settings.showTermsConditions}");
+      
+      // Terms & Conditions - respect user setting without paper size check
       if (settings.showTermsConditions) {
+        debugPrint("Adding Terms & Conditions to receipt");
         bytes += _buildTermsConditions(generator, settings);
+      } else {
+        debugPrint("Skipping Terms & Conditions, disabled in settings");
       }
 
       // Cut the receipt
@@ -487,9 +550,14 @@ class _PrintPageState extends State<PrintPage> {
           styles: const PosStyles(align: PosAlign.center));
     }
 
-    if (settings.showInvoiceNumber) {
-      bytes += generator.text(appSettings.printTitle,
+    // Add invoice title and number as separate elements
+    if (settings.showInvoiceTitle) {
+      bytes += generator.text(
+          settings.invoiceTitle.isNotEmpty ? settings.invoiceTitle : appSettings.printTitle,
           styles: const PosStyles(align: PosAlign.center, bold: true));
+    }
+    
+    if (settings.showInvoiceNumber) {
       bytes += generator.text('INV No: ${widget.orderNumber}',
           styles: const PosStyles(align: PosAlign.center, bold: true));
     }
@@ -805,6 +873,14 @@ class _PrintPageState extends State<PrintPage> {
 
   List<int> _buildQRCode(Generator generator, String customerCareNumber,
       ReceiptSettings settings) {
+    // Double-check settings
+    if (!settings.showQRCode) {
+      debugPrint("QR Code disabled in settings, skipping");
+      return [];
+    }
+    
+    debugPrint("Generating QR code (enabled in settings)");
+    
     final paymentGatewaysProvider =
         Provider.of<PaymentGatewaysProvider>(context, listen: false);
     final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
@@ -849,6 +925,14 @@ class _PrintPageState extends State<PrintPage> {
 
   List<int> _buildTermsConditions(
       Generator generator, ReceiptSettings settings) {
+    // Double-check settings
+    if (!settings.showTermsConditions) {
+      debugPrint("Terms & Conditions disabled in settings, skipping");
+      return [];
+    }
+    
+    debugPrint("Generating Terms & Conditions (enabled in settings)");
+    
     List<int> bytes = [];
 
     bytes += generator.text('Terms & Conditions',
@@ -1194,6 +1278,9 @@ class _PrintPageState extends State<PrintPage> {
         "Selected printer: ${selectedPrinter?.deviceName ?? 'None'} (${selectedPrinter?.typePrinter.toString() ?? 'Unknown'})");
     debugPrint("Selected paper size: $selectedPaperSize");
 
+    // Ensure template settings are up to date before printing
+    await reloadTemplateSettings();
+
     if (selectedPaperSize == '80mm' || selectedPaperSize == '58mm') {
       // Use thermal printer for thermal paper sizes
       debugPrint("Using thermal printing method for $selectedPaperSize paper");
@@ -1210,6 +1297,9 @@ class _PrintPageState extends State<PrintPage> {
   Future<void> generateAndPrintPDF(
       String customerCareNumber, String customerCareEmail) async {
     try {
+      // Print template settings debug info
+      _debugPrintTemplateSettings();
+      
       if (mounted) {
         showScaffold(
           context: context,
@@ -1220,8 +1310,16 @@ class _PrintPageState extends State<PrintPage> {
       // Create a PDF document
       final pdf = pw.Document();
 
-      // Get settings from template or use defaults
+      // Get settings from template or use defaults - respect user settings
       final settings = selectedTemplate?.settings ?? ReceiptSettings();
+      
+      // Use settings as-is without forcing QR and Terms to be disabled
+      final updatedSettings = settings;
+      
+      debugPrint("PDF Generation - Using user settings:");
+      debugPrint("showQRCode: ${updatedSettings.showQRCode}");
+      debugPrint("showTermsConditions: ${updatedSettings.showTermsConditions}");
+
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
       final appSettings = appSettingsProvider.appSettings;
@@ -1245,12 +1343,6 @@ class _PrintPageState extends State<PrintPage> {
                     createdAt: "",
                     updatedAt: "",
                   ));
-
-      debugPrint("===== QR CODE DEBUG =====");
-      debugPrint("Payment Gateway Link: ${manualPaymentGateway.link}");
-      debugPrint("Payment Gateway Name: ${manualPaymentGateway.name}");
-      debugPrint("Payment Gateway Code: ${manualPaymentGateway.code}");
-      debugPrint("=========================");
 
       // Determine page format based on paper size
       PdfPageFormat pageFormat =
@@ -1299,57 +1391,57 @@ class _PrintPageState extends State<PrintPage> {
                   child: pw.Column(
                     children: [
                       // Store name
-                      if (settings.showStoreName)
+                      if (updatedSettings.showStoreName)
                         pw.Text(
-                          settings.storeName.isNotEmpty
-                              ? settings.storeName
+                          updatedSettings.storeName.isNotEmpty
+                              ? updatedSettings.storeName
                               : 'STORE NAME',
                           style: headerStyle,
                         ),
 
                       // Store description
-                      if (settings.showDescription)
+                      if (updatedSettings.showDescription)
                         pw.Text(
-                          settings.description.isNotEmpty
-                              ? settings.description
+                          updatedSettings.description.isNotEmpty
+                              ? updatedSettings.description
                               : 'Mini Supermarket',
                           style: pw.TextStyle(
-                            fontSize: 12.0,
+                            fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
                             fontStyle: pw.FontStyle.italic,
                           ),
                         ),
 
                       // Store address
-                      if (settings.showStoreAddress)
+                      if (updatedSettings.showStoreAddress)
                         pw.Text(
-                          settings.storeAddress.isNotEmpty
-                              ? settings.storeAddress
+                          updatedSettings.storeAddress.isNotEmpty
+                              ? updatedSettings.storeAddress
                               : 'Shop Address',
                           style: bodyStyle,
                         ),
 
                       // FSSAI info
-                      if (settings.showFssaiInfo)
+                      if (updatedSettings.showFssaiInfo)
                         pw.Text(
-                          settings.fssaiInfo.isNotEmpty
-                              ? settings.fssaiInfo
+                          updatedSettings.fssaiInfo.isNotEmpty
+                              ? updatedSettings.fssaiInfo
                               : 'Fssai: xxxx',
                           style: bodyStyle,
                         ),
 
                       // Contact information
-                      if (settings.showTel)
+                      if (updatedSettings.showTel)
                         pw.Text(
-                          settings.telephone.isNotEmpty
-                              ? settings.telephone
+                          updatedSettings.telephone.isNotEmpty
+                              ? updatedSettings.telephone
                               : 'TEL: ${appSettings!.customerCarePhone}',
                           style: bodyStyle,
                         ),
 
-                      if (settings.showEmail)
+                      if (updatedSettings.showEmail)
                         pw.Text(
-                          settings.email.isNotEmpty
-                              ? settings.email
+                          updatedSettings.email.isNotEmpty
+                              ? updatedSettings.email
                               : 'Email: ${appSettings!.customerCareEmail}',
                           style: bodyStyle,
                         ),
@@ -1360,40 +1452,50 @@ class _PrintPageState extends State<PrintPage> {
                 pw.SizedBox(height: 20),
 
                 // Invoice information in a framed box
-                pw.Container(
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(width: 1, color: PdfColors.grey300),
-                    borderRadius:
-                        const pw.BorderRadius.all(pw.Radius.circular(5)),
-                  ),
-                  padding: const pw.EdgeInsets.all(10),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Text(appSettings!.printTitle,
-                              style: subheaderStyle),
-                          pw.Text('No: ${widget.orderNumber}',
-                              style: subheaderStyle),
+                if (updatedSettings.showInvoiceTitle || updatedSettings.showInvoiceNumber)
+                  pw.Container(
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(width: 1, color: PdfColors.grey300),
+                      borderRadius:
+                          const pw.BorderRadius.all(pw.Radius.circular(5)),
+                    ),
+                    padding: const pw.EdgeInsets.all(10),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            if (updatedSettings.showInvoiceTitle)
+                              pw.Text(
+                                updatedSettings.invoiceTitle.isNotEmpty
+                                    ? updatedSettings.invoiceTitle
+                                    : appSettings!.printTitle,
+                                style: subheaderStyle
+                              ),
+                            if (updatedSettings.showInvoiceNumber)
+                              pw.Text('No: ${widget.orderNumber}',
+                                style: subheaderStyle
+                              ),
+                          ],
+                        ),
+                        if (updatedSettings.showDateHeader) ...[
+                          pw.SizedBox(height: 5),
+                          pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text(
+                                  'Date: ${DateHelper.formatISODate(widget.orderDate)}',
+                                  style: bodyStyle),
+                              pw.Text(
+                                  'Time: ${DateHelper.formatISODateToIST(widget.orderDate)}',
+                                  style: bodyStyle),
+                            ],
+                          ),
                         ],
-                      ),
-                      pw.SizedBox(height: 5),
-                      pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Text(
-                              'Date: ${DateHelper.formatISODate(widget.orderDate)}',
-                              style: bodyStyle),
-                          pw.Text(
-                              'Time: ${DateHelper.formatISODateToIST(widget.orderDate)}',
-                              style: bodyStyle),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
 
                 pw.SizedBox(height: 15),
 
@@ -1410,7 +1512,7 @@ class _PrintPageState extends State<PrintPage> {
                     children: [
                       pw.Text('ITEM DETAILS', style: subheaderStyle),
                       pw.SizedBox(height: 10),
-                      _buildPdfItemsTable(tableHeaderStyle, bodyStyle),
+                      _buildPdfItemsTable(tableHeaderStyle, bodyStyle, updatedSettings),
                     ],
                   ),
                 ),
@@ -1430,7 +1532,7 @@ class _PrintPageState extends State<PrintPage> {
                     children: [
                       pw.Text('ORDER SUMMARY', style: subheaderStyle),
                       pw.SizedBox(height: 10),
-                      _buildPdfSummary(bodyStyle),
+                      _buildPdfSummary(bodyStyle, updatedSettings),
                     ],
                   ),
                 ),
@@ -1438,7 +1540,7 @@ class _PrintPageState extends State<PrintPage> {
                 pw.SizedBox(height: 10),
 
                 // Amount in words
-                if (settings.showAmountInWords)
+                if (updatedSettings.showAmountInWords)
                   pw.Container(
                     padding: const pw.EdgeInsets.symmetric(vertical: 10),
                     decoration: const pw.BoxDecoration(
@@ -1450,7 +1552,7 @@ class _PrintPageState extends State<PrintPage> {
                     child: pw.Text(
                       'Amount in words: ${AmountHelper().convertNumberToWords(double.parse(widget.formattedTotal))} Only.',
                       style: pw.TextStyle(
-                        fontSize: 10.0,
+                        fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
                         fontStyle: pw.FontStyle.italic,
                       ),
                     ),
@@ -1461,12 +1563,12 @@ class _PrintPageState extends State<PrintPage> {
                 // Footer section
                 pw.Column(
                   children: [
-                    // Thank You message (still conditional)
-                    if (settings.showThankYouMessage)
+                    // Thank You message
+                    if (updatedSettings.showThankYouMessage)
                       pw.Center(
                         child: pw.Text(
-                          settings.thankYouMessage.isNotEmpty
-                              ? settings.thankYouMessage
+                          updatedSettings.thankYouMessage.isNotEmpty
+                              ? updatedSettings.thankYouMessage
                               : 'Thank You... Visit Again',
                           style: subheaderStyle,
                         ),
@@ -1474,50 +1576,54 @@ class _PrintPageState extends State<PrintPage> {
 
                     pw.SizedBox(height: 10),
 
-                    // QR Code for payment (always include if link available)
-                    pw.Center(
-                      child: pw.Column(
-                        children: [
-                          pw.BarcodeWidget(
-                            barcode: pw.Barcode.qrCode(),
-                            data:
-                                'upi://pay?pa=${manualPaymentGateway.link}&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS&t=c&st=1&se=1&sd=1',
-                            width: selectedPaperSize == 'A5' ? 100 : 120,
-                            height: selectedPaperSize == 'A5' ? 100 : 120,
-                          ),
-                          pw.SizedBox(height: 5),
-                          pw.Text(
-                            settings.qrCodeMessage.isNotEmpty
-                                ? settings.qrCodeMessage
-                                : 'Scan to Pay',
-                            style: pw.TextStyle(
-                              fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
-                              fontWeight: pw.FontWeight.bold,
+                    // QR Code for payment - Only show if enabled in settings
+                    if (updatedSettings.showQRCode) ...[
+                      pw.Center(
+                        child: pw.Column(
+                          children: [
+                            pw.BarcodeWidget(
+                              barcode: pw.Barcode.qrCode(),
+                              data:
+                                  'upi://pay?pa=${manualPaymentGateway.link}&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS&t=c&st=1&se=1&sd=1',
+                              width: selectedPaperSize == 'A5' ? 100 : 120,
+                              height: selectedPaperSize == 'A5' ? 100 : 120,
                             ),
-                          ),
+                            pw.SizedBox(height: 5),
+                            pw.Text(
+                              updatedSettings.qrCodeMessage.isNotEmpty
+                                  ? updatedSettings.qrCodeMessage
+                                  : 'Scan to Pay',
+                              style: pw.TextStyle(
+                                fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      pw.SizedBox(height: 10),
+                    ],
+
+                    // Terms & Conditions - Only show if enabled in settings
+                    if (updatedSettings.showTermsConditions) ...[
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('Terms & Conditions:',
+                              style: pw.TextStyle(
+                                  fontSize:
+                                      selectedPaperSize == 'A5' ? 7.0 : 10.0,
+                                  fontWeight: pw.FontWeight.bold)),
+                          pw.SizedBox(height: 5),
+                          ..._buildTermsConditionsList(
+                              updatedSettings.termsConditions.isNotEmpty
+                                  ? updatedSettings.termsConditions
+                                  : '1. Replace or Return only within 7 Days of Purchase.\n2. Replace only with Bill.\n3. Warranty as per manufacturer terms and conditions.',
+                              smallStyle),
                         ],
                       ),
-                    ),
-
-                    pw.SizedBox(height: 10),
-
-                    // Terms & Conditions (always include)
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('Terms & Conditions:',
-                            style: pw.TextStyle(
-                                fontSize:
-                                    selectedPaperSize == 'A5' ? 7.0 : 10.0,
-                                fontWeight: pw.FontWeight.bold)),
-                        pw.SizedBox(height: 5),
-                        ..._buildTermsConditionsList(
-                            settings.termsConditions.isNotEmpty
-                                ? settings.termsConditions
-                                : '1. Replace or Return only within 7 Days of Purchase.\n2. Replace only with Bill.\n3. Warranty as per manufacturer terms and conditions.',
-                            smallStyle),
-                      ],
-                    ),
+                      pw.SizedBox(height: 10),
+                    ],
                   ],
                 ),
               ],
@@ -1531,10 +1637,6 @@ class _PrintPageState extends State<PrintPage> {
       final file = File('${output.path}/Receipt-${widget.orderNumber}.pdf');
       await file.writeAsBytes(await pdf.save());
 
-      debugPrint("PDF saved to: ${file.path}");
-      debugPrint("File exists: ${await file.exists()}");
-      debugPrint("File size: ${await file.length()} bytes");
-
       // Determine if running on Windows
       final bool isWindows = Platform.isWindows;
 
@@ -1544,16 +1646,10 @@ class _PrintPageState extends State<PrintPage> {
         // Try to open the PDF directly for non-Windows platforms
         try {
           final result = await OpenFile.open(file.path);
-          debugPrint("OpenFile result type: ${result.type}");
-          debugPrint("OpenFile result message: ${result.message}");
-
           if (result.type != 'done') {
-            // If opening fails, try to share it instead (for mobile platforms)
-            debugPrint("Opening PDF failed, trying share fallback...");
             if (!isWindows) {
               await _sharePdfFallback(file);
             } else {
-              // For Windows, we already handled above
               _showFileLocationInfo(file);
             }
           } else {
@@ -1567,12 +1663,9 @@ class _PrintPageState extends State<PrintPage> {
             }
           }
         } catch (e) {
-          debugPrint("Error when opening PDF: $e");
-          // Fallback to sharing if opening fails (for mobile platforms)
           if (!isWindows) {
             await _sharePdfFallback(file);
           } else {
-            // For Windows, we already handled above
             _showFileLocationInfo(file);
           }
         }
@@ -1664,16 +1757,15 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   pw.Widget _buildPdfItemsTable(
-      pw.TextStyle headerStyle, pw.TextStyle contentStyle) {
+      pw.TextStyle headerStyle, pw.TextStyle contentStyle, ReceiptSettings settings) {
     // Create headers for the table
-    final tableHeaders = [
-      'SL#',
-      'PARTICULARS',
-      'MRP',
-      'QTY',
-      'RATE',
-      'TOTAL',
-    ];
+    final tableHeaders = [];
+    if (settings.showSLNumber) tableHeaders.add('SL#');
+    if (settings.showParticulars) tableHeaders.add('PARTICULARS');
+    if (settings.showMRP) tableHeaders.add('MRP');
+    if (settings.showQty) tableHeaders.add('QTY');
+    if (settings.showRate) tableHeaders.add('RATE');
+    if (settings.showTotal) tableHeaders.add('TOTAL');
 
     // Create table data
     List<List<String>> tableData = [];
@@ -1702,14 +1794,15 @@ class _PrintPageState extends State<PrintPage> {
         totalPrice = item.totalPrice?.toString() ?? '0.00';
       }
 
-      tableData.add([
-        (i + 1).toString(),
-        productName,
-        mrp,
-        quantity,
-        unitPrice,
-        totalPrice,
-      ]);
+      List<String> rowData = [];
+      if (settings.showSLNumber) rowData.add((i + 1).toString());
+      if (settings.showParticulars) rowData.add(productName);
+      if (settings.showMRP) rowData.add(mrp);
+      if (settings.showQty) rowData.add(quantity);
+      if (settings.showRate) rowData.add(unitPrice);
+      if (settings.showTotal) rowData.add(totalPrice);
+
+      tableData.add(rowData);
     }
 
     return pw.Table.fromTextArray(
@@ -1738,14 +1831,15 @@ class _PrintPageState extends State<PrintPage> {
     );
   }
 
-  pw.Widget _buildPdfSummary(pw.TextStyle style) {
+  pw.Widget _buildPdfSummary(pw.TextStyle style, ReceiptSettings settings) {
     double savedTotal = double.tryParse(widget.savedTotal ?? '0.0') ?? 0.0;
     double formattedTotal = double.tryParse(widget.formattedTotal) ?? 0.0;
     double totalMRP = savedTotal + formattedTotal;
 
-    return pw.Column(
-      children: [
-        // Summary rows
+    List<pw.Widget> summaryWidgets = [];
+
+    if (settings.showItemsCount) {
+      summaryWidgets.add(
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
@@ -1753,7 +1847,12 @@ class _PrintPageState extends State<PrintPage> {
             pw.Text(widget.cartItems.length.toString(), style: style),
           ],
         ),
-        pw.SizedBox(height: 5),
+      );
+      summaryWidgets.add(pw.SizedBox(height: 5));
+    }
+
+    if (settings.showMRPTotal) {
+      summaryWidgets.add(
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
@@ -1761,7 +1860,12 @@ class _PrintPageState extends State<PrintPage> {
             pw.Text(totalMRP.toStringAsFixed(2), style: style),
           ],
         ),
-        pw.SizedBox(height: 5),
+      );
+      summaryWidgets.add(pw.SizedBox(height: 5));
+    }
+
+    if (settings.showSaved) {
+      summaryWidgets.add(
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
@@ -1769,9 +1873,14 @@ class _PrintPageState extends State<PrintPage> {
             pw.Text(savedTotal.toStringAsFixed(2), style: style),
           ],
         ),
-        pw.SizedBox(height: 5),
-        pw.Divider(color: PdfColors.grey300),
-        pw.SizedBox(height: 5),
+      );
+      summaryWidgets.add(pw.SizedBox(height: 5));
+    }
+
+    if (settings.showNetAmount) {
+      summaryWidgets.add(pw.Divider(color: PdfColors.grey300));
+      summaryWidgets.add(pw.SizedBox(height: 5));
+      summaryWidgets.add(
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
@@ -1787,8 +1896,10 @@ class _PrintPageState extends State<PrintPage> {
                 )),
           ],
         ),
-      ],
-    );
+      );
+    }
+
+    return pw.Column(children: summaryWidgets);
   }
 
   List<pw.Widget> _buildTermsConditionsList(
@@ -1848,8 +1959,164 @@ class _PrintPageState extends State<PrintPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('default_paper_size', paperSize);
 
-    debugPrint("Paper size saved to preferences");
+    // Force reload template settings when paper size changes
+    setState(() {
+      selectedPaperSize = paperSize;
+    });
+    
+    await reloadTemplateSettings();
+    
+    debugPrint("Paper size saved and template reloaded");
     debugPrint("===========================");
+  }
+
+  // Add this method to print debugging info before generating outputs
+  void _debugPrintTemplateSettings() {
+    if (selectedTemplate == null) {
+      debugPrint("ERROR: No template selected!");
+      return;
+    }
+    
+    debugPrint("Current template settings:");
+    debugPrint("Template name: ${selectedTemplate!.name}");
+    debugPrint("Paper size: $selectedPaperSize");
+    debugPrint("showQRCode: ${selectedTemplate!.settings.showQRCode}");
+    debugPrint("showTermsConditions: ${selectedTemplate!.settings.showTermsConditions}");
+  }
+
+  // Add this new method to reload template settings
+  Future<void> reloadTemplateSettings() async {
+    debugPrint("===== RELOAD TEMPLATE DEBUG =====");
+    debugPrint("Reloading template settings...");
+    await _loadReceiptTemplate();
+    debugPrint("Template reload complete");
+    debugPrint("===============================");
+  }
+
+  // Add a global method to update settings before any printing or PDF generation
+  ReceiptSettings _updateSettingsForPaperSize(ReceiptSettings settings) {
+    // No longer force disable QR code and terms for A4/A5
+    // Instead respect user settings for all paper sizes
+    debugPrint("Using original settings for ${selectedPaperSize}");
+    debugPrint("showQRCode: ${settings.showQRCode}");
+    debugPrint("showTermsConditions: ${settings.showTermsConditions}");
+    return settings;
+  }
+
+  // Update the receipt preview in the settings screen to show the invoice title and number separately
+  Widget _buildReceiptPreview() {
+    if (selectedTemplate == null) return const SizedBox();
+
+    final settings = selectedTemplate!.settings;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final appSettings = appSettingsProvider.appSettings;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.3),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      width: 300,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        physics: const ClampingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Store Header
+            if (settings.showStoreName)
+              Text(
+                settings.storeName.isNotEmpty
+                    ? settings.storeName
+                    : 'STORE NAME',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            if (settings.showDescription)
+              Text(
+                settings.description.isNotEmpty
+                    ? settings.description
+                    : 'Your one-stop shop for all needs',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            if (settings.showStoreAddress)
+              Text(
+                settings.storeAddress.isNotEmpty
+                    ? settings.storeAddress
+                    : 'Shop Address',
+                style: const TextStyle(fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            if (settings.showFssaiInfo)
+              Text(
+                settings.fssaiInfo.isNotEmpty
+                    ? settings.fssaiInfo
+                    : 'Fssai: xxxx',
+                style: const TextStyle(fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            if (settings.showTel)
+              Text(
+                settings.telephone.isNotEmpty
+                    ? settings.telephone
+                    : 'TEL: ${appSettings?.customerCarePhone ?? ""}',
+                style: const TextStyle(fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            if (settings.showEmail)
+              Text(
+                settings.email.isNotEmpty
+                    ? settings.email
+                    : 'Email: ${appSettings?.customerCareEmail ?? ""}',
+                style: const TextStyle(fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            
+            // Invoice Title and Number
+            if (settings.showInvoiceTitle)
+              Text(
+                settings.invoiceTitle.isNotEmpty
+                    ? settings.invoiceTitle
+                    : 'INVOICE',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            if (settings.showInvoiceNumber)
+              const Text(
+                'INV No: 12345',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            const SizedBox(height: 8),
+            const Divider(),
+
+            // ... rest of the existing code ...
+          ],
+        ),
+      ),
+    );
   }
 }
 
