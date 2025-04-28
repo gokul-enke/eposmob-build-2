@@ -488,7 +488,7 @@ class _PrintPageState extends State<PrintPage> {
     }
 
     if (settings.showInvoiceNumber) {
-      bytes += generator.text('INVOICE',
+      bytes += generator.text(appSettings.printTitle,
           styles: const PosStyles(align: PosAlign.center, bold: true));
       bytes += generator.text('INV No: ${widget.orderNumber}',
           styles: const PosStyles(align: PosAlign.center, bold: true));
@@ -1373,7 +1373,8 @@ class _PrintPageState extends State<PrintPage> {
                       pw.Row(
                         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                         children: [
-                          pw.Text('INVOICE', style: subheaderStyle),
+                          pw.Text(appSettings!.printTitle,
+                              style: subheaderStyle),
                           pw.Text('No: ${widget.orderNumber}',
                               style: subheaderStyle),
                         ],

@@ -2,11 +2,13 @@ class AppSettings {
   final bool barcodeSales;
   final String customerCarePhone;
   final String customerCareEmail;
+  final String printTitle;
 
   AppSettings({
     required this.barcodeSales,
     required this.customerCarePhone,
     required this.customerCareEmail,
+    required this.printTitle,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -27,6 +29,7 @@ class AppSettings {
           settingsMap['COMPANY_CUSTOMER_CARE_PHONE']?['value'] ?? "",
       customerCareEmail:
           settingsMap['COMPANY_CUSTOMER_CARE_EMAIL']?['value'] ?? "",
+      printTitle: settingsMap['PRINT_TITLE']?['value'] ?? "",
     );
   }
 
@@ -50,6 +53,12 @@ class AppSettings {
           'code': 'COMPANY_CUSTOMER_CARE_EMAIL',
           'value': customerCareEmail,
           'status': customerCareEmail.isNotEmpty ? "true" : "false",
+        },
+        {
+          'name': "Print Title",
+          'code': 'PRINT_TITLE',
+          'value': printTitle,
+          'status': printTitle.isNotEmpty ? "true" : "false",
         },
       ],
     };
