@@ -102,6 +102,13 @@ class BillingPageState extends State<BillingPage> {
   Timer? _debounce;
   Timer? _debounceTimer;
 
+  // Add these variables for keyboard navigation in customer list
+  int? _highlightedCustomerIndex;
+  final FocusNode _customerTextFieldFocus = FocusNode();
+  final ScrollController _customerScrollController = ScrollController();
+  List<CustomerListModelData> _currentCustomerOptions = [];
+  final double _customerItemHeight = 48.0; // Height for customer list items
+
   @override
   void initState() {
     super.initState();
@@ -154,6 +161,8 @@ class BillingPageState extends State<BillingPage> {
 
     _debounce?.cancel();
     _debounceTimer?.cancel();
+    _customerTextFieldFocus.dispose();
+    _customerScrollController.dispose();
     super.dispose();
   }
 
@@ -1916,6 +1925,7 @@ class BillingPageState extends State<BillingPage> {
                       if (mobileNumberTextController.text.isEmpty) {
                         setState(() {
                           isCustomerFound = false; // Reset validity
+                          _highlightedCustomerIndex = null; // Reset highlighted index
                         });
                         return const Iterable<CustomerListModelData>.empty();
                       }
@@ -1955,6 +1965,7 @@ class BillingPageState extends State<BillingPage> {
                             });
                           }
 
+                          _currentCustomerOptions = filteredCustomerList ?? [];
                           return filteredCustomerList!.isNotEmpty
                               ? filteredCustomerList
                               : const Iterable<CustomerListModelData>.empty();
@@ -1966,6 +1977,7 @@ class BillingPageState extends State<BillingPage> {
                       }
                       setState(() {
                         isCustomerFound = false;
+                        _currentCustomerOptions = [];
                       });
                       return const Iterable<
                           CustomerListModelData>.empty(); // Return empty if no customers found
@@ -1991,49 +2003,113 @@ class BillingPageState extends State<BillingPage> {
                         TextEditingController mobileNumberTextController,
                         FocusNode focusNode,
                         VoidCallback onFieldSubmitted) {
-                      return TextField(
-                        controller: mobileNumberTextController,
-                        focusNode: focusNode,
-                        decoration: InputDecoration(
-                          hintText: 'Enter mobile number',
-                          hintStyle: buildCustomStyle(
+                      return KeyboardListener(
+                        focusNode: _customerTextFieldFocus,
+                        onKeyEvent: (KeyEvent event) {
+                          if (event is KeyDownEvent) {
+                            if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                              setState(() {
+                                if (_highlightedCustomerIndex == null) {
+                                  _highlightedCustomerIndex = 0;
+                                } else if (_currentCustomerOptions.isNotEmpty && 
+                                    _highlightedCustomerIndex! < _currentCustomerOptions.length - 1) {
+                                  _highlightedCustomerIndex = _highlightedCustomerIndex! + 1;
+                                }
+                              });
+                              // Scroll to show the highlighted item
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                _scrollToHighlightedCustomer();
+                              });
+                            } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                              setState(() {
+                                if (_highlightedCustomerIndex == null) {
+                                  _highlightedCustomerIndex = 0;
+                                } else if (_highlightedCustomerIndex! > 0) {
+                                  _highlightedCustomerIndex = _highlightedCustomerIndex! - 1;
+                                }
+                              });
+                              // Scroll to show the highlighted item
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                _scrollToHighlightedCustomer();
+                              });
+                            } else if (event.logicalKey == LogicalKeyboardKey.enter) {
+                              // Handle Enter key to select highlighted item
+                              if (_highlightedCustomerIndex != null &&
+                                  _currentCustomerOptions.isNotEmpty &&
+                                  _highlightedCustomerIndex! < _currentCustomerOptions.length) {
+                                // Get the selected customer
+                                final selectedCust = _currentCustomerOptions[_highlightedCustomerIndex!];
+                                
+                                // Process the selection - this should match the onSelected behavior
+                                String? accessToken =
+                                    Provider.of<AuthModel>(context, listen: false).token;
+                                Provider.of<CartProvider>(context, listen: false)
+                                    .fetchCartDataFromApi(
+                                        customerId: selectedCust.id ?? 0,
+                                        accessToken: accessToken ?? '');
+                                
+                                // Update text field with selected customer info
+                                mobileNumberTextController.text = "${selectedCust.name} ${selectedCust.phone}";
+                                
+                                setState(() {
+                                  mobileNumberText = "";
+                                  selectedCustomerID = selectedCust.id!;
+                                  selectedCustomerPhone = selectedCust.phone;
+                                  selectedCustomer = selectedCust;
+                                  isCustomerFound = true;
+                                });
+                                
+                                // Unfocus to close the dropdown
+                                focusNode.unfocus();
+                              }
+                            }
+                          }
+                        },
+                        child: TextField(
+                          controller: mobileNumberTextController,
+                          focusNode: focusNode,
+                          decoration: InputDecoration(
+                            hintText: 'Enter mobile number',
+                            hintStyle: buildCustomStyle(
+                              FontWeight.w500,
+                              12,
+                              0.27,
+                              Colors.grey.withOpacity(.5),
+                            ),
+                            border: InputBorder.none,
+                            isDense: true, // Makes the field more compact
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 10.0),
+                            suffixIconConstraints: const BoxConstraints(
+                                maxHeight: 25,
+                                maxWidth: 30), // Constrains the suffix icon size
+                            suffixIcon:
+                                (isCustomerFound || selectedCustomerID != null)
+                                    ? const Padding(
+                                        padding: EdgeInsets.only(right: 8.0),
+                                        child: Icon(
+                                          Icons.check_circle,
+                                          color: ColorManager.kButtonGreen,
+                                          size: 25,
+                                        ),
+                                      )
+                                    : null,
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              mobileNumberText = value;
+                              selectedCustomerID = null;
+                              selectedCustomerPhone = null;
+                              selectedCustomer = null;
+                              _highlightedCustomerIndex = null;
+                            });
+                          },
+                          style: buildCustomStyle(
                             FontWeight.w500,
                             12,
                             0.27,
-                            Colors.grey.withOpacity(.5),
+                            Colors.black.withOpacity(.5),
                           ),
-                          border: InputBorder.none,
-                          isDense: true, // Makes the field more compact
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 10.0),
-                          suffixIconConstraints: const BoxConstraints(
-                              maxHeight: 25,
-                              maxWidth: 30), // Constrains the suffix icon size
-                          suffixIcon:
-                              (isCustomerFound || selectedCustomerID != null)
-                                  ? const Padding(
-                                      padding: EdgeInsets.only(right: 8.0),
-                                      child: Icon(
-                                        Icons.check_circle,
-                                        color: ColorManager.kButtonGreen,
-                                        size: 25,
-                                      ),
-                                    )
-                                  : null,
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            mobileNumberText = value;
-                            selectedCustomerID = null;
-                            selectedCustomerPhone = null;
-                            selectedCustomer = null;
-                          });
-                        },
-                        style: buildCustomStyle(
-                          FontWeight.w500,
-                          12,
-                          0.27,
-                          Colors.black.withOpacity(.5),
                         ),
                       );
                     },
@@ -2050,6 +2126,7 @@ class BillingPageState extends State<BillingPage> {
                             color: Colors.white,
                             constraints: const BoxConstraints(maxHeight: 200),
                             child: ListView.builder(
+                              controller: _customerScrollController,
                               padding: const EdgeInsets.all(8.0),
                               shrinkWrap: true,
                               physics: const BouncingScrollPhysics(),
@@ -2057,10 +2134,13 @@ class BillingPageState extends State<BillingPage> {
                               itemBuilder: (BuildContext context, int index) {
                                 final CustomerListModelData option =
                                     options.elementAt(index);
+                                final bool isHighlighted = _highlightedCustomerIndex == index;
+                                
                                 return MouseRegion(
                                   onEnter: (_) {
                                     setState(() {
                                       hoverMap[index] = true;
+                                      _highlightedCustomerIndex = index;
                                     });
                                   },
                                   onExit: (_) {
@@ -2073,9 +2153,11 @@ class BillingPageState extends State<BillingPage> {
                                       onSelected(option);
                                     },
                                     child: Container(
-                                      color: hoverMap[index] == true
-                                          ? Colors.grey[200]
-                                          : Colors.white,
+                                      color: isHighlighted
+                                          ? Colors.blue.shade50
+                                          : (hoverMap[index] == true
+                                              ? Colors.grey[200]
+                                              : Colors.white),
                                       child: ListTile(
                                         title: Text(
                                           "${option.name} ${option.phone}",
@@ -2083,7 +2165,9 @@ class BillingPageState extends State<BillingPage> {
                                             FontWeight.w500,
                                             12,
                                             0.27,
-                                            Colors.black.withOpacity(.5),
+                                            isHighlighted
+                                                ? Colors.blue.shade800
+                                                : Colors.black.withOpacity(.5),
                                           ),
                                         ),
                                         hoverColor: Colors.grey[200],
@@ -2963,5 +3047,38 @@ class BillingPageState extends State<BillingPage> {
         message: "Failed to print saved order. Please try again.",
       );
     }
+  }
+
+  // Function to scroll to the highlighted customer in the dropdown
+  void _scrollToHighlightedCustomer() {
+    if (_highlightedCustomerIndex == null) return;
+
+    // Calculate the offset to scroll to
+    final double scrollOffset = _highlightedCustomerIndex! * _customerItemHeight;
+
+    // Get the current scroll position and visible height
+    final double currentScroll = _customerScrollController.offset;
+    final double visibleHeight = 180.0; // Approximate visible height of dropdown
+
+    // Adding buffer space to ensure the item is fully visible
+    const double bufferSpace = 4.0;
+
+    // Check if item is already visible
+    if (scrollOffset < currentScroll + bufferSpace) {
+      // Item is above visible area or partially visible at the top - scroll up to it
+      _customerScrollController.animateTo(
+        scrollOffset > 0 ? scrollOffset - bufferSpace : 0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+      );
+    } else if (scrollOffset + _customerItemHeight > currentScroll + visibleHeight - bufferSpace) {
+      // Item is below visible area or partially visible at bottom - scroll down to it
+      _customerScrollController.animateTo(
+        scrollOffset - visibleHeight + _customerItemHeight + bufferSpace,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+      );
+    }
+    // If item is already fully visible, do nothing
   }
 }
