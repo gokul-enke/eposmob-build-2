@@ -37,6 +37,7 @@ import 'package:pos_machine/widgets/sidebar_product_list.dart';
 import 'package:pos_machine/widgets/stock_selection_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 
 class BillingPage extends StatefulWidget {
   const BillingPage({super.key});
@@ -109,6 +110,10 @@ class BillingPageState extends State<BillingPage> {
   List<CustomerListModelData> _currentCustomerOptions = [];
   final double _customerItemHeight = 48.0; // Height for customer list items
 
+  // Add this variable to track internet connectivity
+  bool _hasInternet = true;
+  late StreamSubscription<InternetConnectionStatus> _internetSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -140,6 +145,9 @@ class BillingPageState extends State<BillingPage> {
         );
       }
     });
+
+    // Initialize internet connectivity listener
+    _initConnectivityListener();
   }
 
   @override
@@ -163,7 +171,30 @@ class BillingPageState extends State<BillingPage> {
     _debounceTimer?.cancel();
     _customerTextFieldFocus.dispose();
     _customerScrollController.dispose();
+    _internetSubscription.cancel(); // Cancel the subscription
     super.dispose();
+  }
+
+  // Function to initialize the connectivity listener
+  void _initConnectivityListener() {
+    _internetSubscription = InternetConnectionCheckerPlus()
+        .onStatusChange
+        .listen((InternetConnectionStatus status) {
+      setState(() {
+        _hasInternet = status == InternetConnectionStatus.connected;
+      });
+      if (!_hasInternet) {
+        showScaffoldError(
+          context: context,
+          message: "No internet connection. Some features may be limited.",
+        );
+      } else {
+        showScaffold(
+          context: context,
+          message: "Internet connection restored.",
+        );
+      }
+    });
   }
 
   Future<void> _fetchCustomers() async {
@@ -1828,24 +1859,28 @@ class BillingPageState extends State<BillingPage> {
             onPressed: _saveOrder,
             isLoading: isLoadingSaveOrder,
           ),
-          _buildActionButton(
-            text: 'Confirm and Print',
-            color: ColorManager.kButtonBlue,
-            onPressed: _createOrderAndPrint,
-            isLoading: isLoadingCreateOrder,
-          ),
-          _buildActionButton(
-            text: 'Confirm Order',
-            color: ColorManager.kButtonGreen,
-            onPressed: _confirmOrder,
-            isLoading: isLoadingConfirmOrder,
-          ),
-          _buildActionButton(
-            text: 'Save and Print',
-            color: ColorManager.kButtonYellow,
-            onPressed: _saveOrderAndPrint,
-            isLoading: isLoadingSaveOrderAndPrint,
-          ),
+          if (_hasInternet) ...[
+            _buildActionButton(
+              text: 'Confirm and Print',
+              color: ColorManager.kButtonBlue,
+              onPressed: _createOrderAndPrint,
+              isLoading: isLoadingCreateOrder,
+            ),
+            _buildActionButton(
+              text: 'Confirm Order',
+              color: ColorManager.kButtonGreen,
+              onPressed: _confirmOrder,
+              isLoading: isLoadingConfirmOrder,
+            ),
+          ],
+          if (!_hasInternet) ...[
+            _buildActionButton(
+              text: 'Save and Print',
+              color: ColorManager.kButtonYellow,
+              onPressed: _saveOrderAndPrint,
+              isLoading: isLoadingSaveOrderAndPrint,
+            ),
+          ],
         ],
       ),
     );
@@ -1925,7 +1960,8 @@ class BillingPageState extends State<BillingPage> {
                       if (mobileNumberTextController.text.isEmpty) {
                         setState(() {
                           isCustomerFound = false; // Reset validity
-                          _highlightedCustomerIndex = null; // Reset highlighted index
+                          _highlightedCustomerIndex =
+                              null; // Reset highlighted index
                         });
                         return const Iterable<CustomerListModelData>.empty();
                       }
@@ -2007,50 +2043,62 @@ class BillingPageState extends State<BillingPage> {
                         focusNode: _customerTextFieldFocus,
                         onKeyEvent: (KeyEvent event) {
                           if (event is KeyDownEvent) {
-                            if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                            if (event.logicalKey ==
+                                LogicalKeyboardKey.arrowDown) {
                               setState(() {
                                 if (_highlightedCustomerIndex == null) {
                                   _highlightedCustomerIndex = 0;
-                                } else if (_currentCustomerOptions.isNotEmpty && 
-                                    _highlightedCustomerIndex! < _currentCustomerOptions.length - 1) {
-                                  _highlightedCustomerIndex = _highlightedCustomerIndex! + 1;
+                                } else if (_currentCustomerOptions.isNotEmpty &&
+                                    _highlightedCustomerIndex! <
+                                        _currentCustomerOptions.length - 1) {
+                                  _highlightedCustomerIndex =
+                                      _highlightedCustomerIndex! + 1;
                                 }
                               });
                               // Scroll to show the highlighted item
                               WidgetsBinding.instance.addPostFrameCallback((_) {
                                 _scrollToHighlightedCustomer();
                               });
-                            } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                            } else if (event.logicalKey ==
+                                LogicalKeyboardKey.arrowUp) {
                               setState(() {
                                 if (_highlightedCustomerIndex == null) {
                                   _highlightedCustomerIndex = 0;
                                 } else if (_highlightedCustomerIndex! > 0) {
-                                  _highlightedCustomerIndex = _highlightedCustomerIndex! - 1;
+                                  _highlightedCustomerIndex =
+                                      _highlightedCustomerIndex! - 1;
                                 }
                               });
                               // Scroll to show the highlighted item
                               WidgetsBinding.instance.addPostFrameCallback((_) {
                                 _scrollToHighlightedCustomer();
                               });
-                            } else if (event.logicalKey == LogicalKeyboardKey.enter) {
+                            } else if (event.logicalKey ==
+                                LogicalKeyboardKey.enter) {
                               // Handle Enter key to select highlighted item
                               if (_highlightedCustomerIndex != null &&
                                   _currentCustomerOptions.isNotEmpty &&
-                                  _highlightedCustomerIndex! < _currentCustomerOptions.length) {
+                                  _highlightedCustomerIndex! <
+                                      _currentCustomerOptions.length) {
                                 // Get the selected customer
-                                final selectedCust = _currentCustomerOptions[_highlightedCustomerIndex!];
-                                
+                                final selectedCust = _currentCustomerOptions[
+                                    _highlightedCustomerIndex!];
+
                                 // Process the selection - this should match the onSelected behavior
-                                String? accessToken =
-                                    Provider.of<AuthModel>(context, listen: false).token;
-                                Provider.of<CartProvider>(context, listen: false)
+                                String? accessToken = Provider.of<AuthModel>(
+                                        context,
+                                        listen: false)
+                                    .token;
+                                Provider.of<CartProvider>(context,
+                                        listen: false)
                                     .fetchCartDataFromApi(
                                         customerId: selectedCust.id ?? 0,
                                         accessToken: accessToken ?? '');
-                                
+
                                 // Update text field with selected customer info
-                                mobileNumberTextController.text = "${selectedCust.name} ${selectedCust.phone}";
-                                
+                                mobileNumberTextController.text =
+                                    "${selectedCust.name} ${selectedCust.phone}";
+
                                 setState(() {
                                   mobileNumberText = "";
                                   selectedCustomerID = selectedCust.id!;
@@ -2058,7 +2106,7 @@ class BillingPageState extends State<BillingPage> {
                                   selectedCustomer = selectedCust;
                                   isCustomerFound = true;
                                 });
-                                
+
                                 // Unfocus to close the dropdown
                                 focusNode.unfocus();
                               }
@@ -2082,7 +2130,8 @@ class BillingPageState extends State<BillingPage> {
                                 const EdgeInsets.symmetric(vertical: 10.0),
                             suffixIconConstraints: const BoxConstraints(
                                 maxHeight: 25,
-                                maxWidth: 30), // Constrains the suffix icon size
+                                maxWidth:
+                                    30), // Constrains the suffix icon size
                             suffixIcon:
                                 (isCustomerFound || selectedCustomerID != null)
                                     ? const Padding(
@@ -2134,8 +2183,9 @@ class BillingPageState extends State<BillingPage> {
                               itemBuilder: (BuildContext context, int index) {
                                 final CustomerListModelData option =
                                     options.elementAt(index);
-                                final bool isHighlighted = _highlightedCustomerIndex == index;
-                                
+                                final bool isHighlighted =
+                                    _highlightedCustomerIndex == index;
+
                                 return MouseRegion(
                                   onEnter: (_) {
                                     setState(() {
@@ -3054,11 +3104,13 @@ class BillingPageState extends State<BillingPage> {
     if (_highlightedCustomerIndex == null) return;
 
     // Calculate the offset to scroll to
-    final double scrollOffset = _highlightedCustomerIndex! * _customerItemHeight;
+    final double scrollOffset =
+        _highlightedCustomerIndex! * _customerItemHeight;
 
     // Get the current scroll position and visible height
     final double currentScroll = _customerScrollController.offset;
-    final double visibleHeight = 180.0; // Approximate visible height of dropdown
+    final double visibleHeight =
+        180.0; // Approximate visible height of dropdown
 
     // Adding buffer space to ensure the item is fully visible
     const double bufferSpace = 4.0;
@@ -3071,7 +3123,8 @@ class BillingPageState extends State<BillingPage> {
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
       );
-    } else if (scrollOffset + _customerItemHeight > currentScroll + visibleHeight - bufferSpace) {
+    } else if (scrollOffset + _customerItemHeight >
+        currentScroll + visibleHeight - bufferSpace) {
       // Item is below visible area or partially visible at bottom - scroll down to it
       _customerScrollController.animateTo(
         scrollOffset - visibleHeight + _customerItemHeight + bufferSpace,
