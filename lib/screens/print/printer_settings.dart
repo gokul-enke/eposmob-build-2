@@ -12,6 +12,8 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:hive/hive.dart';
 import 'package:pos_machine/models/local_models.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class BluetoothPrinter {
   String? deviceName;
@@ -641,28 +643,16 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       // Restore login credentials if needed
       if (rememberMe == true) {
         await prefs.setBool('remember_me', true);
-        if (emailRemember != null)
+        if (emailRemember != null) {
           await prefs.setString('emailRemember', emailRemember);
-        if (passwordRemember != null)
+        }
+        if (passwordRemember != null) {
           await prefs.setString('passwordRemember', passwordRemember);
+        }
       }
 
       // Clear Hive data
-      if (Hive.isBoxOpen('products')) {
-        await Hive.box<HiveProduct>('products').clear();
-      }
-
-      if (Hive.isBoxOpen('cart_items')) {
-        await Hive.box<HiveLocalCartItem>('cart_items').clear();
-      }
-
-      if (Hive.isBoxOpen('saved_orders')) {
-        await Hive.box<HiveSavedOrder>('saved_orders').clear();
-      }
-
-      if (Hive.isBoxOpen('confirmed_orders')) {
-        await Hive.box<HiveSavedOrder>('confirmed_orders').clear();
-      }
+      await clearAllHiveData();
 
       // Log out - clear auth data from provider
       final authModel = Provider.of<AuthModel>(context, listen: false);
@@ -695,12 +685,51 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   Future<void> _saveDefaultPaperSize(String paperSize) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('default_paper_size', paperSize);
-    
+
     if (mounted) {
       showScaffold(
         context: context,
         message: "Default paper size saved",
       );
+    }
+  }
+
+  Future<void> clearAllHiveData() async {
+    try {
+      // Close all open boxes
+      if (Hive.isBoxOpen('products')) {
+        await Hive.box<HiveProduct>('products').close();
+      }
+      if (Hive.isBoxOpen('cart_items')) {
+        await Hive.box<HiveLocalCartItem>('cart_items').close();
+      }
+      if (Hive.isBoxOpen('saved_orders')) {
+        await Hive.box<HiveSavedOrder>('saved_orders').close();
+      }
+      if (Hive.isBoxOpen('confirmed_orders')) {
+        await Hive.box<HiveSavedOrder>('confirmed_orders').close();
+      }
+
+      // Delete all Hive files
+      final appDir = await getApplicationDocumentsDirectory();
+      final hiveDir = Directory('${appDir.path}/hive');
+      if (await hiveDir.exists()) {
+        await hiveDir.delete(recursive: true);
+      }
+
+      if (mounted) {
+        showScaffold(
+          context: context,
+          message: "All Hive data cleared successfully",
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: "Error clearing Hive data: ${e.toString()}",
+        );
+      }
     }
   }
 
@@ -1271,8 +1300,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             if (selectedTemplate!.settings.showDescription)
               _buildTextEditField(
                 label: 'Store Description Content',
-                value: selectedTemplate!
-                    .settings.description,
+                value: selectedTemplate!.settings.description,
                 onChanged: (value) {
                   final newSettings = selectedTemplate!.settings;
                   newSettings.description = value;
@@ -1288,12 +1316,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                 _updateSelectedTemplateSettings(newSettings);
               },
             ),
-            if (selectedTemplate!
-                .settings.showStoreAddress)
+            if (selectedTemplate!.settings.showStoreAddress)
               _buildTextEditField(
                 label: 'Store Address Content',
-                value: selectedTemplate!
-                    .settings.storeAddress,
+                value: selectedTemplate!.settings.storeAddress,
                 onChanged: (value) {
                   final newSettings = selectedTemplate!.settings;
                   newSettings.storeAddress = value;
@@ -1789,28 +1815,37 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                     'Invoice Title',
                                     selectedTemplate!.settings.showInvoiceTitle,
                                     (value) {
-                                      final newSettings = selectedTemplate!.settings;
+                                      final newSettings =
+                                          selectedTemplate!.settings;
                                       newSettings.showInvoiceTitle = value;
-                                      _updateSelectedTemplateSettings(newSettings);
+                                      _updateSelectedTemplateSettings(
+                                          newSettings);
                                     },
                                   ),
-                                  if (selectedTemplate!.settings.showInvoiceTitle)
+                                  if (selectedTemplate!
+                                      .settings.showInvoiceTitle)
                                     _buildTextEditField(
                                       label: 'Invoice Title Content',
-                                      value: selectedTemplate!.settings.invoiceTitle,
+                                      value: selectedTemplate!
+                                          .settings.invoiceTitle,
                                       onChanged: (value) {
-                                        final newSettings = selectedTemplate!.settings;
+                                        final newSettings =
+                                            selectedTemplate!.settings;
                                         newSettings.invoiceTitle = value;
-                                        _updateSelectedTemplateSettings(newSettings);
+                                        _updateSelectedTemplateSettings(
+                                            newSettings);
                                       },
                                     ),
                                   _buildSwitchTile(
                                     'Invoice Number',
-                                    selectedTemplate!.settings.showInvoiceNumber,
+                                    selectedTemplate!
+                                        .settings.showInvoiceNumber,
                                     (value) {
-                                      final newSettings = selectedTemplate!.settings;
+                                      final newSettings =
+                                          selectedTemplate!.settings;
                                       newSettings.showInvoiceNumber = value;
-                                      _updateSelectedTemplateSettings(newSettings);
+                                      _updateSelectedTemplateSettings(
+                                          newSettings);
                                     },
                                   ),
                                 ],
@@ -2261,9 +2296,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                     Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(color: Colors.grey[300]!),
+                                        border: Border.all(
+                                            color: Colors.grey[300]!),
                                       ),
-                                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8),
                                       child: DropdownButton<String>(
                                         value: selectedPaperSize,
                                         underline: const SizedBox(),
