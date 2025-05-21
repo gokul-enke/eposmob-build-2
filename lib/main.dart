@@ -11,6 +11,7 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/cart.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
+import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
@@ -33,13 +34,13 @@ void main() async {
 
   // Initialize Hive
   await Hive.initFlutter();
-  
+
   // Register adapters
   Hive.registerAdapter(HiveStringValueAdapter());
   Hive.registerAdapter(HiveLocalCartItemAdapter());
   Hive.registerAdapter(HiveSavedOrderAdapter());
   Hive.registerAdapter(HiveProductAdapter());
-  
+
   // Open boxes
   await Hive.openBox<HiveProduct>('products');
   await Hive.openBox<HiveLocalCartItem>('cart_items');
@@ -94,6 +95,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PaymentGatewaysProvider()),
         ChangeNotifierProvider(create: (_) => SupplierProvider()),
         ChangeNotifierProvider(create: (_) => SalesExecutiveProvider()),
+        ChangeNotifierProvider(create: (_) => DocumentConfigProvider()),
       ],
       child: GetMaterialApp(
         debugShowCheckedModeBanner: false,
@@ -101,7 +103,7 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(),
         home: const BaseUrlWrapper(),
         routes: {
-          '/login': (context) => const SignInScreen(),  
+          '/login': (context) => const SignInScreen(),
         },
       ),
     );

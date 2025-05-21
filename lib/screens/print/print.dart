@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:get/get.dart';
@@ -18,13 +17,12 @@ import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pos_machine/screens/print/printer_settings.dart';
-import 'package:pos_machine/models/get_app_settings.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:open_file/open_file.dart';
-
+import 'package:pos_machine/providers/document_config_provider.dart'; // Import DocumentConfigProvider
+import 'package:pos_machine/models/document_configurations.dart';
 class PrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
   final String? storeName;
@@ -56,8 +54,11 @@ class _PrintPageState extends State<PrintPage> {
   BluetoothPrinter? selectedPrinter;
   bool _isScanning = false;
   bool _isLoading = true;
-  ReceiptTemplate? selectedTemplate;
+  // Removed selectedTemplate
   String selectedPaperSize = '80mm'; // Default to 80mm thermal paper
+
+  // Add DocumentConfig state variable
+  DocumentConfig? _billDocumentConfig;
 
   static const Color primaryColor = Color(0XFF3C92F5);
   static const Color accentColor = Color(0xFF4CAF50);
@@ -71,15 +72,21 @@ class _PrintPageState extends State<PrintPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       Provider.of<PaymentGatewaysProvider>(context, listen: false)
           .fetchPaymentGateways(accessToken: accessToken!);
+
       // Load saved paper size first so auto-print uses correct method
-      _loadDefaultPaperSize();
-      _loadDefaultPrinter();
-      _loadReceiptTemplate();
+      await _loadDefaultPaperSize();
+
+      // Fetch document configurations and load the Bill template first
+      // This is critical for auto-printing to work properly
+      await _loadDocumentConfigurations(accessToken);
+
+      // Load default printer last (this may trigger auto-printing)
+      await _loadDefaultPrinter();
     });
   }
 
@@ -216,11 +223,16 @@ class _PrintPageState extends State<PrintPage> {
 
       // If we have a default printer, automatically print using correct method
       if (selectedPrinter != null) {
-        final appSettingsProvider =
-            Provider.of<AppSettingsProvider>(context, listen: false);
-        final appSettings = appSettingsProvider.appSettings;
-        _handlePrinting(
-            appSettings!.customerCarePhone, appSettings.customerCareEmail);
+        if (_billDocumentConfig != null) {
+          final appSettingsProvider =
+              Provider.of<AppSettingsProvider>(context, listen: false);
+          final appSettings = appSettingsProvider.appSettings;
+          _handlePrinting(
+              appSettings!.customerCarePhone, appSettings.customerCareEmail);
+        } else {
+          debugPrint(
+              "Waiting for document configurations to load before auto-printing");
+        }
       }
     } else {
       setState(() {
@@ -275,97 +287,59 @@ class _PrintPageState extends State<PrintPage> {
     }
   }
 
-  Future<void> _loadReceiptTemplate() async {
-    debugPrint("===== TEMPLATE DEBUG =====");
-    debugPrint("Loading receipt template from preferences...");
-    
-    final prefs = await SharedPreferences.getInstance();
-    final templatesJson = prefs.getString('receipt_templates');
-    
-    debugPrint("Found templates in prefs: ${templatesJson != null ? 'YES' : 'NO'}");
-    
-    ReceiptTemplate defaultTemplate;
-    
-    if (templatesJson != null) {
-      try {
-        final List<dynamic> decodedData = json.decode(templatesJson);
-        debugPrint("Successfully decoded template data, found ${decodedData.length} templates");
-        
-        final List<ReceiptTemplate> loadedTemplates = decodedData
-            .map((template) => ReceiptTemplate.fromJson(template))
-            .toList();
+  // New method to load document configurations
+  Future<void> _loadDocumentConfigurations(String accessToken) async {
+    try {
+      debugPrint("===== CONFIG LOADING DEBUG =====");
+      debugPrint("Fetching document configurations...");
+      final docConfigProvider =
+          Provider.of<DocumentConfigProvider>(context, listen: false);
+      await docConfigProvider.fetchDocumentConfigurations(
+          accessToken: accessToken);
 
-        // Find default template
-        defaultTemplate = loadedTemplates.firstWhere(
-          (template) => template.isDefault,
-          orElse: () => loadedTemplates.isNotEmpty
-              ? loadedTemplates.first
-              : _createDefaultTemplate(),
-        );
-        
-        debugPrint("Found default template: ${defaultTemplate.name}");
-      } catch (e) {
-        debugPrint("ERROR decoding templates: $e");
-        // Create a default template with appropriate settings
-        defaultTemplate = _createDefaultTemplate();
+      // Find the "Bill" configuration
+      _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+
+      if (_billDocumentConfig != null) {
+        debugPrint(
+            "Successfully loaded 'Bill' document configuration. Display settings:");
+        _billDocumentConfig?.displayConfiguration?.options
+            ?.forEach((key, value) {
+          debugPrint("- $key: visible=${value.visible}, value=${value.value}");
+        });
+      } else {
+        debugPrint(
+            "ERROR: 'Bill' document configuration not found in API response.");
+        if (mounted) {
+          showScaffoldError(
+            context: context,
+            message: "Bill document configuration not found.",
+          );
+        }
       }
-    } else {
-      debugPrint("No templates found in preferences, creating default");
-      // Create a default template with appropriate settings
-      defaultTemplate = _createDefaultTemplate();
-    }
-    
-    // Apply paper size-specific settings
-    final settings = _updateSettingsForPaperSize(defaultTemplate.settings);
-    defaultTemplate = ReceiptTemplate(
-      name: defaultTemplate.name,
-      settings: settings,
-      isDefault: defaultTemplate.isDefault,
-    );
-    
-    setState(() {
-      selectedTemplate = defaultTemplate;
-    });
-    
-    debugPrint("Final template settings after paper size adjustment:");
-    debugPrint("showQRCode: ${defaultTemplate.settings.showQRCode}");
-    debugPrint("showTermsConditions: ${defaultTemplate.settings.showTermsConditions}");
-    debugPrint("=======================");
-  }
 
-  ReceiptTemplate _createDefaultTemplate() {
-    final bool isSpecialPaperSize = selectedPaperSize == 'A4' || selectedPaperSize == 'A5';
-    
-    return ReceiptTemplate(
-      name: 'Default Template',
-      settings: ReceiptSettings(
-        showStoreName: true,
-        showDescription: true,
-        showTel: true,
-        showEmail: true,
-        showInvoiceNumber: true,
-        showStoreAddress: true,
-        showFssaiInfo: true,
-        showDateHeader: true,
-        showSLNumber: true,
-        showParticulars: true,
-        showMRP: true,
-        showQty: true,
-        showRate: true,
-        showTotal: true,
-        showDiscount: true,
-        showNetAmount: true,
-        showMRPTotal: true,
-        showSaved: true,
-        showAmountInWords: true,
-        showItemsCount: true,
-        showThankYouMessage: true,
-        showQRCode: !isSpecialPaperSize, // false for A4/A5
-        showTermsConditions: !isSpecialPaperSize, // false for A4/A5
-      ),
-      isDefault: true,
-    );
+      setState(() {
+        _isLoading = false;
+      });
+      debugPrint("=======================");
+    } catch (e) {
+      debugPrint("ERROR fetching document configurations: $e");
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: "Error loading document configurations: ${e.toString()}",
+        );
+      }
+    }
   }
+  // Removed _loadReceiptTemplate method
+  // Removed _createDefaultTemplate method
+
+  // Removed reloadTemplateSettings method
+  // Removed _updateSettingsForPaperSize method
 
   Future<void> printReceipt(
       String customerCareNumber, String customerCareEmail) async {
@@ -381,13 +355,27 @@ class _PrintPageState extends State<PrintPage> {
       return;
     }
 
+    // Ensure _billDocumentConfig is loaded before printing
+    if (_billDocumentConfig == null) {
+      debugPrint("ERROR: Bill document configuration not loaded yet.");
+      if (mounted) {
+        // showScaffoldError(
+        //   context: context,
+        //   message: "Document configurations not loaded. Please wait.",
+        // );
+      }
+      return;
+    }
+
     debugPrint("Printing receipt with thermal printer:");
     debugPrint(
         "Printer: ${selectedPrinter!.deviceName} (${selectedPrinter!.typePrinter})");
     debugPrint("Paper size: $selectedPaperSize");
-    
-    // Print template settings debug info
-    _debugPrintTemplateSettings();
+
+    // Use the loaded display configuration
+    final displayConfig = _billDocumentConfig?.displayConfiguration?.options;
+    _debugPrintTemplateSettings(
+        displayConfig); // Updated debug print to take config
 
     try {
       // Connect to the printer
@@ -415,49 +403,50 @@ class _PrintPageState extends State<PrintPage> {
       final generator = Generator(paperSize, profile);
       List<int> bytes = [];
 
-      // Get settings from template or use defaults - respect user settings
-      final settings = selectedTemplate?.settings ?? ReceiptSettings();
-      
-      debugPrint("Using user settings for printing:");
-      debugPrint("showQRCode: ${settings.showQRCode}");
-      debugPrint("showTermsConditions: ${settings.showTermsConditions}");
-      
-      final appSettingsProvider =
-          Provider.of<AppSettingsProvider>(context, listen: false);
-      final appSettings = appSettingsProvider.appSettings;
-
-      // Header
-      bytes += _buildHeader(generator, settings, appSettings!);
-
-      // Cart Items
-      bytes += _buildCartItems(generator, widget.cartItems, settings);
-
-      // Total Amount
-      bytes += _buildTotalAmount(generator, settings);
+      // Pass the display config and document config to helper functions
+      bytes += _buildHeader(generator, displayConfig, _billDocumentConfig);
+      bytes += _buildCartItems(generator, widget.cartItems, displayConfig,
+          widget.isFromLocalStorage);
+      bytes += _buildTotalAmount(generator, displayConfig,
+          widget.formattedTotal, widget.savedTotal, widget.cartItems.length);
 
       // Thank You Message
-      if (settings.showThankYouMessage) {
-        bytes += _buildThankYouMessage(generator, settings);
+      if (displayConfig?['showThankYouMessage']?.visible == true) {
+        bytes += _buildThankYouMessage(generator, displayConfig);
       }
 
-      // Debug: Check QR code setting
-      debugPrint("QR Code setting from user: ${settings.showQRCode}");
-      
-      // QR Code - respect user setting without paper size check
-      if (settings.showQRCode) {
-        debugPrint("Adding QR code to receipt");
-        bytes += _buildQRCode(generator, customerCareNumber, settings);
+      // QR Code
+      if (displayConfig?['showQRCode']?.visible == true) {
+        // Access link from PaymentGatewaysProvider
+        final paymentGatewaysProvider =
+            Provider.of<PaymentGatewaysProvider>(context, listen: false);
+        final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
+            .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
+                orElse: () => PaymentGateway(
+                      id: 0,
+                      name: "",
+                      code: "",
+                      label: "",
+                      link: "",
+                      image: "",
+                      status: "",
+                      isWebActive: 0,
+                      isAndroidActive: 0,
+                      isIosActive: 0,
+                      contactEmail: "",
+                      contactPhone: "",
+                      createdAt: "",
+                      updatedAt: "",
+                    ));
+        bytes += _buildQRCode(generator, manualPaymentGateway.link,
+            widget.formattedTotal, widget.orderNumber, displayConfig);
       } else {
         debugPrint("Skipping QR code, disabled in settings");
       }
 
-      // Debug: Check Terms setting
-      debugPrint("Terms & Conditions setting from user: ${settings.showTermsConditions}");
-      
-      // Terms & Conditions - respect user setting without paper size check
-      if (settings.showTermsConditions) {
-        debugPrint("Adding Terms & Conditions to receipt");
-        bytes += _buildTermsConditions(generator, settings);
+      // Terms & Conditions
+      if (displayConfig?['showTermsConditions']?.visible == true) {
+        bytes += _buildTermsConditions(generator, displayConfig);
       } else {
         debugPrint("Skipping Terms & Conditions, disabled in settings");
       }
@@ -492,15 +481,23 @@ class _PrintPageState extends State<PrintPage> {
     }
   }
 
-  List<int> _buildHeader(
-      Generator generator, ReceiptSettings settings, AppSettings appSettings) {
+  // Modify _buildHeader to use DisplayConfiguration and DocumentConfig
+  List<int> _buildHeader(Generator generator,
+      Map<String, DisplayOption>? displayConfig, DocumentConfig? docConfig) {
     List<int> bytes = [];
 
-    if (settings.showStoreName) {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final appSettings = appSettingsProvider.appSettings;
+
+    // Store Name
+    if (displayConfig?['showStoreName']?.visible == true) {
+      final storeName = displayConfig?['showStoreName']?.value as String? ??
+          docConfig?.header ??
+          'STORE NAME';
       bytes += generator.row([
         PosColumn(
-          text:
-              settings.storeName.isNotEmpty ? settings.storeName : 'STORE NAME',
+          text: storeName.isNotEmpty ? storeName : 'STORE NAME',
           width: 12,
           styles: const PosStyles(
               align: PosAlign.center, bold: true, height: PosTextSize.size2),
@@ -508,61 +505,104 @@ class _PrintPageState extends State<PrintPage> {
       ]);
     }
 
-    if (settings.showStoreAddress) {
+    // Description (subheader from DocumentConfig or value from displayConfig)
+    if (displayConfig?['showDescription']?.visible == true) {
+      final description = displayConfig?['showDescription']?.value as String? ??
+          docConfig?.subheader ??
+          'Mini Supermarket';
       bytes += generator.row([
         PosColumn(
-          text: settings.storeAddress.isNotEmpty
-              ? settings.storeAddress
-              : 'Shop Address',
+          text: description.isNotEmpty ? description : 'Mini Supermarket',
           width: 12,
           styles: const PosStyles(
-              align: PosAlign.center, height: PosTextSize.size1),
+            align: PosAlign.center,
+            height: PosTextSize.size1,
+          ),
         ),
       ]);
     }
 
-    if (settings.showFssaiInfo) {
+    // Store Address
+    if (displayConfig?['showStoreAddress']?.visible == true) {
+      final storeAddress =
+          displayConfig?['showStoreAddress']?.value as String? ??
+              'Shop Address';
       bytes += generator.row([
         PosColumn(
-          text: settings.fssaiInfo.isNotEmpty
-              ? settings.fssaiInfo
-              : 'Fssai: xxxx',
+          text: storeAddress.isNotEmpty ? storeAddress : 'Shop Address',
           width: 12,
           styles: const PosStyles(
-              align: PosAlign.center, height: PosTextSize.size1),
+            align: PosAlign.center,
+            height: PosTextSize.size1,
+          ),
         ),
       ]);
     }
 
-    if (settings.showTel) {
-      bytes += generator.text(
-          settings.telephone.isNotEmpty
-              ? settings.telephone
-              : 'TEL: ${appSettings.customerCarePhone}',
-          styles: const PosStyles(align: PosAlign.center));
+    // Fssai Info
+    if (displayConfig?['showFssaiInfo']?.visible == true) {
+      final fssaiInfo =
+          displayConfig?['showFssaiInfo']?.value as String? ?? 'Fssai: xxxx';
+      bytes += generator.row([
+        PosColumn(
+          text: fssaiInfo.isNotEmpty ? fssaiInfo : 'Fssai: xxxx',
+          width: 12,
+          styles: const PosStyles(
+            align: PosAlign.center,
+            height: PosTextSize.size1,
+          ),
+        ),
+      ]);
     }
 
-    if (settings.showEmail) {
-      bytes += generator.text(
-          settings.email.isNotEmpty
-              ? settings.email
-              : 'Email: ${appSettings.customerCareEmail}',
-          styles: const PosStyles(align: PosAlign.center));
+    // Telephone
+    if (displayConfig?['showTel']?.visible == true) {
+      final telephone = displayConfig?['showTel']?.value as String? ??
+          appSettings?.customerCarePhone ??
+          '';
+      if (telephone.isNotEmpty) {
+        bytes += generator.text('TEL: $telephone',
+            styles: const PosStyles(align: PosAlign.center));
+      }
     }
 
-    // Add invoice title and number as separate elements
-    if (settings.showInvoiceTitle) {
+    // Email
+    if (displayConfig?['showEmail']?.visible == true) {
+      final email = displayConfig?['showEmail']?.value as String? ??
+          appSettings?.customerCareEmail ??
+          '';
+      if (email.isNotEmpty) {
+        bytes += generator.text('Email: $email',
+            styles: const PosStyles(align: PosAlign.center));
+      }
+    }
+
+    // Invoice Title (from DocumentConfig header or displayConfig value)
+    if (displayConfig?['showInvoiceTitle']?.visible == true) {
+      final invoiceTitle =
+          displayConfig?['showInvoiceTitle']?.value as String? ??
+              docConfig?.header ??
+              appSettings?.printTitle ??
+              'INVOICE';
       bytes += generator.text(
-          settings.invoiceTitle.isNotEmpty ? settings.invoiceTitle : appSettings.printTitle,
+          invoiceTitle.isNotEmpty ? invoiceTitle : 'INVOICE',
           styles: const PosStyles(align: PosAlign.center, bold: true));
     }
-    
-    if (settings.showInvoiceNumber) {
-      bytes += generator.text('INV No: ${widget.orderNumber}',
+
+    // Invoice Number
+    if (displayConfig?['showInvoiceNumber']?.visible == true) {
+      // Use the numberPrefix from docConfig if available, otherwise just use orderNumber
+      final invoiceNumberText =
+          docConfig?.numberPrefix != null && docConfig!.numberPrefix!.isNotEmpty
+              ? '${docConfig.numberPrefix}${widget.orderNumber}'
+              : 'INV No: ${widget.orderNumber}';
+
+      bytes += generator.text(invoiceNumberText,
           styles: const PosStyles(align: PosAlign.center, bold: true));
     }
 
-    if (settings.showDateHeader) {
+    // Date Header
+    if (displayConfig?['showDateHeader']?.visible == true) {
       bytes += generator.hr();
       bytes += generator.row([
         PosColumn(
@@ -581,101 +621,183 @@ class _PrintPageState extends State<PrintPage> {
 
     return bytes;
   }
+// Removed _buildTableHeader (it was unused in the original code)
 
-  List<int> _buildTableHeader(Generator generator, ReceiptSettings settings) {
-    List<PosColumn> columns = [];
-    int totalWidth = 0;
-
-    // Always add SL# column
-    columns.add(PosColumn(
-        text: 'SL#',
-        width: 1,
-        styles: const PosStyles(align: PosAlign.center)));
-    totalWidth += 1;
-
-    // Always add PARTICULARS column
-    columns.add(PosColumn(text: 'PARTICULARS', width: 3));
-    totalWidth += 3;
-
-    // Always add MRP column
-    columns.add(PosColumn(
-        text: 'MRP', width: 2, styles: const PosStyles(align: PosAlign.right)));
-    totalWidth += 2;
-
-    // Always add QTY column
-    columns.add(PosColumn(
-        text: 'QTY', width: 2, styles: const PosStyles(align: PosAlign.right)));
-    totalWidth += 2;
-
-    // Always add RATE column
-    columns.add(PosColumn(
-        text: 'RATE',
-        width: 2,
-        styles: const PosStyles(align: PosAlign.right)));
-    totalWidth += 2;
-
-    // Always add TOTAL column
-    columns.add(PosColumn(
-        text: 'TOTAL',
-        width: 2,
-        styles: const PosStyles(align: PosAlign.right)));
-    totalWidth += 2;
-
-    // Adjust if total width is not 12
-    if (totalWidth < 12 && columns.isNotEmpty) {
-      // Add remaining width to the first column
-      columns[0] = PosColumn(
-        text: columns[0].text,
-        width: columns[0].width + (12 - totalWidth),
-        styles: columns[0].styles,
-      );
-    }
-
-    return generator.row(columns) + generator.hr();
-  }
-
-  List<int> _buildCartItems(
-      Generator generator, List<dynamic> cartItems, ReceiptSettings settings) {
+  // Modify _buildCartItems to use DisplayConfiguration and DocumentConfig
+  List<int> _buildCartItems(Generator generator, List<dynamic> cartItems,
+      Map<String, DisplayOption>? displayConfig, bool isFromLocalStorage) {
     List<int> bytes = [];
 
-    // Add table headers once at the top
-    bytes += generator.row([
-      PosColumn(
+    // Add table headers based on visibility settings and resolved labels
+    List<PosColumn> headerColumns = [];
+    int remainingWidth = 12; // Total width must be 12
+    
+    // Calculate how many columns are visible
+    int visibleColumns = 0;
+    if (displayConfig?['showSLNumber']?.visible == true) visibleColumns++;
+    if (displayConfig?['showParticulars']?.visible == true) visibleColumns++;
+    if (displayConfig?['showMRP']?.visible == true) visibleColumns++;
+    if (displayConfig?['showQty']?.visible == true) visibleColumns++;
+    if (displayConfig?['showRate']?.visible == true) visibleColumns++;
+    if (displayConfig?['showTotal']?.visible == true) visibleColumns++;
+    
+    // Default width allocations - will be adjusted later
+    int slWidth = 1;
+    int particularsWidth = 4;
+    int mrpWidth = 1;
+    int qtyWidth = 1;
+    int rateWidth = 1;
+    int totalWidth = 1;
+    
+    // Adjust based on which columns are visible
+    if (visibleColumns == 0) {
+      // No columns visible, just return empty bytes
+      return bytes;
+    } else if (visibleColumns == 1) {
+      // If only one column is visible, it gets all 12 units
+      if (displayConfig?['showSLNumber']?.visible == true) slWidth = 12;
+      else if (displayConfig?['showParticulars']?.visible == true) particularsWidth = 12;
+      else if (displayConfig?['showMRP']?.visible == true) mrpWidth = 12;
+      else if (displayConfig?['showQty']?.visible == true) qtyWidth = 12;
+      else if (displayConfig?['showRate']?.visible == true) rateWidth = 12;
+      else if (displayConfig?['showTotal']?.visible == true) totalWidth = 12;
+    } else {
+      // Multiple columns - allocate based on importance
+      // Give more space to particulars if visible
+      if (displayConfig?['showParticulars']?.visible == true) {
+        particularsWidth = visibleColumns <= 3 ? 6 : 4;
+        remainingWidth -= particularsWidth;
+        visibleColumns--; // Remove particulars from count
+        
+        // Distribute remaining width evenly
+        int widthPerColumn = remainingWidth ~/ visibleColumns;
+        
+        if (displayConfig?['showSLNumber']?.visible == true) slWidth = widthPerColumn;
+        if (displayConfig?['showMRP']?.visible == true) mrpWidth = widthPerColumn;
+        if (displayConfig?['showQty']?.visible == true) qtyWidth = widthPerColumn;
+        if (displayConfig?['showRate']?.visible == true) rateWidth = widthPerColumn;
+        if (displayConfig?['showTotal']?.visible == true) totalWidth = widthPerColumn;
+        
+        // Adjust for any rounding issues to ensure total is 12
+        int allocatedWidth = particularsWidth;
+        if (displayConfig?['showSLNumber']?.visible == true) allocatedWidth += slWidth;
+        if (displayConfig?['showMRP']?.visible == true) allocatedWidth += mrpWidth;
+        if (displayConfig?['showQty']?.visible == true) allocatedWidth += qtyWidth;
+        if (displayConfig?['showRate']?.visible == true) allocatedWidth += rateWidth;
+        if (displayConfig?['showTotal']?.visible == true) allocatedWidth += totalWidth;
+        
+        int remainingAdjustment = 12 - allocatedWidth;
+        
+        // Add any remaining width to the particulars column
+        if (remainingAdjustment != 0) {
+          particularsWidth += remainingAdjustment;
+        }
+      } else {
+        // Particulars not visible, distribute evenly
+        int widthPerColumn = 12 ~/ visibleColumns;
+        int remainder = 12 % visibleColumns;
+        
+        if (displayConfig?['showSLNumber']?.visible == true) {
+          slWidth = widthPerColumn;
+          if (remainder > 0) {
+            slWidth++;
+            remainder--;
+          }
+        }
+        if (displayConfig?['showMRP']?.visible == true) {
+          mrpWidth = widthPerColumn;
+          if (remainder > 0) {
+            mrpWidth++;
+            remainder--;
+          }
+        }
+        if (displayConfig?['showQty']?.visible == true) {
+          qtyWidth = widthPerColumn;
+          if (remainder > 0) {
+            qtyWidth++;
+            remainder--;
+          }
+        }
+        if (displayConfig?['showRate']?.visible == true) {
+          rateWidth = widthPerColumn;
+          if (remainder > 0) {
+            rateWidth++;
+            remainder--;
+          }
+        }
+        if (displayConfig?['showTotal']?.visible == true) {
+          totalWidth = widthPerColumn;
+          if (remainder > 0) {
+            totalWidth++;
+            remainder--;
+          }
+        }
+      }
+    }
+    
+    // Now add columns with calculated widths
+    if (displayConfig?['showSLNumber']?.visible == true) {
+      headerColumns.add(PosColumn(
           text: '#SL',
-          width: 2,
-          styles: const PosStyles(align: PosAlign.left, bold: true)),
-      PosColumn(
+          width: slWidth,
+          styles: const PosStyles(align: PosAlign.left, bold: true)));
+    }
+    if (displayConfig?['showParticulars']?.visible == true) {
+      final label =
+          _billDocumentConfig?.resolvedLabels?.itemName ?? 'PARTICULARS';
+      headerColumns.add(PosColumn(
+          text: label.toUpperCase(),
+          width: particularsWidth,
+          styles: const PosStyles(align: PosAlign.left, bold: true)));
+    }
+    if (displayConfig?['showMRP']?.visible == true) {
+      headerColumns.add(PosColumn(
           text: 'MRP',
-          width: 2,
-          styles: const PosStyles(align: PosAlign.left, bold: true)),
-      PosColumn(
-          text: 'QTY',
-          width: 2,
-          styles: const PosStyles(align: PosAlign.left, bold: true)),
-      PosColumn(
-          text: 'RATE',
-          width: 3,
-          styles: const PosStyles(align: PosAlign.left, bold: true)),
-      PosColumn(
-          text: 'TOTAL',
-          width: 3,
-          styles: const PosStyles(align: PosAlign.left, bold: true)),
-    ]);
+          width: mrpWidth,
+          styles: const PosStyles(align: PosAlign.right, bold: true)));
+    }
+    if (displayConfig?['showQty']?.visible == true) {
+      final label = _billDocumentConfig?.resolvedLabels?.unitName ?? 'QTY';
+      headerColumns.add(PosColumn(
+          text: label.toUpperCase(),
+          width: qtyWidth,
+          styles: const PosStyles(align: PosAlign.right, bold: true)));
+    }
+    if (displayConfig?['showRate']?.visible == true) {
+      final label = _billDocumentConfig?.resolvedLabels?.priceName ?? 'RATE';
+      headerColumns.add(PosColumn(
+          text: label.toUpperCase(),
+          width: rateWidth,
+          styles: const PosStyles(align: PosAlign.right, bold: true)));
+    }
+    if (displayConfig?['showTotal']?.visible == true) {
+      final label = _billDocumentConfig?.resolvedLabels?.amountName ?? 'TOTAL';
+      headerColumns.add(PosColumn(
+          text: label.toUpperCase(),
+          width: totalWidth,
+          styles: const PosStyles(align: PosAlign.right, bold: true)));
+    }
 
-    bytes += generator.hr();
+    // Debug log to check total width
+    int totalHeaderWidth = headerColumns.fold(0, (sum, col) => sum + col.width);
+    debugPrint("Total header width: $totalHeaderWidth (should be 12)");
+    headerColumns.forEach((col) => debugPrint("Column '${col.text}': width=${col.width}"));
+
+    if (headerColumns.isNotEmpty) {
+      bytes += generator.row(headerColumns);
+      bytes += generator.hr();
+    }
 
     for (var i = 0; i < cartItems.length; i++) {
       var item = cartItems[i];
 
-      // Handle different models based on data source
       String productName = '';
       String mrp = '';
       String quantity = '';
       String unitPrice = '';
       String totalPrice = '';
 
-      // Adapt the model based on whether it's from local storage or current cart
-      if (widget.isFromLocalStorage) {
+      if (isFromLocalStorage) {
         productName = item['productName'] ?? '';
         mrp = item['mrp'] ?? '0.00';
         quantity = item['quantity'] ?? '0';
@@ -683,162 +805,88 @@ class _PrintPageState extends State<PrintPage> {
         totalPrice = item['totalPrice'] ?? '0.00';
       } else {
         productName = item.productName ?? '';
-        mrp = item.mrp ?? '0.00';
+        mrp = item.mrp?.toString() ?? '0.00';
         quantity = item.quantity?.toString() ?? '0';
         unitPrice = item.unitPrice?.toString() ?? '0.00';
         totalPrice = item.totalPrice?.toString() ?? '0.00';
       }
 
-      // Display the product name with serial number on one or two lines based on length
-      String slNumber = (i + 1).toString();
-      if (productName.length <= 28) {
-        // Display on one line if it fits
-        bytes += generator.row([
-          PosColumn(
-              text: '#$slNumber',
-              width: 2,
-              styles: const PosStyles(align: PosAlign.left)),
-          PosColumn(
-              text: productName,
-              width: 10,
-              styles: const PosStyles(align: PosAlign.left)),
-        ]);
-      } else {
-        // Split across two lines if longer
-        bytes += generator.row([
-          PosColumn(
-              text: '#$slNumber',
-              width: 2,
-              styles: const PosStyles(align: PosAlign.left)),
-          PosColumn(
-              text: productName.substring(0, 28),
-              width: 10,
-              styles: const PosStyles(align: PosAlign.left)),
-        ]);
+      // Build item row using the SAME widths as headers
+      List<PosColumn> itemRowColumns = [];
 
-        // For continuation lines, add spaces instead of serial number
-        String secondLine = productName.substring(28);
-
-        // If second line is too long, truncate with ellipsis
-        if (secondLine.length > 30) {
-          secondLine = secondLine.substring(0, 27) + '...';
-        }
-
-        bytes += generator.row([
-          PosColumn(
-              text: '',
-              width: 2,
-              styles: const PosStyles(align: PosAlign.left)),
-          PosColumn(
-              text: secondLine,
-              width: 10,
-              styles: const PosStyles(align: PosAlign.left)),
-        ]);
+      // Add only visible columns with the calculated widths
+      if (displayConfig?['showSLNumber']?.visible == true) {
+        itemRowColumns.add(PosColumn(
+            text: '#${i + 1}',
+            width: slWidth,
+            styles: const PosStyles(align: PosAlign.left)));
       }
 
-      // Display item details in tabular format with indent to align with product name
-      bytes += generator.row([
-        PosColumn(
-            text: '', width: 2, styles: const PosStyles(align: PosAlign.left)),
-        PosColumn(
-            text: mrp, width: 2, styles: const PosStyles(align: PosAlign.left)),
-        PosColumn(
+      if (displayConfig?['showParticulars']?.visible == true) {
+        itemRowColumns.add(PosColumn(
+            text: productName,
+            width: particularsWidth,
+            styles: const PosStyles(align: PosAlign.left)));
+      }
+
+      if (displayConfig?['showMRP']?.visible == true) {
+        itemRowColumns.add(PosColumn(
+            text: mrp,
+            width: mrpWidth,
+            styles: const PosStyles(align: PosAlign.right)));
+      }
+
+      if (displayConfig?['showQty']?.visible == true) {
+        itemRowColumns.add(PosColumn(
             text: quantity,
-            width: 2,
-            styles: const PosStyles(align: PosAlign.left)),
-        PosColumn(
+            width: qtyWidth,
+            styles: const PosStyles(align: PosAlign.right)));
+      }
+
+      if (displayConfig?['showRate']?.visible == true) {
+        itemRowColumns.add(PosColumn(
             text: unitPrice,
-            width: 3,
-            styles: const PosStyles(align: PosAlign.left)),
-        PosColumn(
+            width: rateWidth,
+            styles: const PosStyles(align: PosAlign.right)));
+      }
+
+      if (displayConfig?['showTotal']?.visible == true) {
+        itemRowColumns.add(PosColumn(
             text: totalPrice,
-            width: 3,
-            styles: const PosStyles(align: PosAlign.left)),
-      ]);
+            width: totalWidth,
+            styles: const PosStyles(align: PosAlign.right)));
+      }
+
+      // Double-check the total width for debugging
+      int totalItemRowWidth = itemRowColumns.fold(0, (sum, col) => sum + col.width);
+      if (totalItemRowWidth != 12) {
+        debugPrint("WARNING: Item row $i has total width $totalItemRowWidth (should be 12)");
+      }
+
+      if (itemRowColumns.isNotEmpty) {
+        bytes += generator.row(itemRowColumns);
+      }
     }
 
+    bytes += generator.hr();
     return bytes;
   }
 
-  List<int> _buildTotalAmount(Generator generator, ReceiptSettings settings) {
+  // Modify _buildTotalAmount to use DisplayConfiguration and DocumentConfig
+  List<int> _buildTotalAmount(
+      Generator generator,
+      Map<String, DisplayOption>? displayConfig,
+      String formattedTotal,
+      String? savedTotal,
+      int itemCount) {
     List<int> bytes = [];
 
-    // Display item count
-    // if (settings.showMRPTotal) {
-    //   bytes += generator.row([
-    //     PosColumn(
-    //         text: 'Discount',
-    //         width: 6,
-    //         styles: const PosStyles(
-    //             align: PosAlign.left, bold: true, height: PosTextSize.size1)),
-    //     PosColumn(
-    //         text: (double.parse(widget.formattedTotal) -
-    //                 double.parse(widget.savedTotal!))
-    //             .toString(),
-    //         width: 6,
-    //         styles: const PosStyles(
-    //             align: PosAlign.right, bold: true, height: PosTextSize.size1)),
-    //   ]);
-    // }
+    double saved = double.tryParse(savedTotal ?? '0.0') ?? 0.0;
+    double total = double.tryParse(formattedTotal) ?? 0.0;
+    double totalMrp = saved + total;
 
-    if (settings.showNetAmount) {
-      bytes += generator.row([
-        PosColumn(
-            text: 'Net Total',
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.left, bold: true, height: PosTextSize.size2)),
-        PosColumn(
-            text: widget.formattedTotal,
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.right, bold: true, height: PosTextSize.size2)),
-      ]);
-    }
-
-    if (settings.showMRPTotal) {
-      bytes += generator.row([
-        PosColumn(
-            text: 'Total MRP',
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
-        PosColumn(
-            text:
-                "${(double.parse(widget.savedTotal!) + double.parse(widget.formattedTotal))}",
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
-      ]);
-    }
-
-    if (settings.showSaved) {
-      bytes += generator.row([
-        PosColumn(
-            text: 'You Saved',
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
-        PosColumn(
-            text: widget.savedTotal.toString(),
-            width: 6,
-            styles: const PosStyles(
-                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
-      ]);
-    }
-
-    // Add a separator line
-    bytes += generator.hr();
-
-    if (settings.showAmountInWords) {
-      bytes += generator.text(
-          '${AmountHelper().convertNumberToWords(double.parse(widget.formattedTotal))} Only.',
-          styles: const PosStyles(align: PosAlign.center));
-      bytes += generator.hr();
-    }
-
-    // Display item count
-    if (settings.showMRPTotal) {
+    // Display Item Count
+    if (displayConfig?['showItemsCount']?.visible == true) {
       bytes += generator.row([
         PosColumn(
             text: 'Items',
@@ -846,101 +894,180 @@ class _PrintPageState extends State<PrintPage> {
             styles: const PosStyles(
                 align: PosAlign.left, bold: true, height: PosTextSize.size1)),
         PosColumn(
-            text: widget.cartItems.length.toString(),
+            text: itemCount.toString(),
             width: 6,
             styles: const PosStyles(
                 align: PosAlign.right, bold: true, height: PosTextSize.size1)),
       ]);
     }
-    bytes += generator.hr();
+
+    // Display Total MRP
+    if (displayConfig?['showMRPTotal']?.visible == true) {
+      bytes += generator.row([
+        PosColumn(
+            text: 'Total MRP',
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+        PosColumn(
+            text: totalMrp.toStringAsFixed(2),
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+      ]);
+    }
+
+    // Display You Saved / Discount
+    if (displayConfig?['showSaved']?.visible == true) {
+      bytes += generator.row([
+        PosColumn(
+            text:
+                'You Saved', // Or 'Discount' based on resolved_labels if available
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+        PosColumn(
+            text: saved.toStringAsFixed(2),
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+      ]);
+    } else if (displayConfig?['showDiscount']?.visible == true) {
+      // If showDiscount is true but showSaved is false, use a generic Discount label
+      bytes += generator.row([
+        PosColumn(
+            text: 'Discount',
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+        PosColumn(
+            text: saved.toStringAsFixed(2),
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+      ]);
+    }
+
+    // Display Net Total (Amount)
+    if (displayConfig?['showNetAmount']?.visible == true) {
+      // Use resolved_labels for label if available, otherwise 'Net Total' or 'Amount'
+      final label =
+          _billDocumentConfig?.resolvedLabels?.amountName ?? 'Net Total';
+      bytes += generator.row([
+        PosColumn(
+            text: label,
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.left, bold: true, height: PosTextSize.size2)),
+        PosColumn(
+            text: total.toStringAsFixed(2),
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.right, bold: true, height: PosTextSize.size2)),
+      ]);
+    }
+
+    // Add a separator line if any totals were shown
+    if ((displayConfig?['showItemsCount']?.visible == true) ||
+        (displayConfig?['showMRPTotal']?.visible == true) ||
+        (displayConfig?['showSaved']?.visible == true) ||
+        (displayConfig?['showDiscount']?.visible == true) ||
+        (displayConfig?['showNetAmount']?.visible == true)) {
+      bytes += generator.hr();
+    }
+
+    // Amount in Words
+    if (displayConfig?['showAmountInWords']?.visible == true) {
+      bytes += generator.text(
+          '${AmountHelper().convertNumberToWords(total)} Only.',
+          styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.hr(); // Add HR after amount in words
+    }
 
     return bytes;
   }
 
+  // Modify _buildThankYouMessage to use DisplayConfiguration
   List<int> _buildThankYouMessage(
-      Generator generator, ReceiptSettings settings) {
+      Generator generator, Map<String, DisplayOption>? displayConfig) {
     List<int> bytes = [];
 
-    bytes += generator.text(
-        settings.thankYouMessage.isNotEmpty
-            ? settings.thankYouMessage
-            : 'Thank You... Visit Again',
-        styles: const PosStyles(bold: true, align: PosAlign.center));
+    if (displayConfig?['showThankYouMessage']?.visible == true) {
+      final message = displayConfig?['showThankYouMessage']?.value as String? ??
+          'Thank You... Visit Again';
+      bytes += generator.text(
+          message.isNotEmpty ? message : 'Thank You... Visit Again',
+          styles: const PosStyles(bold: true, align: PosAlign.center));
+      bytes += generator.hr(); // Add HR after thank you message
+    }
 
-    bytes += generator.hr();
     return bytes;
   }
 
-  List<int> _buildQRCode(Generator generator, String customerCareNumber,
-      ReceiptSettings settings) {
-    // Double-check settings
-    if (!settings.showQRCode) {
+  // Modify _buildQRCode to use DisplayConfiguration and received data
+  List<int> _buildQRCode(
+      Generator generator,
+      String qrCodeLinkTemplate, // Renamed to indicate it's a template
+      String formattedTotal,
+      String orderNumber,
+      Map<String, DisplayOption>? displayConfig) {
+    if (displayConfig?['showQRCode']?.visible != true) {
       debugPrint("QR Code disabled in settings, skipping");
       return [];
     }
-    
+
     debugPrint("Generating QR code (enabled in settings)");
-    
-    final paymentGatewaysProvider =
-        Provider.of<PaymentGatewaysProvider>(context, listen: false);
-    final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
-        .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
-            orElse: () => PaymentGateway(
-                  id: 0,
-                  name: "",
-                  code: "",
-                  label: "",
-                  link: "",
-                  image: "",
-                  status: "",
-                  isWebActive: 0,
-                  isAndroidActive: 0,
-                  isIosActive: 0,
-                  contactEmail: "",
-                  contactPhone: "",
-                  createdAt: "",
-                  updatedAt: "",
-                ));
+
     List<int> bytes = [];
 
     bytes += generator.emptyLines(1);
 
+    // Use the provided QR code link template, total, and order number
+    // Replace placeholders in the template string
+    final qrData = qrCodeLinkTemplate
+        .replaceAll('{formattedTotal}', formattedTotal)
+        .replaceAll('{orderNumber}', orderNumber);
+
     bytes += generator.qrcode(
-      'upi://pay?pa=${manualPaymentGateway.link}&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS&t=c&st=1&se=1&sd=1',
+      qrData,
       size: QRSize.Size4,
       align: PosAlign.center,
     );
 
     bytes += generator.emptyLines(1);
 
+    final qrCodeMessage = displayConfig?['showQRCode']?.value as String? ??
+        'Scan this QR code to Pay';
     bytes += generator.text(
-        settings.qrCodeMessage.isNotEmpty
-            ? settings.qrCodeMessage
-            : 'Scan this QR code to Pay',
+        qrCodeMessage.isNotEmpty ? qrCodeMessage : 'Scan this QR code to Pay',
         styles: const PosStyles(align: PosAlign.center));
 
     bytes += generator.emptyLines(1);
     return bytes;
   }
 
+  // Modify _buildTermsConditions to use DisplayConfiguration and DocumentConfig
   List<int> _buildTermsConditions(
-      Generator generator, ReceiptSettings settings) {
-    // Double-check settings
-    if (!settings.showTermsConditions) {
+      Generator generator, Map<String, DisplayOption>? displayConfig) {
+    if (displayConfig?['showTermsConditions']?.visible != true) {
       debugPrint("Terms & Conditions disabled in settings, skipping");
       return [];
     }
-    
+
     debugPrint("Generating Terms & Conditions (enabled in settings)");
-    
+
     List<int> bytes = [];
 
-    bytes += generator.text('Terms & Conditions',
+    // Add header text based on displayConfig value or default
+    final termsHeader =
+        displayConfig?['showTermsConditions']?.value as String? ??
+            'Terms & Conditions'; // Using the value if available
+    bytes += generator.text(
+        termsHeader.isNotEmpty ? termsHeader : 'Terms & Conditions',
         styles: const PosStyles(bold: true, align: PosAlign.left));
 
-    String terms = settings.termsConditions.isNotEmpty
-        ? settings.termsConditions
-        : '1. Replace or Return only within 7 Days of Purchase.\n2. Replace only with Bill.';
+    // Use the terms from DocumentConfig as the content
+    String terms = _billDocumentConfig?.terms ?? 'No terms provided.';
 
     List<String> termsList = terms.split('\n');
     for (var term in termsList) {
@@ -1278,8 +1405,17 @@ class _PrintPageState extends State<PrintPage> {
         "Selected printer: ${selectedPrinter?.deviceName ?? 'None'} (${selectedPrinter?.typePrinter.toString() ?? 'Unknown'})");
     debugPrint("Selected paper size: $selectedPaperSize");
 
-    // Ensure template settings are up to date before printing
-    await reloadTemplateSettings();
+    // Ensure _billDocumentConfig is loaded before printing
+    if (_billDocumentConfig == null) {
+      debugPrint("ERROR: Bill document configuration not loaded yet.");
+      if (mounted) {
+        // showScaffoldError(
+        //   context: context,
+        //   message: "Document configurations not loaded. Please wait.",
+        // );
+      }
+      return;
+    }
 
     if (selectedPaperSize == '80mm' || selectedPaperSize == '58mm') {
       // Use thermal printer for thermal paper sizes
@@ -1297,9 +1433,33 @@ class _PrintPageState extends State<PrintPage> {
   Future<void> generateAndPrintPDF(
       String customerCareNumber, String customerCareEmail) async {
     try {
-      // Print template settings debug info
-      _debugPrintTemplateSettings();
-      
+      // Ensure _billDocumentConfig is loaded before printing
+      if (_billDocumentConfig == null) {
+        debugPrint("ERROR: Bill document configuration not loaded yet.");
+        if (mounted) {
+          showScaffoldError(
+            context: context,
+            message: "Document configurations not loaded. Please wait.",
+          );
+        }
+        return;
+      }
+
+      // Check if printer is selected before proceeding
+      if (selectedPrinter == null) {
+        debugPrint("ERROR: No printer selected for printing");
+        if (mounted) {
+          showScaffoldError(
+            context: context,
+            message: "No Printer Selected",
+          );
+        }
+        return;
+      }
+
+      final displayConfig = _billDocumentConfig?.displayConfiguration?.options;
+      _debugPrintTemplateSettings(displayConfig); // Updated debug print
+
       if (mounted) {
         showScaffold(
           context: context,
@@ -1310,19 +1470,49 @@ class _PrintPageState extends State<PrintPage> {
       // Create a PDF document
       final pdf = pw.Document();
 
-      // Get settings from template or use defaults - respect user settings
-      final settings = selectedTemplate?.settings ?? ReceiptSettings();
-      
-      // Use settings as-is without forcing QR and Terms to be disabled
-      final updatedSettings = settings;
-      
-      debugPrint("PDF Generation - Using user settings:");
-      debugPrint("showQRCode: ${updatedSettings.showQRCode}");
-      debugPrint("showTermsConditions: ${updatedSettings.showTermsConditions}");
+      // Get settings from the loaded display configuration
+      final updatedSettings = displayConfig; // Directly use the loaded config
 
-      final appSettingsProvider =
-          Provider.of<AppSettingsProvider>(context, listen: false);
-      final appSettings = appSettingsProvider.appSettings;
+      debugPrint("PDF Generation - Using user settings:");
+      debugPrint(
+          "showStoreName: ${updatedSettings?['showStoreName']?.visible}");
+      debugPrint(
+          "showDescription: ${updatedSettings?['showDescription']?.visible}");
+      debugPrint(
+          "showStoreAddress: ${updatedSettings?['showStoreAddress']?.visible}");
+      debugPrint(
+          "showFssaiInfo: ${updatedSettings?['showFssaiInfo']?.visible}");
+      debugPrint("showTel: ${updatedSettings?['showTel']?.visible}");
+      debugPrint("showEmail: ${updatedSettings?['showEmail']?.visible}");
+      debugPrint(
+          "showInvoiceTitle: ${updatedSettings?['showInvoiceTitle']?.visible}");
+      debugPrint(
+          "showInvoiceNumber: ${updatedSettings?['showInvoiceNumber']?.visible}");
+      debugPrint(
+          "showDateHeader: ${updatedSettings?['showDateHeader']?.visible}");
+      debugPrint("showSLNumber: ${updatedSettings?['showSLNumber']?.visible}");
+      debugPrint(
+          "showParticulars: ${updatedSettings?['showParticulars']?.visible}");
+      debugPrint("showMRP: ${updatedSettings?['showMRP']?.visible}");
+      debugPrint("showQty: ${updatedSettings?['showQty']?.visible}");
+      debugPrint("showRate: ${updatedSettings?['showRate']?.visible}");
+      debugPrint("showTotal: ${updatedSettings?['showTotal']?.visible}");
+      debugPrint("showDiscount: ${updatedSettings?['showDiscount']?.visible}");
+      debugPrint(
+          "showNetAmount: ${updatedSettings?['showNetAmount']?.visible}");
+      debugPrint("showMRPTotal: ${updatedSettings?['showMRPTotal']?.visible}");
+      debugPrint("showSaved: ${updatedSettings?['showSaved']?.visible}");
+      debugPrint(
+          "showAmountInWords: ${updatedSettings?['showAmountInWords']?.visible}");
+      debugPrint(
+          "showItemsCount: ${updatedSettings?['showItemsCount']?.visible}");
+      debugPrint(
+          "showThankYouMessage: ${updatedSettings?['showThankYouMessage']?.visible}");
+      debugPrint("showQRCode: ${updatedSettings?['showQRCode']?.visible}");
+      debugPrint(
+          "showTermsConditions: ${updatedSettings?['showTermsConditions']?.visible}");
+
+      // Access Payment Gateways Provider for QR code link
       final paymentGatewaysProvider =
           Provider.of<PaymentGatewaysProvider>(context, listen: false);
       final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
@@ -1391,20 +1581,21 @@ class _PrintPageState extends State<PrintPage> {
                   child: pw.Column(
                     children: [
                       // Store name
-                      if (updatedSettings.showStoreName)
+                      if (updatedSettings?['showStoreName']?.visible == true)
                         pw.Text(
-                          updatedSettings.storeName.isNotEmpty
-                              ? updatedSettings.storeName
-                              : 'STORE NAME',
+                          updatedSettings?['showStoreName']?.value as String? ??
+                              _billDocumentConfig?.header ??
+                              'STORE NAME',
                           style: headerStyle,
                         ),
 
-                      // Store description
-                      if (updatedSettings.showDescription)
+                      // Store description (subheader from DocumentConfig or value from displayConfig)
+                      if (updatedSettings?['showDescription']?.visible == true)
                         pw.Text(
-                          updatedSettings.description.isNotEmpty
-                              ? updatedSettings.description
-                              : 'Mini Supermarket',
+                          updatedSettings?['showDescription']?.value
+                                  as String? ??
+                              _billDocumentConfig?.subheader ??
+                              'Mini Supermarket',
                           style: pw.TextStyle(
                             fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
                             fontStyle: pw.FontStyle.italic,
@@ -1412,37 +1603,34 @@ class _PrintPageState extends State<PrintPage> {
                         ),
 
                       // Store address
-                      if (updatedSettings.showStoreAddress)
+                      if (updatedSettings?['showStoreAddress']?.visible == true)
                         pw.Text(
-                          updatedSettings.storeAddress.isNotEmpty
-                              ? updatedSettings.storeAddress
-                              : 'Shop Address',
+                          updatedSettings?['showStoreAddress']?.value
+                                  as String? ??
+                              'Shop Address',
                           style: bodyStyle,
                         ),
 
                       // FSSAI info
-                      if (updatedSettings.showFssaiInfo)
+                      if (updatedSettings?['showFssaiInfo']?.visible == true)
                         pw.Text(
-                          updatedSettings.fssaiInfo.isNotEmpty
-                              ? updatedSettings.fssaiInfo
-                              : 'Fssai: xxxx',
+                          updatedSettings?['showFssaiInfo']?.value as String? ??
+                              'Fssai: xxxx',
                           style: bodyStyle,
                         ),
 
-                      // Contact information
-                      if (updatedSettings.showTel)
+                      // Contact information (Tel and Email)
+                      if (updatedSettings?['showTel']?.visible == true)
                         pw.Text(
-                          updatedSettings.telephone.isNotEmpty
-                              ? updatedSettings.telephone
-                              : 'TEL: ${appSettings!.customerCarePhone}',
+                          updatedSettings?['showTel']?.value as String? ??
+                              customerCareNumber,
                           style: bodyStyle,
                         ),
 
-                      if (updatedSettings.showEmail)
+                      if (updatedSettings?['showEmail']?.visible == true)
                         pw.Text(
-                          updatedSettings.email.isNotEmpty
-                              ? updatedSettings.email
-                              : 'Email: ${appSettings!.customerCareEmail}',
+                          updatedSettings?['showEmail']?.value as String? ??
+                              customerCareEmail,
                           style: bodyStyle,
                         ),
                     ],
@@ -1452,7 +1640,8 @@ class _PrintPageState extends State<PrintPage> {
                 pw.SizedBox(height: 20),
 
                 // Invoice information in a framed box
-                if (updatedSettings.showInvoiceTitle || updatedSettings.showInvoiceNumber)
+                if ((updatedSettings?['showInvoiceTitle']?.visible == true) ||
+                    (updatedSettings?['showInvoiceNumber']?.visible == true))
                   pw.Container(
                     decoration: pw.BoxDecoration(
                       border: pw.Border.all(width: 1, color: PdfColors.grey300),
@@ -1466,23 +1655,34 @@ class _PrintPageState extends State<PrintPage> {
                         pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
-                            if (updatedSettings.showInvoiceTitle)
+                            if (updatedSettings?['showInvoiceTitle']?.visible ==
+                                true)
                               pw.Text(
-                                updatedSettings.invoiceTitle.isNotEmpty
-                                    ? updatedSettings.invoiceTitle
-                                    : appSettings!.printTitle,
-                                style: subheaderStyle
-                              ),
-                            if (updatedSettings.showInvoiceNumber)
-                              pw.Text('No: ${widget.orderNumber}',
-                                style: subheaderStyle
-                              ),
+                                  updatedSettings?['showInvoiceTitle']?.value
+                                          as String? ??
+                                      _billDocumentConfig?.header ??
+                                      'INVOICE',
+                                  style: subheaderStyle),
+                            if (updatedSettings?['showInvoiceNumber']
+                                    ?.visible ==
+                                true)
+                              // Use numberPrefix from DocumentConfig if available
+                              pw.Text(
+                                  (_billDocumentConfig?.numberPrefix != null &&
+                                          _billDocumentConfig!
+                                              .numberPrefix!.isNotEmpty)
+                                      ? '${_billDocumentConfig!.numberPrefix}${widget.orderNumber}'
+                                      : 'No: ${widget.orderNumber}',
+                                  style: subheaderStyle),
                           ],
                         ),
-                        if (updatedSettings.showDateHeader) ...[
+                        if (updatedSettings?['showDateHeader']?.visible ==
+                            true) ...[
+                          // Assuming showDateHeader controls date in PDF header box
                           pw.SizedBox(height: 5),
                           pw.Row(
-                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment:
+                                pw.MainAxisAlignment.spaceBetween,
                             children: [
                               pw.Text(
                                   'Date: ${DateHelper.formatISODate(widget.orderDate)}',
@@ -1500,47 +1700,62 @@ class _PrintPageState extends State<PrintPage> {
                 pw.SizedBox(height: 15),
 
                 // Items table in a framed box
-                pw.Container(
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(width: 1, color: PdfColors.grey300),
-                    borderRadius:
-                        const pw.BorderRadius.all(pw.Radius.circular(5)),
+                if ((updatedSettings?['showSLNumber']?.visible == true) ||
+                    (updatedSettings?['showParticulars']?.visible == true) ||
+                    (updatedSettings?['showMRP']?.visible == true) ||
+                    (updatedSettings?['showQty']?.visible == true) ||
+                    (updatedSettings?['showRate']?.visible == true) ||
+                    (updatedSettings?['showTotal']?.visible ==
+                        true)) // Only show item details section if any item columns are visible
+                  pw.Container(
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(width: 1, color: PdfColors.grey300),
+                      borderRadius:
+                          const pw.BorderRadius.all(pw.Radius.circular(5)),
+                    ),
+                    padding: const pw.EdgeInsets.all(10),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('ITEM DETAILS', style: subheaderStyle),
+                        pw.SizedBox(height: 10),
+                        _buildPdfItemsTable(tableHeaderStyle, bodyStyle,
+                            updatedSettings), // Pass displayConfig
+                      ],
+                    ),
                   ),
-                  padding: const pw.EdgeInsets.all(10),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('ITEM DETAILS', style: subheaderStyle),
-                      pw.SizedBox(height: 10),
-                      _buildPdfItemsTable(tableHeaderStyle, bodyStyle, updatedSettings),
-                    ],
-                  ),
-                ),
 
                 pw.SizedBox(height: 15),
 
                 // Summary in a framed box
-                pw.Container(
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(width: 1, color: PdfColors.grey300),
-                    borderRadius:
-                        const pw.BorderRadius.all(pw.Radius.circular(5)),
+                if ((updatedSettings?['showItemsCount']?.visible == true) ||
+                    (updatedSettings?['showMRPTotal']?.visible == true) ||
+                    (updatedSettings?['showSaved']?.visible == true) ||
+                    (updatedSettings?['showDiscount']?.visible == true) ||
+                    (updatedSettings?['showNetAmount']?.visible ==
+                        true)) // Only show summary section if any summary items are visible
+                  pw.Container(
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(width: 1, color: PdfColors.grey300),
+                      borderRadius:
+                          const pw.BorderRadius.all(pw.Radius.circular(5)),
+                    ),
+                    padding: const pw.EdgeInsets.all(10),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('ORDER SUMMARY', style: subheaderStyle),
+                        pw.SizedBox(height: 10),
+                        _buildPdfSummary(
+                            bodyStyle, updatedSettings), // Pass displayConfig
+                      ],
+                    ),
                   ),
-                  padding: const pw.EdgeInsets.all(10),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('ORDER SUMMARY', style: subheaderStyle),
-                      pw.SizedBox(height: 10),
-                      _buildPdfSummary(bodyStyle, updatedSettings),
-                    ],
-                  ),
-                ),
 
                 pw.SizedBox(height: 10),
 
                 // Amount in words
-                if (updatedSettings.showAmountInWords)
+                if (updatedSettings?['showAmountInWords']?.visible == true)
                   pw.Container(
                     padding: const pw.EdgeInsets.symmetric(vertical: 10),
                     decoration: const pw.BoxDecoration(
@@ -1564,12 +1779,13 @@ class _PrintPageState extends State<PrintPage> {
                 pw.Column(
                   children: [
                     // Thank You message
-                    if (updatedSettings.showThankYouMessage)
+                    if (updatedSettings?['showThankYouMessage']?.visible ==
+                        true)
                       pw.Center(
                         child: pw.Text(
-                          updatedSettings.thankYouMessage.isNotEmpty
-                              ? updatedSettings.thankYouMessage
-                              : 'Thank You... Visit Again',
+                          updatedSettings?['showThankYouMessage']?.value
+                                  as String? ??
+                              'Thank You... Visit Again',
                           style: subheaderStyle,
                         ),
                       ),
@@ -1577,24 +1793,29 @@ class _PrintPageState extends State<PrintPage> {
                     pw.SizedBox(height: 10),
 
                     // QR Code for payment - Only show if enabled in settings
-                    if (updatedSettings.showQRCode) ...[
+                    if (updatedSettings?['showQRCode']?.visible == true) ...[
                       pw.Center(
                         child: pw.Column(
                           children: [
                             pw.BarcodeWidget(
                               barcode: pw.Barcode.qrCode(),
-                              data:
-                                  'upi://pay?pa=${manualPaymentGateway.link}&am=${widget.formattedTotal}&tn=${widget.orderNumber}&cu=INR&ds=EPOS&t=c&st=1&se=1&sd=1',
+                              data: manualPaymentGateway
+                                  .link // Use the link from PaymentGatewaysProvider
+                                  .replaceAll(
+                                      '{formattedTotal}', widget.formattedTotal)
+                                  .replaceAll(
+                                      '{orderNumber}', widget.orderNumber),
                               width: selectedPaperSize == 'A5' ? 100 : 120,
                               height: selectedPaperSize == 'A5' ? 100 : 120,
                             ),
                             pw.SizedBox(height: 5),
                             pw.Text(
-                              updatedSettings.qrCodeMessage.isNotEmpty
-                                  ? updatedSettings.qrCodeMessage
-                                  : 'Scan to Pay',
+                              updatedSettings?['showQRCode']?.value
+                                      as String? ??
+                                  'Scan to Pay',
                               style: pw.TextStyle(
-                                fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+                                fontSize:
+                                    selectedPaperSize == 'A5' ? 9.0 : 11.0,
                                 fontWeight: pw.FontWeight.bold,
                               ),
                             ),
@@ -1605,20 +1826,22 @@ class _PrintPageState extends State<PrintPage> {
                     ],
 
                     // Terms & Conditions - Only show if enabled in settings
-                    if (updatedSettings.showTermsConditions) ...[
+                    if (updatedSettings?['showTermsConditions']?.visible ==
+                        true) ...[
                       pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text('Terms & Conditions:',
+                          pw.Text('Terms & Conditions:', // Fixed label
                               style: pw.TextStyle(
                                   fontSize:
                                       selectedPaperSize == 'A5' ? 7.0 : 10.0,
                                   fontWeight: pw.FontWeight.bold)),
                           pw.SizedBox(height: 5),
                           ..._buildTermsConditionsList(
-                              updatedSettings.termsConditions.isNotEmpty
-                                  ? updatedSettings.termsConditions
-                                  : '1. Replace or Return only within 7 Days of Purchase.\n2. Replace only with Bill.\n3. Warranty as per manufacturer terms and conditions.',
+                              updatedSettings?['showTermsConditions']?.value
+                                      as String? ??
+                                  _billDocumentConfig?.terms ??
+                                  '1. Replace or Return only within 7 Days of Purchase.\n2. Replace only with Bill.\n3. Warranty as per manufacturer terms and conditions.',
                               smallStyle),
                         ],
                       ),
@@ -1650,7 +1873,14 @@ class _PrintPageState extends State<PrintPage> {
             if (!isWindows) {
               await _sharePdfFallback(file);
             } else {
-              _showFileLocationInfo(file);
+              if (mounted) {
+                showScaffold(
+                    context: context, message: "PDF created successfully");
+                Navigator.pop(context);
+                SideBarController sideBarController =
+                    Get.put(SideBarController());
+                sideBarController.index.value = 46;
+              }
             }
           } else {
             if (mounted) {
@@ -1663,15 +1893,23 @@ class _PrintPageState extends State<PrintPage> {
             }
           }
         } catch (e) {
+          debugPrint("Error opening PDF: ${e.toString()}");
           if (!isWindows) {
             await _sharePdfFallback(file);
           } else {
-            _showFileLocationInfo(file);
+            if (mounted) {
+              showScaffold(
+                  context: context, message: "PDF created successfully");
+              Navigator.pop(context);
+              SideBarController sideBarController =
+                  Get.put(SideBarController());
+              sideBarController.index.value = 46;
+            }
           }
         }
       }
     } catch (e) {
-      debugPrint("Error generating PDF: $e");
+      debugPrint("Error generating PDF: ${e.toString()}");
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -1740,7 +1978,7 @@ class _PrintPageState extends State<PrintPage> {
         _showFileLocationInfo(file);
       }
     } catch (e) {
-      debugPrint("Error sharing PDF fallback: $e");
+      debugPrint("Error sharing PDF fallback: ${e.toString()}");
       if (mounted) {
         if (Platform.isWindows) {
           // Show file location on Windows
@@ -1756,30 +1994,62 @@ class _PrintPageState extends State<PrintPage> {
     }
   }
 
-  pw.Widget _buildPdfItemsTable(
-      pw.TextStyle headerStyle, pw.TextStyle contentStyle, ReceiptSettings settings) {
-    // Create headers for the table
-    final tableHeaders = [];
-    if (settings.showSLNumber) tableHeaders.add('SL#');
-    if (settings.showParticulars) tableHeaders.add('PARTICULARS');
-    if (settings.showMRP) tableHeaders.add('MRP');
-    if (settings.showQty) tableHeaders.add('QTY');
-    if (settings.showRate) tableHeaders.add('RATE');
-    if (settings.showTotal) tableHeaders.add('TOTAL');
+  // Modify _buildPdfItemsTable to use DisplayConfiguration and DocumentConfig
+  pw.Widget _buildPdfItemsTable(pw.TextStyle headerStyle,
+      pw.TextStyle contentStyle, Map<String, DisplayOption>? displayConfig) {
+    // Create headers for the table based on visibility and resolved labels
+    final List<String> tableHeaders = [];
+    final Map<int, pw.Alignment> cellAlignmentsMap = {};
+    final List<double> columnWidths = [];
+    int visibleColIndex = 0;
 
-    // Create table data
+    if (displayConfig?['showSLNumber']?.visible == true) {
+      tableHeaders.add('SL#');
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
+      columnWidths.add(1); // Example width
+    }
+    if (displayConfig?['showParticulars']?.visible == true) {
+      final label =
+          _billDocumentConfig?.resolvedLabels?.itemName ?? 'PARTICULARS';
+      tableHeaders.add(label.toUpperCase());
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
+      columnWidths.add(4); // Example width
+    }
+    if (displayConfig?['showMRP']?.visible == true) {
+      tableHeaders.add('MRP');
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+      columnWidths.add(2); // Example width
+    }
+    if (displayConfig?['showQty']?.visible == true) {
+      final label = _billDocumentConfig?.resolvedLabels?.unitName ?? 'QTY';
+      tableHeaders.add(label.toUpperCase());
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+      columnWidths.add(2); // Example width
+    }
+    if (displayConfig?['showRate']?.visible == true) {
+      final label = _billDocumentConfig?.resolvedLabels?.priceName ?? 'RATE';
+      tableHeaders.add(label.toUpperCase());
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+      columnWidths.add(2); // Example width
+    }
+    if (displayConfig?['showTotal']?.visible == true) {
+      final label = _billDocumentConfig?.resolvedLabels?.amountName ?? 'TOTAL';
+      tableHeaders.add(label.toUpperCase());
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+      columnWidths.add(2); // Example width
+    }
+
+    // Create table data based on visibility
     List<List<String>> tableData = [];
     for (var i = 0; i < widget.cartItems.length; i++) {
       var item = widget.cartItems[i];
 
-      // Handle different models based on data source
       String productName = '';
       String mrp = '';
       String quantity = '';
       String unitPrice = '';
       String totalPrice = '';
 
-      // Adapt the model based on whether it's from local storage or current cart
       if (widget.isFromLocalStorage) {
         productName = item['productName'] ?? '';
         mrp = item['mrp'] ?? '0.00';
@@ -1788,19 +2058,21 @@ class _PrintPageState extends State<PrintPage> {
         totalPrice = item['totalPrice'] ?? '0.00';
       } else {
         productName = item.productName ?? '';
-        mrp = item.mrp ?? '0.00';
+        mrp = item.mrp?.toString() ?? '0.00';
         quantity = item.quantity?.toString() ?? '0';
         unitPrice = item.unitPrice?.toString() ?? '0.00';
         totalPrice = item.totalPrice?.toString() ?? '0.00';
       }
 
       List<String> rowData = [];
-      if (settings.showSLNumber) rowData.add((i + 1).toString());
-      if (settings.showParticulars) rowData.add(productName);
-      if (settings.showMRP) rowData.add(mrp);
-      if (settings.showQty) rowData.add(quantity);
-      if (settings.showRate) rowData.add(unitPrice);
-      if (settings.showTotal) rowData.add(totalPrice);
+      if (displayConfig?['showSLNumber']?.visible == true)
+        rowData.add((i + 1).toString());
+      if (displayConfig?['showParticulars']?.visible == true)
+        rowData.add(productName);
+      if (displayConfig?['showMRP']?.visible == true) rowData.add(mrp);
+      if (displayConfig?['showQty']?.visible == true) rowData.add(quantity);
+      if (displayConfig?['showRate']?.visible == true) rowData.add(unitPrice);
+      if (displayConfig?['showTotal']?.visible == true) rowData.add(totalPrice);
 
       tableData.add(rowData);
     }
@@ -1815,35 +2087,35 @@ class _PrintPageState extends State<PrintPage> {
       headerHeight: 25,
       cellStyle: contentStyle,
       cellHeight: 25,
-      cellAlignments: {
-        0: pw.Alignment.centerLeft,
-        1: pw.Alignment.centerLeft,
-        2: pw.Alignment.centerRight,
-        3: pw.Alignment.centerRight,
-        4: pw.Alignment.centerRight,
-        5: pw.Alignment.centerRight,
-      },
+      cellAlignments: cellAlignmentsMap, // Use the dynamically created map
       cellPadding: const pw.EdgeInsets.all(5),
       border: const pw.TableBorder(
         horizontalInside: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
         verticalInside: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
       ),
+      columnWidths: Map.fromIterable(columnWidths.asMap().keys,
+          key: (i) => i,
+          value: (i) => pw.FlexColumnWidth(
+              columnWidths[i])), // Use flex width based on defined widths
     );
   }
 
-  pw.Widget _buildPdfSummary(pw.TextStyle style, ReceiptSettings settings) {
+  // Modify _buildPdfSummary to use DisplayConfiguration and DocumentConfig
+  pw.Widget _buildPdfSummary(
+      pw.TextStyle style, Map<String, DisplayOption>? displayConfig) {
     double savedTotal = double.tryParse(widget.savedTotal ?? '0.0') ?? 0.0;
     double formattedTotal = double.tryParse(widget.formattedTotal) ?? 0.0;
     double totalMRP = savedTotal + formattedTotal;
 
     List<pw.Widget> summaryWidgets = [];
 
-    if (settings.showItemsCount) {
+    // Display Item Count
+    if (displayConfig?['showItemsCount']?.visible == true) {
       summaryWidgets.add(
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('Total Items:', style: style),
+            pw.Text('Total Items:', style: style), // Fixed label
             pw.Text(widget.cartItems.length.toString(), style: style),
           ],
         ),
@@ -1851,12 +2123,13 @@ class _PrintPageState extends State<PrintPage> {
       summaryWidgets.add(pw.SizedBox(height: 5));
     }
 
-    if (settings.showMRPTotal) {
+    // Display Total MRP
+    if (displayConfig?['showMRPTotal']?.visible == true) {
       summaryWidgets.add(
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('Total MRP:', style: style),
+            pw.Text('Total MRP:', style: style), // Fixed label
             pw.Text(totalMRP.toStringAsFixed(2), style: style),
           ],
         ),
@@ -1864,27 +2137,45 @@ class _PrintPageState extends State<PrintPage> {
       summaryWidgets.add(pw.SizedBox(height: 5));
     }
 
-    if (settings.showSaved) {
+    // Display You Saved / Discount
+    if (displayConfig?['showSaved']?.visible == true) {
       summaryWidgets.add(
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('You Saved:', style: style),
+            pw.Text('You Saved:', style: style), // Fixed label
             pw.Text(savedTotal.toStringAsFixed(2), style: style),
+          ],
+        ),
+      );
+      summaryWidgets.add(pw.SizedBox(height: 5));
+    } else if (displayConfig?['showDiscount']?.visible == true) {
+      // If showDiscount is true but showSaved is false, use a generic Discount label
+      summaryWidgets.add(
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('Discount:', style: style), // Fixed label
+            pw.Text(savedTotal.toStringAsFixed(2),
+                style: style), // Still using savedTotal for the value
           ],
         ),
       );
       summaryWidgets.add(pw.SizedBox(height: 5));
     }
 
-    if (settings.showNetAmount) {
+    // Display Net Total (Amount)
+    if (displayConfig?['showNetAmount']?.visible == true) {
+      // Use resolved_labels for label if available, otherwise 'Net Total' or 'Amount'
+      final label =
+          _billDocumentConfig?.resolvedLabels?.amountName ?? 'Net Total';
       summaryWidgets.add(pw.Divider(color: PdfColors.grey300));
       summaryWidgets.add(pw.SizedBox(height: 5));
       summaryWidgets.add(
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('Net Total:',
+            pw.Text('$label:',
                 style: pw.TextStyle(
                   fontSize: 12.0,
                   fontWeight: pw.FontWeight.bold,
@@ -1902,6 +2193,7 @@ class _PrintPageState extends State<PrintPage> {
     return pw.Column(children: summaryWidgets);
   }
 
+  // _buildTermsConditionsList can remain largely the same, just use the terms string derived from DisplayConfiguration
   List<pw.Widget> _buildTermsConditionsList(
       String termsText, pw.TextStyle style) {
     List<String> terms = termsText.split('\n');
@@ -1927,27 +2219,34 @@ class _PrintPageState extends State<PrintPage> {
     debugPrint("===== PAPER SIZE DEBUG =====");
     debugPrint("Loading default paper size from preferences...");
 
-    final prefs = await SharedPreferences.getInstance();
-    final defaultPaperSize = prefs.getString('default_paper_size');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final defaultPaperSize = prefs.getString('default_paper_size');
 
-    debugPrint(
-        "Found saved paper size: ${defaultPaperSize ?? 'None (will use default 80mm)'}");
+      debugPrint(
+          "Found saved paper size: ${defaultPaperSize ?? 'None (will use default 80mm)'}");
 
-    if (defaultPaperSize != null) {
-      setState(() {
-        // Handle migration from 'Thermal' to '80mm'
-        if (defaultPaperSize == 'Thermal') {
-          selectedPaperSize = '80mm';
-          debugPrint("Converting legacy 'Thermal' value to '80mm'");
-          // Update stored preference to new value
-          _saveDefaultPaperSize('80mm');
-        } else {
-          selectedPaperSize = defaultPaperSize;
-          debugPrint("Set selected paper size to: $selectedPaperSize");
-        }
-      });
-    } else {
-      debugPrint("No saved paper size, using default: $selectedPaperSize");
+      if (defaultPaperSize != null) {
+        setState(() {
+          // Handle migration from 'Thermal' to '80mm'
+          if (defaultPaperSize == 'Thermal') {
+            selectedPaperSize = '80mm';
+            debugPrint("Converting legacy 'Thermal' value to '80mm'");
+            // Update stored preference to new value
+            _saveDefaultPaperSize('80mm');
+          } else {
+            selectedPaperSize = defaultPaperSize;
+            debugPrint("Set selected paper size to: $selectedPaperSize");
+          }
+        });
+      } else {
+        debugPrint("No saved paper size, saving default: $selectedPaperSize");
+        // Save default paper size to preferences
+        _saveDefaultPaperSize(selectedPaperSize);
+      }
+    } catch (e) {
+      debugPrint("ERROR loading paper size preferences: $e");
+      // Continue with default value
     }
     debugPrint("===========================");
   }
@@ -1963,51 +2262,42 @@ class _PrintPageState extends State<PrintPage> {
     setState(() {
       selectedPaperSize = paperSize;
     });
-    
-    await reloadTemplateSettings();
-    
-    debugPrint("Paper size saved and template reloaded");
+
+    // Removed call to reloadTemplateSettings() as it's no longer needed with direct config loading
+
+    debugPrint("Paper size saved");
     debugPrint("===========================");
   }
 
-  // Add this method to print debugging info before generating outputs
-  void _debugPrintTemplateSettings() {
-    if (selectedTemplate == null) {
-      debugPrint("ERROR: No template selected!");
+  // Modify _debugPrintTemplateSettings to take display config
+  void _debugPrintTemplateSettings(Map<String, DisplayOption>? displayConfig) {
+    if (displayConfig == null) {
+      debugPrint("ERROR: Display configuration is null!");
       return;
     }
-    
-    debugPrint("Current template settings:");
-    debugPrint("Template name: ${selectedTemplate!.name}");
-    debugPrint("Paper size: $selectedPaperSize");
-    debugPrint("showQRCode: ${selectedTemplate!.settings.showQRCode}");
-    debugPrint("showTermsConditions: ${selectedTemplate!.settings.showTermsConditions}");
+
+    debugPrint("Current display settings (from Bill config):");
+    displayConfig.forEach((key, value) {
+      debugPrint("- $key: visible=${value.visible}, value=${value.value}");
+    });
   }
 
-  // Add this new method to reload template settings
-  Future<void> reloadTemplateSettings() async {
-    debugPrint("===== RELOAD TEMPLATE DEBUG =====");
-    debugPrint("Reloading template settings...");
-    await _loadReceiptTemplate();
-    debugPrint("Template reload complete");
-    debugPrint("===============================");
-  }
+  // Removed reloadTemplateSettings method
 
-  // Add a global method to update settings before any printing or PDF generation
-  ReceiptSettings _updateSettingsForPaperSize(ReceiptSettings settings) {
-    // No longer force disable QR code and terms for A4/A5
-    // Instead respect user settings for all paper sizes
-    debugPrint("Using original settings for ${selectedPaperSize}");
-    debugPrint("showQRCode: ${settings.showQRCode}");
-    debugPrint("showTermsConditions: ${settings.showTermsConditions}");
-    return settings;
-  }
+  // Removed _updateSettingsForPaperSize method
 
-  // Update the receipt preview in the settings screen to show the invoice title and number separately
+  // Update _buildReceiptPreview to use _billDocumentConfig
   Widget _buildReceiptPreview() {
-    if (selectedTemplate == null) return const SizedBox();
+    // Use the loaded _billDocumentConfig instead of selectedTemplate
+    final displayConfig = _billDocumentConfig?.displayConfiguration?.options;
+    final docConfig =
+        _billDocumentConfig; // Pass DocumentConfig for header/subheader defaults
 
-    final settings = selectedTemplate!.settings;
+    // If config is not loaded yet, show a loading indicator or empty container
+    if (displayConfig == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final appSettings = appSettingsProvider.appSettings;
@@ -2033,77 +2323,76 @@ class _PrintPageState extends State<PrintPage> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Store Header
-            if (settings.showStoreName)
+            if (displayConfig['showStoreName']?.visible == true)
               Text(
-                settings.storeName.isNotEmpty
-                    ? settings.storeName
-                    : 'STORE NAME',
+                displayConfig['showStoreName']?.value as String? ??
+                    docConfig?.header ??
+                    'STORE NAME',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
                 textAlign: TextAlign.center,
               ),
-            if (settings.showDescription)
+            if (displayConfig['showDescription']?.visible == true)
               Text(
-                settings.description.isNotEmpty
-                    ? settings.description
-                    : 'Your one-stop shop for all needs',
+                displayConfig['showDescription']?.value as String? ??
+                    docConfig?.subheader ??
+                    'Your one-stop shop for all needs',
                 style: const TextStyle(
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
                 ),
                 textAlign: TextAlign.center,
               ),
-            if (settings.showStoreAddress)
+            if (displayConfig['showStoreAddress']?.visible == true)
               Text(
-                settings.storeAddress.isNotEmpty
-                    ? settings.storeAddress
-                    : 'Shop Address',
+                displayConfig['showStoreAddress']?.value as String? ??
+                    'Shop Address',
                 style: const TextStyle(fontSize: 12),
                 textAlign: TextAlign.center,
               ),
-            if (settings.showFssaiInfo)
+            if (displayConfig['showFssaiInfo']?.visible == true)
               Text(
-                settings.fssaiInfo.isNotEmpty
-                    ? settings.fssaiInfo
-                    : 'Fssai: xxxx',
+                displayConfig['showFssaiInfo']?.value as String? ??
+                    'Fssai: xxxx',
                 style: const TextStyle(fontSize: 12),
                 textAlign: TextAlign.center,
               ),
-            if (settings.showTel)
+            if (displayConfig['showTel']?.visible == true)
               Text(
-                settings.telephone.isNotEmpty
-                    ? settings.telephone
-                    : 'TEL: ${appSettings?.customerCarePhone ?? ""}',
+                displayConfig['showTel']?.value as String? ??
+                    'TEL: ${appSettings?.customerCarePhone ?? ""}',
                 style: const TextStyle(fontSize: 12),
                 textAlign: TextAlign.center,
               ),
-            if (settings.showEmail)
+            if (displayConfig['showEmail']?.visible == true)
               Text(
-                settings.email.isNotEmpty
-                    ? settings.email
-                    : 'Email: ${appSettings?.customerCareEmail ?? ""}',
+                displayConfig['showEmail']?.value as String? ??
+                    'Email: ${appSettings?.customerCareEmail ?? ""}',
                 style: const TextStyle(fontSize: 12),
                 textAlign: TextAlign.center,
               ),
-            
+
             // Invoice Title and Number
-            if (settings.showInvoiceTitle)
+            if (displayConfig['showInvoiceTitle']?.visible == true)
               Text(
-                settings.invoiceTitle.isNotEmpty
-                    ? settings.invoiceTitle
-                    : 'INVOICE',
+                displayConfig['showInvoiceTitle']?.value as String? ??
+                    docConfig?.header ??
+                    'INVOICE',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
                 textAlign: TextAlign.center,
               ),
-            if (settings.showInvoiceNumber)
-              const Text(
-                'INV No: 12345',
-                style: TextStyle(
+            if (displayConfig['showInvoiceNumber']?.visible == true)
+              Text(
+                docConfig?.numberPrefix != null &&
+                        docConfig!.numberPrefix!.isNotEmpty
+                    ? '${docConfig.numberPrefix}12345' // Use a sample number for preview
+                    : 'INV No: 12345',
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
@@ -2112,7 +2401,153 @@ class _PrintPageState extends State<PrintPage> {
             const SizedBox(height: 8),
             const Divider(),
 
-            // ... rest of the existing code ...
+            // Item details preview (simplified)
+            if ((displayConfig['showSLNumber']?.visible == true) ||
+                (displayConfig['showParticulars']?.visible == true) ||
+                (displayConfig['showMRP']?.visible == true) ||
+                (displayConfig['showQty']?.visible == true) ||
+                (displayConfig['showRate']?.visible == true) ||
+                (displayConfig['showTotal']?.visible == true))
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                      '${displayConfig['showSLNumber']?.visible == true ? '#SL' : ''} ${displayConfig['showParticulars']?.visible == true ? (_billDocumentConfig?.resolvedLabels?.itemName ?? 'PARTICULARS').toUpperCase() : ''} ${displayConfig['showMRP']?.visible == true ? 'MRP' : ''} ${displayConfig['showQty']?.visible == true ? (_billDocumentConfig?.resolvedLabels?.unitName ?? 'QTY').toUpperCase() : ''} ${displayConfig['showRate']?.visible == true ? (_billDocumentConfig?.resolvedLabels?.priceName ?? 'RATE').toUpperCase() : ''} ${displayConfig['showTotal']?.visible == true ? (_billDocumentConfig?.resolvedLabels?.amountName ?? 'TOTAL').toUpperCase() : ''}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 12)),
+                  const Divider(height: 4),
+                  // Add a sample item row based on visible columns
+                  Text(
+                      '${displayConfig['showSLNumber']?.visible == true ? '1     ' : ''}${displayConfig['showParticulars']?.visible == true ? 'Sample Item      ' : ''}${displayConfig['showMRP']?.visible == true ? '10.00  ' : ''}${displayConfig['showQty']?.visible == true ? '2   ' : ''}${displayConfig['showRate']?.visible == true ? '5.00  ' : ''}${displayConfig['showTotal']?.visible == true ? '10.00' : ''}',
+                      style: const TextStyle(fontSize: 12)),
+                  const Divider(height: 4),
+                ],
+              ),
+
+            // Summary preview (simplified)
+            if ((displayConfig['showItemsCount']?.visible == true) ||
+                (displayConfig['showMRPTotal']?.visible == true) ||
+                (displayConfig['showSaved']?.visible == true) ||
+                (displayConfig['showDiscount']?.visible == true) ||
+                (displayConfig['showNetAmount']?.visible == true))
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (displayConfig['showItemsCount']?.visible == true)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text('Items:', style: TextStyle(fontSize: 12)),
+                        Text('5', style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  if (displayConfig['showMRPTotal']?.visible == true)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text('Total MRP:', style: TextStyle(fontSize: 12)),
+                        Text('120.00', style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  if (displayConfig['showSaved']?.visible == true)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text('You Saved:', style: TextStyle(fontSize: 12)),
+                        Text('20.00', style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  if (displayConfig['showDiscount']?.visible == true &&
+                      displayConfig['showSaved']?.visible != true)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text('Discount:', style: TextStyle(fontSize: 12)),
+                        Text('20.00', style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  if (displayConfig['showNetAmount']?.visible == true) ...[
+                    const Divider(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                            '${_billDocumentConfig?.resolvedLabels?.amountName ?? 'Net Total'}:',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13)),
+                        const Text('100.00',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13)),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+
+            // Amount in words preview
+            if (displayConfig['showAmountInWords']?.visible == true) ...[
+              const SizedBox(height: 8),
+              const Divider(),
+              const Text(
+                'Amount in words: One Hundred Only.',
+                style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
+                textAlign: TextAlign.center,
+              ),
+              const Divider(),
+            ],
+
+            // Thank You message preview
+            if (displayConfig['showThankYouMessage']?.visible == true)
+              Text(
+                displayConfig['showThankYouMessage']?.value as String? ??
+                    'Thank You... Visit Again',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+            // QR Code preview
+            if (displayConfig['showQRCode']?.visible == true) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: 80,
+                height: 80,
+                color: Colors.grey[300], // Placeholder for QR code
+                child: const Center(
+                    child: Text('QR Code', style: TextStyle(fontSize: 10))),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                displayConfig['showQRCode']?.value as String? ?? 'Scan to Pay',
+                style:
+                    const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ],
+
+            // Terms & Conditions preview
+            if (displayConfig['showTermsConditions']?.visible == true) ...[
+              const SizedBox(height: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                      displayConfig['showTermsConditions']?.value as String? ??
+                          'Terms & Conditions:',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 11)),
+                  const SizedBox(height: 4),
+                  Text(
+                    docConfig?.terms ??
+                        '1. Replace or Return only within 7 Days...\n2. Replace only with Bill...',
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                ],
+              ),
+              const Divider(),
+            ],
           ],
         ),
       ),

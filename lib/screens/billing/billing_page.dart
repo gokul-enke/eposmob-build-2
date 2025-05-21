@@ -186,13 +186,13 @@ class BillingPageState extends State<BillingPage> {
       if (!_hasInternet) {
         showScaffoldError(
           context: context,
-          message: "No internet connection. Some features may be limited.",
+          message: "No internet connection. Falling back to offline mode.",
         );
       } else {
-        showScaffold(
-          context: context,
-          message: "Internet connection restored.",
-        );
+        // showScaffold(
+        //   context: context,
+        //   message: "Internet connection restored.",
+        // );
       }
     });
   }
@@ -1563,7 +1563,9 @@ class BillingPageState extends State<BillingPage> {
             GestureDetector(
               onTap: () {
                 setState(() {
-                  iconColor = 1;
+                  iconColor = 1; // Cash selected
+                  // When Cash is selected, auto-fill the paid amount
+                  // The Consumer below will handle setting the text
                 });
               },
               child: BuildBoxShadowContainer(
@@ -1595,7 +1597,10 @@ class BillingPageState extends State<BillingPage> {
             GestureDetector(
               onTap: () {
                 setState(() {
-                  iconColor = 2;
+                  iconColor = 2; // Card selected
+                  // Clear paid amount when switching from Cash
+                  _paidAmountController.clear();
+                  _getBalanceAmount(); // Recalculate balance
                 });
               },
               child: BuildBoxShadowContainer(
@@ -1628,7 +1633,10 @@ class BillingPageState extends State<BillingPage> {
             GestureDetector(
               onTap: () {
                 setState(() {
-                  iconColor = 3;
+                  iconColor = 3; // UPI selected
+                  // Clear paid amount when switching from Cash
+                  _paidAmountController.clear();
+                  _getBalanceAmount(); // Recalculate balance
                 });
               },
               child: BuildBoxShadowContainer(
@@ -1661,29 +1669,101 @@ class BillingPageState extends State<BillingPage> {
             if (iconColor == 2 || iconColor == 3 || iconColor == 1)
               Expanded(
                 child: Padding(
-                    padding: const EdgeInsets.only(left: 10),
-                    child: iconColor != 1
-                        ? Padding(
-                            padding: const EdgeInsets.only(top: 10),
-                            child: buildColumnWidgetForTextFields(
-                              controller: _transactionNumberController,
-                              size: size,
-                              height: size.height * .06,
-                              hintText: 'Transaction Reference No:',
-                            ),
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.only(top: 10),
-                            child: buildColumnWidgetForTextFields(
-                              controller: _paidAmountController,
-                              size: size,
-                              onchanged: (value) {
-                                _getBalanceAmount();
-                              },
-                              height: size.height * .06,
-                              hintText: 'Enter Paid Amount Here:',
-                            ),
-                          )),
+                  padding: const EdgeInsets.only(left: 10),
+                  child: Column(
+                    children: [
+                      if (iconColor == 3) ...[
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: buildColumnWidgetForTextFields(
+                            controller: _transactionNumberController,
+                            size: size,
+                            height: size.height * .06,
+                            hintText: 'Transaction Reference No:',
+                          ),
+                        ),
+                        // Wrapped with Consumer
+                        Consumer<LocalProductProvider>(
+                          builder: (context, localProductProvider, child) {
+                            final String cartTotalText =
+                                AmountHelper.formatAmount(
+                                    localProductProvider.cartTotal);
+
+                            // Auto-fill if the controller is empty
+                            if (_paidAmountController.text.isEmpty) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                _paidAmountController.text = cartTotalText;
+                                // Place cursor at the end
+                                _paidAmountController.selection =
+                                    TextSelection.collapsed(
+                                        offset:
+                                            _paidAmountController.text.length);
+                                _getBalanceAmount(); // Recalculate balance after setting text
+                              });
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 10),
+                              child: buildColumnWidgetForTextFields(
+                                controller: _paidAmountController,
+                                size: size,
+                                onchanged: (value) {
+                                  _getBalanceAmount();
+                                },
+                                height: size.height * .06,
+                                hintText: 'Enter Paid Amount Here:',
+                              ),
+                            );
+                          },
+                        ),
+                      ] else if (iconColor == 2) ...[
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: buildColumnWidgetForTextFields(
+                            controller: _transactionNumberController,
+                            size: size,
+                            height: size.height * .06,
+                            hintText: 'Transaction Reference No:',
+                          ),
+                        ),
+                      ] else if (iconColor == 1) ...[
+                        // Wrapped with Consumer
+                        Consumer<LocalProductProvider>(
+                          builder: (context, localProductProvider, child) {
+                            final String cartTotalText =
+                                AmountHelper.formatAmount(
+                                    localProductProvider.cartTotal);
+
+                            // Auto-fill if the controller is empty
+                            if (_paidAmountController.text.isEmpty) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                _paidAmountController.text = cartTotalText;
+                                // Place cursor at the end
+                                _paidAmountController.selection =
+                                    TextSelection.collapsed(
+                                        offset:
+                                            _paidAmountController.text.length);
+                                _getBalanceAmount(); // Recalculate balance after setting text
+                              });
+                            }
+
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 10),
+                              child: buildColumnWidgetForTextFields(
+                                controller: _paidAmountController,
+                                size: size,
+                                onchanged: (value) {
+                                  _getBalanceAmount();
+                                },
+                                height: size.height * .06,
+                                hintText: 'Enter Paid Amount Here:',
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
           ],
         ),
@@ -2648,6 +2728,14 @@ class BillingPageState extends State<BillingPage> {
   }
 
   void _createOrderAndPrint() async {
+    // Check for internet connection before proceeding
+    if (!_hasInternet) {
+      showScaffoldError(
+        context: context,
+        message: "No internet connection. Cannot create order online.",
+      );
+      return; // Stop execution if no internet
+    }
     debugPrint("Create Order and Print pressed");
     setState(() {
       isLoadingCreateOrder = true; // Indicate that loading has started
@@ -2825,6 +2913,14 @@ class BillingPageState extends State<BillingPage> {
   }
 
   void _confirmOrder() async {
+    // Check for internet connection before proceeding
+    if (!_hasInternet) {
+      showScaffoldError(
+        context: context,
+        message: "No internet connection. Cannot confirm order online.",
+      );
+      return; // Stop execution if no internet
+    }
     debugPrint("Create Order pressed");
     setState(() {
       isLoadingConfirmOrder = true; // Indicate that loading has started
@@ -3109,7 +3205,7 @@ class BillingPageState extends State<BillingPage> {
 
     // Get the current scroll position and visible height
     final double currentScroll = _customerScrollController.offset;
-    final double visibleHeight =
+    const double visibleHeight =
         180.0; // Approximate visible height of dropdown
 
     // Adding buffer space to ensure the item is fully visible
