@@ -54,6 +54,7 @@ class BillingPageState extends State<BillingPage> {
   final TextEditingController _transactionNumberController =
       TextEditingController();
   final TextEditingController _paidAmountController = TextEditingController();
+  final FocusNode _paidAmountFocusNode = FocusNode();
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -123,6 +124,8 @@ class BillingPageState extends State<BillingPage> {
     Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
         customerId: customerId!, accessToken: accessToken ?? '');
     _focusNode.addListener(_handleFocusChange);
+    _paidAmountFocusNode
+        .addListener(_handlePaidAmountFocusChange); // Add this line
     deliveryMethodId = "3";
     deliveryMethod = "Store Takeaway";
     iconColor = 1;
@@ -166,6 +169,7 @@ class BillingPageState extends State<BillingPage> {
     // Dispose all the focus nodes
     _quantityFocusNode.dispose();
     _unitPriceFocusNode.dispose();
+    _paidAmountFocusNode.dispose();
 
     _debounce?.cancel();
     _debounceTimer?.cancel();
@@ -173,6 +177,18 @@ class BillingPageState extends State<BillingPage> {
     _customerScrollController.dispose();
     _internetSubscription.cancel(); // Cancel the subscription
     super.dispose();
+  }
+
+  void _handlePaidAmountFocusChange() {
+    if (_paidAmountFocusNode.hasFocus) {
+      _paidAmountController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _paidAmountController.text.length,
+      );
+    }
+    // We don't necessarily need to do anything here, just having the listener
+    // attached allows us to check focus state later.
+    // debugPrint('Paid Amount field focus: ${_paidAmountFocusNode.hasFocus}');
   }
 
   // Function to initialize the connectivity listener
@@ -1571,7 +1587,7 @@ class BillingPageState extends State<BillingPage> {
                         Provider.of<LocalProductProvider>(context,
                             listen: false);
                     _paidAmountController.text =
-                        localProductProvider.cartTotal.toStringAsFixed(2);
+                        localProductProvider.cartTotal.toStringAsFixed(3);
                     _getBalanceAmount(); // Update balance immediately
                   });
                 },
@@ -1609,7 +1625,7 @@ class BillingPageState extends State<BillingPage> {
                         Provider.of<LocalProductProvider>(context,
                             listen: false);
                     _paidAmountController.text =
-                        localProductProvider.cartTotal.toStringAsFixed(2);
+                        localProductProvider.cartTotal.toStringAsFixed(3);
                     _getBalanceAmount(); // Update balance immediately
                   });
                 },
@@ -1648,7 +1664,7 @@ class BillingPageState extends State<BillingPage> {
                         Provider.of<LocalProductProvider>(context,
                             listen: false);
                     _paidAmountController.text =
-                        localProductProvider.cartTotal.toStringAsFixed(2);
+                        localProductProvider.cartTotal.toStringAsFixed(3);
                     _getBalanceAmount(); // Update balance immediately
                   });
                 },
@@ -1702,11 +1718,14 @@ class BillingPageState extends State<BillingPage> {
             builder: (context, localProductProvider, child) {
               // Use addPostFrameCallback to defer the update
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                // Check if the widget is still mounted and a payment method is selected
+                // Check if the widget is still mounted, a payment method is selected,
+                // AND the paid amount field does NOT have focus.
                 if (mounted &&
-                    (iconColor == 1 || iconColor == 2 || iconColor == 3)) {
+                    (iconColor == 1 || iconColor == 2 || iconColor == 3) &&
+                    !_paidAmountFocusNode.hasFocus) {
+                  // Add this condition
                   final newPaidAmount =
-                      localProductProvider.cartTotal.toStringAsFixed(2);
+                      localProductProvider.cartTotal.toStringAsFixed(3);
                   // Only update if the value is different to prevent infinite loops
                   if (_paidAmountController.text != newPaidAmount) {
                     _paidAmountController.text = newPaidAmount;
@@ -1726,13 +1745,14 @@ class BillingPageState extends State<BillingPage> {
                       onchanged: (value) {
                         _getBalanceAmount();
                       },
+                      focusNode: _paidAmountFocusNode, // Add this line
                       height: size.height * .06,
                       hintText: 'Enter Paid Amount Here:',
                     ),
                   ),
                   const SizedBox(height: 10),
                   BuildPaymentRow(
-                    amount: "INR ${_balanceAmount.toStringAsFixed(2)}",
+                    amount: "INR ${_balanceAmount.toStringAsFixed(3)}",
                     title: "Balance amount",
                     padding: const EdgeInsets.only(left: 5.0, right: 5.0),
                     secondRowTextStyle: buildCustomStyle(

@@ -435,30 +435,63 @@ class LocalProductProvider extends ChangeNotifier {
 
   /// Fetches products from the API (similar to GridSelectionProvider) and stores them locally.
   Future<void> fetchProductsFromAPI(
-      {int? categoryId, String? filterName, int page = 1}) async {
-    final queryParams = <String, String>{
-      // if (filterName != null) 'name': filterName,
-      // if (categoryId != null && categoryId != 0)
-      //   'category_id': categoryId.toString(),
-      // 'page': page.toString(),
-      // 'list_all': "true",
-    };
+      {int? categoryId, String? filterName}) async {
+    List<GetProduct> allProducts = [];
+    int currentPage = 1;
+    // const int itemsPerPage = 500; // Assuming 500 items per page
+
     isLoading = true;
     notifyListeners();
-    final url =
-        Uri.parse(APPUrl.getProductUrl).replace(queryParameters: queryParams);
+
     try {
-      final response = await http.get(url);
-      debugPrint('inside ${response.statusCode}');
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        // Assumes that GetProductModel is defined and imported in this file.
-        GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
-        _products = getProductModel.product ?? [];
-        _filteredProducts = List.from(_products);
-        _saveProductsToHive();
-        notifyListeners();
+      while (true) {
+        final queryParams = <String, String>{
+          // if (filterName != null) 'name': filterName,
+          // if (categoryId != null && categoryId != 0)
+            // 'category_id': categoryId.toString(),
+          'page': currentPage.toString(),
+          // 'items_per_page': itemsPerPage.toString(),
+        };
+
+        final url = Uri.parse(APPUrl.getProductUrl)
+            .replace(queryParameters: queryParams);
+
+        final response = await http.get(url);
+        debugPrint(
+            'Fetching products - Page $currentPage, Status Code: ${response.statusCode}');
+
+        if (response.statusCode == 200) {
+          final jsonData = json.decode(response.body);
+          GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
+
+          if (getProductModel.product == null ||
+              getProductModel.product!.isEmpty) {
+            debugPrint('No more products to load. Breaking loop.');
+            break; // No more products
+          }
+
+          allProducts.addAll(getProductModel.product!);
+          debugPrint(
+              'Fetched ${getProductModel.product!.length} products on page $currentPage. Total products fetched so far: ${allProducts.length}');
+          currentPage++;
+        } else {
+          debugPrint('API Error: Status code ${response.statusCode}');
+          debugPrint('Failed URL: $url');
+          // Optionally handle non-200 status codes, e.g., throw an exception
+          break; // Exit loop on error
+        }
       }
+
+      _products = allProducts;
+      _filteredProducts = List.from(
+          _products); // Initialize filtered list with all loaded products
+      _updatePagination(); // Update pagination info based on loaded products
+      _saveProductsToHive();
+      debugPrint(
+          'All products loaded successfully. Total: ${_products.length}');
+    } catch (e) {
+      debugPrint("Error fetching all products from API: $e");
+      // Handle error appropriately, maybe clear products or show an error message
     } finally {
       isLoading = false;
       notifyListeners();
