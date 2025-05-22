@@ -1737,6 +1737,19 @@ class BillingPageState extends State<BillingPage> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const SizedBox(height: 10),
+                  BuildPaymentRow(
+                    amount: "",
+                    title: "Paid Amount",
+                    padding: const EdgeInsets.only(left: 5.0),
+                    firstRowTextStyle: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s14,
+                      0.21,
+                      ColorManager.textColor,
+                    ),
+                    color: ColorManager.textColor,
+                  ),
                   Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: buildColumnWidgetForTextFields(
