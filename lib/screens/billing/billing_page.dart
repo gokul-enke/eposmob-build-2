@@ -1548,6 +1548,7 @@ class BillingPageState extends State<BillingPage> {
       children: [
         BuildPaymentRow(
           amount: "",
+          padding: const EdgeInsets.only(left: 5.0),
           title: "Payment Method",
           firstRowTextStyle: buildCustomStyle(
             FontWeightManager.semiBold,
@@ -1557,236 +1558,201 @@ class BillingPageState extends State<BillingPage> {
           ),
           color: ColorManager.kPrimaryColor,
         ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  iconColor = 1; // Cash selected
-                  // When Cash is selected, auto-fill the paid amount
-                  // The Consumer below will handle setting the text
-                });
-              },
-              child: BuildBoxShadowContainer(
-                border: iconColor == 1
-                    ? Border.all(color: ColorManager.kPrimaryColor)
-                    : null,
-                margin: const EdgeInsets.only(top: 10),
-                padding: const EdgeInsets.all(8),
-                blurRadius: 4,
-                circleRadius: 5,
-                child: Column(
-                  children: [
-                    WebsafeSvg.asset(
-                      ImageAssets.cashIcon,
-                      width: 15,
-                      height: 15,
-                      color: Colors.black,
-                      fit: BoxFit.none,
-                    ),
-                    Text(
-                      'Cash',
-                      style: buildCustomStyle(FontWeightManager.medium,
-                          FontSize.s10, 0.12, Colors.black),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  iconColor = 2; // Card selected
-                  // Clear paid amount when switching from Cash
-                  _paidAmountController.clear();
-                  _getBalanceAmount(); // Recalculate balance
-                });
-              },
-              child: BuildBoxShadowContainer(
-                border: iconColor == 2
-                    ? Border.all(color: ColorManager.kPrimaryColor)
-                    : null,
-                margin: const EdgeInsets.only(left: 10, top: 10),
-                padding: const EdgeInsets.only(
-                    left: 12, top: 8, bottom: 8, right: 12),
-                blurRadius: 4,
-                circleRadius: 5,
-                child: Column(
-                  children: [
-                    WebsafeSvg.asset(
-                      ImageAssets.creditCardIcon,
-                      width: 15,
-                      height: 15,
-                      color: Colors.black,
-                      fit: BoxFit.none,
-                    ),
-                    Text(
-                      'Card',
-                      style: buildCustomStyle(FontWeightManager.medium,
-                          FontSize.s10, 0.12, Colors.black),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  iconColor = 3; // UPI selected
-                  // Clear paid amount when switching from Cash
-                  _paidAmountController.clear();
-                  _getBalanceAmount(); // Recalculate balance
-                });
-              },
-              child: BuildBoxShadowContainer(
-                border: iconColor == 3
-                    ? Border.all(color: ColorManager.kPrimaryColor)
-                    : null,
-                margin: const EdgeInsets.only(left: 10, top: 10),
-                padding: const EdgeInsets.only(
-                    left: 12, top: 8, bottom: 8, right: 12),
-                blurRadius: 4,
-                circleRadius: 5,
-                child: Column(
-                  children: [
-                    WebsafeSvg.asset(
-                      ImageAssets.creditCardIcon,
-                      width: 15,
-                      height: 15,
-                      color: Colors.black,
-                      fit: BoxFit.none,
-                    ),
-                    Text(
-                      'Upi',
-                      style: buildCustomStyle(FontWeightManager.medium,
-                          FontSize.s10, 0.12, Colors.black),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (iconColor == 2 || iconColor == 3 || iconColor == 1)
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 10),
+        Padding(
+          padding: const EdgeInsets.only(left: 5.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    iconColor = 1; // Cash selected
+                    final localProductProvider =
+                        Provider.of<LocalProductProvider>(context,
+                            listen: false);
+                    _paidAmountController.text =
+                        localProductProvider.cartTotal.toStringAsFixed(2);
+                    _getBalanceAmount(); // Update balance immediately
+                  });
+                },
+                child: BuildBoxShadowContainer(
+                  border: iconColor == 1
+                      ? Border.all(color: ColorManager.kPrimaryColor)
+                      : null,
+                  margin: const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.all(8),
+                  blurRadius: 4,
+                  circleRadius: 5,
                   child: Column(
                     children: [
-                      if (iconColor == 3) ...[
-                        Padding(
-                          padding: const EdgeInsets.only(top: 10),
-                          child: buildColumnWidgetForTextFields(
-                            controller: _transactionNumberController,
-                            size: size,
-                            height: size.height * .06,
-                            hintText: 'Transaction Reference No:',
-                          ),
-                        ),
-                        // Wrapped with Consumer
-                        Consumer<LocalProductProvider>(
-                          builder: (context, localProductProvider, child) {
-                            final String cartTotalText =
-                                AmountHelper.formatAmount(
-                                    localProductProvider.cartTotal);
-
-                            // Auto-fill if the controller is empty
-                            if (_paidAmountController.text.isEmpty) {
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                _paidAmountController.text = cartTotalText;
-                                // Place cursor at the end
-                                _paidAmountController.selection =
-                                    TextSelection.collapsed(
-                                        offset:
-                                            _paidAmountController.text.length);
-                                _getBalanceAmount(); // Recalculate balance after setting text
-                              });
-                            }
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 10),
-                              child: buildColumnWidgetForTextFields(
-                                controller: _paidAmountController,
-                                size: size,
-                                onchanged: (value) {
-                                  _getBalanceAmount();
-                                },
-                                height: size.height * .06,
-                                hintText: 'Enter Paid Amount Here:',
-                              ),
-                            );
-                          },
-                        ),
-                      ] else if (iconColor == 2) ...[
-                        Padding(
-                          padding: const EdgeInsets.only(top: 10),
-                          child: buildColumnWidgetForTextFields(
-                            controller: _transactionNumberController,
-                            size: size,
-                            height: size.height * .06,
-                            hintText: 'Transaction Reference No:',
-                          ),
-                        ),
-                      ] else if (iconColor == 1) ...[
-                        // Wrapped with Consumer
-                        Consumer<LocalProductProvider>(
-                          builder: (context, localProductProvider, child) {
-                            final String cartTotalText =
-                                AmountHelper.formatAmount(
-                                    localProductProvider.cartTotal);
-
-                            // Auto-fill if the controller is empty
-                            if (_paidAmountController.text.isEmpty) {
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                _paidAmountController.text = cartTotalText;
-                                // Place cursor at the end
-                                _paidAmountController.selection =
-                                    TextSelection.collapsed(
-                                        offset:
-                                            _paidAmountController.text.length);
-                                _getBalanceAmount(); // Recalculate balance after setting text
-                              });
-                            }
-
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 10),
-                              child: buildColumnWidgetForTextFields(
-                                controller: _paidAmountController,
-                                size: size,
-                                onchanged: (value) {
-                                  _getBalanceAmount();
-                                },
-                                height: size.height * .06,
-                                hintText: 'Enter Paid Amount Here:',
-                              ),
-                            );
-                          },
-                        ),
-                      ],
+                      WebsafeSvg.asset(
+                        ImageAssets.cashIcon,
+                        width: 15,
+                        height: 15,
+                        color: Colors.black,
+                        fit: BoxFit.none,
+                      ),
+                      Text(
+                        'Cash',
+                        style: buildCustomStyle(FontWeightManager.medium,
+                            FontSize.s10, 0.12, Colors.black),
+                      ),
                     ],
                   ),
                 ),
               ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        if (iconColor == 1)
-          BuildPaymentRow(
-            amount: "INR ${_balanceAmount.toStringAsFixed(2)}",
-            title: "Balance amount",
-            secondRowTextStyle: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s15,
-              0.18,
-              ColorManager.textColorRed,
-            ),
-            firstRowTextStyle: buildCustomStyle(
-              FontWeightManager.bold,
-              FontSize.s15,
-              0.23,
-              ColorManager.textColorRed,
-            ),
-            color: ColorManager.textColorRed,
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    iconColor = 2; // Card selected
+                    final localProductProvider =
+                        Provider.of<LocalProductProvider>(context,
+                            listen: false);
+                    _paidAmountController.text =
+                        localProductProvider.cartTotal.toStringAsFixed(2);
+                    _getBalanceAmount(); // Update balance immediately
+                  });
+                },
+                child: BuildBoxShadowContainer(
+                  border: iconColor == 2
+                      ? Border.all(color: ColorManager.kPrimaryColor)
+                      : null,
+                  margin: const EdgeInsets.only(left: 10, top: 10),
+                  padding: const EdgeInsets.only(
+                      left: 12, top: 8, bottom: 8, right: 12),
+                  blurRadius: 4,
+                  circleRadius: 5,
+                  child: Column(
+                    children: [
+                      WebsafeSvg.asset(
+                        ImageAssets.creditCardIcon,
+                        width: 15,
+                        height: 15,
+                        color: Colors.black,
+                        fit: BoxFit.none,
+                      ),
+                      Text(
+                        'Card',
+                        style: buildCustomStyle(FontWeightManager.medium,
+                            FontSize.s10, 0.12, Colors.black),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    iconColor = 3; // UPI selected
+                    final localProductProvider =
+                        Provider.of<LocalProductProvider>(context,
+                            listen: false);
+                    _paidAmountController.text =
+                        localProductProvider.cartTotal.toStringAsFixed(2);
+                    _getBalanceAmount(); // Update balance immediately
+                  });
+                },
+                child: BuildBoxShadowContainer(
+                  border: iconColor == 3
+                      ? Border.all(color: ColorManager.kPrimaryColor)
+                      : null,
+                  margin: const EdgeInsets.only(left: 10, top: 10),
+                  padding: const EdgeInsets.only(
+                      left: 12, top: 8, bottom: 8, right: 12),
+                  blurRadius: 4,
+                  circleRadius: 5,
+                  child: Column(
+                    children: [
+                      WebsafeSvg.asset(
+                        ImageAssets.creditCardIcon,
+                        width: 15,
+                        height: 15,
+                        color: Colors.black,
+                        fit: BoxFit.none,
+                      ),
+                      Text(
+                        'Upi',
+                        style: buildCustomStyle(FontWeightManager.medium,
+                            FontSize.s10, 0.12, Colors.black),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (iconColor != 1)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 10),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: buildColumnWidgetForTextFields(
+                        controller: _transactionNumberController,
+                        size: size,
+                        height: size.height * .06,
+                        hintText: 'Tr Reference No:',
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
-        if (iconColor == 1) const SizedBox(height: 10),
+        ),
+        if (iconColor == 1 || iconColor == 2 || iconColor == 3)
+          Consumer<LocalProductProvider>(
+            builder: (context, localProductProvider, child) {
+              // Use addPostFrameCallback to defer the update
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                // Check if the widget is still mounted and a payment method is selected
+                if (mounted &&
+                    (iconColor == 1 || iconColor == 2 || iconColor == 3)) {
+                  final newPaidAmount =
+                      localProductProvider.cartTotal.toStringAsFixed(2);
+                  // Only update if the value is different to prevent infinite loops
+                  if (_paidAmountController.text != newPaidAmount) {
+                    _paidAmountController.text = newPaidAmount;
+                    _getBalanceAmount(); // Update balance immediately
+                  }
+                }
+              });
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: buildColumnWidgetForTextFields(
+                      controller: _paidAmountController,
+                      size: size,
+                      onchanged: (value) {
+                        _getBalanceAmount();
+                      },
+                      height: size.height * .06,
+                      hintText: 'Enter Paid Amount Here:',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  BuildPaymentRow(
+                    amount: "INR ${_balanceAmount.toStringAsFixed(2)}",
+                    title: "Balance amount",
+                    padding: const EdgeInsets.only(left: 5.0, right: 5.0),
+                    secondRowTextStyle: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s15,
+                      0.18,
+                      ColorManager.textColorRed,
+                    ),
+                    firstRowTextStyle: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s15,
+                      0.23,
+                      ColorManager.textColorRed,
+                    ),
+                    color: ColorManager.textColorRed,
+                  ),
+                ],
+              );
+            },
+          ),
       ],
     );
   }

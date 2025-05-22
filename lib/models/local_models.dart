@@ -31,7 +31,7 @@ class HiveLocalCartItem {
   final HiveStringValue serializedProduct;
 
   // Store serialized selected stock as JSON string
-  @HiveField(4)
+  @HiveField(5)
   final HiveStringValue? serializedSelectedStock;
 
   HiveLocalCartItem({

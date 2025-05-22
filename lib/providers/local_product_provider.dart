@@ -437,11 +437,11 @@ class LocalProductProvider extends ChangeNotifier {
   Future<void> fetchProductsFromAPI(
       {int? categoryId, String? filterName, int page = 1}) async {
     final queryParams = <String, String>{
-      if (filterName != null) 'name': filterName,
-      if (categoryId != null && categoryId != 0)
-        'category_id': categoryId.toString(),
-      'page': page.toString(),
-      'list_all': "true",
+      // if (filterName != null) 'name': filterName,
+      // if (categoryId != null && categoryId != 0)
+      //   'category_id': categoryId.toString(),
+      // 'page': page.toString(),
+      // 'list_all': "true",
     };
     isLoading = true;
     notifyListeners();
