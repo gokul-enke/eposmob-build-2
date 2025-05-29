@@ -23,6 +23,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:open_file/open_file.dart';
 import 'package:pos_machine/providers/document_config_provider.dart'; // Import DocumentConfigProvider
 import 'package:pos_machine/models/document_configurations.dart';
+
 class PrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
   final String? storeName;
@@ -631,7 +632,7 @@ class _PrintPageState extends State<PrintPage> {
     // Add table headers based on visibility settings and resolved labels
     List<PosColumn> headerColumns = [];
     int remainingWidth = 12; // Total width must be 12
-    
+
     // Calculate how many columns are visible
     int visibleColumns = 0;
     if (displayConfig?['showSLNumber']?.visible == true) visibleColumns++;
@@ -640,7 +641,7 @@ class _PrintPageState extends State<PrintPage> {
     if (displayConfig?['showQty']?.visible == true) visibleColumns++;
     if (displayConfig?['showRate']?.visible == true) visibleColumns++;
     if (displayConfig?['showTotal']?.visible == true) visibleColumns++;
-    
+
     // Default width allocations - will be adjusted later
     int slWidth = 1;
     int particularsWidth = 4;
@@ -648,18 +649,23 @@ class _PrintPageState extends State<PrintPage> {
     int qtyWidth = 1;
     int rateWidth = 1;
     int totalWidth = 1;
-    
+
     // Adjust based on which columns are visible
     if (visibleColumns == 0) {
       // No columns visible, just return empty bytes
       return bytes;
     } else if (visibleColumns == 1) {
       // If only one column is visible, it gets all 12 units
-      if (displayConfig?['showSLNumber']?.visible == true) slWidth = 12;
-      else if (displayConfig?['showParticulars']?.visible == true) particularsWidth = 12;
-      else if (displayConfig?['showMRP']?.visible == true) mrpWidth = 12;
-      else if (displayConfig?['showQty']?.visible == true) qtyWidth = 12;
-      else if (displayConfig?['showRate']?.visible == true) rateWidth = 12;
+      if (displayConfig?['showSLNumber']?.visible == true)
+        slWidth = 12;
+      else if (displayConfig?['showParticulars']?.visible == true)
+        particularsWidth = 12;
+      else if (displayConfig?['showMRP']?.visible == true)
+        mrpWidth = 12;
+      else if (displayConfig?['showQty']?.visible == true)
+        qtyWidth = 12;
+      else if (displayConfig?['showRate']?.visible == true)
+        rateWidth = 12;
       else if (displayConfig?['showTotal']?.visible == true) totalWidth = 12;
     } else {
       // Multiple columns - allocate based on importance
@@ -668,26 +674,36 @@ class _PrintPageState extends State<PrintPage> {
         particularsWidth = visibleColumns <= 3 ? 6 : 4;
         remainingWidth -= particularsWidth;
         visibleColumns--; // Remove particulars from count
-        
+
         // Distribute remaining width evenly
         int widthPerColumn = remainingWidth ~/ visibleColumns;
-        
-        if (displayConfig?['showSLNumber']?.visible == true) slWidth = widthPerColumn;
-        if (displayConfig?['showMRP']?.visible == true) mrpWidth = widthPerColumn;
-        if (displayConfig?['showQty']?.visible == true) qtyWidth = widthPerColumn;
-        if (displayConfig?['showRate']?.visible == true) rateWidth = widthPerColumn;
-        if (displayConfig?['showTotal']?.visible == true) totalWidth = widthPerColumn;
-        
+
+        if (displayConfig?['showSLNumber']?.visible == true)
+          slWidth = widthPerColumn;
+        if (displayConfig?['showMRP']?.visible == true)
+          mrpWidth = widthPerColumn;
+        if (displayConfig?['showQty']?.visible == true)
+          qtyWidth = widthPerColumn;
+        if (displayConfig?['showRate']?.visible == true)
+          rateWidth = widthPerColumn;
+        if (displayConfig?['showTotal']?.visible == true)
+          totalWidth = widthPerColumn;
+
         // Adjust for any rounding issues to ensure total is 12
         int allocatedWidth = particularsWidth;
-        if (displayConfig?['showSLNumber']?.visible == true) allocatedWidth += slWidth;
-        if (displayConfig?['showMRP']?.visible == true) allocatedWidth += mrpWidth;
-        if (displayConfig?['showQty']?.visible == true) allocatedWidth += qtyWidth;
-        if (displayConfig?['showRate']?.visible == true) allocatedWidth += rateWidth;
-        if (displayConfig?['showTotal']?.visible == true) allocatedWidth += totalWidth;
-        
+        if (displayConfig?['showSLNumber']?.visible == true)
+          allocatedWidth += slWidth;
+        if (displayConfig?['showMRP']?.visible == true)
+          allocatedWidth += mrpWidth;
+        if (displayConfig?['showQty']?.visible == true)
+          allocatedWidth += qtyWidth;
+        if (displayConfig?['showRate']?.visible == true)
+          allocatedWidth += rateWidth;
+        if (displayConfig?['showTotal']?.visible == true)
+          allocatedWidth += totalWidth;
+
         int remainingAdjustment = 12 - allocatedWidth;
-        
+
         // Add any remaining width to the particulars column
         if (remainingAdjustment != 0) {
           particularsWidth += remainingAdjustment;
@@ -696,7 +712,7 @@ class _PrintPageState extends State<PrintPage> {
         // Particulars not visible, distribute evenly
         int widthPerColumn = 12 ~/ visibleColumns;
         int remainder = 12 % visibleColumns;
-        
+
         if (displayConfig?['showSLNumber']?.visible == true) {
           slWidth = widthPerColumn;
           if (remainder > 0) {
@@ -734,7 +750,7 @@ class _PrintPageState extends State<PrintPage> {
         }
       }
     }
-    
+
     // Now add columns with calculated widths
     if (displayConfig?['showSLNumber']?.visible == true) {
       headerColumns.add(PosColumn(
@@ -781,7 +797,8 @@ class _PrintPageState extends State<PrintPage> {
     // Debug log to check total width
     int totalHeaderWidth = headerColumns.fold(0, (sum, col) => sum + col.width);
     debugPrint("Total header width: $totalHeaderWidth (should be 12)");
-    headerColumns.forEach((col) => debugPrint("Column '${col.text}': width=${col.width}"));
+    headerColumns.forEach(
+        (col) => debugPrint("Column '${col.text}': width=${col.width}"));
 
     if (headerColumns.isNotEmpty) {
       bytes += generator.row(headerColumns);
@@ -811,60 +828,191 @@ class _PrintPageState extends State<PrintPage> {
         totalPrice = item.totalPrice?.toString() ?? '0.00';
       }
 
-      // Build item row using the SAME widths as headers
-      List<PosColumn> itemRowColumns = [];
+      // Handle multi-line product names with better space utilization
+      String slNumber = (i + 1).toString();
 
-      // Add only visible columns with the calculated widths
-      if (displayConfig?['showSLNumber']?.visible == true) {
-        itemRowColumns.add(PosColumn(
-            text: '#${i + 1}',
-            width: slWidth,
-            styles: const PosStyles(align: PosAlign.left)));
-      }
+      // Calculate the width available for product name
+      int productNameWidth = particularsWidth;
 
-      if (displayConfig?['showParticulars']?.visible == true) {
-        itemRowColumns.add(PosColumn(
-            text: productName,
-            width: particularsWidth,
-            styles: const PosStyles(align: PosAlign.left)));
-      }
+      // Determine how much of the product name fits in the allocated width
+      // Approximate character limit based on width (roughly 4-5 chars per width unit)
+      int maxCharsFirstLine = productNameWidth * 4; // Conservative estimate
 
-      if (displayConfig?['showMRP']?.visible == true) {
-        itemRowColumns.add(PosColumn(
-            text: mrp,
-            width: mrpWidth,
-            styles: const PosStyles(align: PosAlign.right)));
-      }
+      if (productName.length <= maxCharsFirstLine) {
+        // Product name fits in one line - show everything in one row
+        List<PosColumn> itemRowColumns = [];
 
-      if (displayConfig?['showQty']?.visible == true) {
-        itemRowColumns.add(PosColumn(
-            text: quantity,
-            width: qtyWidth,
-            styles: const PosStyles(align: PosAlign.right)));
-      }
+        // Add only visible columns with the calculated widths
+        if (displayConfig?['showSLNumber']?.visible == true) {
+          itemRowColumns.add(PosColumn(
+              text: '#$slNumber',
+              width: slWidth,
+              styles: const PosStyles(align: PosAlign.left)));
+        }
 
-      if (displayConfig?['showRate']?.visible == true) {
-        itemRowColumns.add(PosColumn(
-            text: unitPrice,
-            width: rateWidth,
-            styles: const PosStyles(align: PosAlign.right)));
-      }
+        if (displayConfig?['showParticulars']?.visible == true) {
+          itemRowColumns.add(PosColumn(
+              text: productName,
+              width: particularsWidth,
+              styles: const PosStyles(align: PosAlign.left)));
+        }
 
-      if (displayConfig?['showTotal']?.visible == true) {
-        itemRowColumns.add(PosColumn(
-            text: totalPrice,
-            width: totalWidth,
-            styles: const PosStyles(align: PosAlign.right)));
-      }
+        if (displayConfig?['showMRP']?.visible == true) {
+          itemRowColumns.add(PosColumn(
+              text: mrp,
+              width: mrpWidth,
+              styles: const PosStyles(align: PosAlign.right)));
+        }
 
-      // Double-check the total width for debugging
-      int totalItemRowWidth = itemRowColumns.fold(0, (sum, col) => sum + col.width);
-      if (totalItemRowWidth != 12) {
-        debugPrint("WARNING: Item row $i has total width $totalItemRowWidth (should be 12)");
-      }
+        if (displayConfig?['showQty']?.visible == true) {
+          itemRowColumns.add(PosColumn(
+              text: quantity,
+              width: qtyWidth,
+              styles: const PosStyles(align: PosAlign.right)));
+        }
 
-      if (itemRowColumns.isNotEmpty) {
-        bytes += generator.row(itemRowColumns);
+        if (displayConfig?['showRate']?.visible == true) {
+          itemRowColumns.add(PosColumn(
+              text: unitPrice,
+              width: rateWidth,
+              styles: const PosStyles(align: PosAlign.right)));
+        }
+
+        if (displayConfig?['showTotal']?.visible == true) {
+          itemRowColumns.add(PosColumn(
+              text: totalPrice,
+              width: totalWidth,
+              styles: const PosStyles(align: PosAlign.right)));
+        }
+
+        // Verify total width
+        int totalItemRowWidth =
+            itemRowColumns.fold(0, (sum, col) => sum + col.width);
+        if (totalItemRowWidth != 12) {
+          debugPrint(
+              "WARNING: Item row $i has total width $totalItemRowWidth (should be 12)");
+        }
+
+        if (itemRowColumns.isNotEmpty) {
+          bytes += generator.row(itemRowColumns);
+        }
+      } else {
+        // Product name is too long - split it across multiple lines
+        String firstLineName = productName.substring(0, maxCharsFirstLine);
+
+        // First line with product name (truncated) + all details
+        List<PosColumn> firstRowColumns = [];
+
+        if (displayConfig?['showSLNumber']?.visible == true) {
+          firstRowColumns.add(PosColumn(
+              text: '#$slNumber',
+              width: slWidth,
+              styles: const PosStyles(align: PosAlign.left)));
+        }
+
+        if (displayConfig?['showParticulars']?.visible == true) {
+          firstRowColumns.add(PosColumn(
+              text: firstLineName,
+              width: particularsWidth,
+              styles: const PosStyles(align: PosAlign.left)));
+        }
+
+        if (displayConfig?['showMRP']?.visible == true) {
+          firstRowColumns.add(PosColumn(
+              text: mrp,
+              width: mrpWidth,
+              styles: const PosStyles(align: PosAlign.right)));
+        }
+
+        if (displayConfig?['showQty']?.visible == true) {
+          firstRowColumns.add(PosColumn(
+              text: quantity,
+              width: qtyWidth,
+              styles: const PosStyles(align: PosAlign.right)));
+        }
+
+        if (displayConfig?['showRate']?.visible == true) {
+          firstRowColumns.add(PosColumn(
+              text: unitPrice,
+              width: rateWidth,
+              styles: const PosStyles(align: PosAlign.right)));
+        }
+
+        if (displayConfig?['showTotal']?.visible == true) {
+          firstRowColumns.add(PosColumn(
+              text: totalPrice,
+              width: totalWidth,
+              styles: const PosStyles(align: PosAlign.right)));
+        }
+
+        if (firstRowColumns.isNotEmpty) {
+          bytes += generator.row(firstRowColumns);
+        }
+
+        // Continuation lines for remaining product name
+        String remainingName = productName.substring(maxCharsFirstLine);
+        while (remainingName.isNotEmpty) {
+          int maxCharsThisLine = maxCharsFirstLine;
+          String thisLineName = remainingName.length <= maxCharsThisLine
+              ? remainingName
+              : remainingName.substring(0, maxCharsThisLine);
+
+          List<PosColumn> continuationRowColumns = [];
+
+          // Empty space for serial number
+          if (displayConfig?['showSLNumber']?.visible == true) {
+            continuationRowColumns.add(PosColumn(
+                text: '',
+                width: slWidth,
+                styles: const PosStyles(align: PosAlign.left)));
+          }
+
+          // Continuation of product name
+          if (displayConfig?['showParticulars']?.visible == true) {
+            continuationRowColumns.add(PosColumn(
+                text: thisLineName,
+                width: particularsWidth,
+                styles: const PosStyles(align: PosAlign.left)));
+          }
+
+          // Empty spaces for other columns
+          if (displayConfig?['showMRP']?.visible == true) {
+            continuationRowColumns.add(PosColumn(
+                text: '',
+                width: mrpWidth,
+                styles: const PosStyles(align: PosAlign.right)));
+          }
+
+          if (displayConfig?['showQty']?.visible == true) {
+            continuationRowColumns.add(PosColumn(
+                text: '',
+                width: qtyWidth,
+                styles: const PosStyles(align: PosAlign.right)));
+          }
+
+          if (displayConfig?['showRate']?.visible == true) {
+            continuationRowColumns.add(PosColumn(
+                text: '',
+                width: rateWidth,
+                styles: const PosStyles(align: PosAlign.right)));
+          }
+
+          if (displayConfig?['showTotal']?.visible == true) {
+            continuationRowColumns.add(PosColumn(
+                text: '',
+                width: totalWidth,
+                styles: const PosStyles(align: PosAlign.right)));
+          }
+
+          if (continuationRowColumns.isNotEmpty) {
+            bytes += generator.row(continuationRowColumns);
+          }
+
+          // Move to next part
+          remainingName = remainingName.length <= maxCharsThisLine
+              ? ''
+              : remainingName.substring(maxCharsThisLine);
+        }
       }
     }
 
@@ -1554,7 +1702,7 @@ class _PrintPageState extends State<PrintPage> {
         fontSize: selectedPaperSize == 'A5' ? 7.0 : 9.0,
       );
       final tableHeaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
+        fontSize: selectedPaperSize == 'A5' ? 6.0 : 8.0, // Reduced from 7.0/10.0 to 6.0/8.0
         fontWeight: pw.FontWeight.bold,
       );
 
@@ -2006,40 +2154,41 @@ class _PrintPageState extends State<PrintPage> {
     if (displayConfig?['showSLNumber']?.visible == true) {
       tableHeaders.add('SL#');
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
-      columnWidths.add(1); // Example width
+      columnWidths.add(1); // Smaller width for serial number
     }
     if (displayConfig?['showParticulars']?.visible == true) {
       final label =
           _billDocumentConfig?.resolvedLabels?.itemName ?? 'PARTICULARS';
       tableHeaders.add(label.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
-      columnWidths.add(4); // Example width
+      columnWidths.add(
+          5); // Much larger width for product names to accommodate long names
     }
     if (displayConfig?['showMRP']?.visible == true) {
       tableHeaders.add('MRP');
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
-      columnWidths.add(2); // Example width
+      columnWidths.add(1.5); // Slightly larger for price values
     }
     if (displayConfig?['showQty']?.visible == true) {
       final label = _billDocumentConfig?.resolvedLabels?.unitName ?? 'QTY';
       tableHeaders.add(label.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
-      columnWidths.add(2); // Example width
+      columnWidths.add(1.5); // Compact for quantity
     }
     if (displayConfig?['showRate']?.visible == true) {
       final label = _billDocumentConfig?.resolvedLabels?.priceName ?? 'RATE';
       tableHeaders.add(label.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
-      columnWidths.add(2); // Example width
+      columnWidths.add(1.5); // Slightly larger for price values
     }
     if (displayConfig?['showTotal']?.visible == true) {
       final label = _billDocumentConfig?.resolvedLabels?.amountName ?? 'TOTAL';
       tableHeaders.add(label.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
-      columnWidths.add(2); // Example width
+      columnWidths.add(1.5); // Slightly larger for total values
     }
 
-    // Create table data based on visibility
+    // Create table data based on visibility with smart product name handling
     List<List<String>> tableData = [];
     for (var i = 0; i < widget.cartItems.length; i++) {
       var item = widget.cartItems[i];
@@ -2064,11 +2213,18 @@ class _PrintPageState extends State<PrintPage> {
         totalPrice = item.totalPrice?.toString() ?? '0.00';
       }
 
+      // Smart product name handling for PDF - Let PDF table handle wrapping naturally
+      String displayProductName =
+          productName; // Use full product name without truncation
+
+      // Remove the artificial character limit - let the PDF table handle text wrapping
+      // The pw.Table.fromTextArray will automatically wrap long text within cells
+
       List<String> rowData = [];
       if (displayConfig?['showSLNumber']?.visible == true)
         rowData.add((i + 1).toString());
       if (displayConfig?['showParticulars']?.visible == true)
-        rowData.add(productName);
+        rowData.add(displayProductName); // Use the full product name
       if (displayConfig?['showMRP']?.visible == true) rowData.add(mrp);
       if (displayConfig?['showQty']?.visible == true) rowData.add(quantity);
       if (displayConfig?['showRate']?.visible == true) rowData.add(unitPrice);
