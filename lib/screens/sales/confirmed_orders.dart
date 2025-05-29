@@ -10,6 +10,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/screens/sales/widgets/confirmed_order_detail_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
@@ -78,88 +79,93 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                 _formatDateTime(order.createdAt);
                             String formattedTime = _formatTime(order.createdAt);
 
-                            return BuildBoxShadowContainer(
-                              circleRadius: 8,
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            'Order #${order.orderNumber}',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.bold,
-                                              FontSize.s14,
-                                              0.21,
-                                              ColorManager.kPrimaryColor,
+                            return GestureDetector(
+                              onTap: () {
+                                _showOrderDetailsModal(context, order);
+                              },
+                              child: BuildBoxShadowContainer(
+                                circleRadius: 8,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              'Order #${order.orderNumber}',
+                                              style: buildCustomStyle(
+                                                FontWeightManager.bold,
+                                                FontSize.s14,
+                                                0.21,
+                                                ColorManager.kPrimaryColor,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                        ),
-                                        IconButton(
-                                          icon:
-                                              const Icon(Icons.print, size: 18),
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                          onPressed: () => _printOrder(order),
-                                          color: ColorManager.kPrimaryColor,
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 5),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          formattedDate,
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s12,
-                                            0.21,
-                                            Colors.grey,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          formattedTime,
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s12,
-                                            0.21,
-                                            Colors.grey,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const Spacer(),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Items: ${order.items.length}',
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s12,
-                                            0.21,
-                                            Colors.grey,
-                                          ),
-                                        ),
-                                        Text(
-                                          '₹${order.total.toStringAsFixed(2)}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
+                                          IconButton(
+                                            icon:
+                                                const Icon(Icons.print, size: 18),
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                            onPressed: () => _printOrder(order),
                                             color: ColorManager.kPrimaryColor,
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                        ],
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            formattedDate,
+                                            style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s12,
+                                              0.21,
+                                              Colors.grey,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            formattedTime,
+                                            style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s12,
+                                              0.21,
+                                              Colors.grey,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const Spacer(),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Items: ${order.items.length}',
+                                            style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s12,
+                                              0.21,
+                                              Colors.grey,
+                                            ),
+                                          ),
+                                          Text(
+                                            '₹${order.total.toStringAsFixed(2)}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: ColorManager.kPrimaryColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             );
@@ -228,6 +234,15 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           context: context,
           message: "Failed to print order. Please try again.");
     }
+  }
+
+  void _showOrderDetailsModal(BuildContext context, SavedOrder order) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return ConfirmedOrderDetailModal(order: order);
+      },
+    );
   }
 
   Widget _buildHeader() {
