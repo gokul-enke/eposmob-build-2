@@ -904,8 +904,8 @@ class _PrintPageState extends State<PrintPage> {
         bytes += generator.row(priceDetailsRow);
       }
       
-      // Add a small separator between items
-      bytes += generator.emptyLines(1);
+      // Remove the empty line separator between items to eliminate spacing
+      // bytes += generator.emptyLines(1);
     }
 
     bytes += generator.hr();
