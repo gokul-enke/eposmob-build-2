@@ -523,37 +523,38 @@ class _PrintPageState extends State<PrintPage> {
       ]);
     }
 
-    // Store Address
+    // Store Address - Only show if data is available
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      final storeAddress =
-          displayConfig?['showStoreAddress']?.value as String? ??
-              'Shop Address';
-      bytes += generator.row([
-        PosColumn(
-          text: storeAddress.isNotEmpty ? storeAddress : 'Shop Address',
-          width: 12,
-          styles: const PosStyles(
-            align: PosAlign.center,
-            height: PosTextSize.size1,
+      final storeAddress = displayConfig?['showStoreAddress']?.value as String?;
+      if (storeAddress != null && storeAddress.isNotEmpty) {
+        bytes += generator.row([
+          PosColumn(
+            text: storeAddress,
+            width: 12,
+            styles: const PosStyles(
+              align: PosAlign.center,
+              height: PosTextSize.size1,
+            ),
           ),
-        ),
-      ]);
+        ]);
+      }
     }
 
-    // Fssai Info
+    // Fssai Info - Only show if data is available
     if (displayConfig?['showFssaiInfo']?.visible == true) {
-      final fssaiInfo =
-          displayConfig?['showFssaiInfo']?.value as String? ?? 'Fssai: xxxx';
-      bytes += generator.row([
-        PosColumn(
-          text: fssaiInfo.isNotEmpty ? fssaiInfo : 'Fssai: xxxx',
-          width: 12,
-          styles: const PosStyles(
-            align: PosAlign.center,
-            height: PosTextSize.size1,
+      final fssaiInfo = displayConfig?['showFssaiInfo']?.value as String?;
+      if (fssaiInfo != null && fssaiInfo.isNotEmpty) {
+        bytes += generator.row([
+          PosColumn(
+            text: fssaiInfo,
+            width: 12,
+            styles: const PosStyles(
+              align: PosAlign.center,
+              height: PosTextSize.size1,
+            ),
           ),
-        ),
-      ]);
+        ]);
+      }
     }
 
     // Telephone
@@ -629,182 +630,96 @@ class _PrintPageState extends State<PrintPage> {
       Map<String, DisplayOption>? displayConfig, bool isFromLocalStorage) {
     List<int> bytes = [];
 
-    // Add table headers based on visibility settings and resolved labels
+    // Determine if we're using 58mm paper for font size adjustment
+    bool is58mm = selectedPaperSize == '58mm';
+
+    // Add table headers with fixed widths as requested
+    // Header: #SL=1, PARTICULARS=3, MRP=2, QTY=2, RATE=2, TOTAL=2 = Total 12
+    
     List<PosColumn> headerColumns = [];
-    int remainingWidth = 12; // Total width must be 12
-
-    // Calculate how many columns are visible
-    int visibleColumns = 0;
-    if (displayConfig?['showSLNumber']?.visible == true) visibleColumns++;
-    if (displayConfig?['showParticulars']?.visible == true) visibleColumns++;
-    if (displayConfig?['showMRP']?.visible == true) visibleColumns++;
-    if (displayConfig?['showQty']?.visible == true) visibleColumns++;
-    if (displayConfig?['showRate']?.visible == true) visibleColumns++;
-    if (displayConfig?['showTotal']?.visible == true) visibleColumns++;
-
-    // Default width allocations - will be adjusted later
-    int slWidth = 1;
-    int particularsWidth = 4;
-    int mrpWidth = 1;
-    int qtyWidth = 1;
-    int rateWidth = 1;
-    int totalWidth = 1;
-
-    // Adjust based on which columns are visible
-    if (visibleColumns == 0) {
-      // No columns visible, just return empty bytes
-      return bytes;
-    } else if (visibleColumns == 1) {
-      // If only one column is visible, it gets all 12 units
-      if (displayConfig?['showSLNumber']?.visible == true)
-        slWidth = 12;
-      else if (displayConfig?['showParticulars']?.visible == true)
-        particularsWidth = 12;
-      else if (displayConfig?['showMRP']?.visible == true)
-        mrpWidth = 12;
-      else if (displayConfig?['showQty']?.visible == true)
-        qtyWidth = 12;
-      else if (displayConfig?['showRate']?.visible == true)
-        rateWidth = 12;
-      else if (displayConfig?['showTotal']?.visible == true) totalWidth = 12;
-    } else {
-      // Multiple columns - allocate based on importance
-      // Give more space to particulars if visible
-      if (displayConfig?['showParticulars']?.visible == true) {
-        particularsWidth = visibleColumns <= 3 ? 6 : 4;
-        remainingWidth -= particularsWidth;
-        visibleColumns--; // Remove particulars from count
-
-        // Distribute remaining width evenly
-        int widthPerColumn = remainingWidth ~/ visibleColumns;
-
-        if (displayConfig?['showSLNumber']?.visible == true)
-          slWidth = widthPerColumn;
-        if (displayConfig?['showMRP']?.visible == true)
-          mrpWidth = widthPerColumn;
-        if (displayConfig?['showQty']?.visible == true)
-          qtyWidth = widthPerColumn;
-        if (displayConfig?['showRate']?.visible == true)
-          rateWidth = widthPerColumn;
-        if (displayConfig?['showTotal']?.visible == true)
-          totalWidth = widthPerColumn;
-
-        // Adjust for any rounding issues to ensure total is 12
-        int allocatedWidth = particularsWidth;
-        if (displayConfig?['showSLNumber']?.visible == true)
-          allocatedWidth += slWidth;
-        if (displayConfig?['showMRP']?.visible == true)
-          allocatedWidth += mrpWidth;
-        if (displayConfig?['showQty']?.visible == true)
-          allocatedWidth += qtyWidth;
-        if (displayConfig?['showRate']?.visible == true)
-          allocatedWidth += rateWidth;
-        if (displayConfig?['showTotal']?.visible == true)
-          allocatedWidth += totalWidth;
-
-        int remainingAdjustment = 12 - allocatedWidth;
-
-        // Add any remaining width to the particulars column
-        if (remainingAdjustment != 0) {
-          particularsWidth += remainingAdjustment;
-        }
-      } else {
-        // Particulars not visible, distribute evenly
-        int widthPerColumn = 12 ~/ visibleColumns;
-        int remainder = 12 % visibleColumns;
-
-        if (displayConfig?['showSLNumber']?.visible == true) {
-          slWidth = widthPerColumn;
-          if (remainder > 0) {
-            slWidth++;
-            remainder--;
-          }
-        }
-        if (displayConfig?['showMRP']?.visible == true) {
-          mrpWidth = widthPerColumn;
-          if (remainder > 0) {
-            mrpWidth++;
-            remainder--;
-          }
-        }
-        if (displayConfig?['showQty']?.visible == true) {
-          qtyWidth = widthPerColumn;
-          if (remainder > 0) {
-            qtyWidth++;
-            remainder--;
-          }
-        }
-        if (displayConfig?['showRate']?.visible == true) {
-          rateWidth = widthPerColumn;
-          if (remainder > 0) {
-            rateWidth++;
-            remainder--;
-          }
-        }
-        if (displayConfig?['showTotal']?.visible == true) {
-          totalWidth = widthPerColumn;
-          if (remainder > 0) {
-            totalWidth++;
-            remainder--;
-          }
-        }
-      }
-    }
-
-    // Now add columns with calculated widths
+    
     if (displayConfig?['showSLNumber']?.visible == true) {
       headerColumns.add(PosColumn(
           text: '#SL',
-          width: slWidth,
-          styles: const PosStyles(align: PosAlign.left, bold: true)));
+          width: 1,
+          styles: PosStyles(
+            align: PosAlign.left, 
+            bold: true,
+            height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+          )));
     }
+    
     if (displayConfig?['showParticulars']?.visible == true) {
-      final label =
-          _billDocumentConfig?.resolvedLabels?.itemName ?? 'PARTICULARS';
+      final label = _billDocumentConfig?.resolvedLabels?.itemName ?? 'PARTICULARS';
+      // Fixed width for header title
+      int particularsWidth = 3;
+      if (displayConfig?['showSLNumber']?.visible != true) {
+        particularsWidth += 1; // Add SL width if SL is not visible
+      }
+      
       headerColumns.add(PosColumn(
           text: label.toUpperCase(),
           width: particularsWidth,
-          styles: const PosStyles(align: PosAlign.left, bold: true)));
+          styles: PosStyles(
+            align: PosAlign.left, 
+            bold: true,
+            height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+          )));
     }
+    
     if (displayConfig?['showMRP']?.visible == true) {
       headerColumns.add(PosColumn(
           text: 'MRP',
-          width: mrpWidth,
-          styles: const PosStyles(align: PosAlign.right, bold: true)));
+          width: 2,
+          styles: PosStyles(
+            align: PosAlign.right, 
+            bold: true,
+            height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+          )));
     }
+    
     if (displayConfig?['showQty']?.visible == true) {
       final label = _billDocumentConfig?.resolvedLabels?.unitName ?? 'QTY';
       headerColumns.add(PosColumn(
           text: label.toUpperCase(),
-          width: qtyWidth,
-          styles: const PosStyles(align: PosAlign.right, bold: true)));
+          width: 2,
+          styles: PosStyles(
+            align: PosAlign.right, 
+            bold: true,
+            height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+          )));
     }
+    
     if (displayConfig?['showRate']?.visible == true) {
       final label = _billDocumentConfig?.resolvedLabels?.priceName ?? 'RATE';
       headerColumns.add(PosColumn(
           text: label.toUpperCase(),
-          width: rateWidth,
-          styles: const PosStyles(align: PosAlign.right, bold: true)));
+          width: 2,
+          styles: PosStyles(
+            align: PosAlign.right, 
+            bold: true,
+            height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+          )));
     }
+    
     if (displayConfig?['showTotal']?.visible == true) {
       final label = _billDocumentConfig?.resolvedLabels?.amountName ?? 'TOTAL';
       headerColumns.add(PosColumn(
           text: label.toUpperCase(),
-          width: totalWidth,
-          styles: const PosStyles(align: PosAlign.right, bold: true)));
+          width: 2,
+          styles: PosStyles(
+            align: PosAlign.right, 
+            bold: true,
+            height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+          )));
     }
-
-    // Debug log to check total width
-    int totalHeaderWidth = headerColumns.fold(0, (sum, col) => sum + col.width);
-    debugPrint("Total header width: $totalHeaderWidth (should be 12)");
-    headerColumns.forEach(
-        (col) => debugPrint("Column '${col.text}': width=${col.width}"));
-
+    
     if (headerColumns.isNotEmpty) {
       bytes += generator.row(headerColumns);
       bytes += generator.hr();
     }
 
+    // Now process each cart item with the new structure
     for (var i = 0; i < cartItems.length; i++) {
       var item = cartItems[i];
 
@@ -828,192 +743,169 @@ class _PrintPageState extends State<PrintPage> {
         totalPrice = item.totalPrice?.toString() ?? '0.00';
       }
 
-      // Handle multi-line product names with better space utilization
       String slNumber = (i + 1).toString();
-
-      // Calculate the width available for product name
-      int productNameWidth = particularsWidth;
-
-      // Determine how much of the product name fits in the allocated width
-      // Approximate character limit based on width (roughly 4-5 chars per width unit)
-      int maxCharsFirstLine = productNameWidth * 4; // Conservative estimate
-
-      if (productName.length <= maxCharsFirstLine) {
-        // Product name fits in one line - show everything in one row
-        List<PosColumn> itemRowColumns = [];
-
-        // Add only visible columns with the calculated widths
-        if (displayConfig?['showSLNumber']?.visible == true) {
-          itemRowColumns.add(PosColumn(
-              text: '#$slNumber',
-              width: slWidth,
-              styles: const PosStyles(align: PosAlign.left)));
-        }
-
-        if (displayConfig?['showParticulars']?.visible == true) {
-          itemRowColumns.add(PosColumn(
-              text: productName,
-              width: particularsWidth,
-              styles: const PosStyles(align: PosAlign.left)));
-        }
-
-        if (displayConfig?['showMRP']?.visible == true) {
-          itemRowColumns.add(PosColumn(
-              text: mrp,
-              width: mrpWidth,
-              styles: const PosStyles(align: PosAlign.right)));
-        }
-
-        if (displayConfig?['showQty']?.visible == true) {
-          itemRowColumns.add(PosColumn(
-              text: quantity,
-              width: qtyWidth,
-              styles: const PosStyles(align: PosAlign.right)));
-        }
-
-        if (displayConfig?['showRate']?.visible == true) {
-          itemRowColumns.add(PosColumn(
-              text: unitPrice,
-              width: rateWidth,
-              styles: const PosStyles(align: PosAlign.right)));
-        }
-
-        if (displayConfig?['showTotal']?.visible == true) {
-          itemRowColumns.add(PosColumn(
-              text: totalPrice,
-              width: totalWidth,
-              styles: const PosStyles(align: PosAlign.right)));
-        }
-
-        // Verify total width
-        int totalItemRowWidth =
-            itemRowColumns.fold(0, (sum, col) => sum + col.width);
-        if (totalItemRowWidth != 12) {
-          debugPrint(
-              "WARNING: Item row $i has total width $totalItemRowWidth (should be 12)");
-        }
-
-        if (itemRowColumns.isNotEmpty) {
-          bytes += generator.row(itemRowColumns);
-        }
-      } else {
-        // Product name is too long - split it across multiple lines
-        String firstLineName = productName.substring(0, maxCharsFirstLine);
-
-        // First line with product name (truncated) + all details
-        List<PosColumn> firstRowColumns = [];
-
-        if (displayConfig?['showSLNumber']?.visible == true) {
-          firstRowColumns.add(PosColumn(
-              text: '#$slNumber',
-              width: slWidth,
-              styles: const PosStyles(align: PosAlign.left)));
-        }
-
-        if (displayConfig?['showParticulars']?.visible == true) {
-          firstRowColumns.add(PosColumn(
-              text: firstLineName,
-              width: particularsWidth,
-              styles: const PosStyles(align: PosAlign.left)));
-        }
-
-        if (displayConfig?['showMRP']?.visible == true) {
-          firstRowColumns.add(PosColumn(
-              text: mrp,
-              width: mrpWidth,
-              styles: const PosStyles(align: PosAlign.right)));
-        }
-
-        if (displayConfig?['showQty']?.visible == true) {
-          firstRowColumns.add(PosColumn(
-              text: quantity,
-              width: qtyWidth,
-              styles: const PosStyles(align: PosAlign.right)));
-        }
-
-        if (displayConfig?['showRate']?.visible == true) {
-          firstRowColumns.add(PosColumn(
-              text: unitPrice,
-              width: rateWidth,
-              styles: const PosStyles(align: PosAlign.right)));
-        }
-
-        if (displayConfig?['showTotal']?.visible == true) {
-          firstRowColumns.add(PosColumn(
-              text: totalPrice,
-              width: totalWidth,
-              styles: const PosStyles(align: PosAlign.right)));
-        }
-
-        if (firstRowColumns.isNotEmpty) {
-          bytes += generator.row(firstRowColumns);
-        }
-
-        // Continuation lines for remaining product name
-        String remainingName = productName.substring(maxCharsFirstLine);
-        while (remainingName.isNotEmpty) {
-          int maxCharsThisLine = maxCharsFirstLine;
-          String thisLineName = remainingName.length <= maxCharsThisLine
-              ? remainingName
-              : remainingName.substring(0, maxCharsThisLine);
-
-          List<PosColumn> continuationRowColumns = [];
-
-          // Empty space for serial number
-          if (displayConfig?['showSLNumber']?.visible == true) {
-            continuationRowColumns.add(PosColumn(
-                text: '',
-                width: slWidth,
-                styles: const PosStyles(align: PosAlign.left)));
-          }
-
-          // Continuation of product name
-          if (displayConfig?['showParticulars']?.visible == true) {
-            continuationRowColumns.add(PosColumn(
-                text: thisLineName,
-                width: particularsWidth,
-                styles: const PosStyles(align: PosAlign.left)));
-          }
-
-          // Empty spaces for other columns
-          if (displayConfig?['showMRP']?.visible == true) {
-            continuationRowColumns.add(PosColumn(
-                text: '',
-                width: mrpWidth,
-                styles: const PosStyles(align: PosAlign.right)));
-          }
-
-          if (displayConfig?['showQty']?.visible == true) {
-            continuationRowColumns.add(PosColumn(
-                text: '',
-                width: qtyWidth,
-                styles: const PosStyles(align: PosAlign.right)));
-          }
-
-          if (displayConfig?['showRate']?.visible == true) {
-            continuationRowColumns.add(PosColumn(
-                text: '',
-                width: rateWidth,
-                styles: const PosStyles(align: PosAlign.right)));
-          }
-
-          if (displayConfig?['showTotal']?.visible == true) {
-            continuationRowColumns.add(PosColumn(
-                text: '',
-                width: totalWidth,
-                styles: const PosStyles(align: PosAlign.right)));
-          }
-
-          if (continuationRowColumns.isNotEmpty) {
-            bytes += generator.row(continuationRowColumns);
-          }
-
-          // Move to next part
-          remainingName = remainingName.length <= maxCharsThisLine
-              ? ''
-              : remainingName.substring(maxCharsThisLine);
-        }
+      
+      // First row: SL# + Product Name (product name takes full width, not header width)
+      List<PosColumn> productNameRow = [];
+      
+      if (displayConfig?['showSLNumber']?.visible == true) {
+        productNameRow.add(PosColumn(
+            text: '#$slNumber',
+            width: 1,
+            styles: PosStyles(
+              align: PosAlign.left,
+              height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+            )));
       }
+      
+      if (displayConfig?['showParticulars']?.visible == true) {
+        // Product name takes full width: 11 (when SL visible) or 12 (when SL hidden)
+        int productNameWidth = displayConfig?['showSLNumber']?.visible == true ? 11 : 12;
+        
+        // Calculate character limit for product name based on width
+        // Use a more conservative estimate for character wrapping
+        int maxCharsPerLine = productNameWidth * 3; // Reduced from 4 to 3 for better wrapping
+        
+        if (productName.length <= maxCharsPerLine) {
+          // Product name fits in one line - takes full width
+          productNameRow.add(PosColumn(
+              text: productName,
+              width: productNameWidth,
+              styles: PosStyles(
+                align: PosAlign.left,
+                height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+              )));
+          
+          bytes += generator.row(productNameRow);
+        } else {
+          // Product name needs multiple lines - split properly
+          String remainingName = productName;
+          bool isFirstLine = true;
+          
+          while (remainingName.isNotEmpty) {
+            String currentLine;
+            
+            if (remainingName.length <= maxCharsPerLine) {
+              // Remaining text fits in current line
+              currentLine = remainingName;
+              remainingName = '';
+            } else {
+              // Find a good break point (prefer breaking at spaces)
+              int breakPoint = maxCharsPerLine;
+              
+              // Look for a space near the break point to avoid cutting words
+              for (int i = maxCharsPerLine - 1; i >= maxCharsPerLine - 10 && i >= 0; i--) {
+                if (i < remainingName.length && remainingName[i] == ' ') {
+                  breakPoint = i;
+                  break;
+                }
+              }
+              
+              currentLine = remainingName.substring(0, breakPoint).trim();
+              remainingName = remainingName.substring(breakPoint).trim();
+            }
+            
+            List<PosColumn> nameLineRow = [];
+            
+            if (isFirstLine && displayConfig?['showSLNumber']?.visible == true) {
+              nameLineRow.add(PosColumn(
+                  text: '#$slNumber',
+                  width: 1,
+                  styles: PosStyles(
+                    align: PosAlign.left,
+                    height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+                  )));
+            } else if (!isFirstLine && displayConfig?['showSLNumber']?.visible == true) {
+              // Empty space for SL column on continuation lines
+              nameLineRow.add(PosColumn(
+                  text: '',
+                  width: 1,
+                  styles: PosStyles(align: PosAlign.left)));
+            }
+            
+            nameLineRow.add(PosColumn(
+                text: currentLine,
+                width: productNameWidth,
+                styles: PosStyles(
+                  align: PosAlign.left,
+                  height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+                 )));
+            
+            bytes += generator.row(nameLineRow);
+            isFirstLine = false;
+          }
+        }
+      } else if (displayConfig?['showSLNumber']?.visible == true) {
+        // Only SL number, no product name - fill the row to width 12
+        productNameRow.add(PosColumn(
+            text: '#$slNumber',
+            width: 1,
+            styles: PosStyles(
+              align: PosAlign.left,
+              height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+            )));
+        productNameRow.add(PosColumn(
+            text: '',
+            width: 11,
+            styles: PosStyles(align: PosAlign.left)));
+        bytes += generator.row(productNameRow);
+      }
+      
+      // Second row: Price details with new width specifications
+      List<PosColumn> priceDetailsRow = [];
+      
+      // Add empty space for SL column (width 1)
+      if (displayConfig?['showSLNumber']?.visible == true) {
+        priceDetailsRow.add(PosColumn(
+            text: '',
+            width: 1,
+            styles: PosStyles(align: PosAlign.left)));
+      }
+      
+      // Add price columns with new exact widths
+      if (displayConfig?['showMRP']?.visible == true) {
+        priceDetailsRow.add(PosColumn(
+            text: mrp,
+            width: 3,
+            styles: PosStyles(
+              align: PosAlign.right,
+              height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+            )));
+      }
+      if (displayConfig?['showQty']?.visible == true) {
+        priceDetailsRow.add(PosColumn(
+            text: quantity,
+            width: 2,
+            styles: PosStyles(
+              align: PosAlign.right,
+              height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+            )));
+      }
+      if (displayConfig?['showRate']?.visible == true) {
+        priceDetailsRow.add(PosColumn(
+            text: unitPrice,
+            width: 3,
+            styles: PosStyles(
+              align: PosAlign.right,
+              height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+            )));
+      }
+      if (displayConfig?['showTotal']?.visible == true) {
+        priceDetailsRow.add(PosColumn(
+            text: totalPrice,
+            width: 3,
+            styles: PosStyles(
+              align: PosAlign.right,
+              height: is58mm ? PosTextSize.size1 : PosTextSize.size1
+            )));
+      }
+      
+      if (priceDetailsRow.isNotEmpty) {
+        bytes += generator.row(priceDetailsRow);
+      }
+      
+      // Add a small separator between items
+      bytes += generator.emptyLines(1);
     }
 
     bytes += generator.hr();
@@ -1202,25 +1094,32 @@ class _PrintPageState extends State<PrintPage> {
       return [];
     }
 
-    debugPrint("Generating Terms & Conditions (enabled in settings)");
+    // Only show terms if actual data is available from API
+    String? terms = _billDocumentConfig?.terms;
+    if (terms == null || terms.trim().isEmpty) {
+      debugPrint("No Terms & Conditions data available from API, skipping");
+      return [];
+    }
+
+    debugPrint("Generating Terms & Conditions (enabled in settings with data)");
 
     List<int> bytes = [];
 
     // Add header text based on displayConfig value or default
     final termsHeader =
         displayConfig?['showTermsConditions']?.value as String? ??
-            'Terms & Conditions'; // Using the value if available
+            'Terms & Conditions';
     bytes += generator.text(
         termsHeader.isNotEmpty ? termsHeader : 'Terms & Conditions',
         styles: const PosStyles(bold: true, align: PosAlign.left));
 
-    // Use the terms from DocumentConfig as the content
-    String terms = _billDocumentConfig?.terms ?? 'No terms provided.';
-
+    // Use the terms from DocumentConfig (already validated as non-empty)
     List<String> termsList = terms.split('\n');
     for (var term in termsList) {
-      bytes +=
-          generator.text(term, styles: const PosStyles(align: PosAlign.left));
+      if (term.trim().isNotEmpty) {
+        bytes +=
+            generator.text(term, styles: const PosStyles(align: PosAlign.left));
+      }
     }
 
     bytes += generator.hr();
@@ -1750,22 +1649,23 @@ class _PrintPageState extends State<PrintPage> {
                           ),
                         ),
 
-                      // Store address
-                      if (updatedSettings?['showStoreAddress']?.visible == true)
-                        pw.Text(
-                          updatedSettings?['showStoreAddress']?.value
-                                  as String? ??
-                              'Shop Address',
-                          style: bodyStyle,
-                        ),
+                      // Store address - Only show if data is available
+                      if (updatedSettings?['showStoreAddress']?.visible == true) ...[
+                        if ((updatedSettings?['showStoreAddress']?.value as String?)?.isNotEmpty == true)
+                          pw.Text(
+                            updatedSettings!['showStoreAddress']!.value as String,
+                            style: bodyStyle,
+                          ),
+                      ],
 
-                      // FSSAI info
-                      if (updatedSettings?['showFssaiInfo']?.visible == true)
-                        pw.Text(
-                          updatedSettings?['showFssaiInfo']?.value as String? ??
-                              'Fssai: xxxx',
-                          style: bodyStyle,
-                        ),
+                      // FSSAI info - Only show if data is available
+                      if (updatedSettings?['showFssaiInfo']?.visible == true) ...[
+                        if ((updatedSettings?['showFssaiInfo']?.value as String?)?.isNotEmpty == true)
+                          pw.Text(
+                            updatedSettings!['showFssaiInfo']!.value as String,
+                            style: bodyStyle,
+                          ),
+                      ],
 
                       // Contact information (Tel and Email)
                       if (updatedSettings?['showTel']?.visible == true)
@@ -1973,27 +1873,28 @@ class _PrintPageState extends State<PrintPage> {
                       pw.SizedBox(height: 10),
                     ],
 
-                    // Terms & Conditions - Only show if enabled in settings
-                    if (updatedSettings?['showTermsConditions']?.visible ==
-                        true) ...[
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text('Terms & Conditions:', // Fixed label
-                              style: pw.TextStyle(
-                                  fontSize:
-                                      selectedPaperSize == 'A5' ? 7.0 : 10.0,
-                                  fontWeight: pw.FontWeight.bold)),
-                          pw.SizedBox(height: 5),
-                          ..._buildTermsConditionsList(
-                              updatedSettings?['showTermsConditions']?.value
-                                      as String? ??
-                                  _billDocumentConfig?.terms ??
-                                  '1. Replace or Return only within 7 Days of Purchase.\n2. Replace only with Bill.\n3. Warranty as per manufacturer terms and conditions.',
-                              smallStyle),
-                        ],
-                      ),
-                      pw.SizedBox(height: 10),
+                    // Terms & Conditions - Only show if enabled and data is available
+                    if (updatedSettings?['showTermsConditions']?.visible == true) ...[
+                      // Only show if actual terms data is available
+                      if (_billDocumentConfig?.terms != null && _billDocumentConfig!.terms!.trim().isNotEmpty) ...[
+                        pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text('Terms & Conditions:', // Fixed label
+                                style: pw.TextStyle(
+                                    fontSize:
+                                        selectedPaperSize == 'A5' ? 7.0 : 10.0,
+                                    fontWeight: pw.FontWeight.bold)),
+                            pw.SizedBox(height: 5),
+                            ..._buildTermsConditionsList(
+                                updatedSettings?['showTermsConditions']?.value
+                                        as String? ??
+                                    _billDocumentConfig!.terms!,
+                                smallStyle),
+                          ],
+                        ),
+                        pw.SizedBox(height: 10),
+                      ],
                     ],
                   ],
                 ),
