@@ -731,16 +731,16 @@ class _PrintPageState extends State<PrintPage> {
 
       if (isFromLocalStorage) {
         productName = item['productName'] ?? '';
-        mrp = item['mrp'] ?? '0.00';
+        mrp = (double.tryParse(item['mrp']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
         quantity = item['quantity'] ?? '0';
-        unitPrice = item['unitPrice'] ?? '0.00';
-        totalPrice = item['totalPrice'] ?? '0.00';
+        unitPrice = (double.tryParse(item['unitPrice']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
+        totalPrice = (double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
       } else {
         productName = item.productName ?? '';
-        mrp = item.mrp?.toString() ?? '0.00';
+        mrp = (double.tryParse(item.mrp?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
         quantity = item.quantity?.toString() ?? '0';
-        unitPrice = item.unitPrice?.toString() ?? '0.00';
-        totalPrice = item.totalPrice?.toString() ?? '0.00';
+        unitPrice = (double.tryParse(item.unitPrice?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
+        totalPrice = (double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
       }
 
       String slNumber = (i + 1).toString();
@@ -2102,16 +2102,16 @@ class _PrintPageState extends State<PrintPage> {
 
       if (widget.isFromLocalStorage) {
         productName = item['productName'] ?? '';
-        mrp = item['mrp'] ?? '0.00';
+        mrp = (double.tryParse(item['mrp']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
         quantity = item['quantity'] ?? '0';
-        unitPrice = item['unitPrice'] ?? '0.00';
-        totalPrice = item['totalPrice'] ?? '0.00';
+        unitPrice = (double.tryParse(item['unitPrice']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
+        totalPrice = (double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
       } else {
         productName = item.productName ?? '';
-        mrp = item.mrp?.toString() ?? '0.00';
+        mrp = (double.tryParse(item.mrp?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
         quantity = item.quantity?.toString() ?? '0';
-        unitPrice = item.unitPrice?.toString() ?? '0.00';
-        totalPrice = item.totalPrice?.toString() ?? '0.00';
+        unitPrice = (double.tryParse(item.unitPrice?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
+        totalPrice = (double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0.0).toStringAsFixed(2);
       }
 
       // Smart product name handling for PDF - Let PDF table handle wrapping naturally
