@@ -3,9 +3,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/widgets/stock_selection_modal.dart';
+import 'package:pos_machine/models/get_product.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -61,6 +64,147 @@ class _SideBarProductListState extends State<SideBarProductList> {
     _searchProductController.dispose();
     _categoryScrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleProductSelection(GetProduct product) async {
+    debugPrint("=== SIDEBAR PRODUCT VIEW DEBUG ===");
+    debugPrint("Product selected: ${product.productName}");
+    debugPrint("Product ID: ${product.productId}");
+    debugPrint("Product base price: ${product.price?.price ?? 'null'}");
+    debugPrint("Product MRP: ${product.mrp ?? 'null'}");
+    debugPrint("Product has ${product.stock?.length ?? 0} stock entries");
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final generalSettingsProvider =
+        Provider.of<GeneralSettingsProvider>(context, listen: false);
+
+    // Check if stock management is enabled
+    bool stockEnabled = generalSettingsProvider.generalSettings?.stockEnabled ?? false;
+    debugPrint("Stock management enabled: $stockEnabled");
+
+    if (!stockEnabled) {
+      debugPrint("Stock management disabled, adding product directly...");
+      
+      if (widget.onProductSelected != null) {
+        widget.onProductSelected!(product);
+      } else {
+        localProductProvider.addToCart(
+          product: product,
+        );
+
+        showScaffold(
+          context: context,
+          message: 'Added To Cart',
+        );
+      }
+      debugPrint("=== END SIDEBAR PRODUCT VIEW DEBUG ===");
+      return;
+    }
+
+    // Check if product has multiple stock options
+    if (product.stock != null && product.stock!.length > 1) {
+      debugPrint("Multiple stock entries detected, filtering available stocks...");
+      
+      // Filter available stock options (quantity > 0)
+      List<Stock> availableStocks = product.stock!
+          .where((stock) => stock.quantity != null && stock.quantity! > 0)
+          .toList();
+
+      debugPrint("Available stocks after filtering: ${availableStocks.length}");
+      for (int i = 0; i < availableStocks.length; i++) {
+        Stock stock = availableStocks[i];
+        debugPrint("  Stock $i: ID=${stock.id}, Price=${stock.price}, MRP=${stock.mrp}, Qty=${stock.quantity}");
+      }
+
+      if (availableStocks.length > 1) {
+        debugPrint("Showing stock selection modal for user choice...");
+        
+        // Show stock selection modal
+        final result = await showDialog(
+          context: context,
+          builder: (context) => StockSelectionModal(
+            product: product,
+            stockOptions: availableStocks,
+          ),
+        );
+
+        if (result != null) {
+          debugPrint("User selected stock from modal");
+          
+          // Process the selected product and stock
+          GetProduct selectedProduct = result['product'];
+          Stock selectedStock = result['stock'];
+
+          debugPrint("Selected stock: ID=${selectedStock.id}, Price=${selectedStock.price}, MRP=${selectedStock.mrp}");
+
+          double stockPrice = double.tryParse(selectedStock.price ?? "0") ?? 0;
+          double stockMrp = double.tryParse(selectedStock.mrp ?? "0") ?? 0;
+
+          debugPrint("Adding to cart: Price=${stockPrice}, MRP=${stockMrp}");
+
+          // Always add to cart directly with selected stock information
+          localProductProvider.addToCart(
+            product: selectedProduct,
+            price: stockPrice,
+            mrp: stockMrp,
+            selectedStock: selectedStock,
+          );
+
+          showScaffold(
+            context: context,
+            message: 'Added To Cart',
+          );
+        } else {
+          debugPrint("User cancelled stock selection");
+        }
+      } else if (availableStocks.isNotEmpty) {
+        debugPrint("Single available stock found, auto-selecting...");
+        
+        // Single stock option available, use it
+        Stock stock = availableStocks.first;
+
+        debugPrint("Auto-selected stock: ID=${stock.id}, Price=${stock.price}, MRP=${stock.mrp}, Qty=${stock.quantity}");
+
+        double stockPrice = double.tryParse(stock.price ?? "0") ?? 0;
+        double stockMrp = double.tryParse(stock.mrp ?? "0") ?? 0;
+
+        debugPrint("Adding to cart with single stock: Price=${stockPrice}, MRP=${stockMrp}");
+
+        // Always add to cart directly with selected stock information
+        localProductProvider.addToCart(
+          product: product,
+          price: stockPrice,
+          mrp: stockMrp,
+          selectedStock: stock,
+        );
+
+        showScaffold(
+          context: context,
+          message: 'Added To Cart',
+        );
+      } else {
+        debugPrint("No available stock found (all stocks have 0 quantity)");
+        
+        showScaffold(
+          context: context,
+          message: "No stock available for this product.",
+        );
+      }
+    } else {
+      debugPrint("Product has single or no stock entries, using auto-selection logic...");
+      
+      // Always add to cart directly - let the addToCart method handle auto-selection for single stock
+      localProductProvider.addToCart(
+        product: product,
+      );
+
+      showScaffold(
+        context: context,
+        message: 'Added To Cart',
+      );
+    }
+    debugPrint("=== END SIDEBAR PRODUCT VIEW DEBUG ===");
   }
 
   @override
@@ -468,14 +612,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
 
                               return GestureDetector(
                                 behavior: HitTestBehavior.opaque,
-                                onTap: () {
-                                  debugPrint("Product: $product");
-                                  if (widget.onProductSelected != null) {
-                                    widget.onProductSelected!(product);
-                                  } else {
-                                    _addToCart(context, product, customerId);
-                                  }
-                                },
+                                onTap: () => _handleProductSelection(product),
                                 child: Container(
                                   decoration: BoxDecoration(
                                     color: Colors.white,

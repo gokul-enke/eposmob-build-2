@@ -306,15 +306,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                               autocompleteProductKey: _autocompleteProductKey,
                               // autoCompletefocusNode: FocusNode(),
                               size: size,
-                              onSelected: (GetProduct selectedProduct) {
-                                setState(() {
-                                  selectedProductIdController.text =
-                                      selectedProduct.productId.toString();
-                                  unitPriceController.text =
-                                      selectedProduct.price?.price ?? '';
-                                  quantityController.text = '1';
-                                });
-                              },
+                              onSelected: (GetProduct selectedProduct,
+                                  Stock? selectedStock) {},
                               productList: productProvider.productList!,
                             ),
                           ),

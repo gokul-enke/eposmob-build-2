@@ -105,7 +105,7 @@ class OrderHeader extends StatelessWidget {
                               autofocus: !appSettingsProvider
                                   .appSettings!.barcodeSales,
                               size: size,
-                              onSelected: (selectedProduct) {
+                              onSelected: (selectedProduct, selectedStock) {
                                 selectedProductIdController.text =
                                     selectedProduct.productId.toString();
                                 unitPriceController.text =

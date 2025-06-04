@@ -30,7 +30,7 @@ class GeneralSettingsProvider with ChangeNotifier {
         throw Exception('Failed to load general settings');
       }
     } catch (error) {
-      print("Error fetching general settings: $error");
+      debugPrint("Error fetching general settings: $error");
     } finally {
       _loading = false;
       notifyListeners();

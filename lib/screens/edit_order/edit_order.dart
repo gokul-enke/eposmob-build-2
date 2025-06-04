@@ -593,7 +593,7 @@ class _EditOrderState extends State<EditOrder> {
                             autofocus:
                                 !appSettingsProvider.appSettings!.barcodeSales,
                             size: size,
-                            onSelected: (GetProduct selectedProduct) {
+                            onSelected: (GetProduct selectedProduct, Stock? selectedStock) {
                               setState(() {
                                 selectedProductIdController.text =
                                     selectedProduct.productId.toString();

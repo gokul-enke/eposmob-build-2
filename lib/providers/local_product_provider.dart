@@ -96,6 +96,10 @@ class LocalProductProvider extends ChangeNotifier {
   GetProduct? _selectedProduct;
   GetProduct? get selectedProduct => _selectedProduct;
 
+  // Currently selected stock (for the selected product).
+  Stock? _selectedStock;
+  Stock? get selectedStock => _selectedStock;
+
   // Local offline cart state.
   final List<LocalCartItem> _cartItems = [];
   List<LocalCartItem> get cartItems => _cartItems;
@@ -417,8 +421,20 @@ class LocalProductProvider extends ChangeNotifier {
     return total;
   }
 
+  /// Sets the selected product and optionally the selected stock for product details.
+  void callProductDetails(int productId, {Stock? selectedStock}) {
+    GetProduct product = _products.firstWhere(
+      (product) => product.productId == productId,
+    );
+    _selectedProduct = product;
+    _selectedStock = selectedStock;
+    notifyListeners();
+  }
+
+  /// Resets the selected product and stock.
   void resetSelectedProduct() {
     _selectedProduct = null;
+    _selectedStock = null;
     notifyListeners();
   }
 
@@ -630,17 +646,6 @@ class LocalProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Sets the selected product based on [productId] to show product details.
-  void callProductDetails(int productId) {
-    try {
-      _selectedProduct =
-          _products.firstWhere((product) => product.productId == productId);
-    } catch (e) {
-      _selectedProduct = null;
-    }
-    notifyListeners();
-  }
-
   /// Adds a [product] to the local cart with a specified [quantity].
   /// If the product already exists in the cart, its quantity is incremented.
   /// Optionally updates the price of the cart item if provided.
@@ -664,6 +669,8 @@ class LocalProductProvider extends ChangeNotifier {
     if (productId != null) {
       product = _products.firstWhere((p) => p.productId == productId);
     }
+
+
 
     int index = _cartItems.indexWhere((item) =>
         item.product.productId == product!.productId &&
@@ -691,7 +698,7 @@ class LocalProductProvider extends ChangeNotifier {
         _cartItems[index].mrp = mrp;
       } else if (selectedStock != null && selectedStock.mrp != null) {
         _cartItems[index].mrp =
-            double.tryParse(selectedStock.mrp!); // Use stock price
+            double.tryParse(selectedStock.mrp!); // Use stock MRP
       } else {
         _cartItems[index].mrp = _cartItems[index].mrp ??
             (product!.mrp != null ? double.tryParse(product.mrp!) : 0.0);
@@ -729,6 +736,7 @@ class LocalProductProvider extends ChangeNotifier {
             product: product!,
             quantity: quantity!,
             price: productPrice,
+            mrp: productMrp,
             selectedStock: selectedStock,
           ));
     }
