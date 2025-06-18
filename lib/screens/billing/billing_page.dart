@@ -47,6 +47,96 @@ class BillingPage extends StatefulWidget {
   State<BillingPage> createState() => BillingPageState();
 }
 
+// Custom widget for price text field with stable controller and focus node
+class _PriceTextField extends StatefulWidget {
+  final dynamic item;
+  final dynamic localProductProvider;
+
+  const _PriceTextField({
+    Key? key,
+    required this.item,
+    required this.localProductProvider,
+  }) : super(key: key);
+
+  @override
+  State<_PriceTextField> createState() => _PriceTextFieldState();
+}
+
+class _PriceTextFieldState extends State<_PriceTextField> {
+  late TextEditingController controller;
+  late FocusNode focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = TextEditingController(text: widget.item.price.toString());
+    focusNode = FocusNode();
+  }
+
+  @override
+  void didUpdateWidget(_PriceTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update controller text if price has changed
+    if (oldWidget.item.price != widget.item.price) {
+      controller.text = widget.item.price.toString();
+    }
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      textAlign: TextAlign.left,
+      controller: controller,
+      focusNode: focusNode,
+      keyboardType: TextInputType.number,
+      style: const TextStyle(fontSize: 12),
+      decoration: const InputDecoration(
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        border: InputBorder.none,
+        hintText: 'Price',
+        hintStyle: TextStyle(
+          color: Colors.grey,
+          fontSize: 12,
+        ),
+      ),
+      onTap: () {
+        // Use a post-frame callback to ensure text selection happens after the tap is processed
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (controller.text.isNotEmpty && focusNode.hasFocus) {
+            controller.selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: controller.text.length,
+            );
+          }
+        });
+      },
+      onChanged: (newPrice) {
+        // Update immediately on change
+        widget.localProductProvider.updateItemPrice(
+          widget.item.product.productId!,
+          widget.item.selectedStock,
+          double.tryParse(newPrice) ?? widget.item.price!,
+        );
+      },
+      onSubmitted: (newPrice) {
+        widget.localProductProvider.updateItemPrice(
+          widget.item.product.productId!,
+          widget.item.selectedStock,
+          double.tryParse(newPrice) ?? widget.item.price!,
+        );
+      },
+    );
+  }
+}
+
 class BillingPageState extends State<BillingPage> {
   final TextEditingController mobileNumberTextController =
       TextEditingController();
@@ -61,6 +151,9 @@ class BillingPageState extends State<BillingPage> {
 
   GlobalKey _autocompletePhoneKey = GlobalKey();
   GlobalKey _autocompleteProductKey = GlobalKey();
+  
+  // Flag to track if user has manually changed the paid amount
+  bool _userChangedPaidAmount = false;
 
   String? mobileNumberText = "";
   String? salesExecutivemobileNumberText = "";
@@ -1597,65 +1690,10 @@ class BillingPageState extends State<BillingPage> {
                                           vertical: 2),
                                       child: SizedBox(
                                         width: 70,
-                                        child: Builder(builder: (context) {
-                                          final TextEditingController
-                                              controller =
-                                              TextEditingController(
-                                                  text: item.price.toString());
-                                          final FocusNode focusNode =
-                                              FocusNode();
-
-                                          focusNode.addListener(() {
-                                            if (focusNode.hasFocus) {
-                                              controller.selection =
-                                                  TextSelection(
-                                                baseOffset: 0,
-                                                extentOffset:
-                                                    controller.text.length,
-                                              );
-                                            } else {
-                                              localProductProvider
-                                                  .updateItemPrice(
-                                                item.product.productId!,
-                                                item.selectedStock,
-                                                double.tryParse(
-                                                        controller.text) ??
-                                                    item.price!,
-                                              );
-                                            }
-                                          });
-
-                                          return TextField(
-                                            textAlign: TextAlign.left,
-                                            controller: controller,
-                                            focusNode: focusNode,
-                                            keyboardType: TextInputType.number,
-                                            style:
-                                                const TextStyle(fontSize: 12),
-                                            decoration: const InputDecoration(
-                                              isDense: true,
-                                              contentPadding:
-                                                  EdgeInsets.symmetric(
-                                                      vertical: 6,
-                                                      horizontal: 4),
-                                              border: InputBorder.none,
-                                              hintText: 'Price',
-                                              hintStyle: TextStyle(
-                                                color: Colors.grey,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                            onSubmitted: (newPrice) {
-                                              localProductProvider
-                                                  .updateItemPrice(
-                                                item.product.productId!,
-                                                item.selectedStock,
-                                                double.tryParse(newPrice) ??
-                                                    item.price!,
-                                              );
-                                            },
-                                          );
-                                        }),
+                                        child: _PriceTextField(
+                                          item: item,
+                                          localProductProvider: localProductProvider,
+                                        ),
                                       ),
                                     ),
                                     flex: 1,
@@ -1868,6 +1906,7 @@ class BillingPageState extends State<BillingPage> {
                             listen: false);
                     _paidAmountController.text =
                         localProductProvider.cartTotal.toStringAsFixed(3);
+                    _userChangedPaidAmount = false; // Reset flag since this is auto-set
                     _getBalanceAmount(); // Update balance immediately
                   });
                 },
@@ -1906,6 +1945,7 @@ class BillingPageState extends State<BillingPage> {
                             listen: false);
                     _paidAmountController.text =
                         localProductProvider.cartTotal.toStringAsFixed(3);
+                    _userChangedPaidAmount = false; // Reset flag since this is auto-set
                     _getBalanceAmount(); // Update balance immediately
                   });
                 },
@@ -1945,6 +1985,7 @@ class BillingPageState extends State<BillingPage> {
                             listen: false);
                     _paidAmountController.text =
                         localProductProvider.cartTotal.toStringAsFixed(3);
+                    _userChangedPaidAmount = false; // Reset flag since this is auto-set
                     _getBalanceAmount(); // Update balance immediately
                   });
                 },
@@ -1994,15 +2035,17 @@ class BillingPageState extends State<BillingPage> {
           ),
         ),
         if (iconColor == 1 || iconColor == 2 || iconColor == 3)
-          Consumer<LocalProductProvider>(
+                            Consumer<LocalProductProvider>(
             builder: (context, localProductProvider, child) {
               // Use addPostFrameCallback to defer the update
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 // Check if the widget is still mounted, a payment method is selected,
                 // AND the paid amount field does NOT have focus.
+                // Only auto-update if user hasn't manually changed the paid amount
                 if (mounted &&
                     (iconColor == 1 || iconColor == 2 || iconColor == 3) &&
-                    !_paidAmountFocusNode.hasFocus) {
+                    !_paidAmountFocusNode.hasFocus &&
+                    !_userChangedPaidAmount) {
                   // Add this condition
                   final newPaidAmount =
                       localProductProvider.cartTotal.toStringAsFixed(3);
@@ -2030,19 +2073,20 @@ class BillingPageState extends State<BillingPage> {
                     ),
                     color: ColorManager.textColor,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: buildColumnWidgetForTextFields(
-                      controller: _paidAmountController,
-                      size: size,
-                      onchanged: (value) {
-                        _getBalanceAmount();
-                      },
-                      focusNode: _paidAmountFocusNode, // Add this line
-                      height: size.height * .06,
-                      hintText: 'Enter Paid Amount Here:',
+                                      Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: buildColumnWidgetForTextFields(
+                        controller: _paidAmountController,
+                        size: size,
+                        onchanged: (value) {
+                          _userChangedPaidAmount = true; // Mark as manually changed
+                          _getBalanceAmount();
+                        },
+                        focusNode: _paidAmountFocusNode, // Add this line
+                        height: size.height * .06,
+                        hintText: 'Enter Paid Amount Here:',
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 10),
                   BuildPaymentRow(
                     amount: "INR ${_balanceAmount.toStringAsFixed(3)}",
@@ -2739,6 +2783,7 @@ class BillingPageState extends State<BillingPage> {
         _transactionNumberController.clear();
         _paidAmountController.clear();
         _balanceAmount = 0;
+        _userChangedPaidAmount = false; // Reset paid amount flag
         _autocompleteProductKey = GlobalKey();
         quantityController.clear();
         barcodeController.clear();
@@ -2842,6 +2887,7 @@ class BillingPageState extends State<BillingPage> {
         _transactionNumberController.clear();
         _paidAmountController.clear();
         _balanceAmount = 0;
+        _userChangedPaidAmount = false; // Reset paid amount flag
         _carNumberController.clear();
         _commentController.clear();
       });
@@ -2962,6 +3008,7 @@ class BillingPageState extends State<BillingPage> {
         _transactionNumberController.clear();
         _paidAmountController.clear();
         _balanceAmount = 0;
+        _userChangedPaidAmount = false; // Reset paid amount flag
         _carNumberController.clear();
         _commentController.clear();
       });
@@ -3167,6 +3214,7 @@ class BillingPageState extends State<BillingPage> {
               _transactionNumberController.clear();
               _paidAmountController.clear();
               _balanceAmount = 0;
+              _userChangedPaidAmount = false; // Reset paid amount flag
               _carNumberController.clear();
               _commentController.clear();
             });
@@ -3318,6 +3366,7 @@ class BillingPageState extends State<BillingPage> {
               _transactionNumberController.clear();
               _paidAmountController.clear();
               _balanceAmount = 0;
+              _userChangedPaidAmount = false; // Reset paid amount flag
               _carNumberController.clear();
               _commentController.clear();
             });
@@ -3419,6 +3468,7 @@ class BillingPageState extends State<BillingPage> {
       _autocompletePhoneKey = GlobalKey(); // Reset the key to force rebuild
       _autocompleteProductKey = GlobalKey(); // Reset the key to force rebuild
       isCustomerFound = false;
+      _userChangedPaidAmount = false; // Reset paid amount flag
       _fetchCustomers();
       deliveryMethodId = "3";
       deliveryMethod = "Store Takeaway";

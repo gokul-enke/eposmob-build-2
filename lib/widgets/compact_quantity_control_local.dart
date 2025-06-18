@@ -38,6 +38,7 @@ class CompactQuantityControlLocal extends StatefulWidget {
 class _CompactQuantityControlLocalState
     extends State<CompactQuantityControlLocal> {
   late TextEditingController _controller;
+  late FocusNode _focusNode;
   late num _currentQuantity;
   Timer? _debounceTimer;
   bool _isUpdating = false;
@@ -50,6 +51,17 @@ class _CompactQuantityControlLocalState
     super.initState();
     _currentQuantity = widget.quantity;
     _controller = TextEditingController(text: _currentQuantity.toString());
+    _focusNode = FocusNode();
+    
+    // Add listener to focus node to handle quantity changes when focus is lost
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus) {
+        num? newQuantity = num.tryParse(_controller.text);
+        if (newQuantity != null) {
+          _handleQuantityChange(newQuantity);
+        }
+      }
+    });
   }
 
   @override
@@ -69,6 +81,7 @@ class _CompactQuantityControlLocalState
   void dispose() {
     _debounceTimer?.cancel();
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -151,50 +164,41 @@ class _CompactQuantityControlLocalState
         ),
         SizedBox(
           width: 32,
-          child: Builder(builder: (context) {
-            final FocusNode focusNode = FocusNode();
-
-            // Add listener to focus node to select all text when focused
-            focusNode.addListener(() {
-              debugPrint('focusNode.hasFocus: ${focusNode.hasFocus}');
-              if (focusNode.hasFocus) {
-                _controller.selection = TextSelection(
-                  baseOffset: 0,
-                  extentOffset: _controller.text.length,
-                );
-              } else {
-                num? newQuantity = num.tryParse(_controller.text);
-                if (newQuantity != null) {
-                  _handleQuantityChange(newQuantity);
+          child: TextField(
+            controller: _controller,
+            keyboardType: TextInputType.number,
+            focusNode: _focusNode,
+            style: const TextStyle(fontSize: 12),
+            inputFormatters: [
+              if (widget.productUnit == 'KG' || widget.productUnit == 'LT')
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+              if (widget.productUnit != 'LT' && widget.productUnit != 'KG')
+                FilteringTextInputFormatter.digitsOnly,
+            ],
+            textAlign: TextAlign.center,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(vertical: 3),
+            ),
+            onTap: () {
+              // Use a post-frame callback to ensure text selection happens after the tap is processed
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (_controller.text.isNotEmpty && _focusNode.hasFocus) {
+                  _controller.selection = TextSelection(
+                    baseOffset: 0,
+                    extentOffset: _controller.text.length,
+                  );
                 }
+              });
+            },
+            onSubmitted: (value) {
+              num? newQuantity = num.tryParse(value);
+              if (newQuantity != null) {
+                _handleQuantityChange(newQuantity);
               }
-            });
-
-            return TextField(
-              controller: _controller,
-              keyboardType: TextInputType.number,
-              focusNode: focusNode,
-              style: const TextStyle(fontSize: 12),
-              inputFormatters: [
-                if (widget.productUnit == 'KG' || widget.productUnit == 'LT')
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
-                if (widget.productUnit != 'LT' && widget.productUnit != 'KG')
-                  FilteringTextInputFormatter.digitsOnly,
-              ],
-              textAlign: TextAlign.center,
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 3),
-              ),
-              onSubmitted: (value) {
-                num? newQuantity = num.tryParse(value);
-                if (newQuantity != null) {
-                  _handleQuantityChange(newQuantity);
-                }
-              },
-            );
-          }),
+            },
+          ),
         ),
         InkWell(
           onTap: () => _handleQuantityChange(_currentQuantity + 1),

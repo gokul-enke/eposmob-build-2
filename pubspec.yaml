@@ -86,7 +86,7 @@ dependencies:
   dio: ^5.7.0  
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-  printing: ^5.9.3
+  # printing: ^5.9.3  # Commented out due to Windows build issues
   internet_connection_checker_plus: ^1.0.1
 
 dev_dependencies:
