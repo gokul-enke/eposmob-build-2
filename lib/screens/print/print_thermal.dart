@@ -20,6 +20,11 @@ class ThermalPrinter {
   
   // Font configuration - change this to PosFontType.fontA if needed
   static const PosFontType defaultFontType = PosFontType.fontB;
+  
+  // Text size variables for consistent sizing
+  static const PosTextSize textSizeBig = PosTextSize.size2;
+  static const PosTextSize textSizeMedium = PosTextSize.size1;
+  static const PosTextSize textSizeSmall = PosTextSize.size1;
 
   ThermalPrinter(this.context);
 
@@ -93,11 +98,6 @@ class ThermalPrinter {
       bytes += _buildTotalAmount(generator, displayConfig, formattedTotal,
           savedTotal, cartItems.length, billDocumentConfig);
 
-      // Thank You Message
-      if (displayConfig?['showThankYouMessage']?.visible == true) {
-        bytes += _buildThankYouMessage(generator, displayConfig);
-      }
-
       // QR Code
       if (displayConfig?['showQRCode']?.visible == true) {
         debugPrint("QR Code is enabled in display config");
@@ -154,6 +154,11 @@ class ThermalPrinter {
         debugPrint("Skipping Terms & Conditions, disabled in settings");
       }
 
+      // Thank You Message (moved to end after Terms & Conditions)
+      if (displayConfig?['showThankYouMessage']?.visible == true) {
+        bytes += _buildThankYouMessage(generator, displayConfig);
+      }
+
       // Cut the receipt
       bytes += generator.cut();
 
@@ -207,7 +212,7 @@ class ThermalPrinter {
           width: 12,
           styles: const PosStyles(
               fontType: defaultFontType,
-              align: PosAlign.center, bold: true, height: PosTextSize.size2),
+              align: PosAlign.center, bold: true, height: textSizeBig),
         ),
       ]);
     }
@@ -225,7 +230,7 @@ class ThermalPrinter {
             fontType: defaultFontType,
             align: PosAlign.center,
             bold: true,
-            height: PosTextSize.size1,
+            height: textSizeMedium,
           ),
         ),
       ]);
@@ -243,7 +248,7 @@ class ThermalPrinter {
               fontType: defaultFontType,
               align: PosAlign.center,
               bold: true,
-              height: PosTextSize.size1,
+              height: textSizeSmall,
             ),
           ),
         ]);
@@ -262,7 +267,7 @@ class ThermalPrinter {
               fontType: defaultFontType,
               align: PosAlign.center,
               bold: true,
-              height: PosTextSize.size1,
+              height: textSizeSmall,
             ),
           ),
         ]);
@@ -276,7 +281,7 @@ class ThermalPrinter {
           '';
       if (telephone.isNotEmpty) {
         bytes += generator.text('TEL: $telephone',
-            styles: const PosStyles(fontType: defaultFontType, align: PosAlign.center, bold: true));
+            styles: const PosStyles(fontType: defaultFontType, align: PosAlign.center, bold: true, height: textSizeSmall));
       }
     }
 
@@ -287,7 +292,7 @@ class ThermalPrinter {
           '';
       if (email.isNotEmpty) {
         bytes += generator.text('Email: $email',
-            styles: const PosStyles(fontType: defaultFontType, align: PosAlign.center, bold: true));
+            styles: const PosStyles(fontType: defaultFontType, align: PosAlign.center, bold: true, height: textSizeSmall));
       }
     }
 
@@ -300,7 +305,7 @@ class ThermalPrinter {
               'INVOICE';
       bytes += generator.text(
           invoiceTitle.isNotEmpty ? invoiceTitle : 'INVOICE',
-          styles: const PosStyles(fontType: defaultFontType, align: PosAlign.center, bold: true));
+          styles: const PosStyles(fontType: defaultFontType, align: PosAlign.center, bold: true, height: textSizeMedium));
     }
 
     // Invoice Number
@@ -312,7 +317,7 @@ class ThermalPrinter {
               : 'INV No: $orderNumber';
 
       bytes += generator.text(invoiceNumberText,
-          styles: const PosStyles(fontType: defaultFontType, align: PosAlign.center, bold: true));
+          styles: const PosStyles(fontType: defaultFontType, align: PosAlign.center, bold: true, height: textSizeMedium));
     }
 
     // Date Header - Moved to separate _buildDateTimeRow method
@@ -347,7 +352,7 @@ class ThermalPrinter {
               fontType: defaultFontType,
               align: PosAlign.left,
               bold: true,
-              height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+              height: is58mm ? textSizeSmall : textSizeMedium)));
     }
 
     if (displayConfig?['showParticulars']?.visible == true) {
@@ -369,7 +374,7 @@ class ThermalPrinter {
               fontType: defaultFontType,
               align: PosAlign.left,
               bold: true,
-              height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+              height: is58mm ? textSizeSmall : textSizeMedium)));
     }
 
     if (displayConfig?['showMRP']?.visible == true) {
@@ -384,7 +389,7 @@ class ThermalPrinter {
               fontType: defaultFontType,
               align: PosAlign.right,
               bold: true,
-              height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+              height: is58mm ? textSizeSmall : textSizeMedium)));
     }
 
     if (displayConfig?['showQty']?.visible == true) {
@@ -399,7 +404,7 @@ class ThermalPrinter {
               fontType: defaultFontType,
               align: PosAlign.right,
               bold: true,
-              height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+              height: is58mm ? textSizeSmall : textSizeMedium)));
     }
 
     if (displayConfig?['showRate']?.visible == true) {
@@ -414,7 +419,7 @@ class ThermalPrinter {
               fontType: defaultFontType,
               align: PosAlign.right,
               bold: true,
-              height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+              height: is58mm ? textSizeSmall : textSizeMedium)));
     }
 
     if (displayConfig?['showTotal']?.visible == true) {
@@ -429,7 +434,7 @@ class ThermalPrinter {
               fontType: defaultFontType,
               align: PosAlign.right,
               bold: true,
-              height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+              height: is58mm ? textSizeSmall : textSizeMedium)));
     }
 
     if (headerColumns.isNotEmpty) {
@@ -483,7 +488,7 @@ class ThermalPrinter {
                 fontType: defaultFontType,
                 align: PosAlign.left,
                 bold: true,
-                height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+                height: is58mm ? textSizeSmall : textSizeMedium)));
       }
 
       if (displayConfig?['showParticulars']?.visible == true) {
@@ -504,7 +509,7 @@ class ThermalPrinter {
                   fontType: defaultFontType,
                   align: PosAlign.left,
                   bold: true,
-                  height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+                  height: is58mm ? textSizeSmall : textSizeMedium)));
 
           bytes += generator.row(productNameRow);
         } else {
@@ -546,7 +551,7 @@ class ThermalPrinter {
                       fontType: defaultFontType,
                       align: PosAlign.left,
                       bold: true,
-                      height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+                      height: is58mm ? textSizeSmall : textSizeMedium)));
             } else if (!isFirstLine &&
                 displayConfig?['showSLNumber']?.visible == true) {
               // Empty space for SL column on continuation lines
@@ -563,7 +568,7 @@ class ThermalPrinter {
                     fontType: defaultFontType,
                     align: PosAlign.left,
                     bold: true,
-                    height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+                    height: is58mm ? textSizeSmall : textSizeMedium)));
 
             bytes += generator.row(nameLineRow);
             isFirstLine = false;
@@ -578,7 +583,7 @@ class ThermalPrinter {
                 fontType: defaultFontType,
                 align: PosAlign.left,
                 bold: true,
-                height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+                height: is58mm ? textSizeSmall : textSizeMedium)));
         productNameRow.add(PosColumn(
             text: '',
             width: 11,
@@ -604,7 +609,7 @@ class ThermalPrinter {
                 fontType: defaultFontType,
                 align: PosAlign.right,
                 bold: false,
-                height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+                height: is58mm ? textSizeSmall : textSizeMedium)));
       }
       if (displayConfig?['showQty']?.visible == true) {
         priceDetailsRow.add(PosColumn(
@@ -614,7 +619,7 @@ class ThermalPrinter {
                 fontType: defaultFontType,
                 align: PosAlign.right,
                 bold: false,
-                height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+                height: is58mm ? textSizeSmall : textSizeMedium)));
       }
       if (displayConfig?['showRate']?.visible == true) {
         priceDetailsRow.add(PosColumn(
@@ -624,7 +629,7 @@ class ThermalPrinter {
                 fontType: defaultFontType,
                 align: PosAlign.right,
                 bold: false,
-                height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+                height: is58mm ? textSizeSmall : textSizeMedium)));
       }
       if (displayConfig?['showTotal']?.visible == true) {
         priceDetailsRow.add(PosColumn(
@@ -634,7 +639,7 @@ class ThermalPrinter {
                 fontType: defaultFontType,
                 align: PosAlign.right,
                 bold: false,
-                height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+                height: is58mm ? textSizeSmall : textSizeMedium)));
       }
 
       if (priceDetailsRow.isNotEmpty) {
@@ -667,13 +672,13 @@ class ThermalPrinter {
             width: 6,
             styles: const PosStyles(
                 fontType: defaultFontType,
-                align: PosAlign.left, bold: false, height: PosTextSize.size1)),
+                align: PosAlign.left, bold: false, height: textSizeSmall)),
         PosColumn(
             text: itemCount.toString(),
             width: 6,
             styles: const PosStyles(
                 fontType: defaultFontType,
-                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+                align: PosAlign.right, bold: true, height: textSizeSmall)),
       ]);
     }
 
@@ -685,13 +690,13 @@ class ThermalPrinter {
             width: 6,
             styles: const PosStyles(
                 fontType: defaultFontType,
-                align: PosAlign.left, bold: false, height: PosTextSize.size1)),
+                align: PosAlign.left, bold: false, height: textSizeSmall)),
         PosColumn(
             text: totalMrp.toStringAsFixed(2),
             width: 6,
             styles: const PosStyles(
                 fontType: defaultFontType,
-                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+                align: PosAlign.right, bold: true, height: textSizeSmall)),
       ]);
     }
 
@@ -703,13 +708,13 @@ class ThermalPrinter {
             width: 6,
             styles: const PosStyles(
                 fontType: defaultFontType,
-                align: PosAlign.left, bold: false, height: PosTextSize.size1)),
+                align: PosAlign.left, bold: false, height: textSizeSmall)),
         PosColumn(
             text: saved.toStringAsFixed(2),
             width: 6,
             styles: const PosStyles(
                 fontType: defaultFontType,
-                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+                align: PosAlign.right, bold: true, height: textSizeSmall)),
       ]);
     } else if (displayConfig?['showDiscount']?.visible == true) {
       bytes += generator.row([
@@ -718,13 +723,13 @@ class ThermalPrinter {
             width: 6,
             styles: const PosStyles(
                 fontType: defaultFontType,
-                align: PosAlign.left, bold: false, height: PosTextSize.size1)),
+                align: PosAlign.left, bold: false, height: textSizeSmall)),
         PosColumn(
             text: saved.toStringAsFixed(2),
             width: 6,
             styles: const PosStyles(
                 fontType: defaultFontType,
-                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+                align: PosAlign.right, bold: true, height: textSizeSmall)),
       ]);
     }
 
@@ -737,13 +742,13 @@ class ThermalPrinter {
             width: 6,
             styles: const PosStyles(
                 fontType: defaultFontType,
-                align: PosAlign.left, bold: true, height: PosTextSize.size2)),
+                align: PosAlign.left, bold: true, height: textSizeBig)),
         PosColumn(
             text: total.toStringAsFixed(2),
             width: 6,
             styles: const PosStyles(
                 fontType: defaultFontType,
-                align: PosAlign.right, bold: true, height: PosTextSize.size2)),
+                align: PosAlign.right, bold: true, height: textSizeBig)),
       ]);
     }
 
@@ -760,7 +765,7 @@ class ThermalPrinter {
     if (displayConfig?['showAmountInWords']?.visible == true) {
       bytes += generator.text(
           '${AmountHelper().convertNumberToWords(total)} Only.',
-          styles: const PosStyles(fontType: defaultFontType, align: PosAlign.center, bold: true));
+          styles: const PosStyles(fontType: defaultFontType, align: PosAlign.center, bold: true, height: textSizeSmall));
     }
 
     return bytes;
@@ -775,7 +780,7 @@ class ThermalPrinter {
           'Thank You... Visit Again';
       bytes += generator.text(
           message.isNotEmpty ? message : 'Thank You... Visit Again',
-          styles: const PosStyles(fontType: defaultFontType, align: PosAlign.center, bold: true));
+          styles: const PosStyles(fontType: defaultFontType, align: PosAlign.center, bold: true, height: textSizeMedium));
     }
 
     return bytes;
@@ -847,7 +852,7 @@ class ThermalPrinter {
         'Scan this QR code to Pay';
     bytes += generator.text(
         qrCodeMessage.isNotEmpty ? qrCodeMessage : 'Scan this QR code to Pay',
-        styles: const PosStyles(fontType: defaultFontType, align: PosAlign.center, bold: true));
+        styles: const PosStyles(fontType: defaultFontType, align: PosAlign.center, bold: true, height: textSizeSmall));
     debugPrint("==========================");
     return bytes;
   }
@@ -867,8 +872,8 @@ class ThermalPrinter {
               fontType: defaultFontType,
               align: PosAlign.left,
               bold: true,
-              height: PosTextSize.size1,
-              width: PosTextSize.size1)),
+              height: textSizeSmall,
+              width: textSizeSmall)),
       PosColumn(
           text: DateHelper.formatISODateToIST(orderDate),
           width: 6,
@@ -876,8 +881,8 @@ class ThermalPrinter {
               fontType: defaultFontType,
               align: PosAlign.right,
               bold: true,
-              height: PosTextSize.size1,
-              width: PosTextSize.size1)),
+              height: textSizeSmall,
+              width: textSizeSmall)),
     ]);
 
     // Add bottom divider line
@@ -908,7 +913,7 @@ class ThermalPrinter {
           Barcode.code39(code39Data),
           height: barcodeHeight,
           width: 1,
-          textPos: BarcodeText.below,
+          textPos: BarcodeText.none,
           align: PosAlign.center,
         );
         debugPrint(
@@ -954,72 +959,28 @@ class ThermalPrinter {
 
     List<int> bytes = [];
 
-    // Create a visual box around terms & conditions using ASCII characters
-    // Top border of the box using ASCII characters
-    bytes += generator.text('-' * 46,
-        styles: const PosStyles(
-            fontType: defaultFontType,
-            align: PosAlign.center,
-            bold: true,
-            height: PosTextSize.size1,
-            width: PosTextSize.size1));
+    // Add separator line before terms
+    bytes += generator.hr();
 
     // Use the terms from displayConfig or DocumentConfig
     List<String> termsList = terms.split('\n');
     for (var term in termsList) {
       if (term.trim().isNotEmpty) {
-        // Wrap text to fit within the box (44 characters max per line to account for borders)
-        List<String> wrappedLines = _wrapText(term, 44);
-        for (String line in wrappedLines) {
-          String paddedLine = '| ${line.padRight(44)} |';
-          bytes += generator.text(paddedLine,
-              styles: const PosStyles(
-                  fontType: defaultFontType,
-                  align: PosAlign.center,
-                  bold: true,
-                  height: PosTextSize.size1,
-                  width: PosTextSize.size1));
-        }
+        bytes += generator.text(term.trim(),
+            styles: const PosStyles(
+                fontType: defaultFontType,
+                align: PosAlign.center,
+                bold: true,
+                height: textSizeSmall));
       }
     }
 
-    // Bottom border of the box using ASCII characters
-    bytes += generator.text('-' * 46,
-        styles: const PosStyles(
-            fontType: defaultFontType,
-            align: PosAlign.center,
-            bold: true,
-            height: PosTextSize.size1,
-            width: PosTextSize.size1));
+    // Add separator line after terms
+    bytes += generator.hr();
     return bytes;
   }
 
-  // Helper method to wrap text to a specific width
-  List<String> _wrapText(String text, int maxWidth) {
-    List<String> lines = [];
-    String currentLine = '';
 
-    for (String word in text.split(' ')) {
-      if ((currentLine + word).length <= maxWidth) {
-        currentLine = currentLine.isEmpty ? word : '$currentLine $word';
-      } else {
-        if (currentLine.isNotEmpty) {
-          lines.add(currentLine);
-          currentLine = word;
-        } else {
-          // If a single word is longer than maxWidth, truncate it
-          lines.add(word.substring(0, maxWidth));
-          currentLine = '';
-        }
-      }
-    }
-
-    if (currentLine.isNotEmpty) {
-      lines.add(currentLine);
-    }
-
-    return lines;
-  }
 
   Future<void> _connectToPrinter(BluetoothPrinter selectedPrinter) async {
     if (selectedPrinter.typePrinter == PrinterType.usb) {
