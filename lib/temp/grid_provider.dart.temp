@@ -512,7 +512,7 @@ class GridSelectionProvider extends ChangeNotifier {
       'product_lang_name[hi]': productNameHindi,
       'product_lang_name[en]': productNameArabic,
     };
-    print({
+    debugPrint({
       'product_id': productId,
       'product_lang_name[ar]': productNameEnglish,
       'product_lang_name[hi]': productNameHindi,

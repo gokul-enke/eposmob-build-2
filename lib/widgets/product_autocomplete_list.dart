@@ -4,9 +4,8 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/general_settings_provider.dart';
-import 'package:pos_machine/widgets/stock_selection_modal.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/providers/customer_selection_provider.dart';
+import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:provider/provider.dart';
 
 class ProductAutocomplete extends StatefulWidget {
@@ -96,109 +95,22 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
   }
 
   Future<void> _handleProductSelection(GetProduct product) async {
-    debugPrint("=== AUTOCOMPLETE PRODUCT VIEW DEBUG ===");
-    debugPrint("Product selected: ${product.productName}");
-    debugPrint("Product ID: ${product.productId}");
-    debugPrint("Product base price: ${product.price?.price ?? 'null'}");
-    debugPrint("Product MRP: ${product.mrp ?? 'null'}");
-    debugPrint("Product has ${product.stock?.length ?? 0} stock entries");
-
-    final localProductProvider =
-        Provider.of<LocalProductProvider>(context, listen: false);
-    final generalSettingsProvider =
-        Provider.of<GeneralSettingsProvider>(context, listen: false);
-
-    // Check if stock management is enabled
-    bool stockEnabled =
-        generalSettingsProvider.generalSettings?.stockEnabled ?? false;
-    debugPrint("Stock management enabled: $stockEnabled");
-
-    if (!stockEnabled) {
-      debugPrint("Stock management disabled, using normal selection...");
-
-      // Call the original onSelected callback
-      widget.onSelected(product, null);
-      localProductProvider.callProductDetails(product.productId!);
-      debugPrint("=== END AUTOCOMPLETE PRODUCT VIEW DEBUG ===");
-      return;
-    }
-
-    // Check if product has multiple stock options
-    if (product.stock != null && product.stock!.length > 1) {
-      debugPrint(
-          "Multiple stock entries detected, filtering available stocks...");
-
-      // Filter available stock options (quantity > 0)
-      List<Stock> availableStocks = product.stock!
-          .where((stock) => stock.quantity != null && stock.quantity! > 0)
-          .toList();
-
-      debugPrint("Available stocks after filtering: ${availableStocks.length}");
-      for (int i = 0; i < availableStocks.length; i++) {
-        Stock stock = availableStocks[i];
-        debugPrint(
-            "  Stock $i: ID=${stock.id}, Price=${stock.price}, MRP=${stock.mrp}, Qty=${stock.quantity}");
-      }
-
-      if (availableStocks.length > 1) {
-        debugPrint("Showing stock selection modal for user choice...");
-
-        // Show stock selection modal
-        final result = await showDialog(
-          context: context,
-          builder: (context) => StockSelectionModal(
-            product: product,
-            stockOptions: availableStocks,
-          ),
-        );
-
-        if (result != null) {
-          debugPrint("User selected stock from modal");
-
-          // Process the selected product and stock
-          GetProduct selectedProduct = result['product'];
-          Stock selectedStock = result['stock'];
-
-          debugPrint(
-              "Selected stock: ID=${selectedStock.id}, Price=${selectedStock.price}, MRP=${selectedStock.mrp}");
-
-          // Call the original onSelected callback with the selected product
-          widget.onSelected(selectedProduct, selectedStock);
-          localProductProvider.callProductDetails(selectedProduct.productId!,
-              selectedStock: selectedStock);
-        } else {
-          debugPrint("User cancelled stock selection");
-        }
-      } else if (availableStocks.isNotEmpty) {
-        debugPrint("Single available stock found, auto-selecting...");
-
-        // Single stock option available, use it
-        Stock stock = availableStocks.first;
-
-        debugPrint(
-            "Auto-selected stock: ID=${stock.id}, Price=${stock.price}, MRP=${stock.mrp}, Qty=${stock.quantity}");
-
-        // Call the original onSelected callback
-        widget.onSelected(product, stock);
-        localProductProvider.callProductDetails(product.productId!,
-            selectedStock: stock);
-      } else {
-        debugPrint("No available stock found (all stocks have 0 quantity)");
-
-        showScaffold(
-          context: context,
-          message: "No stock available for this product.",
-        );
-      }
-    } else {
-      debugPrint(
-          "Product has single or no stock entries, using normal selection...");
-
-      // Call the original onSelected callback
-      widget.onSelected(product, null);
-      localProductProvider.callProductDetails(product.productId!);
-    }
-    debugPrint("=== END AUTOCOMPLETE PRODUCT VIEW DEBUG ===");
+    debugPrint("🎯 AUTOCOMPLETE PRODUCT SELECTION:");
+    debugPrint("  - Product: ${product.productName}");
+    debugPrint("  - Product ID: ${product.productId}");
+    
+    // Get customer info from global provider
+    final customerSelectionProvider = Provider.of<CustomerSelectionProvider>(context, listen: false);
+    debugPrint("  - Customer from provider: ${customerSelectionProvider.selectedCustomerName}");
+    debugPrint("  - Customer ID from provider: ${customerSelectionProvider.selectedCustomerID}");
+    
+    await ProductCartHelper.handleProductSelection(
+      context: context,
+      product: product,
+      onSelected: widget.onSelected,
+      addToCartDirectly: false, // Prefill form fields for review before adding to cart
+      // Customer info will be fetched from global provider in the helper
+    );
   }
 
   @override

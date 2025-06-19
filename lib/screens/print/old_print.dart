@@ -302,7 +302,7 @@
 //           selectedTemplate = defaultTemplate;
 //         });
 //       } catch (e) {
-//         print('Error decoding templates: $e');
+//         debugPrint('Error decoding templates: $e');
 //         // Create a default template if none exists
 //         setState(() {
 //           selectedTemplate = ReceiptTemplate(

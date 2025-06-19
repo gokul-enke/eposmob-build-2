@@ -30,7 +30,7 @@ class AppSettingsProvider with ChangeNotifier {
         throw Exception('Failed to load app settings');
       }
     } catch (error) {
-      print("Error fetching app settings: $error");
+      debugPrint("Error fetching app settings: $error");
     } finally {
       _loading = false;
       notifyListeners();

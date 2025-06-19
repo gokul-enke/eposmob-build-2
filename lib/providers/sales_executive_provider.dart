@@ -17,20 +17,41 @@ class SalesExecutiveProvider extends ChangeNotifier {
 
   // Get the current user from the list of sales executives
   SalesExecutive? getCurrentUser(BuildContext context) {
+    debugPrint("🔧 SalesExecutiveProvider: getCurrentUser called");
+    
     final authModel = Provider.of<AuthModel>(context, listen: false);
     final userId = authModel.userId;
     
-    if (userId == null) return null;
+    debugPrint("🔧 SalesExecutiveProvider: authModel.userId = $userId");
+    debugPrint("🔧 SalesExecutiveProvider: authModel.token = ${authModel.token != null ? 'exists' : 'null'}");
+    debugPrint("🔧 SalesExecutiveProvider: _salesExecutives.length = ${_salesExecutives.length}");
+    
+    if (_salesExecutives.isNotEmpty) {
+      debugPrint("🔧 SalesExecutiveProvider: Available executives:");
+      for (var exec in _salesExecutives) {
+        debugPrint("   - ID: ${exec.id}, Name: ${exec.name}, Email: ${exec.email ?? 'null'}");
+      }
+    }
+    
+    if (userId == null) {
+      debugPrint("❌ SalesExecutiveProvider: userId is null, returning null");
+      return null;
+    }
     
     try {
-      return _salesExecutives.firstWhere((executive) => executive.id == userId);
+      final executive = _salesExecutives.firstWhere((executive) => executive.id == userId);
+      debugPrint("✅ SalesExecutiveProvider: Found current user: ${executive.name} (ID: ${executive.id})");
+      return executive;
     } catch (e) {
+      debugPrint("❌ SalesExecutiveProvider: No executive found with userId $userId. Error: $e");
       return null;
     }
   }
 
   // Fetch sales executives from the API
   Future<void> fetchSalesExecutives(BuildContext context) async {
+    debugPrint("🔧 SalesExecutiveProvider: fetchSalesExecutives started");
+    
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -39,13 +60,18 @@ class SalesExecutiveProvider extends ChangeNotifier {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final token = authModel.token;
       
+      debugPrint("🔧 SalesExecutiveProvider: Auth token exists: ${token != null}");
+      debugPrint("🔧 SalesExecutiveProvider: API URL: ${APPUrl.listSalesExecutives}");
+      
       if (token == null) {
+        debugPrint("❌ SalesExecutiveProvider: No auth token available");
         _error = 'Not authenticated';
         _isLoading = false;
         notifyListeners();
         return;
       }
 
+      debugPrint("🔧 SalesExecutiveProvider: Making API request...");
       final response = await http.get(
         Uri.parse(APPUrl.listSalesExecutives),
         headers: {
@@ -53,6 +79,9 @@ class SalesExecutiveProvider extends ChangeNotifier {
           'Authorization': 'Bearer $token',
         },
       );
+
+      debugPrint("🔧 SalesExecutiveProvider: API response status: ${response.statusCode}");
+      debugPrint("🔧 SalesExecutiveProvider: API response body: ${response.body}");
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -62,17 +91,26 @@ class SalesExecutiveProvider extends ChangeNotifier {
           _salesExecutives = executivesData
               .map((json) => SalesExecutive.fromJson(json))
               .toList();
+          debugPrint("✅ SalesExecutiveProvider: Successfully loaded ${_salesExecutives.length} executives");
+          
+          for (var exec in _salesExecutives) {
+            debugPrint("   - Loaded executive: ID=${exec.id}, Name=${exec.name}, Email=${exec.email ?? 'null'}");
+          }
         } else {
           _error = data['message'] ?? 'Failed to fetch sales executives';
+          debugPrint("❌ SalesExecutiveProvider: API returned error: $_error");
         }
       } else {
         _error = 'Failed to fetch sales executives: ${response.statusCode}';
+        debugPrint("❌ SalesExecutiveProvider: HTTP error: $_error");
       }
     } catch (e) {
       _error = 'Error: $e';
+      debugPrint("❌ SalesExecutiveProvider: Exception occurred: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
+      debugPrint("🔧 SalesExecutiveProvider: fetchSalesExecutives completed");
     }
   }
 

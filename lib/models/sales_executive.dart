@@ -1,7 +1,7 @@
 class SalesExecutive {
   final int id;
   final String name;
-  final String email;
+  final String? email;
   final String phone;
   final DateTime? emailVerifiedAt;
   final int phoneVerified;
@@ -12,7 +12,7 @@ class SalesExecutive {
   SalesExecutive({
     required this.id,
     required this.name,
-    required this.email,
+    this.email,
     required this.phone,
     this.emailVerifiedAt,
     required this.phoneVerified,

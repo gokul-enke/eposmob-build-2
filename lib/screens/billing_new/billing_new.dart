@@ -10,6 +10,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/delivery_method.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -597,6 +598,7 @@ class _BillingNewPageState extends State<BillingNewPage> {
                                     // Example: add the first product to the cart
                                     GetProduct product = filteredProducts.first;
 
+                                    num? quantity;
                                     if (product.unit == 'KGS' &&
                                         prefix == '000' &&
                                         query.length == 14) {
@@ -605,45 +607,26 @@ class _BillingNewPageState extends State<BillingNewPage> {
                                           0, 2); // First 2 digits = KG
                                       String weightGrams = lastFive.substring(
                                           2, 5); // Last 3 digits = Grams
-                                      double totalWeight =
-                                          double.parse(weightKg) +
+                                      quantity = double.parse(weightKg) +
                                               (double.parse(weightGrams) /
                                                   1000);
-
-                                      localProductProvider.addToCart(
-                                        product: product,
-                                        quantity: totalWeight,
-                                      );
-
-                                      showScaffold(
-                                        context: context,
-                                        message: 'Added To Cart',
-                                      );
                                     } else if (product.unit == 'PCS' &&
                                         prefix == '000' &&
                                         query.length == 14) {
                                       // Count-based product
-                                      int quantity = int.parse(
+                                      quantity = int.parse(
                                           lastFive!); // Last 5 digits represent quantity
-
-                                      localProductProvider.addToCart(
-                                        product: product,
-                                        quantity: quantity,
-                                      );
-
-                                      showScaffold(
-                                        context: context,
-                                        message: 'Added To Cart',
-                                      );
-                                    } else {
-                                      localProductProvider.addToCart(
-                                          product: product);
-
-                                      showScaffold(
-                                        context: context,
-                                        message: 'Added To Cart',
-                                      );
                                     }
+
+                                    // Use centralized helper for stock handling
+                                    await ProductCartHelper.handleProductSelection(
+                                      context: context,
+                                      product: product,
+                                      quantity: quantity,
+                                      addToCartDirectly: true,
+                                      customerId: selectedCustomerID,
+                                      customerName: selectedCustomer?.name,
+                                    );
 
                                     // Clear input fields if necessary
                                     setState(() {

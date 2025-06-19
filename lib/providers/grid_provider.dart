@@ -765,12 +765,12 @@ class GridSelectionProvider extends ChangeNotifier {
       'product_lang_name[hi]': productNameHindi,
       'product_lang_name[en]': productNameArabic,
     };
-    print({
-      'product_id': productId,
-      'product_lang_name[ar]': productNameEnglish,
-      'product_lang_name[hi]': productNameHindi,
-      'product_lang_name[en]': productNameArabic,
-    });
+    // debugPrint({
+    //   'product_id': productId,
+    //   'product_lang_name[ar]': productNameEnglish,
+    //   'product_lang_name[hi]': productNameHindi,
+    //   'product_lang_name[en]': productNameArabic,
+    // });
     final Map<String, dynamic> error = {
       'status': "failed",
       'message': "Something went wrong, Please try Again!"

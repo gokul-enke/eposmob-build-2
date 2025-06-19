@@ -3,12 +3,14 @@ class AppSettings {
   final String customerCarePhone;
   final String customerCareEmail;
   final String printTitle;
+  final bool showCustomerLastBuyedPriceList;
 
   AppSettings({
     required this.barcodeSales,
     required this.customerCarePhone,
     required this.customerCareEmail,
     required this.printTitle,
+    required this.showCustomerLastBuyedPriceList,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,9 @@ class AppSettings {
       customerCareEmail:
           settingsMap['COMPANY_CUSTOMER_CARE_EMAIL']?['value'] ?? "",
       printTitle: settingsMap['PRINT_TITLE']?['value'] ?? "",
+      showCustomerLastBuyedPriceList:
+          settingsMap['SHOW_CUSTOMER_LAST_BUYED_PRICE_LIST']?['status'] ??
+              false,
     );
   }
 
@@ -59,6 +64,12 @@ class AppSettings {
           'code': 'PRINT_TITLE',
           'value': printTitle,
           'status': printTitle.isNotEmpty ? "true" : "false",
+        },
+        {
+          "name": "Show Customer Last Buyed Price List",
+          "code": "SHOW_CUSTOMER_LAST_BUYED_PRICE_LIST",
+          "value": "",
+          "status": showCustomerLastBuyedPriceList.toString(),
         },
       ],
     };

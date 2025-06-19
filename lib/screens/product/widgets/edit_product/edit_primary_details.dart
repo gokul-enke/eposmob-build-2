@@ -88,7 +88,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
     selectedUnit = getProduct.unit; // Use 'Piece' as the default unit
     selectedCurrency = getProduct.currency; // Use 'INR' as the default currency
 
-    print({"currency", getProduct.currency});
+    // debugPrint({"currency", getProduct.currency.toString()});
 
     if (getProduct.categoryId != null) {
       parentCategory = getProduct.categoryId.toString();

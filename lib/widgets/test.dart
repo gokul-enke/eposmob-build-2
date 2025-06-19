@@ -362,7 +362,7 @@ class _YourBagState extends State<YourBag> {
         //   // debugPrint(e.serviceAreaTypes!.vehicle.toString());
         // }
         //        serviceAreaTypes.forEach((key, values) {
-        //   print('$key: $values');
+        //   debugPrint('$key: $values');
         // });
         // debugPrint(
         //     "serviceTypesList checking------------------------------------------------------");

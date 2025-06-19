@@ -189,7 +189,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         throw Exception('Failed to load stock info');
       }
     } catch (e) {
-      print('Error fetching stock info: $e');
+      debugPrint('Error fetching stock info: $e');
       return []; // Return an empty list in case of an error
     }
   }
@@ -348,7 +348,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         throw Exception('Failed to load stock info');
       }
     } catch (e) {
-      print('Error fetching stock info: $e');
+      debugPrint('Error fetching stock info: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error fetching stock info')),
       );
@@ -1576,24 +1576,24 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                                 //         as String;
 
 // Print each parameter for debugging
-                                                print('Unit: $unit');
-                                                print('Store ID: $storeId');
-                                                print('Quantity: $quantity');
-                                                print(
+                                                debugPrint('Unit: $unit');
+                                                debugPrint('Store ID: $storeId');
+                                                debugPrint('Quantity: $quantity');
+                                                debugPrint(
                                                     'Retail Price: $retailPrice');
-                                                print(
+                                                debugPrint(
                                                     'Expiry Date: $expiryDate');
-                                                print(
+                                                debugPrint(
                                                     'Batch Number: $batchNumber');
-                                                print(
+                                                debugPrint(
                                                     'Purchase Rate: $purchaseRate');
-                                                print(
+                                                debugPrint(
                                                     'Wholesale Min Unit: $wholesaleMinUnit');
-                                                print(
+                                                debugPrint(
                                                     'Wholesale Price: $wholesalePrice');
-                                                print('Access Token: $token');
-                                                print('Product ID: $productId');
-                                                // print(
+                                                debugPrint('Access Token: $token');
+                                                debugPrint('Product ID: $productId');
+                                                // debugPrint(
                                                 //     'Product Properties: $productProperties');
 
                                                 gridSelectionProvider

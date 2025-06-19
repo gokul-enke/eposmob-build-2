@@ -10,6 +10,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/delivery_method.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -19,11 +20,13 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -245,6 +248,16 @@ class BillingPageState extends State<BillingPage> {
 
     // Initialize internet connectivity listener
     _initConnectivityListener();
+    
+    // Listen for sales executive changes to update default customer
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final salesExecutiveProvider = Provider.of<SalesExecutiveProvider>(context, listen: false);
+      salesExecutiveProvider.addListener(_onSalesExecutiveChanged);
+      
+      // Also listen for auth changes (more direct indicator of user switch)
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      authModel.addListener(_onUserSwitched);
+    });
   }
 
   @override
@@ -270,6 +283,18 @@ class BillingPageState extends State<BillingPage> {
     _customerTextFieldFocus.dispose();
     _customerScrollController.dispose();
     _internetSubscription.cancel(); // Cancel the subscription
+    
+    // Remove sales executive listener
+    try {
+      final salesExecutiveProvider = Provider.of<SalesExecutiveProvider>(context, listen: false);
+      salesExecutiveProvider.removeListener(_onSalesExecutiveChanged);
+      
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      authModel.removeListener(_onUserSwitched);
+    } catch (e) {
+      debugPrint("Error removing listeners: $e");
+    }
+    
     super.dispose();
   }
 
@@ -320,12 +345,47 @@ class BillingPageState extends State<BillingPage> {
         setState(() {
           customerList = customerListModel.data; // Store the customer list
           CustomerListModelData? salesCustomer;
+          
           if (customerList!.isNotEmpty) {
-            salesCustomer = customerList![0];
+            // Get current sales executive's information
+            final salesExecutiveProvider = Provider.of<SalesExecutiveProvider>(context, listen: false);
+            final currentExecutive = salesExecutiveProvider.getCurrentUser(context);
+            
+            debugPrint("🏢 BILLING: Setting up default customer from sales executive");
+            debugPrint("  - Current executive: ${currentExecutive?.name}");
+            debugPrint("  - Executive phone: ${currentExecutive?.phone}");
+            debugPrint("  - Available customers in list: ${customerList!.length}");
+            
+            if (currentExecutive != null) {
+              // Create a virtual customer using sales executive's information
+              salesCustomer = CustomerListModelData(
+                id: currentExecutive.id, // Use executive ID
+                name: currentExecutive.name,
+                phone: currentExecutive.phone,
+                email: currentExecutive.email,
+                createdAt: currentExecutive.createdAt,
+                updatedAt: currentExecutive.updatedAt,
+              );
+              debugPrint("✅ Created virtual customer from sales executive: ${salesCustomer.name} (${salesCustomer.phone})");
+            } else {
+              debugPrint("⚠️ No current executive found, falling back to first customer");
+              salesCustomer = customerList![0];
+            }
+            
+            debugPrint("🎯 Selected default customer: ${salesCustomer.name} (${salesCustomer.phone})");
+            
             salesExecutivemobileNumberText = salesCustomer.phone!;
             mobileNumberText = salesCustomer.phone!;
             mobileNumberTextController.text =
                 "${salesCustomer.name!} ${salesCustomer.phone!}";
+            
+            // Set the default customer in the global provider and mark as default
+            Provider.of<CustomerSelectionProvider>(context, listen: false)
+                .setSelectedCustomer(salesCustomer, isDefault: true);
+            
+            selectedCustomerID = salesCustomer.id!;
+            selectedCustomerPhone = salesCustomer.phone;
+            selectedCustomer = salesCustomer;
           }
         });
       }
@@ -656,546 +716,56 @@ class BillingPageState extends State<BillingPage> {
                                           );
                                         }
 
-                                        if (filteredProducts.isNotEmpty) {
-                                          // Get the first product (we're now checking for stock options)
-                                          GetProduct product =
-                                              filteredProducts.first;
+                                                                                  if (filteredProducts.isNotEmpty) {
+                                            // Get the first product
+                                            GetProduct product = filteredProducts.first;
 
-                                          debugPrint(
-                                              "=== BARCODE SCAN DEBUG ===");
-                                          debugPrint(
-                                              "Product found: ${product.productName}");
-                                          debugPrint(
-                                              "Product ID: ${product.productId}");
-                                          debugPrint(
-                                              "Product base price: ${product.price?.price ?? 'null'}");
-                                          debugPrint(
-                                              "Product MRP: ${product.mrp ?? 'null'}");
-                                          debugPrint(
-                                              "Product has ${product.stock?.length ?? 0} stock entries");
-
-                                          // Check if stock management is enabled
-                                          final generalSettingsProvider =
-                                              Provider.of<
-                                                      GeneralSettingsProvider>(
-                                                  context,
-                                                  listen: false);
-                                          bool stockEnabled =
-                                              generalSettingsProvider
-                                                      .generalSettings
-                                                      ?.stockEnabled ??
-                                                  false;
-                                          debugPrint(
-                                              "Stock management enabled: $stockEnabled");
-
-                                          if (!stockEnabled) {
-                                            debugPrint(
-                                                "Stock management disabled, adding product directly to cart...");
-
-                                            // Add product directly without stock checking
+                                            num? quantity;
                                             if (product.unit == 'KGS' &&
                                                 prefix == '000' &&
                                                 query.length == 14) {
                                               // Weight-based product
-                                              String weightKg = lastFive!
-                                                  .substring(0,
-                                                      2); // First 2 digits = KG
-                                              String weightGrams =
-                                                  lastFive.substring(2,
-                                                      5); // Last 3 digits = Grams
-                                              double totalWeight = double.parse(
-                                                      weightKg) +
-                                                  (double.parse(weightGrams) /
-                                                      1000);
-
-                                              debugPrint(
-                                                  "Weight-based product (no stock check): Weight=${totalWeight}kg");
-
-                                              localProductProvider.addToCart(
-                                                product: product,
-                                                quantity: totalWeight,
-                                              );
-
-                                              showScaffold(
-                                                context: context,
-                                                message: 'Added To Cart',
-                                              );
+                                              String weightKg = lastFive!.substring(
+                                                  0, 2); // First 2 digits = KG
+                                              String weightGrams = lastFive.substring(
+                                                  2, 5); // Last 3 digits = Grams
+                                              quantity = double.parse(weightKg) +
+                                                      (double.parse(weightGrams) /
+                                                          1000);
                                             } else if (product.unit == 'PCS' &&
                                                 prefix == '000' &&
                                                 query.length == 14) {
                                               // Count-based product
-                                              int quantity = int.parse(
+                                              quantity = int.parse(
                                                   lastFive!); // Last 5 digits represent quantity
-
-                                              debugPrint(
-                                                  "Count-based product (no stock check): Quantity=${quantity}");
-
-                                              localProductProvider.addToCart(
-                                                product: product,
-                                                quantity: quantity,
-                                              );
-
-                                              showScaffold(
-                                                context: context,
-                                                message: 'Added To Cart',
-                                              );
-                                            } else {
-                                              debugPrint(
-                                                  "Regular product (no stock check)");
-
-                                              localProductProvider.addToCart(
-                                                product: product,
-                                              );
-
-                                              showScaffold(
-                                                context: context,
-                                                message: 'Added To Cart',
-                                              );
                                             }
+
+                                            // Use centralized helper for stock handling
+                                            debugPrint("🛒 BARCODE SCAN - Calling ProductCartHelper with:");
+                                            debugPrint("  - Product: ${product.productName}");
+                                            debugPrint("  - Quantity: $quantity");
+                                            debugPrint("  - Customer ID: $selectedCustomerID");
+                                            debugPrint("  - Customer Name: ${selectedCustomer?.name}");
+                                            
+                                            await ProductCartHelper.handleProductSelection(
+                                              context: context,
+                                              product: product,
+                                              quantity: quantity,
+                                              addToCartDirectly: true,
+                                              customerId: selectedCustomerID,
+                                              customerName: selectedCustomer?.name,
+                                            );
 
                                             // Clear input fields
                                             setState(() {
-                                              _autocompleteProductKey =
-                                                  GlobalKey();
+                                              _autocompleteProductKey = GlobalKey();
                                               quantityController.clear();
                                               barcodeController.clear();
-                                              selectedProductIdController
-                                                  .clear();
+                                              selectedProductIdController.clear();
                                               unitPriceController.clear();
                                             });
                                             _focusTextField();
-                                            debugPrint(
-                                                "=== END BARCODE SCAN DEBUG ===");
-                                            return;
-                                          }
-
-                                          // Check if product has multiple stock options
-                                          if (product.stock != null &&
-                                              product.stock!.length > 1) {
-                                            debugPrint(
-                                                "Multiple stock entries detected, filtering available stocks...");
-
-                                            // Filter available stock options (quantity > 0)
-                                            List<Stock> availableStocks =
-                                                product.stock!
-                                                    .where((stock) =>
-                                                        stock.quantity !=
-                                                            null &&
-                                                        stock.quantity! > 0)
-                                                    .toList();
-
-                                            debugPrint(
-                                                "Available stocks after filtering: ${availableStocks.length}");
-                                            for (int i = 0;
-                                                i < availableStocks.length;
-                                                i++) {
-                                              Stock stock = availableStocks[i];
-                                              debugPrint(
-                                                  "  Stock $i: ID=${stock.id}, Price=${stock.price}, MRP=${stock.mrp}, Qty=${stock.quantity}");
-                                            }
-
-                                            if (availableStocks.length > 1) {
-                                              debugPrint(
-                                                  "Showing stock selection modal for user choice...");
-
-                                              // Show stock selection modal
-                                              final result = await showDialog(
-                                                context: context,
-                                                builder: (context) =>
-                                                    StockSelectionModal(
-                                                  product: product,
-                                                  stockOptions: availableStocks,
-                                                ),
-                                              );
-
-                                              if (result != null) {
-                                                debugPrint(
-                                                    "User selected stock from modal");
-
-                                                // Process the selected product and stock
-                                                GetProduct selectedProduct =
-                                                    result['product'];
-                                                Stock selectedStock =
-                                                    result['stock'];
-
-                                                debugPrint(
-                                                    "Selected stock: ID=${selectedStock.id}, Price=${selectedStock.price}, MRP=${selectedStock.mrp}");
-
-                                                // Add to cart with selected stock
-                                                if (selectedProduct.unit ==
-                                                        'KGS' &&
-                                                    prefix == '000' &&
-                                                    query.length == 14) {
-                                                  // Weight-based product
-                                                  String weightKg = lastFive!
-                                                      .substring(0,
-                                                          2); // First 2 digits = KG
-                                                  String weightGrams =
-                                                      lastFive.substring(2,
-                                                          5); // Last 3 digits = Grams
-                                                  double totalWeight =
-                                                      double.parse(weightKg) +
-                                                          (double.parse(
-                                                                  weightGrams) /
-                                                              1000);
-
-                                                  double stockPrice =
-                                                      double.tryParse(
-                                                              selectedStock
-                                                                      .price ??
-                                                                  "0") ??
-                                                          0.00;
-
-                                                  double? stockMrp =
-                                                      double.tryParse(
-                                                              selectedStock
-                                                                      .mrp ??
-                                                                  "0") ??
-                                                          0.00;
-
-                                                  debugPrint(
-                                                      "Weight-based product: Weight=${totalWeight}kg, Price=${stockPrice}, MRP=${stockMrp}");
-
-                                                  localProductProvider
-                                                      .addToCart(
-                                                    product: selectedProduct,
-                                                    quantity: totalWeight,
-                                                    price: stockPrice,
-                                                    mrp: stockMrp,
-                                                    selectedStock:
-                                                        selectedStock,
-                                                  );
-
-                                                  showScaffold(
-                                                    context: context,
-                                                    message: 'Added To Cart',
-                                                  );
-                                                } else if (selectedProduct
-                                                            .unit ==
-                                                        'PCS' &&
-                                                    prefix == '000' &&
-                                                    query.length == 14) {
-                                                  // Count-based product
-                                                  int quantity = int.parse(
-                                                      lastFive!); // Last 5 digits represent quantity
-
-                                                  double stockPrice =
-                                                      double.tryParse(
-                                                              selectedStock
-                                                                      .price ??
-                                                                  "0") ??
-                                                          0;
-
-                                                  debugPrint(
-                                                      "Count-based product: Quantity=${quantity}, Price=${stockPrice}");
-
-                                                  localProductProvider
-                                                      .addToCart(
-                                                    product: selectedProduct,
-                                                    quantity: quantity,
-                                                    price: stockPrice,
-                                                    selectedStock:
-                                                        selectedStock,
-                                                  );
-
-                                                  showScaffold(
-                                                    context: context,
-                                                    message: 'Added To Cart',
-                                                  );
-                                                } else {
-                                                  double stockPrice =
-                                                      double.tryParse(
-                                                              selectedStock
-                                                                      .price ??
-                                                                  "0") ??
-                                                          0;
-
-                                                  debugPrint(
-                                                      "Regular product: Price=${stockPrice}");
-
-                                                  localProductProvider
-                                                      .addToCart(
-                                                    product: selectedProduct,
-                                                    price: stockPrice,
-                                                    selectedStock:
-                                                        selectedStock,
-                                                  );
-
-                                                  showScaffold(
-                                                    context: context,
-                                                    message: 'Added To Cart',
-                                                  );
-                                                }
-
-                                                // Clear input fields
-                                                setState(() {
-                                                  _autocompleteProductKey =
-                                                      GlobalKey();
-                                                  quantityController.clear();
-                                                  barcodeController.clear();
-                                                  selectedProductIdController
-                                                      .clear();
-                                                  unitPriceController.clear();
-                                                });
-                                                _focusTextField();
-                                              } else {
-                                                debugPrint(
-                                                    "User cancelled stock selection");
-                                                // User cancelled selection
-                                                barcodeController.clear();
-                                                _focusTextField();
-                                              }
-                                            } else if (availableStocks
-                                                .isNotEmpty) {
-                                              debugPrint(
-                                                  "Single available stock found, auto-selecting...");
-
-                                              // Single stock option available, use it
-                                              Stock stock =
-                                                  availableStocks.first;
-
-                                              debugPrint(
-                                                  "Auto-selected stock: ID=${stock.id}, Price=${stock.price}, MRP=${stock.mrp}, Qty=${stock.quantity}");
-
-                                              if (product.unit == 'KGS' &&
-                                                  prefix == '000' &&
-                                                  query.length == 14) {
-                                                // Weight-based product
-                                                String weightKg = lastFive!
-                                                    .substring(0,
-                                                        2); // First 2 digits = KG
-                                                String weightGrams =
-                                                    lastFive.substring(2,
-                                                        5); // Last 3 digits = Grams
-                                                double totalWeight =
-                                                    double.parse(weightKg) +
-                                                        (double.parse(
-                                                                weightGrams) /
-                                                            1000);
-
-                                                double stockPrice =
-                                                    double.tryParse(
-                                                            stock.price ??
-                                                                "0") ??
-                                                        0;
-
-                                                debugPrint(
-                                                    "Weight-based single stock: Weight=${totalWeight}kg, Price=${stockPrice}");
-
-                                                localProductProvider.addToCart(
-                                                  product: product,
-                                                  quantity: totalWeight,
-                                                  price: stockPrice,
-                                                  selectedStock: stock,
-                                                );
-
-                                                showScaffold(
-                                                  context: context,
-                                                  message: 'Added To Cart',
-                                                );
-                                              } else if (product.unit ==
-                                                      'PCS' &&
-                                                  prefix == '000' &&
-                                                  query.length == 14) {
-                                                // Count-based product
-                                                int quantity = int.parse(
-                                                    lastFive!); // Last 5 digits represent quantity
-
-                                                double stockPrice =
-                                                    double.tryParse(
-                                                            stock.price ??
-                                                                "0") ??
-                                                        0;
-
-                                                debugPrint(
-                                                    "Count-based single stock: Quantity=${quantity}, Price=${stockPrice}");
-
-                                                localProductProvider.addToCart(
-                                                  product: product,
-                                                  quantity: quantity,
-                                                  price: stockPrice,
-                                                  selectedStock: stock,
-                                                );
-
-                                                showScaffold(
-                                                  context: context,
-                                                  message: 'Added To Cart',
-                                                );
-                                              } else {
-                                                double stockPrice =
-                                                    double.tryParse(
-                                                            stock.price ??
-                                                                "0") ??
-                                                        0;
-
-                                                debugPrint(
-                                                    "Regular single stock: Price=${stockPrice}");
-
-                                                localProductProvider.addToCart(
-                                                  product: product,
-                                                  price: stockPrice,
-                                                  selectedStock: stock,
-                                                );
-
-                                                showScaffold(
-                                                  context: context,
-                                                  message: 'Added To Cart',
-                                                );
-                                              }
-
-                                              // Clear input fields
-                                              setState(() {
-                                                _autocompleteProductKey =
-                                                    GlobalKey();
-                                                quantityController.clear();
-                                                barcodeController.clear();
-                                                selectedProductIdController
-                                                    .clear();
-                                                unitPriceController.clear();
-                                              });
-                                              _focusTextField();
-                                            } else {
-                                              debugPrint(
-                                                  "No available stock found (all stocks have 0 quantity)");
-
-                                              // No stock available
-                                              showScaffoldError(
-                                                context: context,
-                                                message:
-                                                    "No stock available for this product.",
-                                              );
-                                              barcodeController.clear();
-                                              _focusTextField();
-                                            }
                                           } else {
-                                            debugPrint(
-                                                "Product has single or no stock entries, checking availability...");
-
-                                            // Single product found with no or single stock
-                                            // Use the default stock if available
-                                            Stock? stock = null;
-                                            if (product.stock != null &&
-                                                product.stock!.isNotEmpty) {
-                                              List<Stock> availableStocks =
-                                                  product.stock!
-                                                      .where((stock) =>
-                                                          stock.quantity !=
-                                                              null &&
-                                                          stock.quantity! > 0)
-                                                      .toList();
-
-                                              if (availableStocks.isNotEmpty) {
-                                                stock = availableStocks.first;
-                                                debugPrint(
-                                                    "Found available stock: ID=${stock.id}, Price=${stock.price}, MRP=${stock.mrp}, Qty=${stock.quantity}");
-                                              } else {
-                                                debugPrint(
-                                                    "No available stock found (all have 0 quantity)");
-                                              }
-                                            } else {
-                                              debugPrint(
-                                                  "Product has no stock entries - using product-level pricing");
-                                            }
-
-                                            if (product.unit == 'KGS' &&
-                                                prefix == '000' &&
-                                                query.length == 14) {
-                                              // Weight-based product
-                                              String weightKg = lastFive!
-                                                  .substring(0,
-                                                      2); // First 2 digits = KG
-                                              String weightGrams =
-                                                  lastFive.substring(2,
-                                                      5); // Last 3 digits = Grams
-                                              double totalWeight = double.parse(
-                                                      weightKg) +
-                                                  (double.parse(weightGrams) /
-                                                      1000);
-
-                                              double? stockPrice = stock != null
-                                                  ? (double.tryParse(
-                                                          stock.price ?? "0") ??
-                                                      0)
-                                                  : null;
-
-                                              debugPrint(
-                                                  "Weight-based fallback: Weight=${totalWeight}kg, StockPrice=${stockPrice ?? 'null'}, WillUseProductPrice=${stockPrice == null}");
-
-                                              localProductProvider.addToCart(
-                                                product: product,
-                                                quantity: totalWeight,
-                                                price: stockPrice,
-                                                selectedStock: stock,
-                                              );
-
-                                              showScaffold(
-                                                context: context,
-                                                message: 'Added To Cart',
-                                              );
-                                            } else if (product.unit == 'PCS' &&
-                                                prefix == '000' &&
-                                                query.length == 14) {
-                                              // Count-based product
-                                              int quantity = int.parse(
-                                                  lastFive!); // Last 5 digits represent quantity
-
-                                              double? stockPrice = stock != null
-                                                  ? (double.tryParse(
-                                                          stock.price ?? "0") ??
-                                                      0)
-                                                  : null;
-
-                                              debugPrint(
-                                                  "Count-based fallback: Quantity=${quantity}, StockPrice=${stockPrice ?? 'null'}, WillUseProductPrice=${stockPrice == null}");
-
-                                              localProductProvider.addToCart(
-                                                product: product,
-                                                quantity: quantity,
-                                                price: stockPrice,
-                                                selectedStock: stock,
-                                              );
-
-                                              showScaffold(
-                                                context: context,
-                                                message: 'Added To Cart',
-                                              );
-                                            } else {
-                                              double? stockPrice = stock != null
-                                                  ? (double.tryParse(
-                                                          stock.price ?? "0") ??
-                                                      0)
-                                                  : null;
-
-                                              debugPrint(
-                                                  "Regular fallback: StockPrice=${stockPrice ?? 'null'}, WillUseProductPrice=${stockPrice == null}");
-
-                                              localProductProvider.addToCart(
-                                                product: product,
-                                                price: stockPrice,
-                                                selectedStock: stock,
-                                              );
-
-                                              showScaffold(
-                                                context: context,
-                                                message: 'Added To Cart',
-                                              );
-                                            }
-
-                                            // Clear input fields if necessary
-                                            setState(() {
-                                              _autocompleteProductKey =
-                                                  GlobalKey();
-                                              quantityController.clear();
-                                              barcodeController.clear();
-                                              selectedProductIdController
-                                                  .clear();
-                                              unitPriceController.clear();
-                                            });
-                                            _focusTextField();
-                                          }
-                                          debugPrint(
-                                              "=== END BARCODE SCAN DEBUG ===");
-                                        } else {
                                           // Set dialog state to open
                                           await showDialog(
                                             context: context,
@@ -1362,6 +932,9 @@ class BillingPageState extends State<BillingPage> {
                                         false;
                                     debugPrint(
                                         "Stock management enabled: $stockEnabled");
+
+                                    // Set the stock enabled status in LocalProductProvider
+                                    localProductProvider.setStockEnabled(stockEnabled);
 
                                     if (!stockEnabled) {
                                       debugPrint(
@@ -2424,6 +1997,15 @@ class BillingPageState extends State<BillingPage> {
                     displayStringForOption: (CustomerListModelData customer) =>
                         "${customer.name} ${customer.phone}",
                     onSelected: (CustomerListModelData selection) {
+                      debugPrint("👤 CUSTOMER SELECTED:");
+                      debugPrint("  - Customer ID: ${selection.id}");
+                      debugPrint("  - Customer Name: ${selection.name}");
+                      debugPrint("  - Customer Phone: ${selection.phone}");
+                      
+                      // Update the global customer selection provider
+                      Provider.of<CustomerSelectionProvider>(context, listen: false)
+                          .setSelectedCustomer(selection);
+                      
                       String? accessToken =
                           Provider.of<AuthModel>(context, listen: false).token;
                       // debugPrint("accessToken From AuthModel $accessToken");
@@ -2437,6 +2019,8 @@ class BillingPageState extends State<BillingPage> {
                         selectedCustomerPhone = selection.phone;
                         selectedCustomer = selection;
                       });
+                      
+                      debugPrint("👤 Customer selection completed - state updated and provider notified");
                     },
                     fieldViewBuilder: (BuildContext context,
                         TextEditingController mobileNumberTextController,
@@ -2644,6 +2228,10 @@ class BillingPageState extends State<BillingPage> {
           circleRadius: 5,
           child: InkWell(
             onTap: () => {
+              // Clear the global customer selection provider
+              Provider.of<CustomerSelectionProvider>(context, listen: false)
+                  .clearSelectedCustomer(),
+              
               setState(() {
                 _autocompletePhoneKey = GlobalKey();
                 mobileNumberTextController.clear();
@@ -3560,5 +3148,52 @@ class BillingPageState extends State<BillingPage> {
       );
     }
     // If item is already fully visible, do nothing
+  }
+
+  // Function to handle sales executive changes
+  void _onSalesExecutiveChanged() {
+    debugPrint("🔄 BILLING: Sales executive changed, updating default customer...");
+    
+    // Clear current customer selection
+    Provider.of<CustomerSelectionProvider>(context, listen: false)
+        .clearSelectedCustomer();
+    
+    // Reset billing page customer state
+    setState(() {
+      mobileNumberText = "";
+      selectedCustomerID = null;
+      selectedCustomerPhone = null;
+      selectedCustomer = null;
+      isCustomerFound = false;
+      salesExecutivemobileNumberText = "";
+      mobileNumberTextController.clear();
+      _autocompletePhoneKey = GlobalKey(); // Reset autocomplete
+    });
+    
+    // Re-fetch customers to set new default based on new executive
+    _fetchCustomers();
+  }
+
+  void _onUserSwitched() {
+    debugPrint("🔄 BILLING: User switched, updating default customer...");
+    
+    // Clear current customer selection
+    Provider.of<CustomerSelectionProvider>(context, listen: false)
+        .clearSelectedCustomer();
+    
+    // Reset billing page customer state
+    setState(() {
+      mobileNumberText = "";
+      selectedCustomerID = null;
+      selectedCustomerPhone = null;
+      selectedCustomer = null;
+      isCustomerFound = false;
+      salesExecutivemobileNumberText = "";
+      mobileNumberTextController.clear();
+      _autocompletePhoneKey = GlobalKey(); // Reset autocomplete
+    });
+    
+    // Re-fetch customers to set new default based on new executive
+    _fetchCustomers();
   }
 }

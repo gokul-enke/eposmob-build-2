@@ -126,9 +126,14 @@ class SideMenu extends StatelessWidget {
           const SizedBox(
             height: 20,
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 15.0),
-            child: UserSwitcher(),
+          Builder(
+            builder: (context) {
+              debugPrint("🔧 SideMenu: Building UserSwitcher widget");
+              return const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 15.0),
+                child: UserSwitcher(),
+              );
+            },
           ),
           const SizedBox(
             height: 20,

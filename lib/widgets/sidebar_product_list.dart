@@ -3,13 +3,13 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/widgets/stock_selection_modal.dart';
+import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -67,144 +67,36 @@ class _SideBarProductListState extends State<SideBarProductList> {
   }
 
   Future<void> _handleProductSelection(GetProduct product) async {
-    debugPrint("=== SIDEBAR PRODUCT VIEW DEBUG ===");
-    debugPrint("Product selected: ${product.productName}");
-    debugPrint("Product ID: ${product.productId}");
-    debugPrint("Product base price: ${product.price?.price ?? 'null'}");
-    debugPrint("Product MRP: ${product.mrp ?? 'null'}");
-    debugPrint("Product has ${product.stock?.length ?? 0} stock entries");
+    debugPrint("🎯 SIDEBAR PRODUCT SELECTION:");
+    debugPrint("  - Product: ${product.productName}");
+    debugPrint("  - Product ID: ${product.productId}");
+    
+    // Get customer info from global provider
+    final customerSelectionProvider = Provider.of<CustomerSelectionProvider>(context, listen: false);
+    debugPrint("  - Customer from provider: ${customerSelectionProvider.selectedCustomerName}");
+    debugPrint("  - Customer ID from provider: ${customerSelectionProvider.selectedCustomerID}");
 
-    final localProductProvider =
-        Provider.of<LocalProductProvider>(context, listen: false);
-    final generalSettingsProvider =
-        Provider.of<GeneralSettingsProvider>(context, listen: false);
-
-    // Check if stock management is enabled
-    bool stockEnabled = generalSettingsProvider.generalSettings?.stockEnabled ?? false;
-    debugPrint("Stock management enabled: $stockEnabled");
-
-    if (!stockEnabled) {
-      debugPrint("Stock management disabled, adding product directly...");
-      
-      if (widget.onProductSelected != null) {
-        widget.onProductSelected!(product);
-      } else {
-        localProductProvider.addToCart(
-          product: product,
-        );
-
-        showScaffold(
-          context: context,
-          message: 'Added To Cart',
-        );
-      }
-      debugPrint("=== END SIDEBAR PRODUCT VIEW DEBUG ===");
-      return;
-    }
-
-    // Check if product has multiple stock options
-    if (product.stock != null && product.stock!.length > 1) {
-      debugPrint("Multiple stock entries detected, filtering available stocks...");
-      
-      // Filter available stock options (quantity > 0)
-      List<Stock> availableStocks = product.stock!
-          .where((stock) => stock.quantity != null && stock.quantity! > 0)
-          .toList();
-
-      debugPrint("Available stocks after filtering: ${availableStocks.length}");
-      for (int i = 0; i < availableStocks.length; i++) {
-        Stock stock = availableStocks[i];
-        debugPrint("  Stock $i: ID=${stock.id}, Price=${stock.price}, MRP=${stock.mrp}, Qty=${stock.quantity}");
-      }
-
-      if (availableStocks.length > 1) {
-        debugPrint("Showing stock selection modal for user choice...");
-        
-        // Show stock selection modal
-        final result = await showDialog(
-          context: context,
-          builder: (context) => StockSelectionModal(
-            product: product,
-            stockOptions: availableStocks,
-          ),
-        );
-
-        if (result != null) {
-          debugPrint("User selected stock from modal");
-          
-          // Process the selected product and stock
-          GetProduct selectedProduct = result['product'];
-          Stock selectedStock = result['stock'];
-
-          debugPrint("Selected stock: ID=${selectedStock.id}, Price=${selectedStock.price}, MRP=${selectedStock.mrp}");
-
-          double stockPrice = double.tryParse(selectedStock.price ?? "0") ?? 0;
-          double stockMrp = double.tryParse(selectedStock.mrp ?? "0") ?? 0;
-
-          debugPrint("Adding to cart: Price=${stockPrice}, MRP=${stockMrp}");
-
-          // Always add to cart directly with selected stock information
-          localProductProvider.addToCart(
-            product: selectedProduct,
-            price: stockPrice,
-            mrp: stockMrp,
-            selectedStock: selectedStock,
-          );
-
-          showScaffold(
-            context: context,
-            message: 'Added To Cart',
-          );
-        } else {
-          debugPrint("User cancelled stock selection");
-        }
-      } else if (availableStocks.isNotEmpty) {
-        debugPrint("Single available stock found, auto-selecting...");
-        
-        // Single stock option available, use it
-        Stock stock = availableStocks.first;
-
-        debugPrint("Auto-selected stock: ID=${stock.id}, Price=${stock.price}, MRP=${stock.mrp}, Qty=${stock.quantity}");
-
-        double stockPrice = double.tryParse(stock.price ?? "0") ?? 0;
-        double stockMrp = double.tryParse(stock.mrp ?? "0") ?? 0;
-
-        debugPrint("Adding to cart with single stock: Price=${stockPrice}, MRP=${stockMrp}");
-
-        // Always add to cart directly with selected stock information
-        localProductProvider.addToCart(
-          product: product,
-          price: stockPrice,
-          mrp: stockMrp,
-          selectedStock: stock,
-        );
-
-        showScaffold(
-          context: context,
-          message: 'Added To Cart',
-        );
-      } else {
-        debugPrint("No available stock found (all stocks have 0 quantity)");
-        
-        showScaffold(
-          context: context,
-          message: "No stock available for this product.",
-        );
-      }
-    } else {
-      debugPrint("Product has single or no stock entries, using auto-selection logic...");
-      
-      // Always add to cart directly - let the addToCart method handle auto-selection for single stock
-      localProductProvider.addToCart(
-        product: product,
-      );
-
-      showScaffold(
+    if (widget.onProductSelected != null) {
+      debugPrint("  - Using custom callback");
+      // If there's a custom callback, use the helper but handle the callback manually
+      await ProductCartHelper.handleProductSelection(
         context: context,
-        message: 'Added To Cart',
+        product: product,
+        addToCartDirectly: false, // Don't add to cart, let callback handle it
+        // Customer info will be fetched from global provider in the helper
+      );
+      // Call the custom callback
+      widget.onProductSelected!(product);
+    } else {
+      debugPrint("  - Using default behavior - adding to cart directly");
+      // Default behavior - add to cart directly
+      await ProductCartHelper.handleProductSelection(
+        context: context,
+        product: product,
+        addToCartDirectly: true, // Add to cart directly for sidebar view
+        // Customer info will be fetched from global provider in the helper
       );
     }
-    debugPrint("=== END SIDEBAR PRODUCT VIEW DEBUG ===");
   }
 
   @override
@@ -748,19 +640,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
     );
   }
 
-  void _addToCart(BuildContext context, dynamic product, int? customerId) {
-    // Use LocalProductProvider instead of CartProvider
-    Provider.of<LocalProductProvider>(context, listen: false).addToCart(
-      product: product,
-      quantity: 1,
-    );
 
-    // Show success message using ScaffoldMessenger instead of showScaffold
-    showScaffold(
-      context: context,
-      message: "Order Updated Successfully",
-    );
-  }
 
 // Helper widget for image display in carousel
   Widget buildCarouselImage(String? urlImage) {

@@ -28,7 +28,7 @@ class FaqProvider with ChangeNotifier {
         _faqList = [];
       }
     } catch (error) {
-      print('Error fetching FAQs: $error');
+      debugPrint('Error fetching FAQs: $error');
       _faqList = []; // Reset the list on error
     } finally {
       _isLoading = false;
