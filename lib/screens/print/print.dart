@@ -70,7 +70,7 @@ class _PrintPageState extends State<PrintPage> {
           .fetchPaymentGateways(accessToken: accessToken!);
 
       await _loadDefaultPaperSize();
-      await _loadDocumentConfigurations(accessToken);
+      _loadDocumentConfigurationsFromProvider();
       await _loadDefaultPrinter();
     });
   }
@@ -228,6 +228,34 @@ class _PrintPageState extends State<PrintPage> {
         context: context,
         message: "${printer.deviceName.toString()} Printer Selected",
       );
+    }
+  }
+
+  void _loadDocumentConfigurationsFromProvider() {
+    try {
+      final docConfigProvider =
+          Provider.of<DocumentConfigProvider>(context, listen: false);
+      
+      _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+      
+      if (_billDocumentConfig == null) {
+        debugPrint("WARNING: Bill document configuration not found in provider, may need to load manually");
+        // Fallback: try to load if not available
+        String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+        if (accessToken != null) {
+          _loadDocumentConfigurations(accessToken);
+          return;
+        }
+      }
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint("ERROR getting document configurations from provider: $e");
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 

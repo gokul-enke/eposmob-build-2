@@ -7,6 +7,7 @@ import 'package:pos_machine/providers/authentication_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
+import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/screens/login/forgot_password.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -389,6 +390,19 @@ class _SignInScreenState extends State<SignInScreen> {
                                                     context,
                                                     listen: false)
                                                 .fetchProductsFromAPI();
+
+                                            // Load document configurations during login
+                                            try {
+                                              final docConfigProvider =
+                                                  Provider.of<DocumentConfigProvider>(
+                                                      context, listen: false);
+                                              await docConfigProvider.fetchDocumentConfigurations(
+                                                  accessToken: authModel.token ?? "");
+                                              debugPrint("Document configurations loaded successfully during login");
+                                            } catch (e) {
+                                              debugPrint("Warning: Failed to load document configurations during login: $e");
+                                              // Don't block login if document config fails
+                                            }
 
                                             Navigator.pop(context);
 

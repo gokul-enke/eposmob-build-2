@@ -54,7 +54,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
 
     // Get the current scroll position and visible height
     final double currentScroll = _scrollController.offset;
-    final double visibleHeight = 180.0; // maxHeight in constraints
+    const double visibleHeight = 180.0; // maxHeight in constraints
 
     // Adding buffer space to ensure the item is fully visible
     const double bufferSpace = 4.0;
