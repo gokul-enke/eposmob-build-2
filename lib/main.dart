@@ -41,6 +41,11 @@ void main() async {
   Hive.registerAdapter(HiveLocalCartItemAdapter());
   Hive.registerAdapter(HiveSavedOrderAdapter());
   Hive.registerAdapter(HiveProductAdapter());
+  // Add missing adapter registrations
+  Hive.registerAdapter(HiveGetProductAdapter());
+  Hive.registerAdapter(HiveProductCategoryAdapter());
+  Hive.registerAdapter(HiveProductPriceAdapter());
+  Hive.registerAdapter(HiveAttachmentAdapter());
 
   // Open boxes
   await Hive.openBox<HiveProduct>('products');

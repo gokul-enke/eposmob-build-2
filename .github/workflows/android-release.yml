@@ -1,0 +1,49 @@
+name: Android Release CI
+on:
+  push:
+    tags:
+      - v*
+permissions:
+  contents: write
+jobs:
+  build-and-release-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gokul-dev
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          
+      - uses: subosito/flutter-action@v2.12.0
+        with:
+          flutter-version: 3.27.1
+          channel: stable
+
+      - name: Install project dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release -v
+
+      - name: Verify APK Build
+        run: ls -la build/app/outputs/flutter-apk/
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: "build/app/outputs/flutter-apk/app-release.apk"
+          name: EposMachine-android-${{github.ref_name}}.apk
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/app/outputs/flutter-apk/app-release.apk
+          draft: true
+          prerelease: true
+          generate_release_notes: true 
