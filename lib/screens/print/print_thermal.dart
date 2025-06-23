@@ -228,7 +228,7 @@ class ThermalPrinter {
               fontType: fontType,
               align: PosAlign.center,
               bold: true,
-              height: textSizeTitle),
+              height: textSizeBig),
         ),
       ]);
     }
@@ -349,7 +349,7 @@ class ThermalPrinter {
               fontType: fontType,
               align: PosAlign.center,
               bold: true,
-              height: textSizeMedium));
+              height: textSizeSmall));
     }
 
     // Date Header - Moved to separate _buildDateTimeRow method
@@ -385,7 +385,7 @@ class ThermalPrinter {
               fontType: fontType,
               align: PosAlign.left,
               bold: true,
-              height: is58mm ? textSizeSmall : textSizeMedium)));
+              height: is58mm ? textSizeSmall : textSizeSmall )));
     }
 
     if (displayConfig?['showParticulars']?.visible == true) {
@@ -407,7 +407,7 @@ class ThermalPrinter {
               fontType: fontType,
               align: PosAlign.left,
               bold: true,
-              height: is58mm ? textSizeSmall : textSizeMedium)));
+              height: is58mm ? textSizeSmall : textSizeSmall )));
     }
 
     if (displayConfig?['showMRP']?.visible == true) {
@@ -422,7 +422,7 @@ class ThermalPrinter {
               fontType: fontType,
               align: PosAlign.right,
               bold: true,
-              height: is58mm ? textSizeSmall : textSizeMedium)));
+              height: is58mm ? textSizeSmall : textSizeSmall )));
     }
 
     if (displayConfig?['showQty']?.visible == true) {
@@ -437,7 +437,7 @@ class ThermalPrinter {
               fontType: fontType,
               align: PosAlign.right,
               bold: true,
-              height: is58mm ? textSizeSmall : textSizeMedium)));
+              height: is58mm ? textSizeSmall : textSizeSmall )));
     }
 
     if (displayConfig?['showRate']?.visible == true) {
@@ -452,7 +452,7 @@ class ThermalPrinter {
               fontType: fontType,
               align: PosAlign.right,
               bold: true,
-              height: is58mm ? textSizeSmall : textSizeMedium)));
+              height: is58mm ? textSizeSmall : textSizeSmall )));
     }
 
     if (displayConfig?['showTotal']?.visible == true) {
@@ -467,7 +467,7 @@ class ThermalPrinter {
               fontType: fontType,
               align: PosAlign.right,
               bold: true,
-              height: is58mm ? textSizeSmall : textSizeMedium)));
+              height: is58mm ? textSizeSmall : textSizeSmall )));
     }
 
     if (headerColumns.isNotEmpty) {
@@ -521,7 +521,7 @@ class ThermalPrinter {
                 fontType: fontType,
                 align: PosAlign.left,
                 bold: true,
-                height: is58mm ? textSizeSmall : textSizeMedium)));
+                height: is58mm ? textSizeSmall : textSizeSmall )));
       }
 
       if (displayConfig?['showParticulars']?.visible == true) {
@@ -534,7 +534,7 @@ class ThermalPrinter {
             3; // Conservative estimate for character wrapping
 
         if (productName.length <= maxCharsPerLine) {
-          // Product name fits in one line
+          // Product name fits in one line - add the product name column to existing row
           productNameRow.add(PosColumn(
               text: productName,
               width: productNameWidth,
@@ -542,7 +542,7 @@ class ThermalPrinter {
                   fontType: fontType,
                   align: PosAlign.left,
                   bold: true,
-                  height: is58mm ? textSizeSmall : textSizeMedium)));
+                  height: is58mm ? textSizeSmall : textSizeSmall )));
 
           bytes += generator.row(productNameRow);
         } else {
@@ -584,7 +584,7 @@ class ThermalPrinter {
                       fontType: fontType,
                       align: PosAlign.left,
                       bold: true,
-                      height: is58mm ? textSizeSmall : textSizeMedium)));
+                      height: is58mm ? textSizeSmall : textSizeSmall )));
             } else if (!isFirstLine &&
                 displayConfig?['showSLNumber']?.visible == true) {
               // Empty space for SL column on continuation lines
@@ -604,7 +604,7 @@ class ThermalPrinter {
                     fontType: fontType,
                     align: PosAlign.left,
                     bold: true,
-                    height: is58mm ? textSizeSmall : textSizeMedium)));
+                    height: is58mm ? textSizeSmall : textSizeSmall )));
 
             bytes += generator.row(nameLineRow);
             isFirstLine = false;
@@ -619,7 +619,7 @@ class ThermalPrinter {
                 fontType: fontType,
                 align: PosAlign.left,
                 bold: true,
-                height: is58mm ? textSizeSmall : textSizeMedium)));
+                height: is58mm ? textSizeSmall : textSizeSmall )));
         productNameRow.add(PosColumn(
             text: '',
             width: 11,
@@ -640,32 +640,16 @@ class ThermalPrinter {
                 PosStyles(fontType: fontType, align: PosAlign.left)));
       }
 
-      // Calculate remaining width first to add empty space before price columns
-      int usedWidth = 0;
-      if (displayConfig?['showSLNumber']?.visible == true) usedWidth += 1;
-      if (displayConfig?['showMRP']?.visible == true) usedWidth += 2;
-      if (displayConfig?['showQty']?.visible == true) usedWidth += 2;
-      if (displayConfig?['showRate']?.visible == true) usedWidth += 2;
-      if (displayConfig?['showTotal']?.visible == true) usedWidth += 2;
-      
-      int remainingWidth = 12 - usedWidth;
-      if (remainingWidth > 0) {
-        priceDetailsRow.add(PosColumn(
-            text: '',
-            width: remainingWidth,
-            styles: PosStyles(fontType: fontType, align: PosAlign.left)));
-      }
-
-      // Add price columns with matching widths to header
+      // Add price columns with the old working widths (like your old code)
       if (displayConfig?['showMRP']?.visible == true) {
         priceDetailsRow.add(PosColumn(
             text: mrp,
-            width: 2, // Changed from 3 to 2 to match header
+            width: 3, // Back to 3 like your old working code
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.right,
                 bold: false,
-                height: is58mm ? textSizeSmall : textSizeMedium)));
+                height: is58mm ? textSizeSmall : textSizeSmall )));
       }
       if (displayConfig?['showQty']?.visible == true) {
         priceDetailsRow.add(PosColumn(
@@ -675,27 +659,27 @@ class ThermalPrinter {
                 fontType: fontType,
                 align: PosAlign.right,
                 bold: false,
-                height: is58mm ? textSizeSmall : textSizeMedium)));
+                height: is58mm ? textSizeSmall : textSizeSmall )));
       }
       if (displayConfig?['showRate']?.visible == true) {
         priceDetailsRow.add(PosColumn(
             text: unitPrice,
-            width: 2, // Changed from 3 to 2 to match header
+            width: 3, // Back to 3 like your old working code
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.right,
                 bold: false,
-                height: is58mm ? textSizeSmall : textSizeMedium)));
+                height: is58mm ? textSizeSmall : textSizeSmall )));
       }
       if (displayConfig?['showTotal']?.visible == true) {
         priceDetailsRow.add(PosColumn(
             text: totalPrice,
-            width: 2, // Changed from 3 to 2 to match header
+            width: 3, // Back to 3 like your old working code
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.right,
                 bold: false,
-                height: is58mm ? textSizeSmall : textSizeMedium)));
+                height: is58mm ? textSizeSmall : textSizeSmall )));
       }
 
       if (priceDetailsRow.isNotEmpty) {
@@ -787,12 +771,12 @@ class ThermalPrinter {
       rightSideItems.add({
         'label': 'Net Total',
         'value': total.toStringAsFixed(2),
-        'textSize': 'big',
+        'textSize': 'medium',
         'bold': 'true'
       });
     }
 
-    // Generate rows with vertical division (6 columns each side)
+    // Generate rows with vertical division (5-1-6 columns: left section, gap, right section)
     int maxRows = leftSideItems.length > rightSideItems.length 
         ? leftSideItems.length 
         : rightSideItems.length;
@@ -800,7 +784,7 @@ class ThermalPrinter {
     for (int i = 0; i < maxRows; i++) {
       List<PosColumn> columns = [];
 
-      // Left side (first 6 columns)
+      // Left side (first 5 columns: 2 for label + 3 for value)
       if (i < leftSideItems.length) {
         final leftItem = leftSideItems[i];
         PosTextSize textSize = leftItem['textSize'] == 'big' ? textSizeBig 
@@ -810,7 +794,7 @@ class ThermalPrinter {
 
         columns.add(PosColumn(
             text: leftItem['label']!,
-            width: 3,
+            width: 2,
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,
@@ -828,7 +812,7 @@ class ThermalPrinter {
         // Empty left side
         columns.add(PosColumn(
             text: '',
-            width: 3,
+            width: 2,
             styles: PosStyles(fontType: fontType)));
         columns.add(PosColumn(
             text: '',
@@ -836,7 +820,13 @@ class ThermalPrinter {
             styles: PosStyles(fontType: fontType)));
       }
 
-      // Right side (last 6 columns)
+      // Gap column (1 column for spacing)
+      columns.add(PosColumn(
+          text: '',
+          width: 1,
+          styles: PosStyles(fontType: fontType)));
+
+      // Right side (last 6 columns: 3 for label + 3 for value)
       if (i < rightSideItems.length) {
         final rightItem = rightSideItems[i];
         PosTextSize textSize = rightItem['textSize'] == 'big' ? textSizeBig 
