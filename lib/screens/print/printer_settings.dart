@@ -17,6 +17,8 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:pos_machine/screens/print/print_thermal.dart';
+import 'package:esc_pos_utils/esc_pos_utils.dart';
 
 class BluetoothPrinter {
   String? deviceName;
@@ -49,6 +51,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   BluetoothPrinter? selectedPrinter;
   bool isLoading = true;
   String selectedPaperSize = '80mm';
+  String selectedFontStyle = 'Font B (Default)';
   
   // Printer scanning variables
   var printerManager = PrinterManager.instance;
@@ -58,6 +61,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   // List of available paper sizes
   final List<String> paperSizes = ['80mm', '58mm', 'A5', 'A4'];
+  
+  // List of available font styles
+  final List<String> fontStyles = [
+    'Font A (Small & Sharp)',
+    'Font B (Default)',
+  ];
 
   @override
   void initState() {
@@ -195,6 +204,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     final prefs = await SharedPreferences.getInstance();
     final defaultPrinterJson = prefs.getString('default_printer');
     final defaultPaperSize = prefs.getString('default_paper_size');
+    final defaultFontStyle = prefs.getString('default_font_style');
 
     // Load paper size
     if (defaultPaperSize != null) {
@@ -214,6 +224,19 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         selectedPaperSize = '80mm';
       });
       _saveDefaultPaperSize('80mm');
+    }
+
+    // Load font style
+    if (defaultFontStyle != null) {
+      setState(() {
+        selectedFontStyle = defaultFontStyle;
+      });
+    } else {
+      // Default to Font B if no preference is set
+      setState(() {
+        selectedFontStyle = 'Font B (Default)';
+      });
+      _saveDefaultFontStyle('Font B (Default)');
     }
 
     // Load default printer
@@ -349,6 +372,341 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         context: context,
         message: "Default paper size saved",
       );
+    }
+  }
+
+  Future<void> _saveDefaultFontStyle(String fontStyle) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('default_font_style', fontStyle);
+
+    if (mounted) {
+      showScaffold(
+        context: context,
+        message: "Default font style saved",
+      );
+    }
+  }
+
+  Future<void> _printSample() async {
+    if (selectedPrinter == null) {
+      showScaffoldError(
+        context: context,
+        message: "Please select a printer first",
+      );
+      return;
+    }
+
+    try {
+      // Convert selected font style to PosFontType
+      PosFontType fontType = selectedFontStyle.contains('Font A') 
+          ? PosFontType.fontA 
+          : PosFontType.fontB;
+
+      // Create dummy cart items
+      List<Map<String, dynamic>> dummyCartItems = [
+        {
+          'productName': 'Premium Coffee Beans (Arabica)',
+          'mrp': '450.00',
+          'quantity': '2',
+          'unitPrice': '400.00',
+          'totalPrice': '800.00'
+        },
+        {
+          'productName': 'Organic Green Tea Leaves',
+          'mrp': '250.00',
+          'quantity': '1',
+          'unitPrice': '225.00',
+          'totalPrice': '225.00'
+        },
+        {
+          'productName': 'Fresh Milk (Full Cream) 1L',
+          'mrp': '65.00',
+          'quantity': '3',
+          'unitPrice': '60.00',
+          'totalPrice': '180.00'
+        },
+        {
+          'productName': 'Whole Wheat Bread',
+          'mrp': '45.00',
+          'quantity': '2',
+          'unitPrice': '40.00',
+          'totalPrice': '80.00'
+        },
+        {
+          'productName': 'Premium Dark Chocolate Bar',
+          'mrp': '120.00',
+          'quantity': '1',
+          'unitPrice': '110.00',
+          'totalPrice': '110.00'
+        },
+      ];
+
+      // Print sample with the selected font style
+      await _printSampleReceipt(
+        selectedPrinter!,
+        dummyCartItems,
+        fontType,
+        '1395.00', // Total amount
+        '55.00', // Saved amount
+        DateTime.now().toIso8601String(),
+        'SAMPLE-${DateTime.now().millisecondsSinceEpoch}',
+      );
+
+      if (mounted) {
+        showScaffold(
+          context: context,
+          message: "Sample receipt sent to printer",
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: "Error printing sample: ${e.toString()}",
+        );
+      }
+    }
+  }
+
+  Future<void> _printSampleReceipt(
+    BluetoothPrinter printer,
+    List<Map<String, dynamic>> cartItems,
+    PosFontType fontType,
+    String formattedTotal,
+    String savedTotal,
+    String orderDate,
+    String orderNumber,
+  ) async {
+    var printerManager = PrinterManager.instance;
+
+    try {
+      // Connect to printer
+      await _connectToPrinter(printer);
+
+      // Generate receipt with all fields enabled (dummy document config)
+      final profile = await CapabilityProfile.load();
+      PaperSize paperSize = selectedPaperSize == '58mm' ? PaperSize.mm58 : PaperSize.mm80;
+      final generator = Generator(paperSize, profile);
+      List<int> bytes = [];
+
+      // Text sizes based on font type
+      PosTextSize textSizeTitle = PosTextSize.size4;
+      PosTextSize textSizeBig = PosTextSize.size3;
+      PosTextSize textSizeMedium = PosTextSize.size2;
+      PosTextSize textSizeSmall = PosTextSize.size1;
+
+      // Header
+      bytes += generator.text('SAMPLE STORE',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: true,
+              height: textSizeTitle));
+      
+      bytes += generator.text('Sample Receipt Test',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: true,
+              height: textSizeMedium));
+
+      bytes += generator.text('123 Sample Street, Demo City',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: true,
+              height: textSizeSmall));
+
+      bytes += generator.text('TEL: +1-234-567-8900',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: true,
+              height: textSizeSmall));
+
+      bytes += generator.text('Email: sample@store.com',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: true,
+              height: textSizeSmall));
+
+      bytes += generator.text('INVOICE',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: true,
+              height: textSizeMedium));
+
+      bytes += generator.text('INV No: $orderNumber',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: true,
+              height: textSizeMedium));
+
+      // Table header
+      bytes += generator.row([
+        PosColumn(text: 'SL#', width: 1, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: true, height: textSizeMedium)),
+        PosColumn(text: 'PARTICULARS', width: 3, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: true, height: textSizeMedium)),
+        PosColumn(text: 'MRP', width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeMedium)),
+        PosColumn(text: 'QTY', width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeMedium)),
+        PosColumn(text: 'RATE', width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeMedium)),
+        PosColumn(text: 'TOTAL', width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeMedium)),
+      ]);
+      bytes += generator.hr();
+
+      // Cart items
+      for (var i = 0; i < cartItems.length; i++) {
+        var item = cartItems[i];
+        
+        // Product name row
+        bytes += generator.row([
+          PosColumn(text: '${i + 1}', width: 1, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: true, height: textSizeMedium)),
+          PosColumn(text: item['productName'], width: 11, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: true, height: textSizeMedium)),
+        ]);
+
+        // Price details row
+        bytes += generator.row([
+          PosColumn(text: '', width: 1, styles: PosStyles(fontType: fontType, align: PosAlign.left)),
+          PosColumn(text: '', width: 3, styles: PosStyles(fontType: fontType, align: PosAlign.left)),
+          PosColumn(text: item['mrp'], width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: false, height: textSizeMedium)),
+          PosColumn(text: item['quantity'], width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: false, height: textSizeMedium)),
+          PosColumn(text: item['unitPrice'], width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: false, height: textSizeMedium)),
+          PosColumn(text: item['totalPrice'], width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: false, height: textSizeMedium)),
+        ]);
+      }
+
+      bytes += generator.hr();
+
+      // Totals
+      bytes += generator.row([
+        PosColumn(text: 'Items', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: false, height: textSizeSmall)),
+        PosColumn(text: '${cartItems.length}', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeSmall)),
+      ]);
+
+      bytes += generator.row([
+        PosColumn(text: 'Total Quantity', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: false, height: textSizeSmall)),
+        PosColumn(text: '9', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeSmall)),
+      ]);
+
+      bytes += generator.row([
+        PosColumn(text: 'Total MRP', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: false, height: textSizeSmall)),
+        PosColumn(text: '1450.00', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeSmall)),
+      ]);
+
+      bytes += generator.row([
+        PosColumn(text: 'You Saved', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: false, height: textSizeMedium)),
+        PosColumn(text: savedTotal, width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeMedium)),
+      ]);
+
+      bytes += generator.row([
+        PosColumn(text: 'Net Total', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: true, height: textSizeBig)),
+        PosColumn(text: formattedTotal, width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeBig)),
+      ]);
+
+      bytes += generator.hr();
+
+      // Amount in words
+      bytes += generator.text('One Thousand Three Hundred Ninety Five Rupees Only.',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: true,
+              height: textSizeSmall));
+
+      // Date and time
+      bytes += generator.row([
+        PosColumn(text: '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: true, height: textSizeSmall)),
+        PosColumn(text: '${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeSmall)),
+      ]);
+
+      bytes += generator.hr();
+
+      // Barcode
+      try {
+        List<String> code39Data = orderNumber.replaceAll(RegExp(r'[^A-Z0-9\-]'), '').split("");
+        bytes += generator.barcode(
+          Barcode.code39(code39Data),
+          height: selectedPaperSize == '58mm' ? 20 : 30,
+          width: 1,
+          textPos: BarcodeText.none,
+          align: PosAlign.center,
+        );
+      } catch (e) {
+        bytes += generator.text(orderNumber, styles: PosStyles(fontType: fontType, align: PosAlign.center, bold: true));
+      }
+
+      // Terms and conditions
+      bytes += generator.hr();
+      bytes += generator.text('TERMS & CONDITIONS:', styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: true, height: textSizeSmall));
+      bytes += generator.text('1. All sales are final unless defective.', styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: false, height: textSizeSmall));
+      bytes += generator.text('2. Returns accepted within 7 days with receipt.', styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: false, height: textSizeSmall));
+      bytes += generator.text('3. Store credit issued for returns without receipt.', styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: false, height: textSizeSmall));
+
+      // Thank you message
+      bytes += generator.hr();
+      bytes += generator.text('Thank You for Shopping with Us!',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: true,
+              height: textSizeMedium));
+
+      bytes += generator.text('Visit Again Soon!',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: true,
+              height: textSizeSmall));
+
+      // Cut
+      bytes += generator.cut();
+
+      // Print
+      PrinterType type = printer.typePrinter == PrinterType.usb.toString() 
+          ? PrinterType.usb 
+          : PrinterType.bluetooth;
+      await printerManager.send(type: type, bytes: bytes);
+
+    } finally {
+      await _disconnectPrinter(printer);
+    }
+  }
+
+  Future<void> _connectToPrinter(BluetoothPrinter selectedPrinter) async {
+    if (selectedPrinter.typePrinter == PrinterType.usb.toString()) {
+      await printerManager.connect(
+        type: PrinterType.usb,
+        model: UsbPrinterInput(
+          name: selectedPrinter.deviceName ?? 'Unknown',
+          productId: selectedPrinter.productId,
+          vendorId: selectedPrinter.vendorId,
+        ),
+      );
+    } else if (selectedPrinter.typePrinter == PrinterType.bluetooth.toString()) {
+      if (selectedPrinter.address == null) {
+        throw Exception('Bluetooth printer address is null');
+      }
+      await printerManager.connect(
+        type: PrinterType.bluetooth,
+        model: BluetoothPrinterInput(
+          name: selectedPrinter.deviceName ?? 'Unknown',
+          address: selectedPrinter.address!,
+          isBle: false,
+        ),
+      );
+    }
+  }
+
+  Future<void> _disconnectPrinter(BluetoothPrinter selectedPrinter) async {
+    try {
+      PrinterType type = selectedPrinter.typePrinter == PrinterType.usb.toString() 
+          ? PrinterType.usb 
+          : PrinterType.bluetooth;
+      await printerManager.disconnect(type: type);
+    } catch (e) {
+      debugPrint('Error disconnecting printer: $e');
     }
   }
 
@@ -582,6 +940,93 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                 ),
                               ),
                             ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Font Style Selection & Sample Print
+                    BuildBoxShadowContainer(
+                      circleRadius: 7,
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 10),
+                      color: Colors.white,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Font Style & Sample Print',
+                                style: TextStyle(
+                                  color: ColorManager.kPrimaryColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              CustomRoundButton(
+                                fct: () => _printSample(),
+                                title: 'Print Sample',
+                                height: 36,
+                                width: 120,
+                                fontSize: 12,
+                                borderColor: ColorManager.kPrimaryColor,
+                                boxColor: ColorManager.kPrimaryColor,
+                                textColor: Colors.white,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              const Text(
+                                'Font Style:',
+                                style: TextStyle(
+                                  color: ColorManager.kTitleTextColor,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: Colors.grey[300]!),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                child: DropdownButton<String>(
+                                  value: selectedFontStyle,
+                                  underline: const SizedBox(),
+                                  items: fontStyles.map((String style) {
+                                    return DropdownMenuItem<String>(
+                                      value: style,
+                                      child: Text(style),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? newValue) {
+                                    if (newValue != null) {
+                                      setState(() {
+                                        selectedFontStyle = newValue;
+                                      });
+                                      _saveDefaultFontStyle(newValue);
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Select a font style and print a sample receipt with dummy data to test how it looks on your printer.',
+                            style: TextStyle(
+                              color: ColorManager.kGreyColor.withOpacity(0.8),
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
