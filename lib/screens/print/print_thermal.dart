@@ -529,87 +529,86 @@ class ThermalPrinter {
         int productNameWidth =
             displayConfig?['showSLNumber']?.visible == true ? 11 : 12;
 
-        // Calculate character limit for product name based on width
-        int maxCharsPerLine = productNameWidth *
-            3; // Conservative estimate for character wrapping
+        // Calculate character limit for product name based on actual paper width
+        // For thermal printers: 58mm ≈ 32 chars, 80mm ≈ 48 chars
+        int maxCharsPerLine;
+        if (is58mm) {
+          maxCharsPerLine = displayConfig?['showSLNumber']?.visible == true ? 28 : 32; // Reserve space for SL number
+        } else {
+          maxCharsPerLine = displayConfig?['showSLNumber']?.visible == true ? 44 : 48; // Reserve space for SL number
+        }
 
         if (productName.length <= maxCharsPerLine) {
-          // Product name fits in one line - add the product name column to existing row
-          productNameRow.add(PosColumn(
-              text: productName,
-              width: productNameWidth,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.left,
-                  bold: true,
-                  height: is58mm ? textSizeSmall : textSizeSmall )));
-
-          bytes += generator.row(productNameRow);
-        } else {
-          // Product name needs multiple lines - split properly
-          String remainingName = productName;
-          bool isFirstLine = true;
-
-          while (remainingName.isNotEmpty) {
-            String currentLine;
-
-            if (remainingName.length <= maxCharsPerLine) {
-              currentLine = remainingName;
-              remainingName = '';
-            } else {
-              // Find a good break point (prefer breaking at spaces)
-              int breakPoint = maxCharsPerLine;
-
-              for (int i = maxCharsPerLine - 1;
-                  i >= maxCharsPerLine - 10 && i >= 0;
-                  i--) {
-                if (i < remainingName.length && remainingName[i] == ' ') {
-                  breakPoint = i;
-                  break;
-                }
-              }
-
-              currentLine = remainingName.substring(0, breakPoint).trim();
-              remainingName = remainingName.substring(breakPoint).trim();
-            }
-
-            List<PosColumn> nameLineRow = [];
-
-            if (isFirstLine &&
-                displayConfig?['showSLNumber']?.visible == true) {
-              nameLineRow.add(PosColumn(
-                  text: '$slNumber',
-                  width: 1,
-                  styles: PosStyles(
-                      fontType: fontType,
-                      align: PosAlign.left,
-                      bold: true,
-                      height: is58mm ? textSizeSmall : textSizeSmall )));
-            } else if (!isFirstLine &&
-                displayConfig?['showSLNumber']?.visible == true) {
-              // Empty space for SL column on continuation lines
-              nameLineRow.add(PosColumn(
-                  text: '',
-                  width: 1,
-                  styles: PosStyles(
-                      fontType: fontType,
-                      align: PosAlign.left,
-                      bold: true)));
-            }
-
-            nameLineRow.add(PosColumn(
-                text: currentLine,
-                width: productNameWidth,
+          // Try using generator.text() instead of generator.row() to prevent centering
+          if (displayConfig?['showSLNumber']?.visible == true) {
+            // Show SL number first, then product name on same line
+            bytes += generator.text('$slNumber  $productName',
                 styles: PosStyles(
                     fontType: fontType,
                     align: PosAlign.left,
                     bold: true,
-                    height: is58mm ? textSizeSmall : textSizeSmall )));
-
-            bytes += generator.row(nameLineRow);
-            isFirstLine = false;
+                    height: is58mm ? textSizeSmall : textSizeSmall ));
+          } else {
+            // Just product name
+            bytes += generator.text(productName,
+                styles: PosStyles(
+                    fontType: fontType,
+                    align: PosAlign.left,
+                    bold: true,
+                    height: is58mm ? textSizeSmall : textSizeSmall ));
           }
-        }
+                  } else {
+            // Product name needs multiple lines - split properly using generator.text()
+            String remainingName = productName;
+            bool isFirstLine = true;
+
+            while (remainingName.isNotEmpty) {
+              String currentLine;
+
+              if (remainingName.length <= maxCharsPerLine) {
+                currentLine = remainingName;
+                remainingName = '';
+              } else {
+                // Find a good break point (prefer breaking at spaces)
+                int breakPoint = maxCharsPerLine;
+
+                for (int i = maxCharsPerLine - 1;
+                    i >= maxCharsPerLine - 10 && i >= 0;
+                    i--) {
+                  if (i < remainingName.length && remainingName[i] == ' ') {
+                    breakPoint = i;
+                    break;
+                  }
+                }
+
+                currentLine = remainingName.substring(0, breakPoint).trim();
+                remainingName = remainingName.substring(breakPoint).trim();
+              }
+
+              // Use generator.text() for multi-line names too
+              if (isFirstLine && displayConfig?['showSLNumber']?.visible == true) {
+                // First line with SL number
+                bytes += generator.text('$slNumber  $currentLine',
+                    styles: PosStyles(
+                        fontType: fontType,
+                        align: PosAlign.left,
+                        bold: true,
+                        height: is58mm ? textSizeSmall : textSizeSmall ));
+              } else {
+                // Continuation lines or when SL not visible
+                String lineText = (displayConfig?['showSLNumber']?.visible == true && !isFirstLine) 
+                    ? '   $currentLine' // Add spacing for SL alignment
+                    : currentLine;
+                bytes += generator.text(lineText,
+                    styles: PosStyles(
+                        fontType: fontType,
+                        align: PosAlign.left,
+                        bold: true,
+                        height: is58mm ? textSizeSmall : textSizeSmall ));
+              }
+              isFirstLine = false;
+            }
+          }
       } else if (displayConfig?['showSLNumber']?.visible == true) {
         // Only SL number, no product name - fill the row to width 12
         productNameRow.add(PosColumn(
