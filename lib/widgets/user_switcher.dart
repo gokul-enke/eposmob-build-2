@@ -37,15 +37,20 @@ class _UserSwitcherState extends State<UserSwitcher> {
     debugPrint("🔧 UserSwitcher: initState called");
     // Fetch sales executives when the widget is initialized
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      debugPrint("🔧 UserSwitcher: Post frame callback - fetching sales executives");
-      debugPrint("🔧 UserSwitcher: Context is: ${context != null ? 'valid' : 'null'}");
+      debugPrint(
+          "🔧 UserSwitcher: Post frame callback - fetching sales executives");
+      debugPrint(
+          "🔧 UserSwitcher: Context is: ${context != null ? 'valid' : 'null'}");
       debugPrint("🔧 UserSwitcher: Mounted is: $mounted");
-      
+
       try {
-        final provider = Provider.of<SalesExecutiveProvider>(context, listen: false);
-        debugPrint("🔧 UserSwitcher: SalesExecutiveProvider obtained successfully");
-        debugPrint("🔧 UserSwitcher: Current executives count before fetch: ${provider.salesExecutives.length}");
-        
+        final provider =
+            Provider.of<SalesExecutiveProvider>(context, listen: false);
+        debugPrint(
+            "🔧 UserSwitcher: SalesExecutiveProvider obtained successfully");
+        debugPrint(
+            "🔧 UserSwitcher: Current executives count before fetch: ${provider.salesExecutives.length}");
+
         provider.fetchSalesExecutives(context);
         debugPrint("🔧 UserSwitcher: fetchSalesExecutives called successfully");
       } catch (e) {
@@ -258,112 +263,27 @@ class _UserSwitcherState extends State<UserSwitcher> {
   @override
   Widget build(BuildContext context) {
     debugPrint("🔧 UserSwitcher: build method called");
-    
+
     return Consumer<SalesExecutiveProvider>(
       builder: (context, salesExecutiveProvider, child) {
         debugPrint("🔧 UserSwitcher: Consumer builder called");
-        debugPrint("🔧 UserSwitcher: Sales executives count: ${salesExecutiveProvider.salesExecutives.length}");
-        
+        debugPrint(
+            "🔧 UserSwitcher: Sales executives count: ${salesExecutiveProvider.salesExecutives.length}");
+
         final currentUser = salesExecutiveProvider.getCurrentUser(context);
-        
+
         if (currentUser == null) {
-          debugPrint("❌ UserSwitcher: currentUser is null - widget will be hidden");
-          debugPrint("🔧 UserSwitcher: Available executives: ${salesExecutiveProvider.salesExecutives.map((e) => e.name).toList()}");
-          
+          debugPrint(
+              "❌ UserSwitcher: currentUser is null - widget will be hidden");
+          debugPrint(
+              "🔧 UserSwitcher: Available executives: ${salesExecutiveProvider.salesExecutives.map((e) => e.name).toList()}");
+
           // Instead of hiding completely, show a fallback UI with debug info
-          return Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.red.withOpacity(0.3)),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  "⚠️ User Switcher Debug",
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s12,
-                    0.18,
-                    Colors.red,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  "Current user: null",
-                  style: buildCustomStyle(
-                    FontWeightManager.regular,
-                    FontSize.s10,
-                    0.16,
-                    Colors.red,
-                  ),
-                ),
-                Text(
-                  "Executives: ${salesExecutiveProvider.salesExecutives.length}",
-                  style: buildCustomStyle(
-                    FontWeightManager.regular,
-                    FontSize.s10,
-                    0.16,
-                    Colors.red,
-                  ),
-                ),
-                if (salesExecutiveProvider.salesExecutives.isNotEmpty)
-                  Text(
-                    "Names: ${salesExecutiveProvider.salesExecutives.map((e) => e.name).join(', ')}",
-                    style: buildCustomStyle(
-                      FontWeightManager.regular,
-                      FontSize.s10,
-                      0.16,
-                      Colors.red,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                const SizedBox(height: 5),
-                // Manual trigger button for testing
-                ElevatedButton(
-                  onPressed: () async {
-                    debugPrint("🔧 Manual fetch button pressed");
-                    try {
-                      await salesExecutiveProvider.fetchSalesExecutives(context);
-                      debugPrint("🔧 Manual fetch completed");
-                    } catch (e) {
-                      debugPrint("❌ Manual fetch error: $e");
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  ),
-                  child: Text(
-                    "Manual Fetch",
-                    style: buildCustomStyle(
-                      FontWeightManager.regular,
-                      FontSize.s10,
-                      0.16,
-                      Colors.white,
-                    ),
-                  ),
-                ),
-                if (salesExecutiveProvider.error != null)
-                  Text(
-                    "Error: ${salesExecutiveProvider.error}",
-                    style: buildCustomStyle(
-                      FontWeightManager.regular,
-                      FontSize.s10,
-                      0.16,
-                      Colors.red,
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
-            ),
-          );
+          return Container();
         }
 
-        debugPrint("✅ UserSwitcher: currentUser found: ${currentUser.name} (${currentUser.email ?? 'no email'})");
+        debugPrint(
+            "✅ UserSwitcher: currentUser found: ${currentUser.name} (${currentUser.email ?? 'no email'})");
 
         return Column(
           children: [
@@ -522,7 +442,8 @@ class _UserSwitcherState extends State<UserSwitcher> {
                         onTap: isCurrentUser
                             ? null
                             : () async {
-                                debugPrint("🔧 UserSwitcher: Switching to user: ${executive.name}");
+                                debugPrint(
+                                    "🔧 UserSwitcher: Switching to user: ${executive.name}");
                                 // Show password confirmation dialog
                                 await _showPasswordConfirmationDialog(
                                     executive);

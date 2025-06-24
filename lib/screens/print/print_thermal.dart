@@ -13,29 +13,12 @@ import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ThermalPrinter {
   final BuildContext context;
   var printerManager = PrinterManager.instance;
 
-  // Font configuration - default fallback (will be overridden by user preference)
-  static const PosFontType defaultFontType = PosFontType.fontB;
-
-  // Text size variables for consistent sizing
-  static const PosTextSize textSizeTitle = PosTextSize.size4;
-  static const PosTextSize textSizeBig = PosTextSize.size3;
-  static const PosTextSize textSizeMedium = PosTextSize.size2;
-  static const PosTextSize textSizeSmall = PosTextSize.size1;
-
   ThermalPrinter(this.context);
-
-  // Load font type from SharedPreferences
-  Future<PosFontType> _loadFontType() async {
-    final prefs = await SharedPreferences.getInstance();
-    final fontStyle = prefs.getString('default_font_style') ?? 'Font B (Default)';
-    return fontStyle.contains('Font A') ? PosFontType.fontA : PosFontType.fontB;
-  }
 
   Future<void> printReceipt({
     required BluetoothPrinter selectedPrinter,
@@ -74,10 +57,6 @@ class ThermalPrinter {
     _debugPrintTemplateSettings(displayConfig);
 
     try {
-      // Load the selected font type from preferences
-      final selectedFontType = await _loadFontType();
-      debugPrint("Using font type: ${selectedFontType == PosFontType.fontA ? 'Font A' : 'Font B'}");
-
       // Connect to the printer
       debugPrint("Connecting to printer...");
       await _connectToPrinter(selectedPrinter);
@@ -103,23 +82,25 @@ class ThermalPrinter {
       final generator = Generator(paperSize, profile);
       List<int> bytes = [];
 
-      // Pass the display config, document config, and selected font type to helper functions
+      // Pass the display config and document config to helper functions
       bytes += _buildHeader(
-          generator, displayConfig, billDocumentConfig, orderDate, orderNumber, selectedFontType);
+          generator, displayConfig, billDocumentConfig, orderDate, orderNumber);
+      bytes += _buildDateTimeRow(generator, orderDate);
       bytes += _buildCartItems(generator, cartItems, displayConfig,
-          isFromLocalStorage, selectedPaperSize, billDocumentConfig, selectedFontType);
+          isFromLocalStorage, selectedPaperSize, billDocumentConfig);
       bytes += _buildTotalAmount(generator, displayConfig, formattedTotal,
-          savedTotal, cartItems.length, billDocumentConfig, cartItems, isFromLocalStorage, selectedFontType);
+          savedTotal, cartItems.length, billDocumentConfig);
+
+      // Thank You Message
+      if (displayConfig?['showThankYouMessage']?.visible == true) {
+        bytes += _buildThankYouMessage(generator, displayConfig);
+      }
 
       // QR Code
       if (displayConfig?['showQRCode']?.visible == true) {
-        debugPrint("QR Code is enabled in display config");
         // Access link from PaymentGatewaysProvider
         final paymentGatewaysProvider =
             Provider.of<PaymentGatewaysProvider>(context, listen: false);
-        debugPrint(
-            "Payment gateways available: ${paymentGatewaysProvider.paymentGateways.length}");
-
         final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
             .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
                 orElse: () => PaymentGateway(
@@ -138,38 +119,21 @@ class ThermalPrinter {
                       createdAt: "",
                       updatedAt: "",
                     ));
-
-        debugPrint("Manual payment gateway found:");
-        debugPrint("- ID: ${manualPaymentGateway.id}");
-        debugPrint("- Name: '${manualPaymentGateway.name}'");
-        debugPrint("- Code: '${manualPaymentGateway.code}'");
-        debugPrint("- Link: '${manualPaymentGateway.link}'");
-
         bytes += _buildQRCode(generator, manualPaymentGateway.link,
-            formattedTotal, orderNumber, displayConfig, selectedFontType);
+            formattedTotal, orderNumber, displayConfig);
       } else {
         debugPrint("Skipping QR code, disabled in settings");
-        debugPrint(
-            "Display config showQRCode visible: ${displayConfig?['showQRCode']?.visible}");
       }
 
-      // Date and Time (moved to bottom, just above barcode)
-      bytes += _buildDateTimeRow(generator, orderDate, selectedFontType);
-
       // Order ID Barcode (just before Terms & Conditions)
-      bytes += _buildOrderBarcode(generator, orderNumber, selectedPaperSize, selectedFontType);
+      bytes += _buildOrderBarcode(generator, orderNumber, selectedPaperSize);
 
       // Terms & Conditions
       if (displayConfig?['showTermsConditions']?.visible == true) {
         bytes +=
-            _buildTermsConditions(generator, displayConfig, billDocumentConfig, selectedPaperSize, selectedFontType);
+            _buildTermsConditions(generator, displayConfig, billDocumentConfig);
       } else {
         debugPrint("Skipping Terms & Conditions, disabled in settings");
-      }
-
-      // Thank You Message (moved to end after Terms & Conditions)
-      if (displayConfig?['showThankYouMessage']?.visible == true) {
-        bytes += _buildThankYouMessage(generator, displayConfig, selectedFontType);
       }
 
       // Cut the receipt
@@ -207,8 +171,7 @@ class ThermalPrinter {
       Map<String, DisplayOption>? displayConfig,
       DocumentConfig? docConfig,
       String orderDate,
-      String orderNumber,
-      PosFontType fontType) {
+      String orderNumber) {
     List<int> bytes = [];
 
     final appSettingsProvider =
@@ -224,11 +187,8 @@ class ThermalPrinter {
         PosColumn(
           text: storeName.isNotEmpty ? storeName : 'STORE NAME',
           width: 12,
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeBig),
+          styles: const PosStyles(
+              align: PosAlign.center, bold: true, height: PosTextSize.size2),
         ),
       ]);
     }
@@ -242,11 +202,9 @@ class ThermalPrinter {
         PosColumn(
           text: description.isNotEmpty ? description : 'Mini Supermarket',
           width: 12,
-          styles: PosStyles(
-            fontType: fontType,
+          styles: const PosStyles(
             align: PosAlign.center,
-            bold: true,
-            height: textSizeMedium,
+            height: PosTextSize.size1,
           ),
         ),
       ]);
@@ -260,11 +218,9 @@ class ThermalPrinter {
           PosColumn(
             text: storeAddress,
             width: 12,
-            styles: PosStyles(
-              fontType: fontType,
+            styles: const PosStyles(
               align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall,
+              height: PosTextSize.size1,
             ),
           ),
         ]);
@@ -279,11 +235,9 @@ class ThermalPrinter {
           PosColumn(
             text: fssaiInfo,
             width: 12,
-            styles: PosStyles(
-              fontType: fontType,
+            styles: const PosStyles(
               align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall,
+              height: PosTextSize.size1,
             ),
           ),
         ]);
@@ -297,11 +251,7 @@ class ThermalPrinter {
           '';
       if (telephone.isNotEmpty) {
         bytes += generator.text('TEL: $telephone',
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.center,
-                bold: true,
-                height: textSizeSmall));
+            styles: const PosStyles(align: PosAlign.center));
       }
     }
 
@@ -312,11 +262,7 @@ class ThermalPrinter {
           '';
       if (email.isNotEmpty) {
         bytes += generator.text('Email: $email',
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.center,
-                bold: true,
-                height: textSizeSmall));
+            styles: const PosStyles(align: PosAlign.center));
       }
     }
 
@@ -329,11 +275,7 @@ class ThermalPrinter {
               'INVOICE';
       bytes += generator.text(
           invoiceTitle.isNotEmpty ? invoiceTitle : 'INVOICE',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeMedium));
+          styles: const PosStyles(align: PosAlign.center, bold: true));
     }
 
     // Invoice Number
@@ -345,11 +287,7 @@ class ThermalPrinter {
               : 'INV No: $orderNumber';
 
       bytes += generator.text(invoiceNumberText,
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall));
+          styles: const PosStyles(align: PosAlign.center, bold: true));
     }
 
     // Date Header - Moved to separate _buildDateTimeRow method
@@ -363,8 +301,7 @@ class ThermalPrinter {
       Map<String, DisplayOption>? displayConfig,
       bool isFromLocalStorage,
       String selectedPaperSize,
-      DocumentConfig? billDocumentConfig,
-      PosFontType fontType) {
+      DocumentConfig? billDocumentConfig) {
     List<int> bytes = [];
 
     // Determine if we're using 58mm paper for font size adjustment
@@ -382,10 +319,9 @@ class ThermalPrinter {
           text: slLabel,
           width: 1,
           styles: PosStyles(
-              fontType: fontType,
               align: PosAlign.left,
               bold: true,
-              height: is58mm ? textSizeSmall : textSizeSmall )));
+              height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
     }
 
     if (displayConfig?['showParticulars']?.visible == true) {
@@ -404,10 +340,9 @@ class ThermalPrinter {
           text: label.toUpperCase(),
           width: particularsWidth,
           styles: PosStyles(
-              fontType: fontType,
               align: PosAlign.left,
               bold: true,
-              height: is58mm ? textSizeSmall : textSizeSmall )));
+              height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
     }
 
     if (displayConfig?['showMRP']?.visible == true) {
@@ -419,10 +354,9 @@ class ThermalPrinter {
           text: mrpLabel.toUpperCase(),
           width: 2,
           styles: PosStyles(
-              fontType: fontType,
               align: PosAlign.right,
               bold: true,
-              height: is58mm ? textSizeSmall : textSizeSmall )));
+              height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
     }
 
     if (displayConfig?['showQty']?.visible == true) {
@@ -434,10 +368,9 @@ class ThermalPrinter {
           text: label.toUpperCase(),
           width: 2,
           styles: PosStyles(
-              fontType: fontType,
               align: PosAlign.right,
               bold: true,
-              height: is58mm ? textSizeSmall : textSizeSmall )));
+              height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
     }
 
     if (displayConfig?['showRate']?.visible == true) {
@@ -449,10 +382,9 @@ class ThermalPrinter {
           text: label.toUpperCase(),
           width: 2,
           styles: PosStyles(
-              fontType: fontType,
               align: PosAlign.right,
               bold: true,
-              height: is58mm ? textSizeSmall : textSizeSmall )));
+              height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
     }
 
     if (displayConfig?['showTotal']?.visible == true) {
@@ -464,10 +396,9 @@ class ThermalPrinter {
           text: label.toUpperCase(),
           width: 2,
           styles: PosStyles(
-              fontType: fontType,
               align: PosAlign.right,
               bold: true,
-              height: is58mm ? textSizeSmall : textSizeSmall )));
+              height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
     }
 
     if (headerColumns.isNotEmpty) {
@@ -515,13 +446,11 @@ class ThermalPrinter {
 
       if (displayConfig?['showSLNumber']?.visible == true) {
         productNameRow.add(PosColumn(
-            text: '$slNumber',
+            text: '#$slNumber',
             width: 1,
             styles: PosStyles(
-                fontType: fontType,
                 align: PosAlign.left,
-                bold: true,
-                height: is58mm ? textSizeSmall : textSizeSmall )));
+                height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
       }
 
       if (displayConfig?['showParticulars']?.visible == true) {
@@ -529,101 +458,86 @@ class ThermalPrinter {
         int productNameWidth =
             displayConfig?['showSLNumber']?.visible == true ? 11 : 12;
 
-        // Calculate character limit for product name based on actual paper width
-        // For thermal printers: 58mm ≈ 32 chars, 80mm ≈ 48 chars
-        int maxCharsPerLine;
-        if (is58mm) {
-          maxCharsPerLine = displayConfig?['showSLNumber']?.visible == true ? 28 : 32; // Reserve space for SL number
-        } else {
-          maxCharsPerLine = displayConfig?['showSLNumber']?.visible == true ? 44 : 48; // Reserve space for SL number
-        }
+        // Calculate character limit for product name based on width
+        int maxCharsPerLine = productNameWidth *
+            3; // Conservative estimate for character wrapping
 
         if (productName.length <= maxCharsPerLine) {
-          // Try using generator.text() instead of generator.row() to prevent centering
-          if (displayConfig?['showSLNumber']?.visible == true) {
-            // Show SL number first, then product name on same line
-            bytes += generator.text('$slNumber  $productName',
-                styles: PosStyles(
-                    fontType: fontType,
-                    align: PosAlign.left,
-                    bold: true,
-                    height: is58mm ? textSizeSmall : textSizeSmall ));
-          } else {
-            // Just product name
-            bytes += generator.text(productName,
-                styles: PosStyles(
-                    fontType: fontType,
-                    align: PosAlign.left,
-                    bold: true,
-                    height: is58mm ? textSizeSmall : textSizeSmall ));
-          }
-                  } else {
-            // Product name needs multiple lines - split properly using generator.text()
-            String remainingName = productName;
-            bool isFirstLine = true;
+          // Product name fits in one line
+          productNameRow.add(PosColumn(
+              text: productName,
+              width: productNameWidth,
+              styles: PosStyles(
+                  align: PosAlign.left,
+                  height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
 
-            while (remainingName.isNotEmpty) {
-              String currentLine;
+          bytes += generator.row(productNameRow);
+        } else {
+          // Product name needs multiple lines - split properly
+          String remainingName = productName;
+          bool isFirstLine = true;
 
-              if (remainingName.length <= maxCharsPerLine) {
-                currentLine = remainingName;
-                remainingName = '';
-              } else {
-                // Find a good break point (prefer breaking at spaces)
-                int breakPoint = maxCharsPerLine;
+          while (remainingName.isNotEmpty) {
+            String currentLine;
 
-                for (int i = maxCharsPerLine - 1;
-                    i >= maxCharsPerLine - 10 && i >= 0;
-                    i--) {
-                  if (i < remainingName.length && remainingName[i] == ' ') {
-                    breakPoint = i;
-                    break;
-                  }
+            if (remainingName.length <= maxCharsPerLine) {
+              currentLine = remainingName;
+              remainingName = '';
+            } else {
+              // Find a good break point (prefer breaking at spaces)
+              int breakPoint = maxCharsPerLine;
+
+              for (int i = maxCharsPerLine - 1;
+                  i >= maxCharsPerLine - 10 && i >= 0;
+                  i--) {
+                if (i < remainingName.length && remainingName[i] == ' ') {
+                  breakPoint = i;
+                  break;
                 }
-
-                currentLine = remainingName.substring(0, breakPoint).trim();
-                remainingName = remainingName.substring(breakPoint).trim();
               }
 
-              // Use generator.text() for multi-line names too
-              if (isFirstLine && displayConfig?['showSLNumber']?.visible == true) {
-                // First line with SL number
-                bytes += generator.text('$slNumber  $currentLine',
-                    styles: PosStyles(
-                        fontType: fontType,
-                        align: PosAlign.left,
-                        bold: true,
-                        height: is58mm ? textSizeSmall : textSizeSmall ));
-              } else {
-                // Continuation lines or when SL not visible
-                String lineText = (displayConfig?['showSLNumber']?.visible == true && !isFirstLine) 
-                    ? '   $currentLine' // Add spacing for SL alignment
-                    : currentLine;
-                bytes += generator.text(lineText,
-                    styles: PosStyles(
-                        fontType: fontType,
-                        align: PosAlign.left,
-                        bold: true,
-                        height: is58mm ? textSizeSmall : textSizeSmall ));
-              }
-              isFirstLine = false;
+              currentLine = remainingName.substring(0, breakPoint).trim();
+              remainingName = remainingName.substring(breakPoint).trim();
             }
+
+            List<PosColumn> nameLineRow = [];
+
+            if (isFirstLine &&
+                displayConfig?['showSLNumber']?.visible == true) {
+              nameLineRow.add(PosColumn(
+                  text: '#$slNumber',
+                  width: 1,
+                  styles: PosStyles(
+                      align: PosAlign.left,
+                      height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+            } else if (!isFirstLine &&
+                displayConfig?['showSLNumber']?.visible == true) {
+              // Empty space for SL column on continuation lines
+              nameLineRow.add(PosColumn(
+                  text: '', width: 1, styles: PosStyles(align: PosAlign.left)));
+            }
+
+            nameLineRow.add(PosColumn(
+                text: currentLine,
+                width: productNameWidth,
+                styles: PosStyles(
+                    align: PosAlign.left,
+                    height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
+
+            bytes += generator.row(nameLineRow);
+            isFirstLine = false;
           }
+        }
       } else if (displayConfig?['showSLNumber']?.visible == true) {
         // Only SL number, no product name - fill the row to width 12
         productNameRow.add(PosColumn(
-            text: '$slNumber',
+            text: '#$slNumber',
             width: 1,
             styles: PosStyles(
-                fontType: fontType,
                 align: PosAlign.left,
-                bold: true,
-                height: is58mm ? textSizeSmall : textSizeSmall )));
+                height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
         productNameRow.add(PosColumn(
-            text: '',
-            width: 11,
-            styles: PosStyles(
-                fontType: fontType, align: PosAlign.left, bold: true)));
+            text: '', width: 11, styles: PosStyles(align: PosAlign.left)));
         bytes += generator.row(productNameRow);
       }
 
@@ -633,52 +547,41 @@ class ThermalPrinter {
       // Add empty space for SL column (width 1)
       if (displayConfig?['showSLNumber']?.visible == true) {
         priceDetailsRow.add(PosColumn(
-            text: '',
-            width: 1,
-            styles:
-                PosStyles(fontType: fontType, align: PosAlign.left)));
+            text: '', width: 1, styles: PosStyles(align: PosAlign.left)));
       }
 
-      // Add price columns with the old working widths (like your old code)
+      // Add price columns
       if (displayConfig?['showMRP']?.visible == true) {
         priceDetailsRow.add(PosColumn(
             text: mrp,
-            width: 3, // Back to 3 like your old working code
+            width: 3,
             styles: PosStyles(
-                fontType: fontType,
                 align: PosAlign.right,
-                bold: false,
-                height: is58mm ? textSizeSmall : textSizeSmall )));
+                height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
       }
       if (displayConfig?['showQty']?.visible == true) {
         priceDetailsRow.add(PosColumn(
             text: quantity,
             width: 2,
             styles: PosStyles(
-                fontType: fontType,
                 align: PosAlign.right,
-                bold: false,
-                height: is58mm ? textSizeSmall : textSizeSmall )));
+                height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
       }
       if (displayConfig?['showRate']?.visible == true) {
         priceDetailsRow.add(PosColumn(
             text: unitPrice,
-            width: 3, // Back to 3 like your old working code
+            width: 3,
             styles: PosStyles(
-                fontType: fontType,
                 align: PosAlign.right,
-                bold: false,
-                height: is58mm ? textSizeSmall : textSizeSmall )));
+                height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
       }
       if (displayConfig?['showTotal']?.visible == true) {
         priceDetailsRow.add(PosColumn(
             text: totalPrice,
-            width: 3, // Back to 3 like your old working code
+            width: 3,
             styles: PosStyles(
-                fontType: fontType,
                 align: PosAlign.right,
-                bold: false,
-                height: is58mm ? textSizeSmall : textSizeSmall )));
+                height: is58mm ? PosTextSize.size1 : PosTextSize.size1)));
       }
 
       if (priceDetailsRow.isNotEmpty) {
@@ -696,172 +599,89 @@ class ThermalPrinter {
       String formattedTotal,
       String? savedTotal,
       int itemCount,
-      DocumentConfig? billDocumentConfig,
-      List<dynamic> cartItems,
-      bool isFromLocalStorage,
-      PosFontType fontType) {
+      DocumentConfig? billDocumentConfig) {
     List<int> bytes = [];
 
     double saved = double.tryParse(savedTotal ?? '0.0') ?? 0.0;
     double total = double.tryParse(formattedTotal) ?? 0.0;
     double totalMrp = saved + total;
 
-    // Calculate total quantity from all cart items
-    double totalQuantity = 0.0;
-    for (var item in cartItems) {
-      if (isFromLocalStorage) {
-        totalQuantity += double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
-      } else {
-        totalQuantity += double.tryParse(item.quantity?.toString() ?? '0') ?? 0.0;
-      }
-    }
-
-    // Create vertical division layout
-    // Collect all left side and right side items first
-    List<Map<String, String>> leftSideItems = [];
-    List<Map<String, String>> rightSideItems = [];
-
-    // Left side items
+    // Display Item Count
     if (displayConfig?['showItemsCount']?.visible == true) {
-      leftSideItems.add({
-        'label': 'Items',
-        'value': itemCount.toString(),
-        'textSize': 'small',
-        'bold': 'false'
-      });
+      bytes += generator.row([
+        PosColumn(
+            text: 'Items',
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+        PosColumn(
+            text: itemCount.toString(),
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+      ]);
     }
 
-    leftSideItems.add({
-      'label': 'Total Qty',
-      'value': totalQuantity % 1 == 0 
-          ? totalQuantity.toInt().toString() 
-          : totalQuantity.toStringAsFixed(2),
-      'textSize': 'small',
-      'bold': 'false'
-    });
-
-    // Right side items
+    // Display Total MRP
     if (displayConfig?['showMRPTotal']?.visible == true) {
-      rightSideItems.add({
-        'label': 'Total MRP',
-        'value': totalMrp.toStringAsFixed(2),
-        'textSize': 'small',
-        'bold': 'false'
-      });
+      bytes += generator.row([
+        PosColumn(
+            text: 'Total MRP',
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+        PosColumn(
+            text: totalMrp.toStringAsFixed(2),
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+      ]);
     }
 
+    // Display You Saved / Discount
     if (displayConfig?['showSaved']?.visible == true) {
-      rightSideItems.add({
-        'label': 'You Saved',
-        'value': saved.toStringAsFixed(2),
-        'textSize': 'medium',
-        'bold': 'false'
-      });
+      bytes += generator.row([
+        PosColumn(
+            text: 'You Saved',
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+        PosColumn(
+            text: saved.toStringAsFixed(2),
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+      ]);
     } else if (displayConfig?['showDiscount']?.visible == true) {
-      rightSideItems.add({
-        'label': 'Discount',
-        'value': saved.toStringAsFixed(2),
-        'textSize': 'small',
-        'bold': 'false'
-      });
+      bytes += generator.row([
+        PosColumn(
+            text: 'Discount',
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.left, bold: true, height: PosTextSize.size1)),
+        PosColumn(
+            text: saved.toStringAsFixed(2),
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.right, bold: true, height: PosTextSize.size1)),
+      ]);
     }
 
+    // Display Net Total (Amount)
     if (displayConfig?['showNetAmount']?.visible == true) {
-      rightSideItems.add({
-        'label': 'Net Total',
-        'value': total.toStringAsFixed(2),
-        'textSize': 'medium',
-        'bold': 'true'
-      });
-    }
-
-    // Generate rows with vertical division (5-1-6 columns: left section, gap, right section)
-    int maxRows = leftSideItems.length > rightSideItems.length 
-        ? leftSideItems.length 
-        : rightSideItems.length;
-
-    for (int i = 0; i < maxRows; i++) {
-      List<PosColumn> columns = [];
-
-      // Left side (first 5 columns: 2 for label + 3 for value)
-      if (i < leftSideItems.length) {
-        final leftItem = leftSideItems[i];
-        PosTextSize textSize = leftItem['textSize'] == 'big' ? textSizeBig 
-            : leftItem['textSize'] == 'medium' ? textSizeMedium 
-            : textSizeSmall;
-        bool isBold = leftItem['bold'] == 'true';
-
-        columns.add(PosColumn(
-            text: leftItem['label']!,
-            width: 2,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: isBold,
-                height: textSize)));
-        columns.add(PosColumn(
-            text: leftItem['value']!,
-            width: 3,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSize)));
-      } else {
-        // Empty left side
-        columns.add(PosColumn(
-            text: '',
-            width: 2,
-            styles: PosStyles(fontType: fontType)));
-        columns.add(PosColumn(
-            text: '',
-            width: 3,
-            styles: PosStyles(fontType: fontType)));
-      }
-
-      // Gap column (1 column for spacing)
-      columns.add(PosColumn(
-          text: '',
-          width: 1,
-          styles: PosStyles(fontType: fontType)));
-
-      // Right side (last 6 columns: 3 for label + 3 for value)
-      if (i < rightSideItems.length) {
-        final rightItem = rightSideItems[i];
-        PosTextSize textSize = rightItem['textSize'] == 'big' ? textSizeBig 
-            : rightItem['textSize'] == 'medium' ? textSizeMedium 
-            : textSizeSmall;
-        bool isBold = rightItem['bold'] == 'true';
-
-        columns.add(PosColumn(
-            text: rightItem['label']!,
-            width: 3,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: isBold,
-                height: textSize)));
-        columns.add(PosColumn(
-            text: rightItem['value']!,
-            width: 3,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSize)));
-      } else {
-        // Empty right side
-        columns.add(PosColumn(
-            text: '',
-            width: 3,
-            styles: PosStyles(fontType: fontType)));
-        columns.add(PosColumn(
-            text: '',
-            width: 3,
-            styles: PosStyles(fontType: fontType)));
-      }
-
-      bytes += generator.row(columns);
+      const label = 'Net Total';
+      bytes += generator.row([
+        PosColumn(
+            text: label,
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.left, bold: true, height: PosTextSize.size2)),
+        PosColumn(
+            text: total.toStringAsFixed(2),
+            width: 6,
+            styles: const PosStyles(
+                align: PosAlign.right, bold: true, height: PosTextSize.size2)),
+      ]);
     }
 
     // Add a separator line if any totals were shown
@@ -877,18 +697,15 @@ class ThermalPrinter {
     if (displayConfig?['showAmountInWords']?.visible == true) {
       bytes += generator.text(
           '${AmountHelper().convertNumberToWords(total)} Only.',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall));
+          styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.hr();
     }
 
     return bytes;
   }
 
   List<int> _buildThankYouMessage(
-      Generator generator, Map<String, DisplayOption>? displayConfig, PosFontType fontType) {
+      Generator generator, Map<String, DisplayOption>? displayConfig) {
     List<int> bytes = [];
 
     if (displayConfig?['showThankYouMessage']?.visible == true) {
@@ -896,11 +713,8 @@ class ThermalPrinter {
           'Thank You... Visit Again';
       bytes += generator.text(
           message.isNotEmpty ? message : 'Thank You... Visit Again',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeMedium));
+          styles: const PosStyles(bold: true, align: PosAlign.center));
+      bytes += generator.hr();
     }
 
     return bytes;
@@ -911,61 +725,27 @@ class ThermalPrinter {
       String qrCodeLinkTemplate,
       String formattedTotal,
       String orderNumber,
-      Map<String, DisplayOption>? displayConfig,
-      PosFontType fontType) {
+      Map<String, DisplayOption>? displayConfig) {
     if (displayConfig?['showQRCode']?.visible != true) {
       debugPrint("QR Code disabled in settings, skipping");
       return [];
     }
 
-    debugPrint("===== QR CODE DEBUG =====");
-    debugPrint("QR Code enabled in settings");
-    debugPrint("Link template: '$qrCodeLinkTemplate'");
-    debugPrint("Formatted total: '$formattedTotal'");
-    debugPrint("Order number: '$orderNumber'");
+    debugPrint("Generating QR code (enabled in settings)");
 
     List<int> bytes = [];
+    bytes += generator.emptyLines(1);
 
-    String qrData;
+    // Replace placeholders in the template string
+    final qrData = qrCodeLinkTemplate
+        .replaceAll('{formattedTotal}', formattedTotal)
+        .replaceAll('{orderNumber}', orderNumber);
 
-    // Check if the link template is empty or contains placeholders
-    if (qrCodeLinkTemplate.isEmpty) {
-      debugPrint(
-          "WARNING: QR code link template is empty, skipping QR code generation");
-      return [];
-    } else if (qrCodeLinkTemplate.contains('{formattedTotal}') ||
-        qrCodeLinkTemplate.contains('{orderNumber}')) {
-      // Replace placeholders in the template string
-      qrData = qrCodeLinkTemplate
-          .replaceAll('{formattedTotal}', formattedTotal)
-          .replaceAll('{orderNumber}', orderNumber);
-      debugPrint("Using template with placeholders: '$qrData'");
-    } else {
-      // Use the link as-is, or create a UPI payment URL if it looks like a UPI ID
-      if (qrCodeLinkTemplate.contains('@')) {
-        // Looks like a UPI ID, create full UPI payment URL
-        qrData =
-            'upi://pay?pa=$qrCodeLinkTemplate&am=$formattedTotal&tn=$orderNumber&cu=INR&ds=EPOS&t=c&st=1&se=1&sd=1';
-        debugPrint("Created UPI payment URL: '$qrData'");
-      } else {
-        // Use the link as-is
-        qrData = qrCodeLinkTemplate;
-        debugPrint("Using link as-is: '$qrData'");
-      }
-    }
-
-    try {
-      bytes += generator.qrcode(
-        qrData,
-        size: QRSize.Size4,
-        align: PosAlign.center,
-      );
-      debugPrint("QR code generated successfully");
-    } catch (e) {
-      debugPrint("ERROR generating QR code: $e");
-      debugPrint("QR data that failed: '$qrData'");
-      return [];
-    }
+    bytes += generator.qrcode(
+      qrData,
+      size: QRSize.Size4,
+      align: PosAlign.center,
+    );
 
     bytes += generator.emptyLines(1);
 
@@ -973,55 +753,46 @@ class ThermalPrinter {
         'Scan this QR code to Pay';
     bytes += generator.text(
         qrCodeMessage.isNotEmpty ? qrCodeMessage : 'Scan this QR code to Pay',
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.center,
-            bold: true,
-            height: textSizeSmall));
-    debugPrint("==========================");
+        styles: const PosStyles(align: PosAlign.center));
+
+    bytes += generator.emptyLines(1);
     return bytes;
   }
 
-  List<int> _buildDateTimeRow(Generator generator, String orderDate, PosFontType fontType) {
+  List<int> _buildDateTimeRow(Generator generator, String orderDate) {
     List<int> bytes = [];
 
     // Add top divider line
-    // bytes += generator.hr();
+    bytes += generator.hr();
 
-    // Add date and time row with smaller text size
+    // Add date and time row
     bytes += generator.row([
       PosColumn(
           text: DateHelper.formatISODate(orderDate),
           width: 6,
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.left,
-              bold: true,
-              height: textSizeSmall,
-              width: textSizeSmall)),
+          styles: const PosStyles(
+              align: PosAlign.left, bold: true, height: PosTextSize.size1)),
       PosColumn(
           text: DateHelper.formatISODateToIST(orderDate),
           width: 6,
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.right,
-              bold: true,
-              height: textSizeSmall,
-              width: textSizeSmall)),
+          styles: const PosStyles(
+              align: PosAlign.right, bold: true, height: PosTextSize.size1)),
     ]);
 
     // Add bottom divider line
-    // bytes += generator.hr();
+    bytes += generator.hr();
 
     return bytes;
   }
 
   List<int> _buildOrderBarcode(
-      Generator generator, String orderNumber, String selectedPaperSize, PosFontType fontType) {
+      Generator generator, String orderNumber, String selectedPaperSize) {
     List<int> bytes = [];
 
     debugPrint(
         "Generating Order ID barcode: $orderNumber for $selectedPaperSize paper");
+
+    bytes += generator.emptyLines(1);
 
     // Adjust barcode size based on paper width
     bool is58mm = selectedPaperSize == '58mm';
@@ -1038,7 +809,7 @@ class ThermalPrinter {
           Barcode.code39(code39Data),
           height: barcodeHeight,
           width: 1,
-          textPos: BarcodeText.none,
+          textPos: BarcodeText.below,
           align: PosAlign.center,
         );
         debugPrint(
@@ -1052,9 +823,10 @@ class ThermalPrinter {
 
       // Final fallback: Just display the order number as text
       bytes += generator.text(orderNumber,
-          styles: PosStyles(
-              fontType: fontType, align: PosAlign.center, bold: true));
+          styles: const PosStyles(align: PosAlign.center, bold: true));
     }
+
+    bytes += generator.emptyLines(1);
 
     return bytes;
   }
@@ -1062,9 +834,7 @@ class ThermalPrinter {
   List<int> _buildTermsConditions(
       Generator generator,
       Map<String, DisplayOption>? displayConfig,
-      DocumentConfig? billDocumentConfig,
-      String selectedPaperSize,
-      PosFontType fontType) {
+      DocumentConfig? billDocumentConfig) {
     if (displayConfig?['showTermsConditions']?.visible != true) {
       debugPrint("Terms & Conditions disabled in settings, skipping");
       return [];
@@ -1087,66 +857,60 @@ class ThermalPrinter {
 
     List<int> bytes = [];
 
-    // Add separator line before terms
-    bytes += generator.hr();
+    // Create a visual box around terms & conditions using ASCII characters
+    bytes += generator.emptyLines(1);
 
-    // Determine character limit based on paper size
-    int maxCharsPerLine = selectedPaperSize == '58mm' ? 38 : 52; // More optimal for each paper size
-    
+    // Top border of the box using ASCII characters
+    bytes += generator.text('-' * 46,
+        styles: const PosStyles(align: PosAlign.center));
+
     // Use the terms from displayConfig or DocumentConfig
     List<String> termsList = terms.split('\n');
     for (var term in termsList) {
       if (term.trim().isNotEmpty) {
-        String termText = term.trim();
-        
-        // Let the printer handle wrapping automatically if text is not too long
-        if (termText.length <= maxCharsPerLine) {
-          // Short text - let printer handle it naturally
-          bytes += generator.text(termText,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.left,
-                  bold: false,
-                  height: textSizeSmall));
-        } else {
-          // Long text - manual word wrapping to prevent awkward breaks
-          List<String> words = termText.split(' ');
-          String currentLine = '';
-
-          for (String word in words) {
-            String testLine = currentLine.isEmpty ? word : '$currentLine $word';
-            if (testLine.length <= maxCharsPerLine) {
-              currentLine = testLine;
-            } else {
-              // Current line is full, print it and start new line
-              if (currentLine.isNotEmpty) {
-                bytes += generator.text(currentLine,
-                    styles: PosStyles(
-                        fontType: fontType,
-                        align: PosAlign.left,
-                        bold: false,
-                        height: textSizeSmall));
-              }
-              currentLine = word;
-            }
-          }
-
-          // Print the last line if not empty
-          if (currentLine.isNotEmpty) {
-            bytes += generator.text(currentLine,
-                styles: PosStyles(
-                    fontType: fontType,
-                    align: PosAlign.left,
-                    bold: false,
-                    height: textSizeSmall));
-          }
+        // Wrap text to fit within the box (44 characters max per line to account for borders)
+        List<String> wrappedLines = _wrapText(term, 44);
+        for (String line in wrappedLines) {
+          String paddedLine = '| ${line.padRight(44)} |';
+          bytes += generator.text(paddedLine,
+              styles: const PosStyles(align: PosAlign.center));
         }
       }
     }
 
-    // Add separator line after terms
-    bytes += generator.hr();
+    // Bottom border of the box using ASCII characters
+    bytes += generator.text('-' * 46,
+        styles: const PosStyles(align: PosAlign.center));
+
+    bytes += generator.emptyLines(1);
     return bytes;
+  }
+
+  // Helper method to wrap text to a specific width
+  List<String> _wrapText(String text, int maxWidth) {
+    List<String> lines = [];
+    String currentLine = '';
+
+    for (String word in text.split(' ')) {
+      if ((currentLine + word).length <= maxWidth) {
+        currentLine = currentLine.isEmpty ? word : '$currentLine $word';
+      } else {
+        if (currentLine.isNotEmpty) {
+          lines.add(currentLine);
+          currentLine = word;
+        } else {
+          // If a single word is longer than maxWidth, truncate it
+          lines.add(word.substring(0, maxWidth));
+          currentLine = '';
+        }
+      }
+    }
+
+    if (currentLine.isNotEmpty) {
+      lines.add(currentLine);
+    }
+
+    return lines;
   }
 
   Future<void> _connectToPrinter(BluetoothPrinter selectedPrinter) async {
