@@ -15,6 +15,7 @@ import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
+import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/location_provider.dart';
@@ -84,6 +85,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
         ChangeNotifierProvider(create: (_) => GridSelectionProvider()),
+        ChangeNotifierProvider(create: (_) => StockProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => Cart()),
         ChangeNotifierProvider(create: (_) => CarouselProvider()),
@@ -103,6 +105,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SupplierProvider()),
         ChangeNotifierProvider(create: (_) => SalesExecutiveProvider()),
         ChangeNotifierProvider(create: (_) => DocumentConfigProvider()),
+        ChangeNotifierProvider(create: (_) => StockProvider()),
       ],
       child: GetMaterialApp(
         debugShowCheckedModeBanner: false,

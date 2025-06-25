@@ -10,7 +10,7 @@ import '../../../components/build_container_box.dart';
 import '../../../components/build_round_button.dart';
 import '../../../controllers/sidebar_controller.dart';
 
-import '../../../providers/grid_provider.dart';
+import '../../../providers/stock_provider.dart';
 
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
@@ -23,11 +23,11 @@ class StockDetailsWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     SideBarController sideBarController = Get.put(SideBarController());
-    GridSelectionProvider gridSelectionProvider =
-        Provider.of<GridSelectionProvider>(context);
+    StockProvider stockProvider =
+        Provider.of<StockProvider>(context);
 
     stock_models.ListStockModelData? stockDetails =
-        gridSelectionProvider.getViewStockModelData;
+        stockProvider.viewStockModelData;
 
     List<Widget> buildProductProperties(productProps) {
       if (productProps == null || productProps.isEmpty) {

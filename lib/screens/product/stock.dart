@@ -1,11 +1,13 @@
 import 'dart:ui';
 import 'dart:convert';
 import 'dart:math';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/resources/app_url.dart';
@@ -15,7 +17,7 @@ import '../../components/build_round_button.dart';
 
 import '../../models/list_stock.dart';
 import '../../providers/auth_model.dart';
-import '../../providers/grid_provider.dart';
+import '../../providers/stock_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -59,7 +61,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
       }
 
       // Load all stocks for local pagination
-      await Provider.of<GridSelectionProvider>(context, listen: false)
+      await Provider.of<StockProvider>(context, listen: false)
           .loadAllStocks(accessToken);
 
       // Extract unique categories from stocks
@@ -81,7 +83,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
   }
 
   void _extractCategories() {
-    final provider = Provider.of<GridSelectionProvider>(context, listen: false);
+    final provider = Provider.of<StockProvider>(context, listen: false);
     final allStocks = provider.allStocks;
 
     if (allStocks != null && allStocks.isNotEmpty) {
@@ -102,8 +104,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
   }
 
   void searchStocks() {
-    GridSelectionProvider provider =
-        Provider.of<GridSelectionProvider>(context, listen: false);
+    StockProvider provider =
+        Provider.of<StockProvider>(context, listen: false);
     provider.applyStockFiltersLocally(
       filterName: stockNameController.text,
       filterCategory: categoryController.text == "All Categories"
@@ -118,7 +120,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
       stockNameController.clear();
       categoryController.text = "All Categories";
     });
-    Provider.of<GridSelectionProvider>(context, listen: false)
+    Provider.of<StockProvider>(context, listen: false)
         .resetStockFilters();
   }
 
@@ -475,7 +477,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                       );
 
                       // Call the update function
-                      final success = await Provider.of<GridSelectionProvider>(
+                      final success = await Provider.of<StockProvider>(
                               context,
                               listen: false)
                           .updateStockDetails(
@@ -635,6 +637,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    final SideBarController sideBarController = Get.put(SideBarController());
     final bool isSmallScreen = size.width < 600;
     return SafeArea(
       child: Container(
@@ -662,6 +665,15 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     "Product Stock List",
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s20, 0.30, ColorManager.textColor),
+                  ),
+                  CustomRoundButton(
+                    title: "Add Stock",
+                    fct: () async {
+                      sideBarController.index.value = 18;
+                    },
+                    fontSize: 12,
+                    height: 45,
+                    width: 150,
                   ),
                 ],
               ),
@@ -838,17 +850,17 @@ class _AddStockScreenState extends State<AddStockScreen> {
                 child: Column(
                   children: [
                     Expanded(
-                      child: initLoading ||
-                              Provider.of<GridSelectionProvider>(context,
-                                      listen: true)
-                                  .stockIsLoading
-                          ? const Center(
-                              child: CircularProgressIndicator.adaptive())
-                          : Consumer<GridSelectionProvider>(
-                              builder: (context, gridProvider, child) {
-                                List<ListStockModelData>?
-                                    listStockModelDataList =
-                                    gridProvider.getListStockModelDataList;
+                                    child: initLoading ||
+                      Provider.of<StockProvider>(context,
+                              listen: true)
+                          .stockIsLoading
+                  ? const Center(
+                      child: CircularProgressIndicator.adaptive())
+                  : Consumer<StockProvider>(
+                      builder: (context, stockProvider, child) {
+                        List<ListStockModelData>?
+                            listStockModelDataList =
+                            stockProvider.listStockModelDataList;
 
                                 if (listStockModelDataList == null ||
                                     listStockModelDataList.isEmpty) {
@@ -1094,14 +1106,14 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     ),
                     const SizedBox(height: 10),
                     PaginationControl(
-                      currentPage: Provider.of<GridSelectionProvider>(context,
+                      currentPage: Provider.of<StockProvider>(context,
                               listen: true)
                           .stockCurrentPage,
-                      totalPages: Provider.of<GridSelectionProvider>(context,
+                      totalPages: Provider.of<StockProvider>(context,
                               listen: true)
                           .stockTotalPages,
                       onPageChanged: (int page) {
-                        Provider.of<GridSelectionProvider>(context,
+                        Provider.of<StockProvider>(context,
                                 listen: false)
                             .goToStockPage(page);
                       },

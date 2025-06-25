@@ -999,6 +999,173 @@ class LocalProductProvider extends ChangeNotifier {
     refreshProducts();
   }
 
+  /// Manually adds new stock entry to an existing product
+  /// This is much faster than fetching all products from API
+  void addStockToProduct({
+    required int productId,
+    required int stockId,
+    required num quantity,
+    required String price,
+    required String mrp,
+    required String purchasePrice,
+  }) {
+    debugPrint("📦 MANUAL STOCK UPDATE STARTED");
+    debugPrint("Product ID: $productId");
+    debugPrint("Stock ID: $stockId");
+    debugPrint("Quantity: $quantity");
+    debugPrint("Price: $price");
+    
+    // Find the product in the local list
+    int productIndex = _products.indexWhere((p) => p.productId == productId);
+    
+    if (productIndex != -1) {
+      GetProduct oldProduct = _products[productIndex];
+      
+      // Create a copy of existing stock list
+      List<Stock> updatedStock = oldProduct.stock != null 
+          ? List<Stock>.from(oldProduct.stock!) 
+          : [];
+      
+      // Check if stock entry already exists
+      int stockIndex = updatedStock.indexWhere((s) => s.id == stockId);
+      
+      if (stockIndex != -1) {
+        // Update existing stock entry
+        Stock existingStock = updatedStock[stockIndex];
+        updatedStock[stockIndex] = Stock(
+          id: existingStock.id,
+          productId: existingStock.productId,
+          quantity: (existingStock.quantity ?? 0) + quantity, // Add to existing quantity
+          price: price,
+          mrp: mrp,
+          purchasePrice: purchasePrice,
+        );
+        debugPrint("📦 Updated existing stock entry - New quantity: ${updatedStock[stockIndex].quantity}");
+      } else {
+        // Add new stock entry
+        Stock newStock = Stock(
+          id: stockId,
+          productId: productId,
+          quantity: quantity,
+          price: price,
+          mrp: mrp,
+          purchasePrice: purchasePrice,
+        );
+        
+        updatedStock.add(newStock);
+        debugPrint("📦 Added new stock entry to product");
+      }
+      
+      // Create new product instance with updated stock
+      GetProduct updatedProduct = GetProduct(
+        productId: oldProduct.productId,
+        categoryId: oldProduct.categoryId,
+        productName: oldProduct.productName,
+        productSlug: oldProduct.productSlug,
+        barcode: oldProduct.barcode,
+        category: oldProduct.category,
+        numberOfProductsAvailable: oldProduct.numberOfProductsAvailable,
+        rating: oldProduct.rating,
+        unit: oldProduct.unit,
+        currency: oldProduct.currency,
+        description: oldProduct.description,
+        price: oldProduct.price,
+        mrp: oldProduct.mrp,
+        attachment: oldProduct.attachment,
+        names: oldProduct.names,
+        productProps: oldProduct.productProps,
+        weightInfo: oldProduct.weightInfo,
+        stock: updatedStock, // Updated stock list
+      );
+      
+      // Update the product in the list
+      _products[productIndex] = updatedProduct;
+      
+      // Save to Hive
+      _saveProductsToHive();
+      
+      // Update filtered products if needed
+      refreshProducts();
+      
+      debugPrint("✅ MANUAL STOCK UPDATE COMPLETED");
+    } else {
+      debugPrint("❌ Product not found for stock update: $productId");
+    }
+  }
+
+  /// Updates stock quantity for a specific stock entry
+  /// Used when stock quantities change (e.g., after sales, returns, etc.)
+  void updateStockQuantity({
+    required int productId,
+    required int stockId,
+    required num newQuantity,
+  }) {
+    debugPrint("📦 MANUAL STOCK QUANTITY UPDATE");
+    debugPrint("Product ID: $productId, Stock ID: $stockId, New Quantity: $newQuantity");
+    
+    int productIndex = _products.indexWhere((p) => p.productId == productId);
+    
+    if (productIndex != -1) {
+      GetProduct oldProduct = _products[productIndex];
+      
+      if (oldProduct.stock != null) {
+        // Create a copy of existing stock list
+        List<Stock> updatedStock = List<Stock>.from(oldProduct.stock!);
+        
+        int stockIndex = updatedStock.indexWhere((s) => s.id == stockId);
+        
+        if (stockIndex != -1) {
+          Stock existingStock = updatedStock[stockIndex];
+          updatedStock[stockIndex] = Stock(
+            id: existingStock.id,
+            productId: existingStock.productId,
+            quantity: newQuantity,
+            price: existingStock.price,
+            mrp: existingStock.mrp,
+            purchasePrice: existingStock.purchasePrice,
+          );
+          
+          // Create new product instance with updated stock
+          GetProduct updatedProduct = GetProduct(
+            productId: oldProduct.productId,
+            categoryId: oldProduct.categoryId,
+            productName: oldProduct.productName,
+            productSlug: oldProduct.productSlug,
+            barcode: oldProduct.barcode,
+            category: oldProduct.category,
+            numberOfProductsAvailable: oldProduct.numberOfProductsAvailable,
+            rating: oldProduct.rating,
+            unit: oldProduct.unit,
+            currency: oldProduct.currency,
+            description: oldProduct.description,
+            price: oldProduct.price,
+            mrp: oldProduct.mrp,
+            attachment: oldProduct.attachment,
+            names: oldProduct.names,
+            productProps: oldProduct.productProps,
+            weightInfo: oldProduct.weightInfo,
+            stock: updatedStock, // Updated stock list
+          );
+          
+          // Update the product in the list
+          _products[productIndex] = updatedProduct;
+          
+          // Save to Hive
+          _saveProductsToHive();
+          
+          // Refresh products
+          refreshProducts();
+          
+          debugPrint("✅ Stock quantity updated successfully");
+        } else {
+          debugPrint("❌ Stock entry not found: $stockId");
+        }
+      }
+    } else {
+      debugPrint("❌ Product not found: $productId");
+    }
+  }
+
   /// Removes a product from the local product list.
   void deleteProduct(int productId) {
     _products.removeWhere((p) => p.productId == productId);
