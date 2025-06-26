@@ -246,7 +246,8 @@ class ThermalPrinter {
               fontType: fontType,
               align: PosAlign.center,
               bold: true,
-              height: textSizeBig),
+              width: textSizeMedium,
+              height: textSizeMedium),
         ),
       ]);
     }
@@ -263,8 +264,9 @@ class ThermalPrinter {
           styles: PosStyles(
             fontType: fontType,
             align: PosAlign.center,
-            bold: true,
-            height: textSizeMedium,
+            bold: false,
+            height: textSizeSmall,
+            width: textSizeSmall,
           ),
         ),
       ]);
@@ -281,7 +283,7 @@ class ThermalPrinter {
             styles: PosStyles(
               fontType: fontType,
               align: PosAlign.center,
-              bold: true,
+              bold: false,
               height: textSizeSmall,
             ),
           ),
@@ -300,7 +302,7 @@ class ThermalPrinter {
             styles: PosStyles(
               fontType: fontType,
               align: PosAlign.center,
-              bold: true,
+              bold: false,
               height: textSizeSmall,
             ),
           ),
@@ -318,7 +320,7 @@ class ThermalPrinter {
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.center,
-                bold: true,
+                bold: false,
                 height: textSizeSmall));
       }
     }
@@ -333,7 +335,7 @@ class ThermalPrinter {
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.center,
-                bold: true,
+                bold: false,
                 height: textSizeSmall));
       }
     }
@@ -345,13 +347,15 @@ class ThermalPrinter {
               docConfig?.header ??
               appSettings?.printTitle ??
               'INVOICE';
-      bytes += generator.text(
-          invoiceTitle.isNotEmpty ? invoiceTitle : 'INVOICE',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeMedium));
+      bytes +=
+          generator.text(invoiceTitle.isNotEmpty ? invoiceTitle : 'INVOICE',
+              styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.center,
+                bold: true,
+                height: textSizeSmall,
+                width: textSizeSmall,
+              ));
     }
 
     // Invoice Number
@@ -367,7 +371,10 @@ class ThermalPrinter {
               fontType: fontType,
               align: PosAlign.center,
               bold: true,
-              height: textSizeSmall));
+              height: textSizeSmall,
+              width: textSizeSmall));
+
+      bytes += generator.emptyLines(1);
     }
 
     // Date Header - Moved to separate _buildDateTimeRow method
@@ -559,7 +566,7 @@ class ThermalPrinter {
               styles: PosStyles(
                   fontType: fontType,
                   align: PosAlign.left,
-                  bold: true,
+                  bold: false,
                   height: is58mm ? textSizeSmall : textSizeSmall)));
 
           bytes += generator.row(productNameRow);
@@ -610,7 +617,7 @@ class ThermalPrinter {
                   text: '',
                   width: 1,
                   styles: PosStyles(
-                      fontType: fontType, align: PosAlign.left, bold: true)));
+                      fontType: fontType, align: PosAlign.left, bold: false)));
             }
 
             nameLineRow.add(PosColumn(
@@ -619,7 +626,7 @@ class ThermalPrinter {
                 styles: PosStyles(
                     fontType: fontType,
                     align: PosAlign.left,
-                    bold: true,
+                    bold: false,
                     height: is58mm ? textSizeSmall : textSizeSmall)));
 
             bytes += generator.row(nameLineRow);
@@ -648,18 +655,18 @@ class ThermalPrinter {
       List<PosColumn> priceDetailsRow = [];
 
       // Add empty space for SL column (width 1)
-      if (displayConfig?['showSLNumber']?.visible == true) {
-        priceDetailsRow.add(PosColumn(
-            text: '',
-            width: 1,
-            styles: PosStyles(fontType: fontType, align: PosAlign.left)));
-      }
+      // if (displayConfig?['showSLNumber']?.visible == true) {
+      priceDetailsRow.add(PosColumn(
+          text: '',
+          width: 4,
+          styles: PosStyles(fontType: fontType, align: PosAlign.left)));
+      // }
 
       // Add price columns with the old working widths (like your old code)
       if (displayConfig?['showMRP']?.visible == true) {
         priceDetailsRow.add(PosColumn(
             text: mrp,
-            width: 3, // Back to 3 like your old working code
+            width: 2, // Back to 3 like your old working code
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.right,
@@ -679,7 +686,7 @@ class ThermalPrinter {
       if (displayConfig?['showRate']?.visible == true) {
         priceDetailsRow.add(PosColumn(
             text: unitPrice,
-            width: 3, // Back to 3 like your old working code
+            width: 2, // Back to 3 like your old working code
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.right,
@@ -689,7 +696,7 @@ class ThermalPrinter {
       if (displayConfig?['showTotal']?.visible == true) {
         priceDetailsRow.add(PosColumn(
             text: totalPrice,
-            width: 3, // Back to 3 like your old working code
+            width: 2, // Back to 3 like your old working code
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.right,
@@ -745,7 +752,9 @@ class ThermalPrinter {
         'label': 'Items',
         'value': itemCount.toString(),
         'textSize': 'small',
-        'bold': 'false'
+        'bold': 'false',
+        'fontStyle': 'normal',
+        'fontType': 'fontA' // Default font type
       });
     }
 
@@ -755,7 +764,9 @@ class ThermalPrinter {
           ? totalQuantity.toInt().toString()
           : totalQuantity.toStringAsFixed(2),
       'textSize': 'small',
-      'bold': 'false'
+      'bold': 'false',
+      'fontStyle': 'normal',
+      'fontType': 'fontA' // Default font type
     });
 
     // Right side items
@@ -764,23 +775,20 @@ class ThermalPrinter {
         'label': 'Total MRP',
         'value': totalMrp.toStringAsFixed(2),
         'textSize': 'small',
-        'bold': 'false'
+        'bold': 'false',
+        'fontStyle': 'normal',
+        'fontType': 'fontA' // Different font type for MRP
       });
     }
 
-    if (displayConfig?['showSaved']?.visible == true) {
-      rightSideItems.add({
-        'label': 'You Saved',
-        'value': saved.toStringAsFixed(2),
-        'textSize': 'medium',
-        'bold': 'false'
-      });
-    } else if (displayConfig?['showDiscount']?.visible == true) {
+    if (displayConfig?['showDiscount']?.visible == true) {
       rightSideItems.add({
         'label': 'Discount',
         'value': saved.toStringAsFixed(2),
         'textSize': 'small',
-        'bold': 'false'
+        'bold': 'false',
+        'fontStyle': 'normal',
+        'fontType': 'fontA' // Default font type
       });
     }
 
@@ -788,8 +796,9 @@ class ThermalPrinter {
       rightSideItems.add({
         'label': 'Net Total',
         'value': total.toStringAsFixed(2),
-        'textSize': 'medium',
-        'bold': 'true'
+        'textSize': 'small',
+        'bold': 'true',
+        'fontType': 'fontA' // Different font type for Net Total
       });
     }
 
@@ -810,29 +819,36 @@ class ThermalPrinter {
                 ? textSizeMedium
                 : textSizeSmall;
         bool isBold = leftItem['bold'] == 'true';
+        // Get custom font type if specified, otherwise use the default
+        PosFontType itemFontType = leftItem['fontType'] == 'fontA'
+            ? PosFontType.fontA
+            : PosFontType.fontB;
+
+        // Combine label and value with a colon
+        String labelText = '${leftItem['label']!}: ';
 
         columns.add(PosColumn(
-            text: leftItem['label']!,
-            width: 2,
+            text: labelText,
+            width: 3,
             styles: PosStyles(
-                fontType: fontType,
+                fontType: itemFontType,
                 align: PosAlign.left,
                 bold: isBold,
                 height: textSize)));
         columns.add(PosColumn(
             text: leftItem['value']!,
-            width: 3,
+            width: 2,
             styles: PosStyles(
-                fontType: fontType,
+                fontType: itemFontType,
                 align: PosAlign.right,
                 bold: true,
                 height: textSize)));
       } else {
         // Empty left side
         columns.add(PosColumn(
-            text: '', width: 2, styles: PosStyles(fontType: fontType)));
-        columns.add(PosColumn(
             text: '', width: 3, styles: PosStyles(fontType: fontType)));
+        columns.add(PosColumn(
+            text: '', width: 2, styles: PosStyles(fontType: fontType)));
       }
 
       // Gap column (1 column for spacing)
@@ -848,23 +864,32 @@ class ThermalPrinter {
                 ? textSizeMedium
                 : textSizeSmall;
         bool isBold = rightItem['bold'] == 'true';
+        // Get custom font type if specified, otherwise use the default
+        PosFontType itemFontType = rightItem['fontType'] == 'fontA'
+            ? PosFontType.fontA
+            : PosFontType.fontB;
+
+        // Combine label and value with a colon
+        String labelText = '${rightItem['label']!}: ';
 
         columns.add(PosColumn(
-            text: rightItem['label']!,
+            text: labelText,
             width: 3,
             styles: PosStyles(
-                fontType: fontType,
+                fontType: itemFontType,
                 align: PosAlign.left,
                 bold: isBold,
-                height: textSize)));
+                height: textSize,
+                width: textSize)));
         columns.add(PosColumn(
             text: rightItem['value']!,
             width: 3,
             styles: PosStyles(
-                fontType: fontType,
+                fontType: itemFontType,
                 align: PosAlign.right,
-                bold: true,
-                height: textSize)));
+                bold: isBold,
+                height: textSize,
+                width: textSize)));
       } else {
         // Empty right side
         columns.add(PosColumn(
@@ -874,6 +899,19 @@ class ThermalPrinter {
       }
 
       bytes += generator.row(columns);
+    }
+
+    bytes += generator.emptyLines(1);
+
+    // Amount in Words
+    if (displayConfig?['showSaved']?.visible == true) {
+      bytes += generator.text('You Saved ${saved.toStringAsFixed(2)}',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: true,
+              height: textSizeSmall,
+              width: textSizeSmall));
     }
 
     // Add a separator line if any totals were shown
@@ -912,7 +950,8 @@ class ThermalPrinter {
               fontType: fontType,
               align: PosAlign.center,
               bold: true,
-              height: textSizeMedium));
+              height: textSizeSmall,
+              width: textSizeSmall));
     }
 
     return bytes;
@@ -1103,59 +1142,24 @@ class ThermalPrinter {
     // Add separator line before terms
     bytes += generator.hr();
 
-    // Determine character limit based on paper size
-    int maxCharsPerLine = selectedPaperSize == '58mm'
-        ? 38
-        : 52; // More optimal for each paper size
-
     // Use the terms from displayConfig or DocumentConfig
     List<String> termsList = terms.split('\n');
     for (var term in termsList) {
       if (term.trim().isNotEmpty) {
         String termText = term.trim();
 
-        // Let the printer handle wrapping automatically if text is not too long
-        if (termText.length <= maxCharsPerLine) {
-          // Short text - let printer handle it naturally
-          bytes += generator.text(termText,
-              styles: PosStyles(
-                  fontType: fontType,
+        // Use exactly the same styling as _buildDateTimeRow for left alignment
+        bytes += generator.row([
+          PosColumn(
+              text: termText,
+              width: 12,
+              styles: const PosStyles(
+                  fontType: PosFontType.fontB,
                   align: PosAlign.left,
                   bold: false,
-                  height: textSizeSmall));
-        } else {
-          // Long text - manual word wrapping to prevent awkward breaks
-          List<String> words = termText.split(' ');
-          String currentLine = '';
-
-          for (String word in words) {
-            String testLine = currentLine.isEmpty ? word : '$currentLine $word';
-            if (testLine.length <= maxCharsPerLine) {
-              currentLine = testLine;
-            } else {
-              // Current line is full, print it and start new line
-              if (currentLine.isNotEmpty) {
-                bytes += generator.text(currentLine,
-                    styles: PosStyles(
-                        fontType: fontType,
-                        align: PosAlign.left,
-                        bold: false,
-                        height: textSizeSmall));
-              }
-              currentLine = word;
-            }
-          }
-
-          // Print the last line if not empty
-          if (currentLine.isNotEmpty) {
-            bytes += generator.text(currentLine,
-                styles: PosStyles(
-                    fontType: fontType,
-                    align: PosAlign.left,
-                    bold: false,
-                    height: textSizeSmall));
-          }
-        }
+                  height: textSizeSmall,
+                  width: textSizeSmall)),
+        ]);
       }
     }
 
