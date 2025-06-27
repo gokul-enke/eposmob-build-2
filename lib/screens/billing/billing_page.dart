@@ -319,6 +319,7 @@ class BillingPageState extends State<BillingPage> {
   bool isLoadingConfirmOrder = false;
   bool isLoadingSaveOrderAndPrint = false;
   bool isLoadingAddItem = false;
+  bool _isBottomSectionVisible = true; // Add this for hide/show functionality
 
   Timer? _debounce;
   Timer? _debounceTimer;
@@ -600,44 +601,14 @@ class BillingPageState extends State<BillingPage> {
                                     child: _buildCartItemsTable(size),
                                   ),
                                   const SizedBox(height: 5),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        flex: 3,
-                                        child: Container(
-                                          color: Colors.white,
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 16.0, vertical: 10),
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.start,
-                                            children: [
-                                              _buildMobileNumberInput(
-                                                  size: size,
-                                                  mobileNumberTextController:
-                                                      mobileNumberTextController),
-                                              const SizedBox(height: 10),
-                                              Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  _buildPaymentMethodSelection(),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: _buildDeliveryMethodSelection(),
-                                      ),
-                                      Expanded(
+                                  if (_isBottomSectionVisible) // Conditionally show the section
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
                                           flex: 3,
                                           child: Container(
                                             color: Colors.white,
@@ -648,14 +619,45 @@ class BillingPageState extends State<BillingPage> {
                                               mainAxisAlignment:
                                                   MainAxisAlignment.start,
                                               children: [
-                                                _buildCouponInput(),
+                                                _buildMobileNumberInput(
+                                                    size: size,
+                                                    mobileNumberTextController:
+                                                        mobileNumberTextController),
                                                 const SizedBox(height: 10),
-                                                _buildPaymentSummary(),
+                                                Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    _buildPaymentMethodSelection(),
+                                                  ],
+                                                ),
                                               ],
                                             ),
-                                          )),
-                                    ],
-                                  ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          flex: 2,
+                                          child: _buildDeliveryMethodSelection(),
+                                        ),
+                                        Expanded(
+                                            flex: 3,
+                                            child: Container(
+                                              color: Colors.white,
+                                              padding: const EdgeInsets.symmetric(
+                                                  horizontal: 16.0, vertical: 10),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.start,
+                                                children: [
+                                                  _buildCouponInput(),
+                                                  const SizedBox(height: 10),
+                                                  _buildPaymentSummary(),
+                                                ],
+                                              ),
+                                            )),
+                                      ],
+                                    ),
                                   const SizedBox(height: 10),
                                   _buildActionButtons(),
                                 ],
@@ -669,7 +671,7 @@ class BillingPageState extends State<BillingPage> {
                 ),
 
                 // Category Based Product List
-                Expanded(
+                const Expanded(
                   flex: 1,
                   child: SideBarProductList(),
                 ),
@@ -2004,6 +2006,34 @@ class BillingPageState extends State<BillingPage> {
               isLoading: isLoadingSaveOrderAndPrint,
             ),
           ],
+          // Hide/Show toggle button
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isBottomSectionVisible = !_isBottomSectionVisible;
+                });
+              },
+              child: Container(
+                width: 35,
+                height: 35,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10.0),
+                  color: ColorManager.kPrimaryColor,
+                ),
+                child: Center(
+                  child: Icon(
+                    _isBottomSectionVisible
+                        ? Icons.keyboard_arrow_down
+                        : Icons.keyboard_arrow_up,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
