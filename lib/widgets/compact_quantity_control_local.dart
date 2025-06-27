@@ -124,12 +124,23 @@ class _CompactQuantityControlLocalState
       if (newQuantity > widget.quantity) {
         // Calculate difference and add to cart
         final num difference = newQuantity - widget.quantity;
+        
+        // 🔧 FIX: Get current custom price from the existing cart item
+        double? customPrice;
+        final existingItem = localProductProvider.cartItems.firstWhere(
+          (item) => item.product.productId == widget.productId && 
+                   item.selectedStock?.id == widget.selectedStock?.id,
+          orElse: () => throw StateError('Item not found'),
+        );
+        customPrice = existingItem.price;
+        
         localProductProvider.addToCart(
           product: widget.product!,
           quantity: difference,
+          price: customPrice, // 🔧 FIX: Pass the current custom price
           isIncreamentUsingCompactQuantityControl: true,
           selectedStock: widget.selectedStock,
-        ); // Pass the difference
+        );
       } else if (newQuantity < widget.quantity) {
         // Calculate difference for decrements too
         final num difference = widget.quantity - newQuantity;

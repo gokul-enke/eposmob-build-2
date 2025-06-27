@@ -85,6 +85,8 @@ class _PriceTextFieldState extends State<_PriceTextField> {
     }
   }
 
+
+
   @override
   void dispose() {
     controller.dispose();
@@ -94,46 +96,61 @@ class _PriceTextFieldState extends State<_PriceTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      textAlign: TextAlign.left,
-      controller: controller,
-      focusNode: focusNode,
-      keyboardType: TextInputType.number,
-      style: const TextStyle(fontSize: 12),
-      decoration: const InputDecoration(
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        border: InputBorder.none,
-        hintText: 'Price',
-        hintStyle: TextStyle(
-          color: Colors.grey,
-          fontSize: 12,
-        ),
-      ),
-      onTap: () {
-        // Use a post-frame callback to ensure text selection happens after the tap is processed
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (controller.text.isNotEmpty && focusNode.hasFocus) {
-            controller.selection = TextSelection(
-              baseOffset: 0,
-              extentOffset: controller.text.length,
+    return Consumer<LocalProductProvider>(
+      builder: (context, localProductProvider, child) {
+        // Check if the price has changed and update the controller if needed
+        final currentPrice = widget.item.price.toString();
+        if (!focusNode.hasFocus && controller.text != currentPrice) {
+          // Only update if user is not currently editing the field
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              controller.text = currentPrice;
+            }
+          });
+        }
+
+        return TextField(
+          textAlign: TextAlign.left,
+          controller: controller,
+          focusNode: focusNode,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(fontSize: 12),
+          decoration: const InputDecoration(
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            border: InputBorder.none,
+            hintText: 'Price',
+            hintStyle: TextStyle(
+              color: Colors.grey,
+              fontSize: 12,
+            ),
+          ),
+          onTap: () {
+            // Use a post-frame callback to ensure text selection happens after the tap is processed
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (controller.text.isNotEmpty && focusNode.hasFocus) {
+                controller.selection = TextSelection(
+                  baseOffset: 0,
+                  extentOffset: controller.text.length,
+                );
+              }
+            });
+          },
+          onChanged: (newPrice) {
+            // Update immediately on change
+            widget.localProductProvider.updateItemPrice(
+              widget.item.product.productId!,
+              widget.item.selectedStock,
+              double.tryParse(newPrice) ?? widget.item.price!,
             );
-          }
-        });
-      },
-      onChanged: (newPrice) {
-        // Update immediately on change
-        widget.localProductProvider.updateItemPrice(
-          widget.item.product.productId!,
-          widget.item.selectedStock,
-          double.tryParse(newPrice) ?? widget.item.price!,
-        );
-      },
-      onSubmitted: (newPrice) {
-        widget.localProductProvider.updateItemPrice(
-          widget.item.product.productId!,
-          widget.item.selectedStock,
-          double.tryParse(newPrice) ?? widget.item.price!,
+          },
+          onSubmitted: (newPrice) {
+            widget.localProductProvider.updateItemPrice(
+              widget.item.product.productId!,
+              widget.item.selectedStock,
+              double.tryParse(newPrice) ?? widget.item.price!,
+            );
+          },
         );
       },
     );
@@ -978,6 +995,8 @@ class BillingPageState extends State<BillingPage> {
                                       debugPrint(
                                           "Using pre-selected stock from autocomplete...");
 
+                                      // 🔧 FIX: Prioritize user's custom typed price over stock price
+                                      double customPrice = double.tryParse(unitPriceController.text) ?? 0;
                                       double stockPrice = double.tryParse(
                                               selectedStock.price ?? "0") ??
                                           0;
@@ -985,15 +1004,18 @@ class BillingPageState extends State<BillingPage> {
                                               selectedStock.mrp ?? "0") ??
                                           0;
 
+                                      // Use custom price if user typed one, otherwise use stock price
+                                      double finalPrice = customPrice > 0 ? customPrice : stockPrice;
+
                                       debugPrint(
-                                          "Adding to cart with pre-selected stock: Price=${stockPrice}, MRP=${stockMrp}");
+                                          "Adding to cart with pre-selected stock: CustomPrice=${customPrice}, StockPrice=${stockPrice}, FinalPrice=${finalPrice}");
 
                                       // Add the selected product to the local cart with the pre-selected stock
                                       localProductProvider.addToCart(
                                         product: selectedProduct,
                                         quantity: num.tryParse(
                                             quantityController.text),
-                                        price: stockPrice,
+                                        price: finalPrice, // 🔧 FIX: Use custom price if available
                                         mrp: stockMrp,
                                         selectedStock: selectedStock,
                                       );
@@ -2651,6 +2673,7 @@ class BillingPageState extends State<BillingPage> {
       return; // Stop execution if no internet
     }
     debugPrint("Create Order and Print pressed");
+    debugPrint("🚀 API REQUEST STARTING - Create Order and Print");
     setState(() {
       isLoadingCreateOrder = true; // Indicate that loading has started
     });
@@ -2677,7 +2700,7 @@ class BillingPageState extends State<BillingPage> {
         // debugPrint("accessToken From AuthModel $accessToken");
         final provider = Provider.of<CartProvider>(context, listen: false);
         int? cartId = provider.getCartIDForOrder;
-        // debugPrint("$cartId");
+        debugPrint("📦 Cart ID for order: $cartId");
 
         String paymentMethod = "";
 
@@ -2688,6 +2711,7 @@ class BillingPageState extends State<BillingPage> {
         } else if (iconColor == 3) {
           paymentMethod = "UPI";
         }
+        debugPrint("💰 Payment Method: $paymentMethod");
 
         final localProductProvider =
             Provider.of<LocalProductProvider>(context, listen: false);
@@ -2710,6 +2734,13 @@ class BillingPageState extends State<BillingPage> {
             'price': item.price,
           });
         }
+        
+        debugPrint("📋 Order Items: ${items.length} products");
+        debugPrint("💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
+        debugPrint("👤 Customer ID: $selectedCustomerID");
+        debugPrint("📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
+        debugPrint("💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
+        debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
 
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderAPI(
@@ -2733,7 +2764,7 @@ class BillingPageState extends State<BillingPage> {
           status: "confirmed",
         )
             .then((response) async {
-          debugPrint("response ${response["order_id"]}");
+          debugPrint("✅ API RESPONSE - Create Order and Print: ${json.encode(response)}");
           if (response["order_id"] != null) {
             showScaffold(
               context: context,
@@ -2752,9 +2783,11 @@ class BillingPageState extends State<BillingPage> {
               String ordersId = response["order_number"].toString();
               String? accessToken =
                   Provider.of<AuthModel>(context, listen: false).token;
-
+              
+              debugPrint("🔍 Fetching order details for print - Order #$ordersId");
               final OrderDetailsresponse = await SalesProvider()
                   .listOrderDetails(context, ordersId, accessToken ?? "");
+              debugPrint("✅ Order details received for printing");
 
               OrderDetailsModel orderDetails =
                   OrderDetailsModel.fromJson(OrderDetailsresponse);
@@ -2766,7 +2799,8 @@ class BillingPageState extends State<BillingPage> {
 
               String storeName = orderDetails.data!.cart!.storeName ?? "";
               String orderDate = orderDetails.data!.orderDate ?? "";
-
+              
+              debugPrint("🖨️ Navigating to print page for order #${orderDetails.data!.orderNumber}");
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -2781,7 +2815,7 @@ class BillingPageState extends State<BillingPage> {
                 ),
               );
             } catch (error) {
-              debugPrint(error.toString());
+              debugPrint("❌ Error fetching order details for print: $error");
             }
 
             // Clear the mobile number after successful save
@@ -2808,6 +2842,7 @@ class BillingPageState extends State<BillingPage> {
             });
             resetAutocomplete();
           } else {
+            debugPrint("❌ API ERROR - Create Order and Print failed");
             showScaffoldError(
               context: context,
               message: "Failed to Save Order",
@@ -2818,12 +2853,13 @@ class BillingPageState extends State<BillingPage> {
       }
       _focusTextField();
     } catch (error) {
-      debugPrint(error.toString());
+      debugPrint("❌ EXCEPTION in _createOrderAndPrint: $error");
     } finally {
       // Set loading to false at the end of the function
       setState(() {
         isLoadingCreateOrder = false; // Indicate that loading has finished
       });
+      debugPrint("🏁 Create Order and Print process completed");
     }
   }
 
@@ -2837,6 +2873,7 @@ class BillingPageState extends State<BillingPage> {
       return; // Stop execution if no internet
     }
     debugPrint("Create Order pressed");
+    debugPrint("🚀 API REQUEST STARTING - Confirm Order");
     setState(() {
       isLoadingConfirmOrder = true; // Indicate that loading has started
     });
@@ -2863,7 +2900,7 @@ class BillingPageState extends State<BillingPage> {
         // debugPrint("accessToken From AuthModel $accessToken");
         final provider = Provider.of<CartProvider>(context, listen: false);
         int? cartId = provider.getCartIDForOrder;
-        // debugPrint("$cartId");
+        debugPrint("📦 Cart ID for order: $cartId");
 
         String paymentMethod = "";
 
@@ -2874,6 +2911,7 @@ class BillingPageState extends State<BillingPage> {
         } else if (iconColor == 3) {
           paymentMethod = "UPI";
         }
+        debugPrint("💰 Payment Method: $paymentMethod");
 
         final localProductProvider =
             Provider.of<LocalProductProvider>(context, listen: false);
@@ -2898,6 +2936,13 @@ class BillingPageState extends State<BillingPage> {
             'stock_id': item.selectedStock?.id,
           });
         }
+        
+        debugPrint("📋 Order Items: ${items.length} products");
+        debugPrint("💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
+        debugPrint("👤 Customer ID: $selectedCustomerID");
+        debugPrint("📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
+        debugPrint("💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
+        debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
 
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderAPI(
@@ -2921,7 +2966,7 @@ class BillingPageState extends State<BillingPage> {
           status: "confirmed",
         )
             .then((response) {
-          debugPrint("response ${response["order_id"]}");
+          debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
           if (response["order_id"] != null) {
             showScaffold(
               context: context,
@@ -2960,6 +3005,7 @@ class BillingPageState extends State<BillingPage> {
             });
             resetAutocomplete();
           } else {
+            debugPrint("❌ API ERROR - Confirm Order failed");
             showScaffoldError(
               context: context,
               message: "Failed to Confirm Order",
@@ -2969,12 +3015,13 @@ class BillingPageState extends State<BillingPage> {
         _focusTextField();
       }
     } catch (error) {
-      // debugPrint(error.toString());
+      debugPrint("❌ EXCEPTION in _confirmOrder: $error");
     } finally {
       // Set loading to false at the end of the function
       setState(() {
         isLoadingConfirmOrder = false; // Indicate that loading has finished
       });
+      debugPrint("🏁 Confirm Order process completed");
     }
   }
 

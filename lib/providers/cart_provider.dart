@@ -532,7 +532,22 @@ class CartProvider with ChangeNotifier {
     String? carNumber,
     String? status,
   }) async {
-    // debugPrint("********************ADD TO ORDER API******************** ");
+    debugPrint("📤 ADD TO ORDER API - Starting request");
+    debugPrint("📦 Order items count: ${items?.length ?? 0}");
+    debugPrint("🛒 Cart ID: $cartIds");
+    debugPrint("👤 Customer ID: $customerId");
+    debugPrint("📱 Customer Phone: $customerPhone");
+    debugPrint("💰 Payment Method: $paymentMethod");
+    debugPrint("💵 Total Price: $totalPrice");
+    debugPrint("💳 Transaction ID: $transactionId");
+    debugPrint("💸 Paid Amount: $paidAmount");
+    debugPrint("🔄 Balance Amount: $balanceAmount");
+    debugPrint("🎫 Coupon ID: $couponId");
+    debugPrint("💬 Comment: $comment");
+    debugPrint("🚚 Delivery Method ID: $deliveryMethodId");
+    debugPrint("🚗 Car Number: $carNumber");
+    debugPrint("📊 Status: $status");
+    
     DateTime now = DateTime.now();
 
     String formattedDate = DateFormat('yyyy-MM-dd').format(now);
@@ -560,35 +575,41 @@ class CartProvider with ChangeNotifier {
       if (status != null) "status": status,
     };
 
-    debugPrint("apiBodyData ${apiBodyData.toString()}");
+    debugPrint("📝 API Request Body: ${json.encode(apiBodyData)}");
 
     final url = Uri.parse(APPUrl.addToOrderUrl);
+    debugPrint("🌐 API URL: ${url.toString()}");
 
     try {
+      debugPrint("🔄 Sending POST request to server...");
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
 
-      debugPrint('Response status: ${response.statusCode}');
-      debugPrint('Response body: ${response.body}');
+      debugPrint('📥 Response status code: ${response.statusCode}');
+      debugPrint('📥 Response body: ${response.body}');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        // debugPrint('inside 201');
+        debugPrint('✅ Order created successfully (status ${response.statusCode})');
 
-        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
-        // AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(jsonData);
-
-        // debugPrint(jsonData);
-        // debugPrint(addToOrderModel.status);
+        debugPrint('📊 Order ID: ${jsonData["order_id"]}');
+        debugPrint('📊 Order Number: ${jsonData["order_number"]}');
+        
         getData();
-        return jsonData; //addToOrderModel.status == 'success' ? true : false;
+        return jsonData;
       } else {
+        debugPrint('❌ Failed to create order (status ${response.statusCode})');
         return {"status": "failure", "message": "Failed to add order"};
       }
-    } finally {}
+    } catch (e) {
+      debugPrint('❌ Exception during API call: $e');
+      return {"status": "error", "message": e.toString()};
+    } finally {
+      debugPrint("🏁 ADD TO ORDER API - Request completed");
+    }
   }
 
   // Update Order Api
@@ -610,15 +631,10 @@ class CartProvider with ChangeNotifier {
     String? carNumber,
     String? status,
   }) async {
-    // debugPrint("********************ADD TO ORDER API******************** ");
+    debugPrint("📤 UPDATE ORDER API - Starting request");
     DateTime now = DateTime.now();
 
     String formattedDate = DateFormat('yyyy-MM-dd').format(now);
-    // debugPrint("$cartIds CadtId Inside ADD TO CART API $formattedDate");
-
-    // debugPrint("Customer ID $customerId");
-    // debugPrint("Phone $phone");
-    // debugPrint("Phone $accessToken");
 
     Map<String, dynamic> apiBodyData = {};
 
@@ -637,35 +653,38 @@ class CartProvider with ChangeNotifier {
       if (status != null) "status": status,
     };
 
-    debugPrint("apiBodyData ${apiBodyData.toString()}");
+    debugPrint("📝 API Request Body: ${json.encode(apiBodyData)}");
 
     final url = Uri.parse(APPUrl.updateOrderUrl);
+    debugPrint("🌐 API URL: ${url.toString()}");
 
     try {
+      debugPrint("🔄 Sending POST request to server...");
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
 
-      debugPrint('Response status: ${response.statusCode}');
-      debugPrint('Response body: ${response.body}');
+      debugPrint('📥 Response status code: ${response.statusCode}');
+      debugPrint('📥 Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // debugPrint('inside 201');
+        debugPrint('✅ Order updated successfully (status ${response.statusCode})');
 
-        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
-        // AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(jsonData);
-
-        // debugPrint(jsonData);
-        // debugPrint(addToOrderModel.status);
         getData();
-        return jsonData; //addToOrderModel.status == 'success' ? true : false;
+        return jsonData;
       } else {
+        debugPrint('❌ Failed to update order (status ${response.statusCode})');
         return {"status": "failure", "message": "Failed to update order"};
       }
-    } finally {}
+    } catch (e) {
+      debugPrint('❌ Exception during API call: $e');
+      return {"status": "error", "message": e.toString()};
+    } finally {
+      debugPrint("🏁 UPDATE ORDER API - Request completed");
+    }
   }
 
   Future<dynamic> addToOrderConfirmAPI({
@@ -685,14 +704,10 @@ class CartProvider with ChangeNotifier {
     String? deliveryMethodId,
     String? carNumber,
   }) async {
-    // debugPrint("********************ADD TO ORDER API******************** ");
+    debugPrint("📤 CONFIRM ORDER API - Starting request");
     DateTime now = DateTime.now();
 
     String formattedDate = DateFormat('yyyy-MM-dd').format(now);
-    // debugPrint("$cartIds CadtId Inside ADD TO CART API $formattedDate");
-
-    // debugPrint("Customer ID $customerId");
-    // debugPrint("Phone $phone");
 
     Map<String, dynamic> apiBodyData = {};
 
@@ -711,35 +726,37 @@ class CartProvider with ChangeNotifier {
       if (carNumber != null) "car_number": carNumber,
     };
 
-    debugPrint("apiBodyData ${apiBodyData.toString()}");
+    debugPrint("📝 API Request Body: ${json.encode(apiBodyData)}");
 
     final url = Uri.parse(APPUrl.addToOrderConfirmUrl);
+    debugPrint("🌐 API URL: ${url.toString()}");
 
     try {
+      debugPrint("🔄 Sending POST request to server...");
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       });
-      debugPrint('inside ${response.statusCode}');
-      debugPrint('inside ${response.body.toString()}');
+      
+      debugPrint('📥 Response status code: ${response.statusCode}');
+      debugPrint('📥 Response body: ${response.body}');
+      
       if (response.statusCode == 200) {
-        // debugPrint('inside 200');
-
-        debugPrint(json.decode(response.body).toString());
+        debugPrint('✅ Order confirmed successfully');
         final jsonData = json.decode(response.body);
-        // AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(jsonData);
-
-        // debugPrint(jsonData);
-        // debugPrint(addToOrderModel.status);
         getData();
-        return jsonData; //addToOrderModel.status == 'success' ? true : false;
+        return jsonData;
       } else {
-        return false;
+        debugPrint('❌ Failed to confirm order (status ${response.statusCode})');
+        return {"status": "failure", "message": "Failed to confirm order"};
       }
     } catch (e) {
-      debugPrint(e.toString());
-    } finally {}
+      debugPrint('❌ Exception during API call: $e');
+      return {"status": "error", "message": e.toString()};
+    } finally {
+      debugPrint("🏁 CONFIRM ORDER API - Request completed");
+    }
   }
 
   Future<dynamic> applyCoupon({

@@ -348,19 +348,51 @@ class ProductCartHelper {
       // Set final values with defaults
       final cartQuantity = finalQuantity ?? 1;
       
+      // 🔧 FIX: Check if product already exists in cart with custom price
+      // If explicit custom price was provided (from parameter), use that
+      // Otherwise, check if product exists with custom price and preserve it
+      double? priceToUse = customPrice; // Use custom price from parameter if provided
+      double? mrpToUse = customMrp; // Use custom MRP from parameter if provided
+      
+      if (priceToUse == null) {
+        // No explicit custom price provided, check if item already exists in cart
+        final existingItem = localProductProvider.cartItems.firstWhere(
+          (item) => item.product.productId == product.productId && 
+                   (item.selectedStock?.id == selectedStock?.id ||
+                    (item.selectedStock == null && selectedStock == null)),
+          orElse: () => throw StateError('Item not found'),
+        );
+        
+        // If item exists in cart, preserve its custom price; otherwise use calculated price
+        if (localProductProvider.cartItems.any((item) => 
+            item.product.productId == product.productId && 
+            (item.selectedStock?.id == selectedStock?.id ||
+             (item.selectedStock == null && selectedStock == null)))) {
+          debugPrint("💰 Product already in cart - preserving existing custom price: ${existingItem.price}");
+          priceToUse = null; // Don't pass price, let addToCart preserve existing price
+          mrpToUse = null; // Don't pass MRP, let addToCart preserve existing MRP
+        } else {
+          debugPrint("💰 New product to cart - using calculated price: $finalPrice");
+          priceToUse = finalPrice;
+          mrpToUse = finalMrp;
+        }
+      } else {
+        debugPrint("💰 Using explicit custom price from parameter: $priceToUse");
+      }
+      
       debugPrint("🛒 STEP 4: ADDING TO CART");
       debugPrint("Product: ${product.productName}");
       debugPrint("Final Quantity: $cartQuantity");
-      debugPrint("Final Price: $finalPrice");
-      debugPrint("Final MRP: $finalMrp");
+      debugPrint("Price to use: $priceToUse");
+      debugPrint("MRP to use: $mrpToUse");
       debugPrint("Selected Stock ID: ${selectedStock?.id}");
       debugPrint("Stock Management Enabled: $stockEnabled");
       
       localProductProvider.addToCart(
         product: product,
         quantity: cartQuantity,
-        price: finalPrice,
-        mrp: finalMrp,
+        price: priceToUse, // 🔧 FIX: Pass null to preserve existing custom price, or explicit price
+        mrp: mrpToUse, // 🔧 FIX: Pass null to preserve existing custom MRP, or explicit MRP
         selectedStock: selectedStock,
       );
 

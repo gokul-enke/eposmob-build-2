@@ -779,28 +779,59 @@ class LocalProductProvider extends ChangeNotifier {
       // If the product already exists in cart with the same stock, just update the quantity and price
       _cartItems[index].quantity += cartQuantity; // Increment by the specified quantity
       
+      // 🔧 FIX: Handle price updates based on explicit price provision and source
       if (price != null) {
-        _cartItems[index].price = price; // Update the price if provided
-      } else if (selectedStock != null && selectedStock.price != null) {
-        _cartItems[index].price =
-            double.tryParse(selectedStock.price!); // Use stock price
-      } else {
-        // Safely handle null product price
-        _cartItems[index].price = _cartItems[index].price ??
-            (product.price?.price != null
+        // When ANY source provides an explicit price, use it (custom pricing from Add Item, quantity control, etc.)
+        _cartItems[index].price = price;
+        debugPrint("💰 Using explicit price: $price");
+      } else if (!isIncreamentUsingCompactQuantityControl!) {
+        // When adding from external sources WITHOUT explicit price, preserve existing custom price
+        // Only update if it's a completely new addition (no existing price set)
+        if (_cartItems[index].price == null || _cartItems[index].price == 0.0) {
+          // No existing price set, use defaults
+          if (selectedStock != null && selectedStock.price != null) {
+            _cartItems[index].price = double.tryParse(selectedStock.price!);
+            debugPrint("💰 Using stock price: ${_cartItems[index].price}");
+          } else {
+            _cartItems[index].price = product.price?.price != null
                 ? double.tryParse(product.price!.price!)
-                : 0.0);
-      }
-
-      if (mrp != null) {
-        _cartItems[index].mrp = mrp;
-      } else if (selectedStock != null && selectedStock.mrp != null) {
-        _cartItems[index].mrp =
-            double.tryParse(selectedStock.mrp!); // Use stock MRP
+                : 0.0;
+            debugPrint("💰 Using product price: ${_cartItems[index].price}");
+          }
+        } else {
+          debugPrint("💰 Preserving existing price: ${_cartItems[index].price}");
+        }
+        // If existing price exists (could be custom), preserve it when adding from external sources without explicit price
       } else {
-        _cartItems[index].mrp = _cartItems[index].mrp ??
-            (product.mrp != null ? double.tryParse(product.mrp!) : 0.0);
+        debugPrint("💰 Preserving existing price from quantity control: ${_cartItems[index].price}");
       }
+      // Always use explicit price when provided, otherwise preserve existing custom price
+
+      // 🔧 FIX: Apply same logic for MRP to preserve custom values
+      if (mrp != null) {
+        // When ANY source provides an explicit MRP, use it
+        _cartItems[index].mrp = mrp;
+        debugPrint("💰 Using explicit MRP: $mrp");
+      } else if (!isIncreamentUsingCompactQuantityControl!) {
+        // When adding from external sources WITHOUT explicit MRP, preserve existing custom MRP
+        // Only update if it's a completely new addition (no existing MRP set)
+        if (_cartItems[index].mrp == null || _cartItems[index].mrp == 0.0) {
+          // No existing MRP set, use defaults
+          if (selectedStock != null && selectedStock.mrp != null) {
+            _cartItems[index].mrp = double.tryParse(selectedStock.mrp!);
+            debugPrint("💰 Using stock MRP: ${_cartItems[index].mrp}");
+          } else {
+            _cartItems[index].mrp = product.mrp != null ? double.tryParse(product.mrp!) : 0.0;
+            debugPrint("💰 Using product MRP: ${_cartItems[index].mrp}");
+          }
+        } else {
+          debugPrint("💰 Preserving existing MRP: ${_cartItems[index].mrp}");
+        }
+        // If existing MRP exists (could be custom), preserve it when adding from external sources without explicit MRP
+      } else {
+        debugPrint("💰 Preserving existing MRP from quantity control: ${_cartItems[index].mrp}");
+      }
+      // Always use explicit MRP when provided, otherwise preserve existing custom MRP
 
       if (!isIncreamentUsingCompactQuantityControl!) {
         // Move this item to the beginning of the array
