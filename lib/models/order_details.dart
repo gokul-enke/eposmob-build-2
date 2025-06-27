@@ -228,9 +228,9 @@ class OrderDetailsModelDataCartItem {
         categoryName: json["category_name"], // Added category name
         quantity: num.tryParse(json["quantity"]),
         productUnit: json["product_unit"],
-        unitPrice: json["unit_price"],
-        mrp: json["mrp"],
-        totalPrice: json["total_price"],
+        unitPrice: json["unit_price"].toString(),
+        mrp: json["mrp"].toString(),
+        totalPrice: json["total_price"].toString(),
         currency: json["currency"],
         createdAt: json["created_at"] == null
             ? null
