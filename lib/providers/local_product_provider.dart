@@ -936,6 +936,20 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
+  void updateItemMrp(int productId, Stock? selectedStock, double newMrp) {
+    // Update MRP for cart item
+    int index = _cartItems.indexWhere((item) =>
+        item.product.productId == productId &&
+        (item.selectedStock?.id == selectedStock?.id ||
+            (item.selectedStock == null && selectedStock == null)));
+
+    if (index != -1) {
+      _cartItems[index].mrp = newMrp;
+      _saveCartToHive();
+      notifyListeners();
+    }
+  }
+
   /// Decrements the quantity of the product in the cart.
   /// If the quantity becomes less than 1, the product is removed from the cart.
   /// Also handles stock restoration when stock management is enabled.

@@ -125,19 +125,22 @@ class _CompactQuantityControlLocalState
         // Calculate difference and add to cart
         final num difference = newQuantity - widget.quantity;
         
-        // 🔧 FIX: Get current custom price from the existing cart item
+        // 🔧 FIX: Get current custom price and MRP from the existing cart item
         double? customPrice;
+        double? customMrp;
         final existingItem = localProductProvider.cartItems.firstWhere(
           (item) => item.product.productId == widget.productId && 
                    item.selectedStock?.id == widget.selectedStock?.id,
           orElse: () => throw StateError('Item not found'),
         );
         customPrice = existingItem.price;
+        customMrp = existingItem.mrp;
         
         localProductProvider.addToCart(
           product: widget.product!,
           quantity: difference,
           price: customPrice, // 🔧 FIX: Pass the current custom price
+          mrp: customMrp, // 🔧 FIX: Pass the current custom MRP
           isIncreamentUsingCompactQuantityControl: true,
           selectedStock: widget.selectedStock,
         );

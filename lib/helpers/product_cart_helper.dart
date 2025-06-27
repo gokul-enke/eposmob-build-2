@@ -356,28 +356,30 @@ class ProductCartHelper {
       
       if (priceToUse == null) {
         // No explicit custom price provided, check if item already exists in cart
-        final existingItem = localProductProvider.cartItems.firstWhere(
-          (item) => item.product.productId == product.productId && 
-                   (item.selectedStock?.id == selectedStock?.id ||
-                    (item.selectedStock == null && selectedStock == null)),
-          orElse: () => throw StateError('Item not found'),
-        );
-        
-        // If item exists in cart, preserve its custom price; otherwise use calculated price
-        if (localProductProvider.cartItems.any((item) => 
+        // First check if item exists in cart
+        final bool itemExistsInCart = localProductProvider.cartItems.any((item) => 
             item.product.productId == product.productId && 
             (item.selectedStock?.id == selectedStock?.id ||
-             (item.selectedStock == null && selectedStock == null)))) {
-          debugPrint("💰 Product already in cart - preserving existing custom price: ${existingItem.price}");
+             (item.selectedStock == null && selectedStock == null)));
+        
+        if (itemExistsInCart) {
+          // Item exists in cart, find it and preserve its custom price
+          final existingItem = localProductProvider.cartItems.firstWhere(
+            (item) => item.product.productId == product.productId && 
+                     (item.selectedStock?.id == selectedStock?.id ||
+                      (item.selectedStock == null && selectedStock == null)),
+          );
+          
+          debugPrint("💰 Product already in cart - preserving existing custom price: ${existingItem.price}, MRP: ${existingItem.mrp}");
           priceToUse = null; // Don't pass price, let addToCart preserve existing price
           mrpToUse = null; // Don't pass MRP, let addToCart preserve existing MRP
         } else {
-          debugPrint("💰 New product to cart - using calculated price: $finalPrice");
+          debugPrint("💰 New product to cart - using calculated price: $finalPrice, MRP: $finalMrp");
           priceToUse = finalPrice;
           mrpToUse = finalMrp;
         }
       } else {
-        debugPrint("💰 Using explicit custom price from parameter: $priceToUse");
+        debugPrint("💰 Using explicit custom price from parameter: $priceToUse, MRP: $mrpToUse");
       }
       
       debugPrint("🛒 STEP 4: ADDING TO CART");

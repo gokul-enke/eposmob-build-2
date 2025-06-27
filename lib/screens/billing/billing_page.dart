@@ -157,6 +157,111 @@ class _PriceTextFieldState extends State<_PriceTextField> {
   }
 }
 
+// Custom widget for MRP text field with stable controller and focus node
+class _MrpTextField extends StatefulWidget {
+  final dynamic item;
+  final dynamic localProductProvider;
+
+  const _MrpTextField({
+    Key? key,
+    required this.item,
+    required this.localProductProvider,
+  }) : super(key: key);
+
+  @override
+  State<_MrpTextField> createState() => _MrpTextFieldState();
+}
+
+class _MrpTextFieldState extends State<_MrpTextField> {
+  late TextEditingController controller;
+  late FocusNode focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = TextEditingController(text: (widget.item.mrp ?? 0.0).toString());
+    focusNode = FocusNode();
+  }
+
+  @override
+  void didUpdateWidget(_MrpTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update controller text if MRP has changed
+    if (oldWidget.item.mrp != widget.item.mrp) {
+      controller.text = (widget.item.mrp ?? 0.0).toString();
+    }
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<LocalProductProvider>(
+      builder: (context, localProductProvider, child) {
+        // Check if the MRP has changed and update the controller if needed
+        final currentMrp = (widget.item.mrp ?? 0.0).toString();
+        if (!focusNode.hasFocus && controller.text != currentMrp) {
+          // Only update if user is not currently editing the field
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              controller.text = currentMrp;
+            }
+          });
+        }
+
+        return TextField(
+          textAlign: TextAlign.left,
+          controller: controller,
+          focusNode: focusNode,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(fontSize: 12),
+          decoration: const InputDecoration(
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            border: InputBorder.none,
+            hintText: 'MRP',
+            hintStyle: TextStyle(
+              color: Colors.grey,
+              fontSize: 12,
+            ),
+          ),
+          onTap: () {
+            // Use a post-frame callback to ensure text selection happens after the tap is processed
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (controller.text.isNotEmpty && focusNode.hasFocus) {
+                controller.selection = TextSelection(
+                  baseOffset: 0,
+                  extentOffset: controller.text.length,
+                );
+              }
+            });
+          },
+          onChanged: (newMrp) {
+            // Update immediately on change
+            widget.localProductProvider.updateItemMrp(
+              widget.item.product.productId!,
+              widget.item.selectedStock,
+              double.tryParse(newMrp) ?? widget.item.mrp ?? 0.0,
+            );
+          },
+          onSubmitted: (newMrp) {
+            widget.localProductProvider.updateItemMrp(
+              widget.item.product.productId!,
+              widget.item.selectedStock,
+              double.tryParse(newMrp) ?? widget.item.mrp ?? 0.0,
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
 class BillingPageState extends State<BillingPage> {
   final TextEditingController mobileNumberTextController =
       TextEditingController();
@@ -1007,8 +1112,25 @@ class BillingPageState extends State<BillingPage> {
                                       // Use custom price if user typed one, otherwise use stock price
                                       double finalPrice = customPrice > 0 ? customPrice : stockPrice;
 
+                                      // 🔧 FIX: Check if product already exists in cart with custom MRP
+                                      double? finalMrp;
+                                      final bool itemExistsInCart = localProductProvider.cartItems.any((item) => 
+                                          item.product.productId == selectedProduct.productId && 
+                                          (item.selectedStock?.id == selectedStock.id ||
+                                           (item.selectedStock == null && selectedStock == null)));
+                                      
+                                      if (itemExistsInCart) {
+                                        // Item exists, don't pass MRP to preserve existing custom MRP
+                                        finalMrp = null;
+                                        debugPrint("Product already in cart - preserving existing custom MRP");
+                                      } else {
+                                        // New item, use stock MRP
+                                        finalMrp = stockMrp;
+                                        debugPrint("New product to cart - using stock MRP: $finalMrp");
+                                      }
+
                                       debugPrint(
-                                          "Adding to cart with pre-selected stock: CustomPrice=${customPrice}, StockPrice=${stockPrice}, FinalPrice=${finalPrice}");
+                                          "Adding to cart with pre-selected stock: CustomPrice=${customPrice}, StockPrice=${stockPrice}, FinalPrice=${finalPrice}, MRP=${finalMrp ?? 'preserved'}");
 
                                       // Add the selected product to the local cart with the pre-selected stock
                                       localProductProvider.addToCart(
@@ -1016,7 +1138,7 @@ class BillingPageState extends State<BillingPage> {
                                         quantity: num.tryParse(
                                             quantityController.text),
                                         price: finalPrice, // 🔧 FIX: Use custom price if available
-                                        mrp: stockMrp,
+                                        mrp: finalMrp, // 🔧 FIX: Use null to preserve existing custom MRP
                                         selectedStock: selectedStock,
                                       );
 
@@ -1265,12 +1387,9 @@ class BillingPageState extends State<BillingPage> {
                                           vertical: 2),
                                       child: SizedBox(
                                         width: 70,
-                                        child: Text(
-                                          item.mrp?.toString() ??
-                                              item.product.mrp ??
-                                              '0.00',
-                                          style: const TextStyle(fontSize: 12),
-                                          textAlign: TextAlign.left,
+                                        child: _MrpTextField(
+                                          item: item,
+                                          localProductProvider: localProductProvider,
                                         ),
                                       ),
                                     ),
