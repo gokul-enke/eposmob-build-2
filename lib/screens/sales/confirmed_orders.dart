@@ -426,6 +426,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           'product_id': item.product.productId,
           'quantity': item.quantity,
           'price': item.price,
+          'mrp': item.mrp, // 🔧 FIX: Include custom MRP in API call
         });
       }
 

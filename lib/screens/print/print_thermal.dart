@@ -837,7 +837,7 @@ class ThermalPrinter {
                 height: textSize)));
         columns.add(PosColumn(
             text: leftItem['value']!,
-            width: 2,
+            width: 1,
             styles: PosStyles(
                 fontType: itemFontType,
                 align: PosAlign.right,
@@ -846,14 +846,14 @@ class ThermalPrinter {
       } else {
         // Empty left side
         columns.add(PosColumn(
-            text: '', width: 3, styles: PosStyles(fontType: fontType)));
+            text: '', width: 2, styles: PosStyles(fontType: fontType)));
         columns.add(PosColumn(
             text: '', width: 2, styles: PosStyles(fontType: fontType)));
       }
 
       // Gap column (1 column for spacing)
       columns.add(
-          PosColumn(text: '', width: 1, styles: PosStyles(fontType: fontType)));
+          PosColumn(text: '', width: 2, styles: PosStyles(fontType: fontType)));
 
       // Right side (last 6 columns: 3 for label + 3 for value)
       if (i < rightSideItems.length) {
@@ -1144,22 +1144,68 @@ class ThermalPrinter {
 
     // Use the terms from displayConfig or DocumentConfig
     List<String> termsList = terms.split('\n');
+    
+    // Determine if we're using 58mm paper for text wrapping
+    bool is58mm = selectedPaperSize == '58mm';
+    
     for (var term in termsList) {
       if (term.trim().isNotEmpty) {
         String termText = term.trim();
-
-        // Use exactly the same styling as _buildDateTimeRow for left alignment
-        bytes += generator.row([
-          PosColumn(
-              text: termText,
-              width: 12,
-              styles: const PosStyles(
-                  fontType: PosFontType.fontB,
-                  align: PosAlign.left,
-                  bold: false,
-                  height: textSizeSmall,
-                  width: textSizeSmall)),
-        ]);
+        
+        // Calculate character limit based on paper size and font
+        int maxCharsPerLine = is58mm ? 32 : 64; // Adjust based on paper width
+        
+        if (termText.length <= maxCharsPerLine) {
+          // Text fits in one line
+          bytes += generator.row([
+            PosColumn(
+                text: termText,
+                width: 12,
+                styles: const PosStyles(
+                    fontType: PosFontType.fontB, // Use the passed fontType parameter
+                    align: PosAlign.left,
+                    bold: false,
+                    height: textSizeSmall,
+                    width: textSizeSmall)),
+          ]);
+        } else {
+          // Text needs to be wrapped to multiple lines
+          String remainingText = termText;
+          
+          while (remainingText.isNotEmpty) {
+            String currentLine;
+            
+            if (remainingText.length <= maxCharsPerLine) {
+              currentLine = remainingText;
+              remainingText = '';
+            } else {
+              // Find a good break point (prefer breaking at spaces)
+              int breakPoint = maxCharsPerLine;
+              
+              for (int i = maxCharsPerLine - 1; i >= maxCharsPerLine - 10 && i >= 0; i--) {
+                if (i < remainingText.length && remainingText[i] == ' ') {
+                  breakPoint = i;
+                  break;
+                }
+              }
+              
+              currentLine = remainingText.substring(0, breakPoint).trim();
+              remainingText = remainingText.substring(breakPoint).trim();
+            }
+            
+            bytes += generator.row([
+              PosColumn(
+                  text: currentLine,
+                  width: 12,
+                  styles: const PosStyles(
+                      fontType: PosFontType.fontB, // Use the passed fontType parameter
+                      align: PosAlign.left,
+                      bold: false,
+                      height: textSizeSmall,
+                      width: textSizeSmall)),
+            ]);
+          }
+        }
       }
     }
 

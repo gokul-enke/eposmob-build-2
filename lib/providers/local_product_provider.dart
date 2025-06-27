@@ -191,6 +191,7 @@ class LocalProductProvider extends ChangeNotifier {
             product: product,
             quantity: hiveCartItem.quantity,
             price: hiveCartItem.price,
+            mrp: hiveCartItem.mrp, // 🔧 FIX: Include MRP when loading confirmed orders from Hive
             selectedStock: selectedStock,
           );
         }).toList();
@@ -237,6 +238,7 @@ class LocalProductProvider extends ChangeNotifier {
             productId: item.product.productId!,
             quantity: item.quantity,
             price: item.price,
+            mrp: item.mrp, // 🔧 FIX: Include MRP when saving confirmed orders to Hive
             serializedProduct:
                 HiveStringValue(json.encode(item.product.toJson())),
             serializedSelectedStock: serializedStock,
@@ -291,6 +293,7 @@ class LocalProductProvider extends ChangeNotifier {
         product: product,
         quantity: hiveCartItem.quantity,
         price: hiveCartItem.price,
+        mrp: hiveCartItem.mrp, // 🔧 FIX: Include MRP when loading cart from Hive
         selectedStock: selectedStock,
       ));
     }
@@ -317,6 +320,7 @@ class LocalProductProvider extends ChangeNotifier {
           product: product,
           quantity: hiveCartItem.quantity,
           price: hiveCartItem.price,
+          mrp: hiveCartItem.mrp, // 🔧 FIX: Include MRP when loading saved orders from Hive
           selectedStock: selectedStock,
         );
       }).toList();
@@ -366,6 +370,7 @@ class LocalProductProvider extends ChangeNotifier {
         productId: cartItem.product.productId!,
         quantity: cartItem.quantity,
         price: cartItem.price,
+        mrp: cartItem.mrp, // 🔧 FIX: Include MRP when saving cart to Hive
         serializedProduct:
             HiveStringValue(json.encode(cartItem.product.toJson())),
         serializedSelectedStock: serializedStock,
@@ -390,6 +395,7 @@ class LocalProductProvider extends ChangeNotifier {
           productId: item.product.productId!,
           quantity: item.quantity,
           price: item.price,
+          mrp: item.mrp, // 🔧 FIX: Include MRP when saving saved orders to Hive
           serializedProduct:
               HiveStringValue(json.encode(item.product.toJson())),
           serializedSelectedStock: serializedStock,
@@ -1266,6 +1272,7 @@ class LocalProductProvider extends ChangeNotifier {
               product: item.product,
               quantity: item.quantity,
               price: item.price,
+              mrp: item.mrp, // 🔧 FIX: Include MRP when saving confirmed order
               selectedStock: item.selectedStock,
             ))
         .toList();
@@ -1396,6 +1403,7 @@ class LocalProductProvider extends ChangeNotifier {
               product: item.product,
               quantity: item.quantity,
               price: item.price,
+              mrp: item.mrp, // 🔧 FIX: Include MRP when saving order
               selectedStock: item.selectedStock,
             ))
         .toList();
@@ -1467,6 +1475,7 @@ class LocalProductProvider extends ChangeNotifier {
           product: item.product,
           quantity: item.quantity,
           price: item.price,
+          mrp: item.mrp, // 🔧 FIX: Include MRP when loading order for editing
           selectedStock: item.selectedStock,
         ));
       }
@@ -1501,6 +1510,7 @@ class LocalProductProvider extends ChangeNotifier {
                 product: item.product,
                 quantity: item.quantity,
                 price: item.price,
+                mrp: item.mrp, // 🔧 FIX: Include MRP when updating saved order
                 selectedStock: item.selectedStock,
               ))
           .toList();

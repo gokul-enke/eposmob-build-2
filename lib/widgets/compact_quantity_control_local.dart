@@ -184,9 +184,9 @@ class _CompactQuantityControlLocalState
             focusNode: _focusNode,
             style: const TextStyle(fontSize: 12),
             inputFormatters: [
-              if (widget.productUnit == 'KG' || widget.productUnit == 'LT')
+              if (widget.productUnit == 'KG' || widget.productUnit == 'KGS' || widget.productUnit == 'LT')
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
-              if (widget.productUnit != 'LT' && widget.productUnit != 'KG')
+              if (widget.productUnit != 'LT' && widget.productUnit != 'KG' && widget.productUnit != 'KGS')
                 FilteringTextInputFormatter.digitsOnly,
             ],
             textAlign: TextAlign.center,
