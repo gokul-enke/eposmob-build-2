@@ -28,6 +28,10 @@ class PriceSelectionModal extends StatelessWidget {
       child: Container(
         width: 400,
         height: 500,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [

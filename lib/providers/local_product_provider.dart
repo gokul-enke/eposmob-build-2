@@ -35,6 +35,17 @@ class SavedOrder {
   final String createdAt;
   final double total;
   final String? deliveryMethod;
+  
+  // New fields for API compatibility
+  final int? customerId;
+  final String? paymentMethod;
+  final String? paidAmount;
+  final String? balanceAmount;
+  final String? transactionId;
+  final String? couponId;
+  final String? deliveryMethodId;
+  final String? carNumber;
+  final String? status;
 
   SavedOrder({
     required this.id,
@@ -46,6 +57,16 @@ class SavedOrder {
     required this.createdAt,
     required this.total,
     this.deliveryMethod,
+    // New API-compatible fields
+    this.customerId,
+    this.paymentMethod,
+    this.paidAmount,
+    this.balanceAmount,
+    this.transactionId,
+    this.couponId,
+    this.deliveryMethodId,
+    this.carNumber,
+    this.status,
   });
 }
 
@@ -206,6 +227,16 @@ class LocalProductProvider extends ChangeNotifier {
           createdAt: hiveSavedOrder.createdAt,
           total: hiveSavedOrder.total,
           deliveryMethod: hiveSavedOrder.deliveryMethod,
+          // Load new API-compatible fields
+          customerId: hiveSavedOrder.customerId,
+          paymentMethod: hiveSavedOrder.paymentMethod,
+          paidAmount: hiveSavedOrder.paidAmount,
+          balanceAmount: hiveSavedOrder.balanceAmount,
+          transactionId: hiveSavedOrder.transactionId,
+          couponId: hiveSavedOrder.couponId,
+          deliveryMethodId: hiveSavedOrder.deliveryMethodId,
+          carNumber: hiveSavedOrder.carNumber,
+          status: hiveSavedOrder.status,
         ));
       }
       notifyListeners();
@@ -255,6 +286,16 @@ class LocalProductProvider extends ChangeNotifier {
           createdAt: order.createdAt,
           total: order.total,
           deliveryMethod: order.deliveryMethod,
+          // Save new API-compatible fields
+          customerId: order.customerId,
+          paymentMethod: order.paymentMethod,
+          paidAmount: order.paidAmount,
+          balanceAmount: order.balanceAmount,
+          transactionId: order.transactionId,
+          couponId: order.couponId,
+          deliveryMethodId: order.deliveryMethodId,
+          carNumber: order.carNumber,
+          status: order.status,
         );
 
         _confirmedOrdersBox.add(hiveSavedOrder);
@@ -335,6 +376,16 @@ class LocalProductProvider extends ChangeNotifier {
         createdAt: hiveSavedOrder.createdAt,
         total: hiveSavedOrder.total,
         deliveryMethod: hiveSavedOrder.deliveryMethod,
+        // Load new API-compatible fields
+        customerId: hiveSavedOrder.customerId,
+        paymentMethod: hiveSavedOrder.paymentMethod,
+        paidAmount: hiveSavedOrder.paidAmount,
+        balanceAmount: hiveSavedOrder.balanceAmount,
+        transactionId: hiveSavedOrder.transactionId,
+        couponId: hiveSavedOrder.couponId,
+        deliveryMethodId: hiveSavedOrder.deliveryMethodId,
+        carNumber: hiveSavedOrder.carNumber,
+        status: hiveSavedOrder.status,
       ));
     }
     notifyListeners();
@@ -412,6 +463,16 @@ class LocalProductProvider extends ChangeNotifier {
         createdAt: order.createdAt,
         total: order.total,
         deliveryMethod: order.deliveryMethod,
+        // Save new API-compatible fields
+        customerId: order.customerId,
+        paymentMethod: order.paymentMethod,
+        paidAmount: order.paidAmount,
+        balanceAmount: order.balanceAmount,
+        transactionId: order.transactionId,
+        couponId: order.couponId,
+        deliveryMethodId: order.deliveryMethodId,
+        carNumber: order.carNumber,
+        status: order.status,
       );
 
       _savedOrdersBox.add(hiveSavedOrder);
@@ -1255,6 +1316,16 @@ class LocalProductProvider extends ChangeNotifier {
     String? customerPhone,
     String? comment,
     String? deliveryMethod,
+    // New API-compatible parameters
+    int? customerId,
+    String? paymentMethod,
+    String? paidAmount,
+    String? balanceAmount,
+    String? transactionId,
+    String? couponId,
+    String? deliveryMethodId,
+    String? carNumber,
+    String? status,
   }) {
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as confirmed order");
@@ -1291,6 +1362,16 @@ class LocalProductProvider extends ChangeNotifier {
       createdAt: DateTime.now().toIso8601String(),
       total: total,
       deliveryMethod: deliveryMethod,
+      // Include new API-compatible fields
+      customerId: customerId,
+      paymentMethod: paymentMethod,
+      paidAmount: paidAmount,
+      balanceAmount: balanceAmount,
+      transactionId: transactionId,
+      couponId: couponId,
+      deliveryMethodId: deliveryMethodId,
+      carNumber: carNumber,
+      status: status ?? "confirmed", // Default to "confirmed" if not provided
     );
 
     // Add to confirmed orders list
@@ -1322,6 +1403,16 @@ class LocalProductProvider extends ChangeNotifier {
           createdAt: order.createdAt,
           total: order.total,
           deliveryMethod: order.deliveryMethod,
+          // Preserve API-compatible fields
+          customerId: order.customerId,
+          paymentMethod: order.paymentMethod,
+          paidAmount: order.paidAmount,
+          balanceAmount: order.balanceAmount,
+          transactionId: order.transactionId,
+          couponId: order.couponId,
+          deliveryMethodId: order.deliveryMethodId,
+          carNumber: order.carNumber,
+          status: order.status ?? "confirmed",
         );
 
         // Add to confirmed orders
@@ -1386,6 +1477,16 @@ class LocalProductProvider extends ChangeNotifier {
     String? customerPhone,
     String? comment,
     String? deliveryMethod,
+    // New API-compatible parameters
+    int? customerId,
+    String? paymentMethod,
+    String? paidAmount,
+    String? balanceAmount,
+    String? transactionId,
+    String? couponId,
+    String? deliveryMethodId,
+    String? carNumber,
+    String? status,
   }) {
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as order");
@@ -1422,6 +1523,16 @@ class LocalProductProvider extends ChangeNotifier {
       createdAt: DateTime.now().toIso8601String(),
       total: total,
       deliveryMethod: deliveryMethod,
+      // Include new API-compatible fields
+      customerId: customerId,
+      paymentMethod: paymentMethod,
+      paidAmount: paidAmount,
+      balanceAmount: balanceAmount,
+      transactionId: transactionId,
+      couponId: couponId,
+      deliveryMethodId: deliveryMethodId,
+      carNumber: carNumber,
+      status: status ?? "saved", // Default to "saved" for regular orders
     );
 
     // Add to saved orders list
@@ -1497,6 +1608,16 @@ class LocalProductProvider extends ChangeNotifier {
     String? customerPhone,
     String? comment,
     String? deliveryMethod,
+    // New API-compatible parameters
+    int? customerId,
+    String? paymentMethod,
+    String? paidAmount,
+    String? balanceAmount,
+    String? transactionId,
+    String? couponId,
+    String? deliveryMethodId,
+    String? carNumber,
+    String? status,
   }) {
     int index = _savedOrders.indexWhere((o) => o.id == orderId);
 
@@ -1527,6 +1648,16 @@ class LocalProductProvider extends ChangeNotifier {
             DateTime.now().toIso8601String(), // Keep original creation date
         total: total,
         deliveryMethod: deliveryMethod ?? _savedOrders[index].deliveryMethod,
+        // Update or preserve API-compatible fields
+        customerId: customerId ?? _savedOrders[index].customerId,
+        paymentMethod: paymentMethod ?? _savedOrders[index].paymentMethod,
+        paidAmount: paidAmount ?? _savedOrders[index].paidAmount,
+        balanceAmount: balanceAmount ?? _savedOrders[index].balanceAmount,
+        transactionId: transactionId ?? _savedOrders[index].transactionId,
+        couponId: couponId ?? _savedOrders[index].couponId,
+        deliveryMethodId: deliveryMethodId ?? _savedOrders[index].deliveryMethodId,
+        carNumber: carNumber ?? _savedOrders[index].carNumber,
+        status: status ?? _savedOrders[index].status,
       );
 
       // Update in list

@@ -54,14 +54,16 @@ class HiveLocalCartItemAdapter extends TypeAdapter<HiveLocalCartItem> {
       productId: fields[0] as int,
       quantity: fields[2] as num,
       price: fields[1] as double?,
-      serializedProduct: fields[3] as HiveStringValue,
+      mrp: fields[3] as double?,
+      serializedProduct: fields[4] as HiveStringValue,
+      serializedSelectedStock: fields[5] as HiveStringValue?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveLocalCartItem obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.productId)
       ..writeByte(1)
@@ -69,7 +71,11 @@ class HiveLocalCartItemAdapter extends TypeAdapter<HiveLocalCartItem> {
       ..writeByte(2)
       ..write(obj.quantity)
       ..writeByte(3)
-      ..write(obj.serializedProduct);
+      ..write(obj.mrp)
+      ..writeByte(4)
+      ..write(obj.serializedProduct)
+      ..writeByte(5)
+      ..write(obj.serializedSelectedStock);
   }
 
   @override
@@ -103,13 +109,22 @@ class HiveSavedOrderAdapter extends TypeAdapter<HiveSavedOrder> {
       createdAt: fields[6] as String,
       total: fields[7] as double,
       deliveryMethod: fields[8] as String?,
+      customerId: fields[9] as int?,
+      paymentMethod: fields[10] as String?,
+      paidAmount: fields[11] as String?,
+      balanceAmount: fields[12] as String?,
+      transactionId: fields[13] as String?,
+      couponId: fields[14] as String?,
+      deliveryMethodId: fields[15] as String?,
+      carNumber: fields[16] as String?,
+      status: fields[17] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveSavedOrder obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -127,7 +142,25 @@ class HiveSavedOrderAdapter extends TypeAdapter<HiveSavedOrder> {
       ..writeByte(7)
       ..write(obj.total)
       ..writeByte(8)
-      ..write(obj.deliveryMethod);
+      ..write(obj.deliveryMethod)
+      ..writeByte(9)
+      ..write(obj.customerId)
+      ..writeByte(10)
+      ..write(obj.paymentMethod)
+      ..writeByte(11)
+      ..write(obj.paidAmount)
+      ..writeByte(12)
+      ..write(obj.balanceAmount)
+      ..writeByte(13)
+      ..write(obj.transactionId)
+      ..writeByte(14)
+      ..write(obj.couponId)
+      ..writeByte(15)
+      ..write(obj.deliveryMethodId)
+      ..writeByte(16)
+      ..write(obj.carNumber)
+      ..writeByte(17)
+      ..write(obj.status);
   }
 
   @override

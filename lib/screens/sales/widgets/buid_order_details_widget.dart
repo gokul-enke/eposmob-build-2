@@ -23,6 +23,21 @@ class OrderDetailWidget extends StatelessWidget {
     required this.customerDetails,
   }) : super(key: key);
 
+  // Calculate total MRP from all cart items
+  double _calculateTotalMRP() {
+    if (cartItem == null || cartItem!.isEmpty) {
+      return 0.0;
+    }
+    
+    double totalMRP = 0.0;
+    for (var item in cartItem!) {
+      final mrp = double.tryParse(item.mrp ?? '0') ?? 0.0;
+      final quantity = item.quantity ?? 0;
+      totalMRP += mrp * quantity;
+    }
+    return totalMRP;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (customerDetails == null || cartItem == null || priceSummary == null) {
@@ -94,31 +109,50 @@ class OrderDetailWidget extends StatelessWidget {
                       title: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          RichText(
-                            text: TextSpan(
-                              text: '${cartItem![index].productName}\n',
-                              style: buildCustomStyle(FontWeightManager.regular,
-                                  FontSize.s13, 0.20, Colors.black),
-                              children: <TextSpan>[
-                                TextSpan(
-                                  text:
-                                      '${cartItem![index].quantity} * ${cartItem![index].unitPrice}',
+                          Expanded(
+                            flex: 3,
+                            child: RichText(
+                              text: TextSpan(
+                                text: '${cartItem![index].productName}\n',
+                                style: buildCustomStyle(FontWeightManager.regular,
+                                    FontSize.s13, 0.20, Colors.black),
+                                children: <TextSpan>[
+                                  TextSpan(
+                                    text:
+                                        '${cartItem![index].quantity} * ${cartItem![index].unitPrice}',
+                                    style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s9,
+                                        0.13,
+                                        ColorManager.blackWithOpacity50),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 1,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  'MRP: ${cartItem![index].currency} ${cartItem![index].mrp}',
                                   style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s9,
-                                      0.13,
+                                      FontWeightManager.regular,
+                                      FontSize.s11,
+                                      0.16,
                                       ColorManager.blackWithOpacity50),
+                                ),
+                                Text(
+                                  '${cartItem![index].currency} ${cartItem![index].totalPrice}',
+                                  style: buildCustomStyle(
+                                      FontWeightManager.semiBold,
+                                      FontSize.s14,
+                                      0.21,
+                                      Colors.black),
                                 ),
                               ],
                             ),
-                          ),
-                          Text(
-                            '${cartItem![index].currency} ${cartItem![index].totalPrice}',
-                            style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.21,
-                                ColorManager.blackWithOpacity50),
                           ),
                         ],
                       ),
@@ -133,10 +167,33 @@ class OrderDetailWidget extends StatelessWidget {
                       children: [
                         // Displaying Price Summary
                         BuildPaymentRow(
+                          amount: "INR ${_calculateTotalMRP().toStringAsFixed(2)}",
+                          title: "Total MRP",
+                          color: ColorManager.textColor,
+                        ),
+                        BuildPaymentRow(
                           amount: priceSummary!.netTotal!.toStringAsFixed(2),
                           title: "Net amount",
                           color: ColorManager.textColor,
                         ),
+                        if (priceSummary!.savedTotal != null && priceSummary!.savedTotal! > 0)
+                          BuildPaymentRow(
+                            amount: "INR ${priceSummary!.savedTotal!.toStringAsFixed(2)}",
+                            title: "You saved",
+                            color: ColorManager.kButtonGreen,
+                            firstRowTextStyle: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s14,
+                              0.21,
+                              ColorManager.kButtonGreen,
+                            ),
+                            secondRowTextStyle: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s14,
+                              0.21,
+                              ColorManager.kButtonGreen,
+                            ),
+                          ),
                         BuildPaymentRow(
                           amount: "${priceSummary!.discount ?? 0.00}",
                           title: "Discount",

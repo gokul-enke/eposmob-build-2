@@ -73,6 +73,34 @@ class HiveSavedOrder extends HiveObject {
   @HiveField(8)
   final String? deliveryMethod;
 
+  // New fields for API compatibility
+  @HiveField(9)
+  final int? customerId;
+
+  @HiveField(10)
+  final String? paymentMethod;
+
+  @HiveField(11)
+  final String? paidAmount;
+
+  @HiveField(12)
+  final String? balanceAmount;
+
+  @HiveField(13)
+  final String? transactionId;
+
+  @HiveField(14)
+  final String? couponId;
+
+  @HiveField(15)
+  final String? deliveryMethodId;
+
+  @HiveField(16)
+  final String? carNumber;
+
+  @HiveField(17)
+  final String? status;
+
   HiveSavedOrder({
     required this.id,
     required this.orderNumber,
@@ -83,6 +111,16 @@ class HiveSavedOrder extends HiveObject {
     required this.createdAt,
     required this.total,
     this.deliveryMethod,
+    // New API-compatible fields
+    this.customerId,
+    this.paymentMethod,
+    this.paidAmount,
+    this.balanceAmount,
+    this.transactionId,
+    this.couponId,
+    this.deliveryMethodId,
+    this.carNumber,
+    this.status,
   });
 }
 

@@ -85,8 +85,6 @@ class _PriceTextFieldState extends State<_PriceTextField> {
     }
   }
 
-
-
   @override
   void dispose() {
     controller.dispose();
@@ -137,19 +135,36 @@ class _PriceTextFieldState extends State<_PriceTextField> {
             });
           },
           onChanged: (newPrice) {
-            // Update immediately on change
-            widget.localProductProvider.updateItemPrice(
-              widget.item.product.productId!,
-              widget.item.selectedStock,
-              double.tryParse(newPrice) ?? widget.item.price!,
-            );
+            // Validate and update immediately on change
+            final parsedPrice = double.tryParse(newPrice);
+            if (parsedPrice != null && parsedPrice >= 0) {
+              widget.localProductProvider.updateItemPrice(
+                widget.item.product.productId!,
+                widget.item.selectedStock,
+                parsedPrice,
+              );
+            } else if (newPrice.isEmpty) {
+              // Allow empty field for editing
+              widget.localProductProvider.updateItemPrice(
+                widget.item.product.productId!,
+                widget.item.selectedStock,
+                0.0,
+              );
+            }
           },
           onSubmitted: (newPrice) {
-            widget.localProductProvider.updateItemPrice(
-              widget.item.product.productId!,
-              widget.item.selectedStock,
-              double.tryParse(newPrice) ?? widget.item.price!,
-            );
+            // Validate and update on submit
+            final parsedPrice = double.tryParse(newPrice);
+            if (parsedPrice != null && parsedPrice >= 0) {
+              widget.localProductProvider.updateItemPrice(
+                widget.item.product.productId!,
+                widget.item.selectedStock,
+                parsedPrice,
+              );
+            } else {
+              // Revert to original price if invalid
+              controller.text = widget.item.price.toString();
+            }
           },
         );
       },
@@ -179,7 +194,8 @@ class _MrpTextFieldState extends State<_MrpTextField> {
   @override
   void initState() {
     super.initState();
-    controller = TextEditingController(text: (widget.item.mrp ?? 0.0).toString());
+    controller =
+        TextEditingController(text: (widget.item.mrp ?? 0.0).toString());
     focusNode = FocusNode();
   }
 
@@ -242,19 +258,36 @@ class _MrpTextFieldState extends State<_MrpTextField> {
             });
           },
           onChanged: (newMrp) {
-            // Update immediately on change
-            widget.localProductProvider.updateItemMrp(
-              widget.item.product.productId!,
-              widget.item.selectedStock,
-              double.tryParse(newMrp) ?? widget.item.mrp ?? 0.0,
-            );
+            // Validate and update immediately on change
+            final parsedMrp = double.tryParse(newMrp);
+            if (parsedMrp != null && parsedMrp >= 0) {
+              widget.localProductProvider.updateItemMrp(
+                widget.item.product.productId!,
+                widget.item.selectedStock,
+                parsedMrp,
+              );
+            } else if (newMrp.isEmpty) {
+              // Allow empty field for editing
+              widget.localProductProvider.updateItemMrp(
+                widget.item.product.productId!,
+                widget.item.selectedStock,
+                0.0,
+              );
+            }
           },
           onSubmitted: (newMrp) {
-            widget.localProductProvider.updateItemMrp(
-              widget.item.product.productId!,
-              widget.item.selectedStock,
-              double.tryParse(newMrp) ?? widget.item.mrp ?? 0.0,
-            );
+            // Validate and update on submit
+            final parsedMrp = double.tryParse(newMrp);
+            if (parsedMrp != null && parsedMrp >= 0) {
+              widget.localProductProvider.updateItemMrp(
+                widget.item.product.productId!,
+                widget.item.selectedStock,
+                parsedMrp,
+              );
+            } else {
+              // Revert to original MRP if invalid
+              controller.text = (widget.item.mrp ?? 0.0).toString();
+            }
           },
         );
       },
@@ -276,7 +309,7 @@ class BillingPageState extends State<BillingPage> {
 
   GlobalKey _autocompletePhoneKey = GlobalKey();
   GlobalKey _autocompleteProductKey = GlobalKey();
-  
+
   // Flag to track if user has manually changed the paid amount
   bool _userChangedPaidAmount = false;
 
@@ -371,12 +404,13 @@ class BillingPageState extends State<BillingPage> {
 
     // Initialize internet connectivity listener
     _initConnectivityListener();
-    
+
     // Listen for sales executive changes to update default customer
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final salesExecutiveProvider = Provider.of<SalesExecutiveProvider>(context, listen: false);
+      final salesExecutiveProvider =
+          Provider.of<SalesExecutiveProvider>(context, listen: false);
       salesExecutiveProvider.addListener(_onSalesExecutiveChanged);
-      
+
       // Also listen for auth changes (more direct indicator of user switch)
       final authModel = Provider.of<AuthModel>(context, listen: false);
       authModel.addListener(_onUserSwitched);
@@ -406,18 +440,19 @@ class BillingPageState extends State<BillingPage> {
     _customerTextFieldFocus.dispose();
     _customerScrollController.dispose();
     _internetSubscription.cancel(); // Cancel the subscription
-    
+
     // Remove sales executive listener
     try {
-      final salesExecutiveProvider = Provider.of<SalesExecutiveProvider>(context, listen: false);
+      final salesExecutiveProvider =
+          Provider.of<SalesExecutiveProvider>(context, listen: false);
       salesExecutiveProvider.removeListener(_onSalesExecutiveChanged);
-      
+
       final authModel = Provider.of<AuthModel>(context, listen: false);
       authModel.removeListener(_onUserSwitched);
     } catch (e) {
       debugPrint("Error removing listeners: $e");
     }
-    
+
     super.dispose();
   }
 
@@ -468,17 +503,21 @@ class BillingPageState extends State<BillingPage> {
         setState(() {
           customerList = customerListModel.data; // Store the customer list
           CustomerListModelData? salesCustomer;
-          
+
           if (customerList!.isNotEmpty) {
             // Get current sales executive's information
-            final salesExecutiveProvider = Provider.of<SalesExecutiveProvider>(context, listen: false);
-            final currentExecutive = salesExecutiveProvider.getCurrentUser(context);
-            
-            debugPrint("🏢 BILLING: Setting up default customer from sales executive");
+            final salesExecutiveProvider =
+                Provider.of<SalesExecutiveProvider>(context, listen: false);
+            final currentExecutive =
+                salesExecutiveProvider.getCurrentUser(context);
+
+            debugPrint(
+                "🏢 BILLING: Setting up default customer from sales executive");
             debugPrint("  - Current executive: ${currentExecutive?.name}");
             debugPrint("  - Executive phone: ${currentExecutive?.phone}");
-            debugPrint("  - Available customers in list: ${customerList!.length}");
-            
+            debugPrint(
+                "  - Available customers in list: ${customerList!.length}");
+
             if (currentExecutive != null) {
               // Create a virtual customer using sales executive's information
               salesCustomer = CustomerListModelData(
@@ -489,23 +528,26 @@ class BillingPageState extends State<BillingPage> {
                 createdAt: currentExecutive.createdAt,
                 updatedAt: currentExecutive.updatedAt,
               );
-              debugPrint("✅ Created virtual customer from sales executive: ${salesCustomer.name} (${salesCustomer.phone})");
+              debugPrint(
+                  "✅ Created virtual customer from sales executive: ${salesCustomer.name} (${salesCustomer.phone})");
             } else {
-              debugPrint("⚠️ No current executive found, falling back to first customer");
+              debugPrint(
+                  "⚠️ No current executive found, falling back to first customer");
               salesCustomer = customerList![0];
             }
-            
-            debugPrint("🎯 Selected default customer: ${salesCustomer.name} (${salesCustomer.phone})");
-            
+
+            debugPrint(
+                "🎯 Selected default customer: ${salesCustomer.name} (${salesCustomer.phone})");
+
             salesExecutivemobileNumberText = salesCustomer.phone!;
             mobileNumberText = salesCustomer.phone!;
             mobileNumberTextController.text =
                 "${salesCustomer.name!} ${salesCustomer.phone!}";
-            
+
             // Set the default customer in the global provider and mark as default
             Provider.of<CustomerSelectionProvider>(context, listen: false)
                 .setSelectedCustomer(salesCustomer, isDefault: true);
-            
+
             selectedCustomerID = salesCustomer.id!;
             selectedCustomerPhone = salesCustomer.phone;
             selectedCustomer = salesCustomer;
@@ -637,14 +679,17 @@ class BillingPageState extends State<BillingPage> {
                                         ),
                                         Expanded(
                                           flex: 2,
-                                          child: _buildDeliveryMethodSelection(),
+                                          child:
+                                              _buildDeliveryMethodSelection(),
                                         ),
                                         Expanded(
                                             flex: 3,
                                             child: Container(
                                               color: Colors.white,
-                                              padding: const EdgeInsets.symmetric(
-                                                  horizontal: 16.0, vertical: 10),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 16.0,
+                                                      vertical: 10),
                                               child: Column(
                                                 mainAxisSize: MainAxisSize.min,
                                                 mainAxisAlignment:
@@ -840,56 +885,68 @@ class BillingPageState extends State<BillingPage> {
                                           );
                                         }
 
-                                                                                  if (filteredProducts.isNotEmpty) {
-                                            // Get the first product
-                                            GetProduct product = filteredProducts.first;
+                                        if (filteredProducts.isNotEmpty) {
+                                          // Get the first product
+                                          GetProduct product =
+                                              filteredProducts.first;
 
-                                            num? quantity;
-                                            if (product.unit == 'KGS' &&
-                                                prefix == '000' &&
-                                                query.length == 14) {
-                                              // Weight-based product
-                                              String weightKg = lastFive!.substring(
-                                                  0, 2); // First 2 digits = KG
-                                              String weightGrams = lastFive.substring(
-                                                  2, 5); // Last 3 digits = Grams
-                                              quantity = double.parse(weightKg) +
-                                                      (double.parse(weightGrams) /
-                                                          1000);
-                                            } else if (product.unit == 'PCS' &&
-                                                prefix == '000' &&
-                                                query.length == 14) {
-                                              // Count-based product
-                                              quantity = int.parse(
-                                                  lastFive!); // Last 5 digits represent quantity
-                                            }
+                                          num? quantity;
+                                          if ((product.unit == 'KGS' ||
+                                                  product.unit == 'KG') &&
+                                              prefix == '000' &&
+                                              query.length == 14) {
+                                            // Weight-based product
+                                            String weightKg = lastFive!
+                                                .substring(0,
+                                                    2); // First 2 digits = KG
+                                            String weightGrams =
+                                                lastFive.substring(2,
+                                                    5); // Last 3 digits = Grams
+                                            quantity = double.parse(weightKg) +
+                                                (double.parse(weightGrams) /
+                                                    1000);
+                                          } else if ((product.unit == 'PCS' ||
+                                                  product.unit == 'PC') &&
+                                              prefix == '000' &&
+                                              query.length == 14) {
+                                            // Count-based product
+                                            quantity = int.parse(
+                                                lastFive!); // Last 5 digits represent quantity
+                                          }
 
-                                            // Use centralized helper for stock handling
-                                            debugPrint("🛒 BARCODE SCAN - Calling ProductCartHelper with:");
-                                            debugPrint("  - Product: ${product.productName}");
-                                            debugPrint("  - Quantity: $quantity");
-                                            debugPrint("  - Customer ID: $selectedCustomerID");
-                                            debugPrint("  - Customer Name: ${selectedCustomer?.name}");
-                                            
-                                            await ProductCartHelper.handleProductSelection(
-                                              context: context,
-                                              product: product,
-                                              quantity: quantity,
-                                              addToCartDirectly: true,
-                                              customerId: selectedCustomerID,
-                                              customerName: selectedCustomer?.name,
-                                            );
+                                          // Use centralized helper for stock handling
+                                          debugPrint(
+                                              "🛒 BARCODE SCAN - Calling ProductCartHelper with:");
+                                          debugPrint(
+                                              "  - Product: ${product.productName}");
+                                          debugPrint("  - Quantity: $quantity");
+                                          debugPrint(
+                                              "  - Customer ID: $selectedCustomerID");
+                                          debugPrint(
+                                              "  - Customer Name: ${selectedCustomer?.name}");
 
-                                            // Clear input fields
-                                            setState(() {
-                                              _autocompleteProductKey = GlobalKey();
-                                              quantityController.clear();
-                                              barcodeController.clear();
-                                              selectedProductIdController.clear();
-                                              unitPriceController.clear();
-                                            });
-                                            _focusTextField();
-                                          } else {
+                                          await ProductCartHelper
+                                              .handleProductSelection(
+                                            context: context,
+                                            product: product,
+                                            quantity: quantity,
+                                            addToCartDirectly: true,
+                                            customerId: selectedCustomerID,
+                                            customerName:
+                                                selectedCustomer?.name,
+                                          );
+
+                                          // Clear input fields
+                                          setState(() {
+                                            _autocompleteProductKey =
+                                                GlobalKey();
+                                            quantityController.clear();
+                                            barcodeController.clear();
+                                            selectedProductIdController.clear();
+                                            unitPriceController.clear();
+                                          });
+                                          _focusTextField();
+                                        } else {
                                           // Set dialog state to open
                                           await showDialog(
                                             context: context,
@@ -952,25 +1009,29 @@ class BillingPageState extends State<BillingPage> {
                                 size: size,
                                 onSelected: (GetProduct selectedProduct,
                                     Stock? selectedStock) async {
-                                  // Show price selection modal
-                                  await showDialog(
-                                    context: context,
-                                    builder: (context) => PriceSelectionModal(
-                                      productName: selectedProduct.productName ?? 'Unknown Product',
-                                      onPriceSelected: (double selectedPrice) {
-                                        setState(() {
-                                          selectedProductIdController.text =
-                                              selectedProduct.productId.toString();
-                                          unitPriceController.text = selectedPrice.toString();
-                                          quantityController.text = '1';
-                                          selectedProductNameController.text =
-                                              selectedProduct.productName ?? '';
-                                          barcodeController.text =
-                                              selectedProduct.barcode ?? '';
-                                        });
-                                      },
-                                    ),
-                                  );
+                                  // Directly populate form fields without showing price modal
+                                  
+                                  // Determine the price to use: stock price or product base price
+                                  double defaultPrice = 0.0;
+                                  if (selectedStock != null) {
+                                    // Use stock price if available
+                                    defaultPrice = double.tryParse(selectedStock.price ?? "0") ?? 0.0;
+                                  } else {
+                                    // Use product base price
+                                    defaultPrice = double.tryParse(selectedProduct.price?.price ?? "0") ?? 0.0;
+                                  }
+                                  
+                                  setState(() {
+                                    selectedProductIdController.text =
+                                        selectedProduct.productId.toString();
+                                    unitPriceController.text =
+                                        defaultPrice.toString();
+                                    quantityController.text = '1';
+                                    selectedProductNameController.text =
+                                        selectedProduct.productName ?? '';
+                                    barcodeController.text =
+                                        selectedProduct.barcode ?? '';
+                                  });
                                 },
                                 productList: productProvider.productList!,
                               ),
@@ -1064,7 +1125,8 @@ class BillingPageState extends State<BillingPage> {
                                         "Stock management enabled: $stockEnabled");
 
                                     // Set the stock enabled status in LocalProductProvider
-                                    localProductProvider.setStockEnabled(stockEnabled);
+                                    localProductProvider
+                                        .setStockEnabled(stockEnabled);
 
                                     if (!stockEnabled) {
                                       debugPrint(
@@ -1109,7 +1171,9 @@ class BillingPageState extends State<BillingPage> {
                                           "Using pre-selected stock from autocomplete...");
 
                                       // 🔧 FIX: Prioritize user's custom typed price over stock price
-                                      double customPrice = double.tryParse(unitPriceController.text) ?? 0;
+                                      double customPrice = double.tryParse(
+                                              unitPriceController.text) ??
+                                          0;
                                       double stockPrice = double.tryParse(
                                               selectedStock.price ?? "0") ??
                                           0;
@@ -1118,23 +1182,35 @@ class BillingPageState extends State<BillingPage> {
                                           0;
 
                                       // Use custom price if user typed one, otherwise use stock price
-                                      double finalPrice = customPrice > 0 ? customPrice : stockPrice;
+                                      double finalPrice = customPrice > 0
+                                          ? customPrice
+                                          : stockPrice;
 
                                       // 🔧 FIX: Check if product already exists in cart with custom MRP
                                       double? finalMrp;
-                                      final bool itemExistsInCart = localProductProvider.cartItems.any((item) => 
-                                          item.product.productId == selectedProduct.productId && 
-                                          (item.selectedStock?.id == selectedStock.id ||
-                                           (item.selectedStock == null && selectedStock == null)));
-                                      
+                                      final bool itemExistsInCart =
+                                          localProductProvider.cartItems.any(
+                                              (item) =>
+                                                  item.product.productId ==
+                                                      selectedProduct
+                                                          .productId &&
+                                                  (item.selectedStock?.id ==
+                                                          selectedStock.id ||
+                                                      (item.selectedStock ==
+                                                              null &&
+                                                          selectedStock ==
+                                                              null)));
+
                                       if (itemExistsInCart) {
                                         // Item exists, don't pass MRP to preserve existing custom MRP
                                         finalMrp = null;
-                                        debugPrint("Product already in cart - preserving existing custom MRP");
+                                        debugPrint(
+                                            "Product already in cart - preserving existing custom MRP");
                                       } else {
                                         // New item, use stock MRP
                                         finalMrp = stockMrp;
-                                        debugPrint("New product to cart - using stock MRP: $finalMrp");
+                                        debugPrint(
+                                            "New product to cart - using stock MRP: $finalMrp");
                                       }
 
                                       debugPrint(
@@ -1145,8 +1221,10 @@ class BillingPageState extends State<BillingPage> {
                                         product: selectedProduct,
                                         quantity: num.tryParse(
                                             quantityController.text),
-                                        price: finalPrice, // 🔧 FIX: Use custom price if available
-                                        mrp: finalMrp, // 🔧 FIX: Use null to preserve existing custom MRP
+                                        price:
+                                            finalPrice, // 🔧 FIX: Use custom price if available
+                                        mrp:
+                                            finalMrp, // 🔧 FIX: Use null to preserve existing custom MRP
                                         selectedStock: selectedStock,
                                       );
 
@@ -1397,7 +1475,8 @@ class BillingPageState extends State<BillingPage> {
                                         width: 70,
                                         child: _MrpTextField(
                                           item: item,
-                                          localProductProvider: localProductProvider,
+                                          localProductProvider:
+                                              localProductProvider,
                                         ),
                                       ),
                                     ),
@@ -1414,7 +1493,8 @@ class BillingPageState extends State<BillingPage> {
                                         width: 70,
                                         child: _PriceTextField(
                                           item: item,
-                                          localProductProvider: localProductProvider,
+                                          localProductProvider:
+                                              localProductProvider,
                                         ),
                                       ),
                                     ),
@@ -1628,7 +1708,8 @@ class BillingPageState extends State<BillingPage> {
                             listen: false);
                     _paidAmountController.text =
                         localProductProvider.cartTotal.toStringAsFixed(3);
-                    _userChangedPaidAmount = false; // Reset flag since this is auto-set
+                    _userChangedPaidAmount =
+                        false; // Reset flag since this is auto-set
                     _getBalanceAmount(); // Update balance immediately
                   });
                 },
@@ -1667,7 +1748,8 @@ class BillingPageState extends State<BillingPage> {
                             listen: false);
                     _paidAmountController.text =
                         localProductProvider.cartTotal.toStringAsFixed(3);
-                    _userChangedPaidAmount = false; // Reset flag since this is auto-set
+                    _userChangedPaidAmount =
+                        false; // Reset flag since this is auto-set
                     _getBalanceAmount(); // Update balance immediately
                   });
                 },
@@ -1707,7 +1789,8 @@ class BillingPageState extends State<BillingPage> {
                             listen: false);
                     _paidAmountController.text =
                         localProductProvider.cartTotal.toStringAsFixed(3);
-                    _userChangedPaidAmount = false; // Reset flag since this is auto-set
+                    _userChangedPaidAmount =
+                        false; // Reset flag since this is auto-set
                     _getBalanceAmount(); // Update balance immediately
                   });
                 },
@@ -1757,7 +1840,7 @@ class BillingPageState extends State<BillingPage> {
           ),
         ),
         if (iconColor == 1 || iconColor == 2 || iconColor == 3)
-                            Consumer<LocalProductProvider>(
+          Consumer<LocalProductProvider>(
             builder: (context, localProductProvider, child) {
               // Use addPostFrameCallback to defer the update
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1795,20 +1878,21 @@ class BillingPageState extends State<BillingPage> {
                     ),
                     color: ColorManager.textColor,
                   ),
-                                      Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: buildColumnWidgetForTextFields(
-                        controller: _paidAmountController,
-                        size: size,
-                        onchanged: (value) {
-                          _userChangedPaidAmount = true; // Mark as manually changed
-                          _getBalanceAmount();
-                        },
-                        focusNode: _paidAmountFocusNode, // Add this line
-                        height: size.height * .06,
-                        hintText: 'Enter Paid Amount Here:',
-                      ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: buildColumnWidgetForTextFields(
+                      controller: _paidAmountController,
+                      size: size,
+                      onchanged: (value) {
+                        _userChangedPaidAmount =
+                            true; // Mark as manually changed
+                        _getBalanceAmount();
+                      },
+                      focusNode: _paidAmountFocusNode, // Add this line
+                      height: size.height * .06,
+                      hintText: 'Enter Paid Amount Here:',
                     ),
+                  ),
                   const SizedBox(height: 10),
                   BuildPaymentRow(
                     amount: "INR ${_balanceAmount.toStringAsFixed(3)}",
@@ -2178,11 +2262,12 @@ class BillingPageState extends State<BillingPage> {
                       debugPrint("  - Customer ID: ${selection.id}");
                       debugPrint("  - Customer Name: ${selection.name}");
                       debugPrint("  - Customer Phone: ${selection.phone}");
-                      
+
                       // Update the global customer selection provider
-                      Provider.of<CustomerSelectionProvider>(context, listen: false)
+                      Provider.of<CustomerSelectionProvider>(context,
+                              listen: false)
                           .setSelectedCustomer(selection);
-                      
+
                       String? accessToken =
                           Provider.of<AuthModel>(context, listen: false).token;
                       // debugPrint("accessToken From AuthModel $accessToken");
@@ -2196,8 +2281,9 @@ class BillingPageState extends State<BillingPage> {
                         selectedCustomerPhone = selection.phone;
                         selectedCustomer = selection;
                       });
-                      
-                      debugPrint("👤 Customer selection completed - state updated and provider notified");
+
+                      debugPrint(
+                          "👤 Customer selection completed - state updated and provider notified");
                     },
                     fieldViewBuilder: (BuildContext context,
                         TextEditingController mobileNumberTextController,
@@ -2408,7 +2494,7 @@ class BillingPageState extends State<BillingPage> {
               // Clear the global customer selection provider
               Provider.of<CustomerSelectionProvider>(context, listen: false)
                   .clearSelectedCustomer(),
-              
+
               setState(() {
                 _autocompletePhoneKey = GlobalKey();
                 mobileNumberTextController.clear();
@@ -2594,17 +2680,59 @@ class BillingPageState extends State<BillingPage> {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
 
+      // Debug: Log current cart items with custom pricing
+      debugPrint("💾 LOCAL SAVE - Cart items with custom pricing:");
+      for (var item in localProductProvider.cartItems) {
+        debugPrint("  📦 ${item.product.productName}");
+        debugPrint("    - Quantity: ${item.quantity}");
+        debugPrint("    - Custom Price: ${item.price}");
+        debugPrint("    - Custom MRP: ${item.mrp}");
+        debugPrint("    - Stock ID: ${item.selectedStock?.id}");
+      }
+
+      // Validate that all items have valid pricing
+      bool hasInvalidPricing = localProductProvider.cartItems
+          .any((item) => item.price == null || item.price! < 0);
+
+      if (hasInvalidPricing) {
+        showScaffoldError(
+          context: context,
+          message: "Please ensure all items have valid prices before saving",
+        );
+        return;
+      }
+
       // Check if we're editing an existing order
       SavedOrder? currentOrder = localProductProvider.currentOrder;
 
       if (currentOrder != null) {
         // Update existing order
+        debugPrint("💾 Updating existing order: ${currentOrder.orderNumber}");
+        String paymentMethod = "";
+        if (iconColor == 1) {
+          paymentMethod = "CASH";
+        } else if (iconColor == 2) {
+          paymentMethod = "CARD";
+        } else if (iconColor == 3) {
+          paymentMethod = "UPI";
+        }
+
         localProductProvider.updateSavedOrder(
           currentOrder.id,
           customerName: selectedCustomer?.name,
           customerPhone: selectedCustomerPhone ?? mobileNumberText,
           comment: _commentController.text,
           deliveryMethod: deliveryMethod,
+          // Include all API-compatible fields
+          customerId: selectedCustomerID,
+          paymentMethod: paymentMethod,
+          paidAmount: _paidAmountController.text,
+          balanceAmount: _balanceAmount.toString(),
+          transactionId: _transactionNumberController.text,
+          couponId: isCouponApplied ? coupenCodeTextController.text : null,
+          deliveryMethodId: deliveryMethodId,
+          carNumber: _carNumberController.text,
+          status: "saved",
         );
 
         showScaffold(
@@ -2613,10 +2741,20 @@ class BillingPageState extends State<BillingPage> {
         );
       } else {
         // Save as new order
+        debugPrint("💾 Saving as new order");
         // Get customer name if available
         String? customerName;
         if (selectedCustomer != null) {
           customerName = selectedCustomer!.name;
+        }
+
+        String paymentMethod = "";
+        if (iconColor == 1) {
+          paymentMethod = "CASH";
+        } else if (iconColor == 2) {
+          paymentMethod = "CARD";
+        } else if (iconColor == 3) {
+          paymentMethod = "UPI";
         }
 
         localProductProvider.saveCurrentCartAsOrder(
@@ -2624,6 +2762,16 @@ class BillingPageState extends State<BillingPage> {
           customerPhone: selectedCustomerPhone ?? mobileNumberText,
           comment: _commentController.text,
           deliveryMethod: deliveryMethod,
+          // Include all API-compatible fields
+          customerId: selectedCustomerID,
+          paymentMethod: paymentMethod,
+          paidAmount: _paidAmountController.text,
+          balanceAmount: _balanceAmount.toString(),
+          transactionId: _transactionNumberController.text,
+          couponId: isCouponApplied ? coupenCodeTextController.text : null,
+          deliveryMethodId: deliveryMethodId,
+          carNumber: _carNumberController.text,
+          status: "saved",
         );
 
         showScaffold(
@@ -2691,12 +2839,36 @@ class BillingPageState extends State<BillingPage> {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
 
+      // Debug: Log current cart items with custom pricing
+      debugPrint("💾 LOCAL SAVE AND PRINT - Cart items with custom pricing:");
+      for (var item in localProductProvider.cartItems) {
+        debugPrint("  📦 ${item.product.productName}");
+        debugPrint("    - Quantity: ${item.quantity}");
+        debugPrint("    - Custom Price: ${item.price}");
+        debugPrint("    - Custom MRP: ${item.mrp}");
+        debugPrint("    - Stock ID: ${item.selectedStock?.id}");
+      }
+
+      // Validate that all items have valid pricing
+      bool hasInvalidPricing = localProductProvider.cartItems
+          .any((item) => item.price == null || item.price! < 0);
+
+      if (hasInvalidPricing) {
+        showScaffoldError(
+          context: context,
+          message: "Please ensure all items have valid prices before saving",
+        );
+        return;
+      }
+
       // Check if we're editing an existing order
       SavedOrder? currentOrder = localProductProvider.currentOrder;
       SavedOrder? orderToUse;
 
       if (currentOrder != null) {
         // We're editing an existing order, move it to confirmed orders
+        debugPrint(
+            "💾 Moving existing order to confirmed: ${currentOrder.orderNumber}");
         orderToUse =
             localProductProvider.moveToConfirmedOrders(currentOrder.id);
 
@@ -2707,10 +2879,20 @@ class BillingPageState extends State<BillingPage> {
           );
         } else {
           // If the order couldn't be moved (shouldn't happen), create a new confirmed order
+          debugPrint("💾 Creating new confirmed order (fallback)");
           // Get customer name if available
           String? customerName;
           if (selectedCustomer != null) {
             customerName = selectedCustomer!.name;
+          }
+
+          String paymentMethod = "";
+          if (iconColor == 1) {
+            paymentMethod = "CASH";
+          } else if (iconColor == 2) {
+            paymentMethod = "CARD";
+          } else if (iconColor == 3) {
+            paymentMethod = "UPI";
           }
 
           orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
@@ -2718,6 +2900,16 @@ class BillingPageState extends State<BillingPage> {
             customerPhone: selectedCustomerPhone ?? mobileNumberText,
             comment: _commentController.text,
             deliveryMethod: deliveryMethod,
+            // Include all API-compatible fields
+            customerId: selectedCustomerID,
+            paymentMethod: paymentMethod,
+            paidAmount: _paidAmountController.text,
+            balanceAmount: _balanceAmount.toString(),
+            transactionId: _transactionNumberController.text,
+            couponId: isCouponApplied ? coupenCodeTextController.text : null,
+            deliveryMethodId: deliveryMethodId,
+            carNumber: _carNumberController.text,
+            status: "confirmed",
           );
 
           showScaffold(
@@ -2727,10 +2919,20 @@ class BillingPageState extends State<BillingPage> {
         }
       } else {
         // Create a new confirmed order
+        debugPrint("💾 Creating new confirmed order");
         // Get customer name if available
         String? customerName;
         if (selectedCustomer != null) {
           customerName = selectedCustomer!.name;
+        }
+
+        String paymentMethod = "";
+        if (iconColor == 1) {
+          paymentMethod = "CASH";
+        } else if (iconColor == 2) {
+          paymentMethod = "CARD";
+        } else if (iconColor == 3) {
+          paymentMethod = "UPI";
         }
 
         orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
@@ -2738,6 +2940,16 @@ class BillingPageState extends State<BillingPage> {
           customerPhone: selectedCustomerPhone ?? mobileNumberText,
           comment: _commentController.text,
           deliveryMethod: deliveryMethod,
+          // Include all API-compatible fields
+          customerId: selectedCustomerID,
+          paymentMethod: paymentMethod,
+          paidAmount: _paidAmountController.text,
+          balanceAmount: _balanceAmount.toString(),
+          transactionId: _transactionNumberController.text,
+          couponId: isCouponApplied ? coupenCodeTextController.text : null,
+          deliveryMethodId: deliveryMethodId,
+          carNumber: _carNumberController.text,
+          status: "confirmed",
         );
 
         showScaffold(
@@ -2880,23 +3092,52 @@ class BillingPageState extends State<BillingPage> {
           return;
         }
 
+        // Validate that all items have valid pricing before API call
+        bool hasInvalidPricing = localProductProvider.cartItems.any((item) =>
+            item.price == null ||
+            item.price! < 0 ||
+            item.mrp == null ||
+            item.mrp! < 0);
+
+        if (hasInvalidPricing) {
+          showScaffoldError(
+            context: context,
+            message:
+                "Please ensure all items have valid prices and MRP before confirming order",
+          );
+          return;
+        }
+
         List<Map<String, dynamic>> items = [];
 
         for (var item in cartItems) {
+          debugPrint("📦 Order Item: ${item.product.productName}");
+          debugPrint("  - Product ID: ${item.product.productId}");
+          debugPrint("  - Quantity: ${item.quantity}");
+          debugPrint("  - Custom Price: ${item.price}");
+          debugPrint("  - Custom MRP: ${item.mrp}");
+          debugPrint("  - Stock ID: ${item.selectedStock?.id}");
+
           items.add({
             'product_id': item.product.productId,
             'quantity': item.quantity,
             'price': item.price,
             'mrp': item.mrp, // 🔧 FIX: Include custom MRP in API call
+            'stock_id': item
+                .selectedStock?.id, // 🔧 FIX: Include stock_id for consistency
           });
         }
-        
+
         debugPrint("📋 Order Items: ${items.length} products");
-        debugPrint("💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
+        debugPrint(
+            "💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
         debugPrint("👤 Customer ID: $selectedCustomerID");
-        debugPrint("📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
-        debugPrint("💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
-        debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
+        debugPrint(
+            "📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
+        debugPrint(
+            "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
+        debugPrint(
+            "🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
 
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderAPI(
@@ -2920,7 +3161,8 @@ class BillingPageState extends State<BillingPage> {
           status: "confirmed",
         )
             .then((response) async {
-          debugPrint("✅ API RESPONSE - Create Order and Print: ${json.encode(response)}");
+          debugPrint(
+              "✅ API RESPONSE - Create Order and Print: ${json.encode(response)}");
           if (response["order_id"] != null) {
             showScaffold(
               context: context,
@@ -2939,8 +3181,9 @@ class BillingPageState extends State<BillingPage> {
               String ordersId = response["order_number"].toString();
               String? accessToken =
                   Provider.of<AuthModel>(context, listen: false).token;
-              
-              debugPrint("🔍 Fetching order details for print - Order #$ordersId");
+
+              debugPrint(
+                  "🔍 Fetching order details for print - Order #$ordersId");
               final OrderDetailsresponse = await SalesProvider()
                   .listOrderDetails(context, ordersId, accessToken ?? "");
               debugPrint("✅ Order details received for printing");
@@ -2955,8 +3198,9 @@ class BillingPageState extends State<BillingPage> {
 
               String storeName = orderDetails.data!.cart!.storeName ?? "";
               String orderDate = orderDetails.data!.orderDate ?? "";
-              
-              debugPrint("🖨️ Navigating to print page for order #${orderDetails.data!.orderNumber}");
+
+              debugPrint(
+                  "🖨️ Navigating to print page for order #${orderDetails.data!.orderNumber}");
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -3081,10 +3325,32 @@ class BillingPageState extends State<BillingPage> {
           return;
         }
 
+        // Validate that all items have valid pricing before API call
+        bool hasInvalidPricing = localProductProvider.cartItems.any((item) =>
+            item.price == null ||
+            item.price! < 0 ||
+            item.mrp == null ||
+            item.mrp! < 0);
+
+        if (hasInvalidPricing) {
+          showScaffoldError(
+            context: context,
+            message:
+                "Please ensure all items have valid prices and MRP before confirming order",
+          );
+          return;
+        }
+
         List<Map<String, dynamic>> items = [];
 
         for (var item in cartItems) {
-          debugPrint("item ${item.price}");
+          debugPrint("📦 Order Item: ${item.product.productName}");
+          debugPrint("  - Product ID: ${item.product.productId}");
+          debugPrint("  - Quantity: ${item.quantity}");
+          debugPrint("  - Custom Price: ${item.price}");
+          debugPrint("  - Custom MRP: ${item.mrp}");
+          debugPrint("  - Stock ID: ${item.selectedStock?.id}");
+
           items.add({
             'product_id': item.product.productId,
             'quantity': item.quantity,
@@ -3093,13 +3359,17 @@ class BillingPageState extends State<BillingPage> {
             'stock_id': item.selectedStock?.id,
           });
         }
-        
+
         debugPrint("📋 Order Items: ${items.length} products");
-        debugPrint("💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
+        debugPrint(
+            "💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
         debugPrint("👤 Customer ID: $selectedCustomerID");
-        debugPrint("📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
-        debugPrint("💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
-        debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
+        debugPrint(
+            "📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
+        debugPrint(
+            "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
+        debugPrint(
+            "🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
 
         await Provider.of<CartProvider>(context, listen: false)
             .addToOrderAPI(
@@ -3123,7 +3393,8 @@ class BillingPageState extends State<BillingPage> {
           status: "confirmed",
         )
             .then((response) {
-          debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
+          debugPrint(
+              "✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
           if (response["order_id"] != null) {
             showScaffold(
               context: context,
@@ -3274,23 +3545,38 @@ class BillingPageState extends State<BillingPage> {
     try {
       // Extract cart items from the saved order
       List<Map<String, dynamic>> cartItems = [];
+      double totalMRP = 0.0;
+      double netTotal = 0.0;
 
       // Convert SavedOrder items to the format expected by PrintPage
       for (var item in savedOrder.items) {
+        // Calculate individual item values
+        double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
+        double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
+        double itemTotalPrice = itemPrice * item.quantity;
+
+        // Add to totals for "You Saved" calculation
+        totalMRP += itemMrp * item.quantity;
+        netTotal += itemTotalPrice;
+
         cartItems.add({
           'productName': item.product.productName ?? 'Unknown',
-          'mrp': (item.product.mrp?.toString() ?? '0.00'),
+          'mrp': itemMrp.toString(),
           'quantity': item.quantity.toString(),
-          'unitPrice': (item.price?.toString() ??
-              item.product.price?.price?.toString() ??
-              '0.00'),
-          'totalPrice': ((item.price ?? (item.product.price?.price ?? 0.0)) *
-                  item.quantity)
-              .toString(),
+          'unitPrice': itemPrice.toString(),
+          'totalPrice': itemTotalPrice.toString(),
         });
       }
 
+      // 🔧 FIX: Calculate "You Saved" using Option 3 approach
+      double youSaved = totalMRP - netTotal;
+      youSaved = youSaved > 0 ? youSaved : 0.0; // Ensure non-negative
+
       // Debug - check what's being sent
+      debugPrint("🖨️ BILLING SAVE AND PRINT CALCULATION:");
+      debugPrint("  - Total MRP: $totalMRP");
+      debugPrint("  - Net Total: $netTotal");
+      debugPrint("  - You Saved: $youSaved");
       debugPrint("Sending ${cartItems.length} items to PrintPage");
       debugPrint(
           "Sample item: ${cartItems.isNotEmpty ? json.encode(cartItems[0]) : 'No items'}");
@@ -3301,8 +3587,9 @@ class BillingPageState extends State<BillingPage> {
           builder: (context) => PrintPage(
             storeName: "SOUQ POINT",
             cartItems: cartItems,
-            formattedTotal: savedOrder.total.toString(),
-            savedTotal: "0.00", // Adjust if you track discounts
+            formattedTotal: netTotal.toString(), // Use calculated net total
+            savedTotal:
+                youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
             orderDate: savedOrder.createdAt,
             orderNumber: savedOrder.orderNumber,
             isFromLocalStorage: true,
@@ -3356,12 +3643,13 @@ class BillingPageState extends State<BillingPage> {
 
   // Function to handle sales executive changes
   void _onSalesExecutiveChanged() {
-    debugPrint("🔄 BILLING: Sales executive changed, updating default customer...");
-    
+    debugPrint(
+        "🔄 BILLING: Sales executive changed, updating default customer...");
+
     // Clear current customer selection
     Provider.of<CustomerSelectionProvider>(context, listen: false)
         .clearSelectedCustomer();
-    
+
     // Reset billing page customer state
     setState(() {
       mobileNumberText = "";
@@ -3373,18 +3661,18 @@ class BillingPageState extends State<BillingPage> {
       mobileNumberTextController.clear();
       _autocompletePhoneKey = GlobalKey(); // Reset autocomplete
     });
-    
+
     // Re-fetch customers to set new default based on new executive
     _fetchCustomers();
   }
 
   void _onUserSwitched() {
     debugPrint("🔄 BILLING: User switched, updating default customer...");
-    
+
     // Clear current customer selection
     Provider.of<CustomerSelectionProvider>(context, listen: false)
         .clearSelectedCustomer();
-    
+
     // Reset billing page customer state
     setState(() {
       mobileNumberText = "";
@@ -3396,7 +3684,7 @@ class BillingPageState extends State<BillingPage> {
       mobileNumberTextController.clear();
       _autocompletePhoneKey = GlobalKey(); // Reset autocomplete
     });
-    
+
     // Re-fetch customers to set new default based on new executive
     _fetchCustomers();
   }

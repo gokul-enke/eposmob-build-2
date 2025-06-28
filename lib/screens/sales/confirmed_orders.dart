@@ -215,20 +215,36 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
     try {
       // Convert SavedOrder items to the format expected by PrintPage
       List<Map<String, dynamic>> cartItems = [];
+      double totalMRP = 0.0;
+      double netTotal = 0.0;
 
       for (var item in order.items) {
+        // Calculate individual item values
+        double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
+        double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
+        double itemTotalPrice = itemPrice * item.quantity;
+        
+        // Add to totals for "You Saved" calculation
+        totalMRP += itemMrp * item.quantity;
+        netTotal += itemTotalPrice;
+        
         cartItems.add({
           'productName': item.product.productName ?? 'Unknown',
-          'mrp': (item.product.mrp?.toString() ?? '0.00'),
+          'mrp': itemMrp.toString(),
           'quantity': item.quantity.toString(),
-          'unitPrice': (item.price?.toString() ??
-              item.product.price?.price?.toString() ??
-              '0.00'),
-          'totalPrice': ((item.price ?? (item.product.price?.price ?? 0.0)) *
-                  item.quantity)
-              .toString(),
+          'unitPrice': itemPrice.toString(),
+          'totalPrice': itemTotalPrice.toString(),
         });
       }
+
+      // 🔧 FIX: Calculate "You Saved" using Option 3 approach
+      double youSaved = totalMRP - netTotal;
+      youSaved = youSaved > 0 ? youSaved : 0.0; // Ensure non-negative
+
+      debugPrint("🖨️ OFFLINE ORDER PRINT CALCULATION:");
+      debugPrint("  - Total MRP: $totalMRP");
+      debugPrint("  - Net Total: $netTotal");
+      debugPrint("  - You Saved: $youSaved");
 
       Navigator.push(
         context,
@@ -236,8 +252,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           builder: (context) => PrintPage(
             storeName: "SOUQ POINT",
             cartItems: cartItems,
-            formattedTotal: order.total.toString(),
-            savedTotal: "0.00", // Adjust if you track discounts
+            formattedTotal: netTotal.toString(), // Use calculated net total
+            savedTotal: youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
             orderDate: order.createdAt,
             orderNumber: order.orderNumber,
             isFromLocalStorage: true,
@@ -458,6 +474,21 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       debugPrint(
           "Processing order ${i + 1}/${confirmedOrders.length}: ${order.orderNumber}");
 
+      // Debug: Log the order data being synced
+      debugPrint("💾 SYNC ORDER DATA:");
+      debugPrint("  - Order Number: ${order.orderNumber}");
+      debugPrint("  - Customer ID: ${order.customerId}");
+      debugPrint("  - Customer Phone: ${order.customerPhone}");
+      debugPrint("  - Payment Method: ${order.paymentMethod}");
+      debugPrint("  - Paid Amount: ${order.paidAmount}");
+      debugPrint("  - Balance Amount: ${order.balanceAmount}");
+      debugPrint("  - Transaction ID: ${order.transactionId}");
+      debugPrint("  - Coupon ID: ${order.couponId}");
+      debugPrint("  - Delivery Method ID: ${order.deliveryMethodId}");
+      debugPrint("  - Car Number: ${order.carNumber}");
+      debugPrint("  - Status: ${order.status}");
+      debugPrint("  - Total: ${order.total}");
+
       // Prepare items for API
       List<Map<String, dynamic>> items = [];
       for (var item in order.items) {
@@ -478,15 +509,19 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           items: items,
           cartIds: 0, // Default cart ID as we're syncing saved orders
           accessToken: accessToken,
-          transactionId: order.orderNumber,
+          // Use stored data from local order, with fallbacks if needed
+          transactionId: order.transactionId ?? order.orderNumber,
           totalPrice: order.total.toString(),
+          customerId: order.customerId,
           customerPhone: order.customerPhone ?? "",
-          paymentMethod: "CASH", // Default payment method
-          paidAmount: order.total.toString(),
-          balanceAmount: "0.0",
+          paymentMethod: order.paymentMethod ?? "CASH", // Use stored payment method or default
+          paidAmount: order.paidAmount ?? order.total.toString(),
+          balanceAmount: order.balanceAmount ?? "0.0",
+          couponId: order.couponId,
           comment: order.comment,
-          deliveryMethodId: "1", // Default delivery method
-          status: "confirmed",
+          deliveryMethodId: order.deliveryMethodId ?? "1", // Use stored delivery method or default
+          carNumber: order.carNumber,
+          status: order.status ?? "confirmed",
         );
 
         // AFTER the API call completes, update the index

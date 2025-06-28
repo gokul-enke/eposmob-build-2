@@ -16,6 +16,28 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
   const ConfirmedOrderDetailModal({Key? key, required this.order})
       : super(key: key);
 
+  // Calculate total MRP from all order items
+  double _calculateTotalMRP() {
+    double totalMRP = 0.0;
+    for (var item in order.items) {
+      final mrp = item.mrp ?? item.product.mrp ?? 0.0;
+      totalMRP += mrp * item.quantity;
+    }
+    return totalMRP;
+  }
+
+  // Calculate "You Saved" amount (Total MRP - Net Total)
+  double _calculateYouSaved() {
+    double totalMRP = _calculateTotalMRP();
+    double netTotal = 0.0;
+    for (var item in order.items) {
+      final price = item.price ?? item.product.price?.price ?? 0.0;
+      netTotal += price * item.quantity;
+    }
+    double youSaved = totalMRP - netTotal;
+    return youSaved > 0 ? youSaved : 0.0;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -83,6 +105,14 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                     _buildInfoRow("Time", _formatTime(order.createdAt)),
                     const SizedBox(height: 8),
                     _buildInfoRow("Total Amount", "₹${order.total.toStringAsFixed(2)}"),
+                    const SizedBox(height: 8),
+                    _buildInfoRow("Total MRP", "₹${_calculateTotalMRP().toStringAsFixed(2)}"),
+                    const SizedBox(height: 8),
+                    _buildInfoRow("You Saved", "₹${_calculateYouSaved().toStringAsFixed(2)}", 
+                        valueStyle: const TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.w600,
+                        )),
                     if (order.comment != null && order.comment!.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       _buildInfoRow("Comment", order.comment!),
@@ -212,7 +242,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(String label, String value, {TextStyle? valueStyle}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -229,7 +259,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
+            style: valueStyle ?? const TextStyle(
               color: Colors.black,
               fontWeight: FontWeight.w600,
             ),
@@ -255,20 +285,36 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
     try {
       // Convert SavedOrder items to the format expected by PrintPage
       List<Map<String, dynamic>> cartItems = [];
+      double totalMRP = 0.0;
+      double netTotal = 0.0;
 
       for (var item in order.items) {
+        // Calculate individual item values
+        double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
+        double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
+        double itemTotalPrice = itemPrice * item.quantity;
+        
+        // Add to totals for "You Saved" calculation
+        totalMRP += itemMrp * item.quantity;
+        netTotal += itemTotalPrice;
+        
         cartItems.add({
           'productName': item.product.productName ?? 'Unknown',
-          'mrp': (item.product.mrp?.toString() ?? '0.00'),
+          'mrp': itemMrp.toString(),
           'quantity': item.quantity.toString(),
-          'unitPrice': (item.price?.toString() ??
-              item.product.price?.price?.toString() ??
-              '0.00'),
-          'totalPrice': ((item.price ?? (item.product.price?.price ?? 0.0)) *
-                  item.quantity)
-              .toString(),
+          'unitPrice': itemPrice.toString(),
+          'totalPrice': itemTotalPrice.toString(),
         });
       }
+
+      // 🔧 FIX: Calculate "You Saved" using Option 3 approach
+      double youSaved = totalMRP - netTotal;
+      youSaved = youSaved > 0 ? youSaved : 0.0; // Ensure non-negative
+
+      debugPrint("🖨️ OFFLINE ORDER MODAL PRINT CALCULATION:");
+      debugPrint("  - Total MRP: $totalMRP");
+      debugPrint("  - Net Total: $netTotal");
+      debugPrint("  - You Saved: $youSaved");
 
       Navigator.push(
         context,
@@ -276,8 +322,8 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
           builder: (context) => PrintPage(
             storeName: "SOUQ POINT",
             cartItems: cartItems,
-            formattedTotal: order.total.toString(),
-            savedTotal: "0.00", // Adjust if you track discounts
+            formattedTotal: netTotal.toString(), // Use calculated net total
+            savedTotal: youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
             orderDate: order.createdAt,
             orderNumber: order.orderNumber,
             isFromLocalStorage: true,
