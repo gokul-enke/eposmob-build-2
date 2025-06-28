@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 class ListSalesOrderModel {
   final String? status;
@@ -13,8 +14,23 @@ class ListSalesOrderModel {
     this.pagination,
   });
 
-  factory ListSalesOrderModel.fromJson(Map<String, dynamic> json) =>
-      ListSalesOrderModel(
+  factory ListSalesOrderModel.fromJson(Map<String, dynamic> json) {
+    debugPrint('=== ListSalesOrderModel.fromJson DEBUG ===');
+    debugPrint('Input JSON keys: ${json.keys.toList()}');
+    debugPrint('Status: ${json["status"]}');
+    debugPrint('Message: ${json["message"]}');
+    debugPrint('Data type: ${json["data"]?.runtimeType}');
+    
+    if (json["data"] != null) {
+      debugPrint('Data keys: ${json["data"] is Map ? json["data"].keys.toList() : "Not a Map"}');
+      if (json["data"] is Map && json["data"]["data"] != null) {
+        debugPrint('Orders data type: ${json["data"]["data"].runtimeType}');
+        debugPrint('Orders length: ${json["data"]["data"] is List ? json["data"]["data"].length : "Not a List"}');
+      }
+    }
+    
+    try {
+      return ListSalesOrderModel(
         status: json["status"],
         message: json["message"],
         data: json["data"]?["data"] == null
@@ -24,6 +40,13 @@ class ListSalesOrderModel {
         pagination:
             json["data"] != null ? PaginationInfo.fromJson(json["data"]) : null,
       );
+    } catch (e, stackTrace) {
+      debugPrint('=== ListSalesOrderModel.fromJson ERROR ===');
+      debugPrint('Error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
 
   Map<String, dynamic> toJson() => {
         "status": status,
@@ -64,8 +87,25 @@ class ListOrderModelData {
     this.customerName,
   });
 
-  factory ListOrderModelData.fromJson(Map<String, dynamic> json) =>
-      ListOrderModelData(
+  factory ListOrderModelData.fromJson(Map<String, dynamic> json) {
+    try {
+      debugPrint('=== ListOrderModelData.fromJson DEBUG ===');
+      debugPrint('Order ID: ${json["id"]}');
+      debugPrint('Order Number: ${json["order_number"]}');
+      debugPrint('Grant Total: ${json["grant_total"]} (${json["grant_total"]?.runtimeType})');
+      debugPrint('Order Date: ${json["order_date"]} (${json["order_date"]?.runtimeType})');
+      debugPrint('Customer Name: ${json["customer_name"]}');
+      debugPrint('Cart Items Type: ${json["cart_items"]?.runtimeType}');
+      
+      if (json["cart_items"] != null) {
+        debugPrint('Cart Items Keys: ${json["cart_items"] is Map ? json["cart_items"].keys.toList() : "Not a Map"}');
+        if (json["cart_items"] is Map && json["cart_items"]["cart_items"] != null) {
+          debugPrint('Cart Items Array Type: ${json["cart_items"]["cart_items"].runtimeType}');
+          debugPrint('Cart Items Length: ${json["cart_items"]["cart_items"] is List ? json["cart_items"]["cart_items"].length : "Not a List"}');
+        }
+      }
+      
+      return ListOrderModelData(
         id: json["id"],
         cartId: json["cart_id"],
         orderDate: json["order_date"] == null
@@ -90,6 +130,14 @@ class ListOrderModelData {
             : List<CartItem>.from(json["cart_items"]["cart_items"]
                 .map((x) => CartItem.fromJson(x))),
       );
+    } catch (e, stackTrace) {
+      debugPrint('=== ListOrderModelData.fromJson ERROR ===');
+      debugPrint('Error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      debugPrint('JSON input: $json');
+      rethrow;
+    }
+  }
 
   Map<String, dynamic> toJson() => {
         "id": id,
@@ -134,16 +182,32 @@ class CartItem {
     this.totalPrice,
   });
 
-  factory CartItem.fromJson(Map<String, dynamic> json) => CartItem(
+  factory CartItem.fromJson(Map<String, dynamic> json) {
+    try {
+      debugPrint('=== CartItem.fromJson DEBUG ===');
+      debugPrint('Cart Item ID: ${json["id"]}');
+      debugPrint('Product Name: ${json["product_name"]}');
+      debugPrint('Quantity: ${json["quantity"]} (${json["quantity"]?.runtimeType})');
+      debugPrint('Total Price: ${json["total_price"]} (${json["total_price"]?.runtimeType})');
+      
+      return CartItem(
         id: json["id"],
         cartId: json["cart_id"],
         customerId: json["customer_id"],
         storeId: json["store_id"],
         productId: json["product_id"],
         productName: json["product_name"],
-        quantity: num.tryParse(json["quantity"]),
-        totalPrice: json["total_price"],
+        quantity: json["quantity"] is String ? num.tryParse(json["quantity"]) : json["quantity"],
+        totalPrice: json["total_price"].toString(),
       );
+    } catch (e, stackTrace) {
+      debugPrint('=== CartItem.fromJson ERROR ===');
+      debugPrint('Error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      debugPrint('JSON input: $json');
+      rethrow;
+    }
+  }
 
   Map<String, dynamic> toJson() => {
         "id": id,
@@ -229,10 +293,24 @@ class PriceSummary {
 
   PriceSummary({this.grandTotal, this.taxTotal});
 
-  factory PriceSummary.fromJson(Map<String, dynamic> json) => PriceSummary(
-        grandTotal: json["grand_total"].toString(),
-        taxTotal: json["tax_total"].toString(),
+  factory PriceSummary.fromJson(Map<String, dynamic> json) {
+    try {
+      debugPrint('=== PriceSummary.fromJson DEBUG ===');
+      debugPrint('Grand Total: ${json["grand_total"]} (${json["grand_total"]?.runtimeType})');
+      debugPrint('Tax Total: ${json["tax_total"]} (${json["tax_total"]?.runtimeType})');
+      
+      return PriceSummary(
+        grandTotal: json["grand_total"]?.toString(),
+        taxTotal: json["tax_total"]?.toString(),
       );
+    } catch (e, stackTrace) {
+      debugPrint('=== PriceSummary.fromJson ERROR ===');
+      debugPrint('Error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      debugPrint('JSON input: $json');
+      rethrow;
+    }
+  }
 
   Map<String, dynamic> toJson() => {
         "grand_total": grandTotal,
@@ -259,15 +337,26 @@ class PaginationInfo {
     this.prevPageUrl,
   });
 
-  factory PaginationInfo.fromJson(Map<String, dynamic> json) => PaginationInfo(
-        currentPage: json["current_page"],
-        from: json["from"],
-        to: json["to"],
-        totalPages: (json["last_page"] != null) ? json["last_page"] : null,
-        firstPageUrl: json["first_page_url"],
-        nextPageUrl: json["next_page_url"],
-        prevPageUrl: json["prev_page_url"],
-      );
+  factory PaginationInfo.fromJson(Map<String, dynamic> json) {
+    debugPrint('=== PaginationInfo.fromJson DEBUG ===');
+    debugPrint('Input JSON keys: ${json.keys.toList()}');
+    debugPrint('Current Page: ${json["current_page"]} (${json["current_page"]?.runtimeType})');
+    debugPrint('Last Page: ${json["last_page"]} (${json["last_page"]?.runtimeType})');
+    debugPrint('From: ${json["from"]}');
+    debugPrint('To: ${json["to"]}');
+    debugPrint('Next Page URL: ${json["next_page_url"]}');
+    debugPrint('Prev Page URL: ${json["prev_page_url"]}');
+    
+    return PaginationInfo(
+      currentPage: json["current_page"],
+      from: json["from"],
+      to: json["to"],
+      totalPages: (json["last_page"] != null) ? json["last_page"] : null,
+      firstPageUrl: json["first_page_url"],
+      nextPageUrl: json["next_page_url"],
+      prevPageUrl: json["prev_page_url"],
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         "current_page": currentPage,

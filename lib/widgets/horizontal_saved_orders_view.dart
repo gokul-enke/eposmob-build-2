@@ -1,20 +1,14 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
-import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/screens/billing/billing_page.dart';
 import 'package:provider/provider.dart';
-import '../../models/list_sales_order.dart';
-import '../../providers/sales_provider.dart';
 
 /// A widget to display saved orders in a horizontal scrollable list
 class HorizontalSavedOrdersView extends StatefulWidget {
@@ -144,7 +138,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                                     "₹${order.total.toStringAsFixed(2)}",
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 12,
+                                      fontSize: 11,
                                     ),
                                   ),
                                   Row(
@@ -268,6 +262,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
       title: "Delete Order",
       itemName: order.orderNumber,
       message: "This order will be permanently removed from your saved orders.",
+      warningIcon: Icons.receipt_long_outlined,
       onDelete: () {
         // Delete the order
         provider.deleteSavedOrder(order.id);

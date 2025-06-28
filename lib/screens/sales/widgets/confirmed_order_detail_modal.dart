@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 class ConfirmedOrderDetailModal extends StatelessWidget {
@@ -177,14 +180,29 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                   boxColor: ColorManager.kPrimaryColor,
                   textColor: Colors.white,
                 ),
-                CustomRoundButton(
-                  fct: () => Navigator.of(context).pop(),
-                  title: "Close",
-                  fontSize: FontSize.s12,
-                  height: MediaQuery.of(context).size.height * .05,
-                  width: 80,
-                  boxColor: Colors.grey[300],
-                  textColor: Colors.black,
+                Row(
+                  children: [
+                    CustomRoundButton(
+                      fct: () => _showDeleteConfirmationDialog(context),
+                      title: "Delete",
+                      fontSize: FontSize.s12,
+                      height: MediaQuery.of(context).size.height * .05,
+                      width: 80,
+                      boxColor: ColorManager.kButtonRed,
+                      borderColor: ColorManager.kButtonRed,
+                      textColor: Colors.white,
+                    ),
+                    const SizedBox(width: 12),
+                    CustomRoundButton(
+                      fct: () => Navigator.of(context).pop(),
+                      title: "Close",
+                      fontSize: FontSize.s12,
+                      height: MediaQuery.of(context).size.height * .05,
+                      width: 80,
+                      boxColor: Colors.grey[300],
+                      textColor: Colors.black,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -275,5 +293,31 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
         ),
       );
     }
+  }
+
+  void _showDeleteConfirmationDialog(BuildContext context) {
+    DeleteConfirmationDialog.show(
+      context: context,
+      title: "Delete Confirmed Order",
+      itemName: order.orderNumber,
+      message: "This confirmed order will be permanently removed from your local storage. This action cannot be undone.",
+      warningIcon: Icons.receipt_long_outlined,
+      warningIconColor: ColorManager.kButtonRed,
+      deleteButtonText: "Delete",
+      onDelete: () {
+        // Delete the confirmed order from local storage
+        final provider = Provider.of<LocalProductProvider>(context, listen: false);
+        provider.deleteConfirmedOrder(order.id);
+
+        // Close the modal first
+        Navigator.of(context).pop();
+
+        // Show success message
+        showScaffold(
+          context: context,
+          message: "Confirmed order deleted successfully",
+        );
+      },
+    );
   }
 } 

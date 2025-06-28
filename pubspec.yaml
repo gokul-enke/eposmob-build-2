@@ -88,8 +88,6 @@ dependencies:
   hive_flutter: ^1.1.0
   # printing: ^5.9.3  # Commented out due to Windows build issues
   internet_connection_checker_plus: ^1.0.1
-  esc_pos_utils_plus: ^2.0.1+6
-  flutter_usb_printer: ^0.1.0+1
 
 dev_dependencies:
   flutter_test:

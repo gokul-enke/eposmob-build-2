@@ -151,6 +151,7 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   void loadInitData() async {
+    debugPrint('=== LOAD INIT DATA START ===');
     try {
       setState(() {
         initLoading = true;
@@ -159,23 +160,42 @@ class _SalesScreenState extends State<SalesScreen> {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
 
+      debugPrint('Access Token Available: ${accessToken != null ? "Yes" : "No"}');
+      debugPrint('Access Token Length: ${accessToken?.length ?? 0}');
+
       SalesProvider orderProvider =
           Provider.of<SalesProvider>(context, listen: false);
 
+      debugPrint('Calling fetchOrders with storeId: 1');
       await orderProvider.fetchOrders(
         accessToken: accessToken ?? '',
         storeId: 1,
       );
-    } catch (error) {
-      // debugPrint(error.toString());
+      debugPrint('fetchOrders completed successfully');
+    } catch (error, stackTrace) {
+      debugPrint('=== LOAD INIT DATA ERROR ===');
+      debugPrint('Error Type: ${error.runtimeType}');
+      debugPrint('Error Message: $error');
+      debugPrint('Stack Trace: $stackTrace');
     } finally {
       setState(() {
         initLoading = false;
       });
+      debugPrint('=== LOAD INIT DATA END ===');
     }
   }
 
   void searchOrders(page) async {
+    debugPrint('=== SEARCH ORDERS START ===');
+    debugPrint('Search Page: $page');
+    debugPrint('Order Number: ${orderNumberController.text}');
+    debugPrint('Customer Name: ${customerNameController.text}');
+    debugPrint('Amount: ${amountController.text}');
+    debugPrint('Email: ${emailController.text}');
+    debugPrint('Phone: ${phoneController.text}');
+    debugPrint('Selected Date: $selectedDate');
+    debugPrint('Store: ${storeController.text}');
+    
     try {
       setState(() {
         initLoading = true;
@@ -185,6 +205,7 @@ class _SalesScreenState extends State<SalesScreen> {
       SalesProvider orderProvider =
           Provider.of<SalesProvider>(context, listen: false);
 
+      debugPrint('Calling fetchOrders with search filters');
       await orderProvider.fetchOrders(
         accessToken: accessToken ?? '',
         // storeId: 1,
@@ -199,12 +220,16 @@ class _SalesScreenState extends State<SalesScreen> {
         filterStore: storeController.text,
         page: page,
       );
-    } catch (error) {
-      // debugPrint(error.toString());
+      debugPrint('fetchOrders completed for page: $page');
+    } catch (error, stackTrace) {
+      debugPrint('=== SEARCH ORDERS ERROR ===');
+      debugPrint('Error: $error');
+      debugPrint('Stack trace: $stackTrace');
     } finally {
       setState(() {
         initLoading = false;
       });
+      debugPrint('=== SEARCH ORDERS END ===');
     }
   }
 
@@ -590,6 +615,25 @@ class _SalesScreenState extends State<SalesScreen> {
                         builder: (context, orderProvider, child) {
                           List<ListOrderModelData> orders =
                               orderProvider.orders;
+                          
+                          // DEBUG: Print UI rendering details
+                          debugPrint('=== SALES UI RENDER DEBUG ===');
+                          debugPrint('Orders List Length: ${orders.length}');
+                          debugPrint('Orders Provider State: ${orderProvider.runtimeType}');
+                          debugPrint('Current Page: ${orderProvider.currentPage}');
+                          debugPrint('Total Pages: ${orderProvider.totalPages}');
+                          
+                          if (orders.isEmpty) {
+                            debugPrint('=== NO ORDERS TO DISPLAY ===');
+                            debugPrint('Orders list is empty - no data to render');
+                          } else {
+                            debugPrint('=== ORDERS TO RENDER ===');
+                            for (int i = 0; i < orders.length && i < 5; i++) {
+                              var order = orders[i];
+                              debugPrint('UI Order $i: ${order.orderNumber} - ${order.grantTotal}');
+                            }
+                          }
+                          
                           return SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: SizedBox(

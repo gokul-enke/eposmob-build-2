@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -88,7 +89,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(12.0),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         mainAxisAlignment:
@@ -106,13 +108,27 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
-                                          IconButton(
-                                            icon:
-                                                const Icon(Icons.print, size: 18),
-                                            padding: EdgeInsets.zero,
-                                            constraints: const BoxConstraints(),
-                                            onPressed: () => _printOrder(order),
-                                            color: ColorManager.kPrimaryColor,
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(Icons.print,
+                                                    size: 18),
+                                                padding: EdgeInsets.zero,
+                                                constraints: const BoxConstraints(),
+                                                onPressed: () => _printOrder(order),
+                                                color: ColorManager.kPrimaryColor,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              IconButton(
+                                                icon: const Icon(Icons.delete_outline,
+                                                    size: 18),
+                                                padding: EdgeInsets.zero,
+                                                constraints: const BoxConstraints(),
+                                                onPressed: () => _showDeleteConfirmationDialog(context, order),
+                                                color: ColorManager.kButtonRed,
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),
@@ -241,6 +257,29 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       context: context,
       builder: (BuildContext context) {
         return ConfirmedOrderDetailModal(order: order);
+      },
+    );
+  }
+
+  void _showDeleteConfirmationDialog(BuildContext context, SavedOrder order) {
+    DeleteConfirmationDialog.show(
+      context: context,
+      title: "Delete Confirmed Order",
+      itemName: order.orderNumber,
+      message: "This confirmed order will be permanently removed from your local storage. This action cannot be undone.",
+      warningIcon: Icons.receipt_long_outlined,
+      warningIconColor: ColorManager.kButtonRed,
+      deleteButtonText: "Delete",
+      onDelete: () {
+        // Delete the confirmed order from local storage
+        final provider = Provider.of<LocalProductProvider>(context, listen: false);
+        provider.deleteConfirmedOrder(order.id);
+
+        // Show success message
+        showScaffold(
+          context: context,
+          message: "Confirmed order deleted successfully",
+        );
       },
     );
   }
