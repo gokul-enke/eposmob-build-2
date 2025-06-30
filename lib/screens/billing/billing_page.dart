@@ -838,7 +838,7 @@ class BillingPageState extends State<BillingPage> {
                                       ? Colors.white
                                       : Colors.grey.shade700,
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 13,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
@@ -882,7 +882,7 @@ class BillingPageState extends State<BillingPage> {
                                       ? Colors.white
                                       : Colors.grey.shade700,
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 13,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
@@ -3694,6 +3694,7 @@ class BillingPageState extends State<BillingPage> {
                         "  📝 Setting text with phone only: '$textToSet'");
                   }
                   mobileNumberTextController.text = textToSet;
+                  mobileNumberText = textToSet; // <-- Ensure both are set
 
                   // **FIX: For custom phone orders, mobileNumberText should be the phone number**
                   if (isDefaultSalesExecutiveCustomer) {
@@ -3703,7 +3704,7 @@ class BillingPageState extends State<BillingPage> {
                     mobileNumberText = currentOrder.customerPhone ?? "";
                   } else {
                     // Regular customer from list, clear mobileNumberText
-                    mobileNumberText = "";
+                    // mobileNumberText = ""; // <-- Don't clear, keep the text for display
                   }
                   debugPrint(
                       "  - Set mobileNumberText to: '$mobileNumberText'");

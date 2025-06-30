@@ -25,8 +25,18 @@ class _HorizontalProductViewLocalState
 
   // Define your custom prices array
   final List<double> customPrices = [
-    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0,
-    15.0, 20.0
+    1.0,
+    2.0,
+    3.0,
+    4.0,
+    5.0,
+    6.0,
+    7.0,
+    8.0,
+    9.0,
+    10.0,
+    15.0,
+    20.0
   ];
 
   @override
@@ -54,12 +64,15 @@ class _HorizontalProductViewLocalState
     debugPrint("  - Product: ${product.productName ?? ''}");
     debugPrint("  - Product ID: ${product.productId}");
     debugPrint("  - About to show price selection modal...");
-    
+
     // Get customer info from global provider
-    final customerSelectionProvider = Provider.of<CustomerSelectionProvider>(context, listen: false);
-    debugPrint("  - Customer from provider: ${customerSelectionProvider.selectedCustomerName}");
-    debugPrint("  - Customer ID from provider: ${customerSelectionProvider.selectedCustomerID}");
-    
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    debugPrint(
+        "  - Customer from provider: ${customerSelectionProvider.selectedCustomerName}");
+    debugPrint(
+        "  - Customer ID from provider: ${customerSelectionProvider.selectedCustomerID}");
+
     // Show price selection modal first
     double? selectedPrice = await showDialog<double>(
       context: context,
@@ -72,7 +85,8 @@ class _HorizontalProductViewLocalState
       ),
     );
 
-    debugPrint("🎯 HORIZONTAL: Price modal result: ${selectedPrice != null ? '₹$selectedPrice' : 'cancelled'}");
+    debugPrint(
+        "🎯 HORIZONTAL: Price modal result: ${selectedPrice != null ? '₹$selectedPrice' : 'cancelled'}");
 
     // If user selected a price, proceed with adding to cart
     if (selectedPrice != null) {
@@ -82,6 +96,7 @@ class _HorizontalProductViewLocalState
         product: product,
         addToCartDirectly: true, // Add to cart directly for horizontal view
         customPrice: selectedPrice, // Pass the selected price
+        customMrp: selectedPrice,
         // Customer info will be fetched from global provider in the helper
       );
     } else {

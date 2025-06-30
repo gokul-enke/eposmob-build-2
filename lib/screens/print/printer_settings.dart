@@ -51,8 +51,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   BluetoothPrinter? selectedPrinter;
   bool isLoading = true;
   String selectedPaperSize = '80mm';
-  String selectedFontStyle = 'Font B (Default)';
-  
+  String selectedFontStyle = 'Font A (Small & Sharp)';
+
   // Printer scanning variables
   var printerManager = PrinterManager.instance;
   var devices = <BluetoothPrinter>[];
@@ -61,7 +61,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   // List of available paper sizes
   final List<String> paperSizes = ['80mm', '58mm', 'A5', 'A4'];
-  
+
   // List of available font styles
   final List<String> fontStyles = [
     'Font A (Small & Sharp)',
@@ -234,9 +234,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     } else {
       // Default to Font B if no preference is set
       setState(() {
-        selectedFontStyle = 'Font B (Default)';
+        selectedFontStyle = 'Font A (Small & Sharp)';
       });
-      _saveDefaultFontStyle('Font B (Default)');
+      _saveDefaultFontStyle('Font A (Small & Sharp)');
     }
 
     // Load default printer
@@ -398,8 +398,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
     try {
       // Convert selected font style to PosFontType
-      PosFontType fontType = selectedFontStyle.contains('Font A') 
-          ? PosFontType.fontA 
+      PosFontType fontType = selectedFontStyle.contains('Font A')
+          ? PosFontType.fontA
           : PosFontType.fontB;
 
       // Create dummy cart items
@@ -485,7 +485,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
       // Generate receipt with all fields enabled (dummy document config)
       final profile = await CapabilityProfile.load();
-      PaperSize paperSize = selectedPaperSize == '58mm' ? PaperSize.mm58 : PaperSize.mm80;
+      PaperSize paperSize =
+          selectedPaperSize == '58mm' ? PaperSize.mm58 : PaperSize.mm80;
       final generator = Generator(paperSize, profile);
       List<int> bytes = [];
 
@@ -502,7 +503,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               align: PosAlign.center,
               bold: true,
               height: textSizeTitle));
-      
+
       bytes += generator.text('Sample Receipt Test',
           styles: PosStyles(
               fontType: fontType,
@@ -547,33 +548,123 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
       // Table header
       bytes += generator.row([
-        PosColumn(text: 'SL#', width: 1, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: true, height: textSizeMedium)),
-        PosColumn(text: 'PARTICULARS', width: 3, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: true, height: textSizeMedium)),
-        PosColumn(text: 'MRP', width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeMedium)),
-        PosColumn(text: 'QTY', width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeMedium)),
-        PosColumn(text: 'RATE', width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeMedium)),
-        PosColumn(text: 'TOTAL', width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeMedium)),
+        PosColumn(
+            text: 'SL#',
+            width: 1,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: true,
+                height: textSizeMedium)),
+        PosColumn(
+            text: 'PARTICULARS',
+            width: 3,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: true,
+                height: textSizeMedium)),
+        PosColumn(
+            text: 'MRP',
+            width: 2,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: true,
+                height: textSizeMedium)),
+        PosColumn(
+            text: 'QTY',
+            width: 2,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: true,
+                height: textSizeMedium)),
+        PosColumn(
+            text: 'RATE',
+            width: 2,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: true,
+                height: textSizeMedium)),
+        PosColumn(
+            text: 'TOTAL',
+            width: 2,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: true,
+                height: textSizeMedium)),
       ]);
       bytes += generator.hr();
 
       // Cart items
       for (var i = 0; i < cartItems.length; i++) {
         var item = cartItems[i];
-        
+
         // Product name row
         bytes += generator.row([
-          PosColumn(text: '${i + 1}', width: 1, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: true, height: textSizeMedium)),
-          PosColumn(text: item['productName'], width: 11, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: true, height: textSizeMedium)),
+          PosColumn(
+              text: '${i + 1}',
+              width: 1,
+              styles: PosStyles(
+                  fontType: fontType,
+                  align: PosAlign.left,
+                  bold: true,
+                  height: textSizeMedium)),
+          PosColumn(
+              text: item['productName'],
+              width: 11,
+              styles: PosStyles(
+                  fontType: fontType,
+                  align: PosAlign.left,
+                  bold: true,
+                  height: textSizeMedium)),
         ]);
 
         // Price details row
         bytes += generator.row([
-          PosColumn(text: '', width: 1, styles: PosStyles(fontType: fontType, align: PosAlign.left)),
-          PosColumn(text: '', width: 3, styles: PosStyles(fontType: fontType, align: PosAlign.left)),
-          PosColumn(text: item['mrp'], width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: false, height: textSizeMedium)),
-          PosColumn(text: item['quantity'], width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: false, height: textSizeMedium)),
-          PosColumn(text: item['unitPrice'], width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: false, height: textSizeMedium)),
-          PosColumn(text: item['totalPrice'], width: 2, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: false, height: textSizeMedium)),
+          PosColumn(
+              text: '',
+              width: 1,
+              styles: PosStyles(fontType: fontType, align: PosAlign.left)),
+          PosColumn(
+              text: '',
+              width: 3,
+              styles: PosStyles(fontType: fontType, align: PosAlign.left)),
+          PosColumn(
+              text: item['mrp'],
+              width: 2,
+              styles: PosStyles(
+                  fontType: fontType,
+                  align: PosAlign.right,
+                  bold: false,
+                  height: textSizeMedium)),
+          PosColumn(
+              text: item['quantity'],
+              width: 2,
+              styles: PosStyles(
+                  fontType: fontType,
+                  align: PosAlign.right,
+                  bold: false,
+                  height: textSizeMedium)),
+          PosColumn(
+              text: item['unitPrice'],
+              width: 2,
+              styles: PosStyles(
+                  fontType: fontType,
+                  align: PosAlign.right,
+                  bold: false,
+                  height: textSizeMedium)),
+          PosColumn(
+              text: item['totalPrice'],
+              width: 2,
+              styles: PosStyles(
+                  fontType: fontType,
+                  align: PosAlign.right,
+                  bold: false,
+                  height: textSizeMedium)),
         ]);
       }
 
@@ -581,34 +672,105 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
       // Totals
       bytes += generator.row([
-        PosColumn(text: 'Items', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: false, height: textSizeSmall)),
-        PosColumn(text: '${cartItems.length}', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeSmall)),
+        PosColumn(
+            text: 'Items',
+            width: 6,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: false,
+                height: textSizeSmall)),
+        PosColumn(
+            text: '${cartItems.length}',
+            width: 6,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: true,
+                height: textSizeSmall)),
       ]);
 
       bytes += generator.row([
-        PosColumn(text: 'Total Quantity', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: false, height: textSizeSmall)),
-        PosColumn(text: '9', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeSmall)),
+        PosColumn(
+            text: 'Total Quantity',
+            width: 6,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: false,
+                height: textSizeSmall)),
+        PosColumn(
+            text: '9',
+            width: 6,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: true,
+                height: textSizeSmall)),
       ]);
 
       bytes += generator.row([
-        PosColumn(text: 'Total MRP', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: false, height: textSizeSmall)),
-        PosColumn(text: '1450.00', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeSmall)),
+        PosColumn(
+            text: 'Total MRP',
+            width: 6,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: false,
+                height: textSizeSmall)),
+        PosColumn(
+            text: '1450.00',
+            width: 6,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: true,
+                height: textSizeSmall)),
       ]);
 
       bytes += generator.row([
-        PosColumn(text: 'You Saved', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: false, height: textSizeMedium)),
-        PosColumn(text: savedTotal, width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeMedium)),
+        PosColumn(
+            text: 'You Saved',
+            width: 6,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: false,
+                height: textSizeMedium)),
+        PosColumn(
+            text: savedTotal,
+            width: 6,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: true,
+                height: textSizeMedium)),
       ]);
 
       bytes += generator.row([
-        PosColumn(text: 'Net Total', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: true, height: textSizeBig)),
-        PosColumn(text: formattedTotal, width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeBig)),
+        PosColumn(
+            text: 'Net Total',
+            width: 6,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: true,
+                height: textSizeBig)),
+        PosColumn(
+            text: formattedTotal,
+            width: 6,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: true,
+                height: textSizeBig)),
       ]);
 
       bytes += generator.hr();
 
       // Amount in words
-      bytes += generator.text('One Thousand Three Hundred Ninety Five Rupees Only.',
+      bytes += generator.text(
+          'One Thousand Three Hundred Ninety Five Rupees Only.',
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.center,
@@ -617,15 +779,32 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
       // Date and time
       bytes += generator.row([
-        PosColumn(text: '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: true, height: textSizeSmall)),
-        PosColumn(text: '${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}', width: 6, styles: PosStyles(fontType: fontType, align: PosAlign.right, bold: true, height: textSizeSmall)),
+        PosColumn(
+            text:
+                '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+            width: 6,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: true,
+                height: textSizeSmall)),
+        PosColumn(
+            text:
+                '${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+            width: 6,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.right,
+                bold: true,
+                height: textSizeSmall)),
       ]);
 
       bytes += generator.hr();
 
       // Barcode
       try {
-        List<String> code39Data = orderNumber.replaceAll(RegExp(r'[^A-Z0-9\-]'), '').split("");
+        List<String> code39Data =
+            orderNumber.replaceAll(RegExp(r'[^A-Z0-9\-]'), '').split("");
         bytes += generator.barcode(
           Barcode.code39(code39Data),
           height: selectedPaperSize == '58mm' ? 20 : 30,
@@ -634,15 +813,38 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           align: PosAlign.center,
         );
       } catch (e) {
-        bytes += generator.text(orderNumber, styles: PosStyles(fontType: fontType, align: PosAlign.center, bold: true));
+        bytes += generator.text(orderNumber,
+            styles: PosStyles(
+                fontType: fontType, align: PosAlign.center, bold: true));
       }
 
       // Terms and conditions
       bytes += generator.hr();
-      bytes += generator.text('TERMS & CONDITIONS:', styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: true, height: textSizeSmall));
-      bytes += generator.text('1. All sales are final unless defective.', styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: false, height: textSizeSmall));
-      bytes += generator.text('2. Returns accepted within 7 days with receipt.', styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: false, height: textSizeSmall));
-      bytes += generator.text('3. Store credit issued for returns without receipt.', styles: PosStyles(fontType: fontType, align: PosAlign.left, bold: false, height: textSizeSmall));
+      bytes += generator.text('TERMS & CONDITIONS:',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: true,
+              height: textSizeSmall));
+      bytes += generator.text('1. All sales are final unless defective.',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: false,
+              height: textSizeSmall));
+      bytes += generator.text('2. Returns accepted within 7 days with receipt.',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: false,
+              height: textSizeSmall));
+      bytes += generator.text(
+          '3. Store credit issued for returns without receipt.',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: false,
+              height: textSizeSmall));
 
       // Thank you message
       bytes += generator.hr();
@@ -664,11 +866,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       bytes += generator.cut();
 
       // Print
-      PrinterType type = printer.typePrinter == PrinterType.usb.toString() 
-          ? PrinterType.usb 
+      PrinterType type = printer.typePrinter == PrinterType.usb.toString()
+          ? PrinterType.usb
           : PrinterType.bluetooth;
       await printerManager.send(type: type, bytes: bytes);
-
     } finally {
       await _disconnectPrinter(printer);
     }
@@ -684,7 +885,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           vendorId: selectedPrinter.vendorId,
         ),
       );
-    } else if (selectedPrinter.typePrinter == PrinterType.bluetooth.toString()) {
+    } else if (selectedPrinter.typePrinter ==
+        PrinterType.bluetooth.toString()) {
       if (selectedPrinter.address == null) {
         throw Exception('Bluetooth printer address is null');
       }
@@ -701,9 +903,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Future<void> _disconnectPrinter(BluetoothPrinter selectedPrinter) async {
     try {
-      PrinterType type = selectedPrinter.typePrinter == PrinterType.usb.toString() 
-          ? PrinterType.usb 
-          : PrinterType.bluetooth;
+      PrinterType type =
+          selectedPrinter.typePrinter == PrinterType.usb.toString()
+              ? PrinterType.usb
+              : PrinterType.bluetooth;
       await printerManager.disconnect(type: type);
     } catch (e) {
       debugPrint('Error disconnecting printer: $e');
@@ -957,10 +1160,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          const Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 'Font Style & Sample Print',
                                 style: TextStyle(
                                   color: ColorManager.kPrimaryColor,
@@ -968,16 +1171,16 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              CustomRoundButton(
-                                fct: () => _printSample(),
-                                title: 'Print Sample',
-                                height: 36,
-                                width: 120,
-                                fontSize: 12,
-                                borderColor: ColorManager.kPrimaryColor,
-                                boxColor: ColorManager.kPrimaryColor,
-                                textColor: Colors.white,
-                              ),
+                              // CustomRoundButton(
+                              //   fct: () => _printSample(),
+                              //   title: 'Print Sample',
+                              //   height: 36,
+                              //   width: 120,
+                              //   fontSize: 12,
+                              //   borderColor: ColorManager.kPrimaryColor,
+                              //   boxColor: ColorManager.kPrimaryColor,
+                              //   textColor: Colors.white,
+                              // ),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -1056,16 +1259,17 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                 ),
                               ),
                               CustomRoundButton(
-                                fct: () => _isScanning ? null : _checkPermissions(),
+                                fct: () =>
+                                    _isScanning ? null : _checkPermissions(),
                                 title: _isScanning ? 'Scanning...' : 'Scan',
                                 height: 36,
                                 width: 100,
                                 fontSize: 12,
-                                borderColor: _isScanning 
-                                    ? ColorManager.kGreyColor 
+                                borderColor: _isScanning
+                                    ? ColorManager.kGreyColor
                                     : ColorManager.kPrimaryColor,
-                                boxColor: _isScanning 
-                                    ? ColorManager.kGreyColor 
+                                boxColor: _isScanning
+                                    ? ColorManager.kGreyColor
                                     : ColorManager.kPrimaryColor,
                                 textColor: Colors.white,
                                 isLoading: _isScanning,
@@ -1083,7 +1287,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          
+
                           // Printers List
                           devices.isEmpty
                               ? Container(
@@ -1108,7 +1312,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                       Text(
                                         'Tap the scan button to search for printers',
                                         style: TextStyle(
-                                          color: ColorManager.kGreyColor.withOpacity(0.8),
+                                          color: ColorManager.kGreyColor
+                                              .withOpacity(0.8),
                                           fontSize: 14,
                                         ),
                                       ),
@@ -1121,18 +1326,26 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                   itemCount: devices.length,
                                   itemBuilder: (context, index) {
                                     final printer = devices[index];
-                                    final isSelected = selectedPrinter?.deviceName == printer.deviceName &&
-                                                      selectedPrinter?.address == printer.address;
+                                    final isSelected =
+                                        selectedPrinter?.deviceName ==
+                                                printer.deviceName &&
+                                            selectedPrinter?.address ==
+                                                printer.address;
 
                                     return Container(
                                       margin: const EdgeInsets.only(bottom: 8),
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(8),
                                         border: isSelected
-                                            ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
-                                            : Border.all(color: Colors.grey[300]!),
-                                        color: isSelected 
-                                            ? ColorManager.kPrimaryColor.withOpacity(0.1)
+                                            ? Border.all(
+                                                color:
+                                                    ColorManager.kPrimaryColor,
+                                                width: 2)
+                                            : Border.all(
+                                                color: Colors.grey[300]!),
+                                        color: isSelected
+                                            ? ColorManager.kPrimaryColor
+                                                .withOpacity(0.1)
                                             : Colors.grey[50],
                                       ),
                                       child: ListTile(
@@ -1144,7 +1357,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                           size: 28,
                                         ),
                                         title: Text(
-                                          printer.deviceName ?? 'Unknown device',
+                                          printer.deviceName ??
+                                              'Unknown device',
                                           style: TextStyle(
                                             color: ColorManager.kTitleTextColor,
                                             fontWeight: isSelected
@@ -1154,7 +1368,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                           ),
                                         ),
                                         subtitle: Text(
-                                          printer.address ?? printer.typePrinter,
+                                          printer.address ??
+                                              printer.typePrinter,
                                           style: const TextStyle(
                                             color: ColorManager.kGreyColor,
                                             fontSize: 14,
@@ -1162,7 +1377,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                                         ),
                                         trailing: CustomRoundButton(
                                           fct: () => selectPrinter(printer),
-                                          title: isSelected ? 'Selected' : 'Select',
+                                          title: isSelected
+                                              ? 'Selected'
+                                              : 'Select',
                                           height: 32,
                                           width: 80,
                                           fontSize: 12,
