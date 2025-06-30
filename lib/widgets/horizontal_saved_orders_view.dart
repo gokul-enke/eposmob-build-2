@@ -192,39 +192,88 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
         width: 60,
         child: InkWell(
           onTap: () {
+            debugPrint("===== NEW ORDER (+) BUTTON PRESSED =====");
+            debugPrint("🔄 Current state:");
+            debugPrint("  - Current order ID: ${provider.currentOrder?.id}");
+            debugPrint("  - Current order number: ${provider.currentOrder?.orderNumber}");
+            debugPrint("  - Cart items count: ${provider.cartItems.length}");
+            
             // If currently editing an order and cart has items, update it
             if (provider.currentOrder != null &&
                 provider.cartItems.isNotEmpty) {
-              provider.updateSavedOrder(
-                provider.currentOrder!.id,
-                customerName: null,
-                customerPhone: null,
-                comment: null,
-                deliveryMethod: null,
-              );
+              debugPrint("📝 Currently editing order ${provider.currentOrder!.orderNumber} with items in cart");
+              
+              // Get current values from billing page to preserve customer info
+              final billingPageState = context.findAncestorStateOfType<BillingPageState>();
+              if (billingPageState != null) {
+                debugPrint("💾 Updating current order before creating new one");
+                debugPrint("  - Will save with all current customer and payment info");
+                debugPrint("  - Current order ID: ${provider.currentOrder!.id}");
+                debugPrint("  - Current order phone before save: ${provider.currentOrder!.customerPhone}");
+                // Call the billing page's save method to properly save with current customer info
+                billingPageState.saveCurrentOrder();
+                debugPrint("  - Current order phone after save: ${provider.currentOrder?.customerPhone}");
+              } else {
+                // Fallback - update with null values (not ideal but better than losing the order)
+                debugPrint("⚠️ Could not find billing page state, updating with minimal info");
+                provider.updateSavedOrder(
+                  provider.currentOrder!.id,
+                  customerName: null,
+                  customerPhone: null,
+                  comment: null,
+                  deliveryMethod: null,
+                );
+              }
             }
 
             // If cart has items, save as new order
             else if (provider.cartItems.isNotEmpty) {
-              try {
-                provider.saveCurrentCartAsOrder();
-                showScaffold(
-                  context: context,
-                  message: "Order Saved Successfully",
-                );
-              } catch (e) {
-                // Swallow exception if cart is empty
+              // Get current values from billing page to preserve customer info
+              final billingPageState = context.findAncestorStateOfType<BillingPageState>();
+              if (billingPageState != null) {
+                debugPrint("💾 Saving new order with current customer info");
+                // Call the billing page's save method to properly save with current customer info
+                billingPageState.saveCurrentOrder();
+              } else {
+                // Fallback - save without customer info (not ideal)
+                debugPrint("⚠️ Could not find billing page state, saving without customer info");
+                try {
+                  provider.saveCurrentCartAsOrder();
+                  showScaffold(
+                    context: context,
+                    message: "Order Saved Successfully",
+                  );
+                } catch (e) {
+                  debugPrint("Error saving order: $e");
+                }
               }
             }
 
             // Clear cart and reset current order
+            debugPrint("🧹 Clearing cart and resetting for new order");
             provider.clearCart();
-            if (provider.currentOrder != null) {
-              String orderId = provider.currentOrder!.id;
-              provider.loadOrderForEditing(orderId);
-              provider.clearCart();
+            
+            // **FIX: Trigger the billing page to reset to default sales executive**
+            // Find the billing page state and call the reset methods
+            final billingPageState = context.findAncestorStateOfType<BillingPageState>();
+            if (billingPageState != null) {
+              debugPrint("✅ Found BillingPageState, calling reset method");
+              debugPrint("  - This will reset to default sales executive");
+              debugPrint("  - This will clear all form fields");
+              
+              // Call the public method to reset to default sales executive
+              billingPageState.resetToDefaultSalesExecutive();
+              
+              showScaffold(
+                context: context,
+                message: "New Order - Reset to default sales executive",
+              );
+            } else {
+              debugPrint("⚠️ BillingPageState not found, manual rebuild");
+              (context as Element).markNeedsBuild();
             }
-            (context as Element).markNeedsBuild();
+            
+            debugPrint("===== NEW ORDER (+) BUTTON COMPLETE =====");
           },
           child: const Padding(
             padding: EdgeInsets.all(8.0),

@@ -1084,6 +1084,13 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("✅ CLEAR CART COMPLETED");
   }
 
+  /// Clears the current order being edited
+  void clearCurrentOrder() {
+    debugPrint("🧹 CLEARING CURRENT ORDER REFERENCE");
+    _currentOrder = null;
+    notifyListeners();
+  }
+
   /// Resets the local product list and filtered list.
   void resetProducts() {
     _products = [];
@@ -1488,6 +1495,11 @@ class LocalProductProvider extends ChangeNotifier {
     String? carNumber,
     String? status,
   }) {
+    debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder called");
+    debugPrint("  - Customer Phone parameter: '$customerPhone'");
+    debugPrint("  - Customer Name parameter: '$customerName'");
+    debugPrint("  - Customer ID parameter: $customerId");
+    
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as order");
     }
@@ -1540,6 +1552,12 @@ class LocalProductProvider extends ChangeNotifier {
     _saveSavedOrdersToHive();
     notifyListeners();
 
+    debugPrint("  - New order created: ${order.orderNumber}");
+    debugPrint("  - Saved order phone: '${order.customerPhone}'");
+    debugPrint("  - Saved order name: '${order.customerName}'");
+    debugPrint("  - Saved order customer ID: ${order.customerId}");
+    debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder completed");
+    
     return order;
   }
 
@@ -1619,9 +1637,17 @@ class LocalProductProvider extends ChangeNotifier {
     String? carNumber,
     String? status,
   }) {
+    debugPrint("💾 LOCAL PROVIDER - updateSavedOrder called");
+    debugPrint("  - Order ID: $orderId");
+    debugPrint("  - Customer Phone parameter: '$customerPhone'");
+    debugPrint("  - Customer Name parameter: '$customerName'");
+    debugPrint("  - Customer ID parameter: $customerId");
+    
     int index = _savedOrders.indexWhere((o) => o.id == orderId);
 
     if (index != -1) {
+      debugPrint("  - Found order at index: $index");
+      debugPrint("  - Original order phone: '${_savedOrders[index].customerPhone}'");
       // Get current cart total
       double total = cartTotal;
 
@@ -1662,12 +1688,20 @@ class LocalProductProvider extends ChangeNotifier {
 
       // Update in list
       _savedOrders[index] = updatedOrder;
+      
+      debugPrint("  - Updated order phone: '${updatedOrder.customerPhone}'");
+      debugPrint("  - Updated order name: '${updatedOrder.customerName}'");
+      debugPrint("  - Updated order customer ID: ${updatedOrder.customerId}");
 
       // Clear current order reference
       _currentOrder = null;
 
       _saveSavedOrdersToHive();
       notifyListeners();
+      
+      debugPrint("💾 LOCAL PROVIDER - updateSavedOrder completed");
+    } else {
+      debugPrint("⚠️ LOCAL PROVIDER - Order not found: $orderId");
     }
   }
 
