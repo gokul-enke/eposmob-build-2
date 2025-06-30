@@ -354,6 +354,10 @@ class BillingPageState extends State<BillingPage> {
   bool isLoadingAddItem = false;
   bool _isBottomSectionVisible = true; // Add this for hide/show functionality
 
+  // Add these variables for the new sidebar
+  bool _isSidebarVisible = true;
+  int _selectedSidebarTab = 0; // 0 for products, 1 for orders/categories
+
   Timer? _debounce;
   Timer? _debounceTimer;
 
@@ -544,10 +548,12 @@ class BillingPageState extends State<BillingPage> {
             mobileNumberText = salesCustomer.phone!;
             mobileNumberTextController.text =
                 "${salesCustomer.name!} ${salesCustomer.phone!}";
-            
-            debugPrint("  - Set salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
+
+            debugPrint(
+                "  - Set salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
             debugPrint("  - Set mobileNumberText: '$mobileNumberText'");
-            debugPrint("  - Set mobileNumberTextController.text: '${mobileNumberTextController.text}'");
+            debugPrint(
+                "  - Set mobileNumberTextController.text: '${mobileNumberTextController.text}'");
 
             // Set the default customer in the global provider and mark as default
             Provider.of<CustomerSelectionProvider>(context, listen: false)
@@ -556,7 +562,7 @@ class BillingPageState extends State<BillingPage> {
             selectedCustomerID = salesCustomer.id!;
             selectedCustomerPhone = salesCustomer.phone;
             selectedCustomer = salesCustomer;
-            
+
             debugPrint("  - Set selectedCustomerID: $selectedCustomerID");
             debugPrint("  - Set selectedCustomerPhone: $selectedCustomerPhone");
             debugPrint("  - Set selectedCustomer: ${selectedCustomer?.name}");
@@ -607,8 +613,9 @@ class BillingPageState extends State<BillingPage> {
   @override
   Widget build(BuildContext context) {
     debugPrint("🔨 BillingPage build() called");
-    debugPrint("  - Current salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
-    
+    debugPrint(
+        "  - Current salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
+
     Size size = MediaQuery.of(context).size;
     final productProvider =
         Provider.of<GridSelectionProvider>(context, listen: false);
@@ -618,125 +625,423 @@ class BillingPageState extends State<BillingPage> {
         focusNode: _focusNode,
         onKeyEvent: _handleKeyPress,
         child: Scaffold(
-          body: Center(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Main content area
-                Expanded(
-                  flex: 3,
-                  child: BuildBoxShadowContainer(
-                    circleRadius: 10,
-                    margin: const EdgeInsets.only(
-                        left: 10, top: 10, bottom: 10, right: 10),
-                    child: Form(
-                      key: _formKey,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            _buildHeader(),
-                            const Divider(thickness: 1),
-                            const HorizontalProductViewLocal(),
-                            const SizedBox(height: 10),
-                            _buildOrderHeader(
-                              size: size,
-                              barcodeController: barcodeController,
-                              quantityController: quantityController,
-                              unitPriceController: unitPriceController,
-                              selectedProductIdController:
-                                  selectedProductIdController,
-                              productProvider: productProvider,
-                            ),
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  Expanded(
-                                    child: _buildCartItemsTable(size),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  if (_isBottomSectionVisible) // Conditionally show the section
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          flex: 3,
-                                          child: Container(
-                                            color: Colors.white,
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 16.0, vertical: 10),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.start,
-                                              children: [
-                                                _buildMobileNumberInput(
-                                                    size: size,
-                                                    mobileNumberTextController:
-                                                        mobileNumberTextController),
-                                                const SizedBox(height: 10),
-                                                Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
+          body: Stack(
+            children: [
+              // Main content
+              Center(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Main content area
+                    Expanded(
+                      flex: _isSidebarVisible ? 3 : 4,
+                      child: BuildBoxShadowContainer(
+                        circleRadius: 10,
+                        margin: const EdgeInsets.only(
+                            left: 10, top: 10, bottom: 10, right: 10),
+                        child: Form(
+                          key: _formKey,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                _buildHeader(),
+                                const Divider(thickness: 1),
+                                _buildOrderHeader(
+                                  size: size,
+                                  barcodeController: barcodeController,
+                                  quantityController: quantityController,
+                                  unitPriceController: unitPriceController,
+                                  selectedProductIdController:
+                                      selectedProductIdController,
+                                  productProvider: productProvider,
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    children: [
+                                      Expanded(
+                                        child: _buildCartItemsTable(size),
+                                      ),
+                                      const SizedBox(height: 5),
+                                      if (_isBottomSectionVisible) // Conditionally show the section
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
+                                              flex: 3,
+                                              child: Container(
+                                                color: Colors.white,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 16.0,
+                                                        vertical: 10),
+                                                child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.start,
                                                   children: [
-                                                    _buildPaymentMethodSelection(),
+                                                    _buildMobileNumberInput(
+                                                        size: size,
+                                                        mobileNumberTextController:
+                                                            mobileNumberTextController),
+                                                    const SizedBox(height: 10),
+                                                    Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        _buildPaymentMethodSelection(),
+                                                      ],
+                                                    ),
                                                   ],
                                                 ),
-                                              ],
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                        Expanded(
-                                          flex: 2,
-                                          child:
-                                              _buildDeliveryMethodSelection(),
-                                        ),
-                                        Expanded(
-                                            flex: 3,
-                                            child: Container(
-                                              color: Colors.white,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
+                                            Expanded(
+                                              flex: 2,
+                                              child:
+                                                  _buildDeliveryMethodSelection(),
+                                            ),
+                                            Expanded(
+                                                flex: 3,
+                                                child: Container(
+                                                  color: Colors.white,
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
                                                       horizontal: 16.0,
                                                       vertical: 10),
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.start,
-                                                children: [
-                                                  _buildCouponInput(),
-                                                  const SizedBox(height: 10),
-                                                  _buildPaymentSummary(),
-                                                ],
-                                              ),
-                                            )),
-                                      ],
-                                    ),
-                                  const SizedBox(height: 10),
-                                  _buildActionButtons(),
-                                ],
-                              ),
+                                                  child: Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment.start,
+                                                    children: [
+                                                      _buildCouponInput(),
+                                                      const SizedBox(
+                                                          height: 10),
+                                                      _buildPaymentSummary(),
+                                                    ],
+                                                  ),
+                                                )),
+                                          ],
+                                        ),
+                                      const SizedBox(height: 10),
+                                      _buildActionButtons(),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
 
-                // Category Based Product List
-                const Expanded(
-                  flex: 1,
-                  child: SideBarProductList(),
+                    // Collapsible Sidebar
+                    if (_isSidebarVisible)
+                      Expanded(
+                        flex: 1,
+                        child: _buildSidebar(),
+                      ),
+
+                    // Sidebar toggle button - moved to be positioned absolutely
+                  ],
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebar() {
+    return BuildBoxShadowContainer(
+      circleRadius: 10,
+      margin: const EdgeInsets.only(top: 10, bottom: 10, right: 10),
+      child: Stack(
+        children: [
+          Column(
+            children: [
+              // Tab headers with improved design
+              Container(
+                height: 55,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(10),
+                    topRight: Radius.circular(10),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 3,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedSidebarTab = 0;
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: _selectedSidebarTab == 0
+                                ? ColorManager.kPrimaryColor
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.inventory_2_outlined,
+                                size: 18,
+                                color: _selectedSidebarTab == 0
+                                    ? Colors.white
+                                    : Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Products',
+                                style: TextStyle(
+                                  color: _selectedSidebarTab == 0
+                                      ? Colors.white
+                                      : Colors.grey.shade700,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedSidebarTab = 1;
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: _selectedSidebarTab == 1
+                                ? ColorManager.kPrimaryColor
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.receipt_long_outlined,
+                                size: 18,
+                                color: _selectedSidebarTab == 1
+                                    ? Colors.white
+                                    : Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Orders',
+                                style: TextStyle(
+                                  color: _selectedSidebarTab == 1
+                                      ? Colors.white
+                                      : Colors.grey.shade700,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 50), // Space for toggle button
+                  ],
+                ),
+              ),
+
+              // Tab content
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  child: _selectedSidebarTab == 0
+                      ? const SideBarProductList()
+                      : _buildOrdersTab(),
+                ),
+              ),
+            ],
+          ),
+
+          // Toggle button positioned at top-right
+          Positioned(
+            top: 10,
+            right: 8,
+            child: CustomRoundButton(
+              title: "×",
+              fct: () {
+                setState(() {
+                  _isSidebarVisible = !_isSidebarVisible;
+                });
+              },
+              fontSize: 18,
+              height: 35,
+              width: 35,
+              boxColor: ColorManager.kPrimaryColor,
+              borderColor: ColorManager.kPrimaryColor,
+              textColor: Colors.white,
+              radius: 8,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrdersTab() {
+    return Column(
+      children: [
+        // Saved Orders section with improved header
+        // Container(
+        //   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        //   child: const Row(
+        //     children: [
+        //       Icon(
+        //         Icons.bookmark_outline,
+        //         size: 16,
+        //         color: ColorManager.kPrimaryColor,
+        //       ),
+        //       SizedBox(width: 6),
+        //       Text(
+        //         'Saved Orders',
+        //         style: TextStyle(
+        //           fontSize: 14,
+        //           fontWeight: FontWeight.w600,
+        //           color: ColorManager.kPrimaryColor,
+        //         ),
+        //       ),
+        //     ],
+        //   ),
+        // ),
+
+        // HorizontalSavedOrdersView in grid format
+        Expanded(
+          flex: 2,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: HorizontalSavedOrdersView(
+              onOrderSelected: (orderId) {
+                // Get the local provider
+                final localProductProvider =
+                    Provider.of<LocalProductProvider>(context, listen: false);
+
+                // If we're editing an order and there are items in the cart, update that order
+                if (localProductProvider.currentOrder != null &&
+                    localProductProvider.cartItems.isNotEmpty) {
+                  try {
+                    // Update the current order being edited
+                    localProductProvider.updateSavedOrder(
+                      localProductProvider.currentOrder!.id,
+                      customerName: selectedCustomer?.name,
+                      customerPhone: selectedCustomerPhone ?? mobileNumberText,
+                      comment: _commentController.text,
+                      deliveryMethod: deliveryMethod,
+                    );
+
+                    // Show quick feedback
+                    showScaffold(
+                      context: context,
+                      message: "Current order updated before switching",
+                    );
+                  } catch (e) {
+                    debugPrint("Error updating current order: $e");
+                  }
+                } // If cart has items, save as new order
+                else if (localProductProvider.cartItems.isNotEmpty) {
+                  try {
+                    localProductProvider.saveCurrentCartAsOrder();
+                    showScaffold(
+                      context: context,
+                      message: "Order Saved Successfully",
+                    );
+                  } catch (e) {
+                    // Swallow exception if cart is empty
+                  }
+                }
+
+                // Now load the selected order
+                _loadSavedOrderForEditing(orderId);
+              },
+            ),
+          ),
+        ),
+
+        // Divider with improved styling
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          height: 1,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.transparent,
+                Colors.grey.shade300,
+                Colors.transparent,
               ],
             ),
           ),
         ),
-      ),
+
+        // Quick Access section with improved header
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          child: const Row(
+            children: [
+              Icon(
+                Icons.category_outlined,
+                size: 16,
+                color: ColorManager.kPrimaryColor,
+              ),
+              SizedBox(width: 6),
+              Text(
+                'Quick Access',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: ColorManager.kPrimaryColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // HorizontalProductViewLocal in grid format
+        Expanded(
+          flex: 1,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: const HorizontalProductViewLocal(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -745,62 +1050,16 @@ class BillingPageState extends State<BillingPage> {
         Provider.of<LocalProductProvider>(context, listen: true);
     final bool isEditingOrder = localProductProvider.currentOrder != null;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        HorizontalSavedOrdersView(
-          onOrderSelected: (orderId) {
-            // Get the local provider
-            final localProductProvider =
-                Provider.of<LocalProductProvider>(context, listen: false);
-
-            // If we're editing an order and there are items in the cart, update that order
-            if (localProductProvider.currentOrder != null &&
-                localProductProvider.cartItems.isNotEmpty) {
-              try {
-                // Update the current order being edited
-                localProductProvider.updateSavedOrder(
-                  localProductProvider.currentOrder!.id,
-                  customerName: selectedCustomer?.name,
-                  customerPhone: selectedCustomerPhone ?? mobileNumberText,
-                  comment: _commentController.text,
-                  deliveryMethod: deliveryMethod,
-                );
-
-                // Show quick feedback
-                showScaffold(
-                  context: context,
-                  message: "Current order updated before switching",
-                );
-              } catch (e) {
-                debugPrint("Error updating current order: $e");
-              }
-            } // If cart has items, save as new order
-            else if (localProductProvider.cartItems.isNotEmpty) {
-              try {
-                localProductProvider.saveCurrentCartAsOrder();
-                showScaffold(
-                  context: context,
-                  message: "Order Saved Successfully",
-                );
-              } catch (e) {
-                // Swallow exception if cart is empty
-              }
-            }
-
-            // Now load the selected order
-            _loadSavedOrderForEditing(orderId);
-          },
+        Text(
+          isEditingOrder ? 'Edit Order' : 'New Order',
+          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
+              0.30, ColorManager.textColor),
         ),
-        const SizedBox(height: 10),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              isEditingOrder ? 'Edit Order' : 'New Order',
-              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-                  0.30, ColorManager.textColor),
-            ),
             Text(
               isEditingOrder
                   ? 'Order No #${localProductProvider.currentOrder!.orderNumber}'
@@ -808,6 +1067,25 @@ class BillingPageState extends State<BillingPage> {
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s14,
                   0.18, ColorManager.textColor),
             ),
+            // Show toggle button next to order number when sidebar is hidden
+            if (!_isSidebarVisible) ...[
+              const SizedBox(width: 12),
+              CustomRoundButton(
+                title: "☰",
+                fct: () {
+                  setState(() {
+                    _isSidebarVisible = !_isSidebarVisible;
+                  });
+                },
+                fontSize: 16,
+                height: 32,
+                width: 32,
+                boxColor: ColorManager.kPrimaryColor,
+                borderColor: ColorManager.kPrimaryColor,
+                textColor: Colors.white,
+                radius: 8,
+              ),
+            ],
           ],
         ),
       ],
@@ -1022,17 +1300,22 @@ class BillingPageState extends State<BillingPage> {
                                 onSelected: (GetProduct selectedProduct,
                                     Stock? selectedStock) async {
                                   // Directly populate form fields without showing price modal
-                                  
+
                                   // Determine the price to use: stock price or product base price
                                   double defaultPrice = 0.0;
                                   if (selectedStock != null) {
                                     // Use stock price if available
-                                    defaultPrice = double.tryParse(selectedStock.price ?? "0") ?? 0.0;
+                                    defaultPrice = double.tryParse(
+                                            selectedStock.price ?? "0") ??
+                                        0.0;
                                   } else {
                                     // Use product base price
-                                    defaultPrice = double.tryParse(selectedProduct.price?.price ?? "0") ?? 0.0;
+                                    defaultPrice = double.tryParse(
+                                            selectedProduct.price?.price ??
+                                                "0") ??
+                                        0.0;
                                   }
-                                  
+
                                   setState(() {
                                     selectedProductIdController.text =
                                         selectedProduct.productId.toString();
@@ -1376,6 +1659,8 @@ class BillingPageState extends State<BillingPage> {
                     color: ColorManager.kPrimaryColor.withOpacity(0.1),
                     child: Row(
                       children: [
+                        _buildHeaderCell('#',
+                            flex: 1, alignment: Alignment.center),
                         _buildHeaderCell('Item Name',
                             flex: 3, alignment: Alignment.centerLeft),
                         _buildHeaderCell('Unit',
@@ -1417,6 +1702,26 @@ class BillingPageState extends State<BillingPage> {
                                   : Colors.grey.shade50,
                               child: Row(
                                 children: [
+                                  // Index Number
+                                  _buildContentCell(
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 2),
+                                      child: Text(
+                                        '${index + 1}',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          12,
+                                          0.21,
+                                          ColorManager.textColor,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                    flex: 1,
+                                    alignment: Alignment.center,
+                                  ),
+
                                   // Item Name
                                   _buildContentCell(
                                     Padding(
@@ -2181,12 +2486,16 @@ class BillingPageState extends State<BillingPage> {
     required TextEditingController mobileNumberTextController,
   }) {
     debugPrint("🖼️ _buildMobileNumberInput - Rendering customer field");
-    debugPrint("  - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
-    debugPrint("  - salesExecutivemobileNumberText != '': ${salesExecutivemobileNumberText != ""}");
-    debugPrint("  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
+    debugPrint(
+        "  - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
+    debugPrint(
+        "  - salesExecutivemobileNumberText != '': ${salesExecutivemobileNumberText != ""}");
+    debugPrint(
+        "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
     debugPrint("  - isCustomerFound: $isCustomerFound");
-    debugPrint("  - Showing: ${salesExecutivemobileNumberText != "" ? "READ-ONLY field" : "AUTOCOMPLETE field"}");
-    
+    debugPrint(
+        "  - Showing: ${salesExecutivemobileNumberText != "" ? "READ-ONLY field" : "AUTOCOMPLETE field"}");
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -2211,9 +2520,13 @@ class BillingPageState extends State<BillingPage> {
                   width: size.width / 3,
                   child: Autocomplete<CustomerListModelData>(
                     key: _autocompletePhoneKey, // Set the key here
-                    initialValue: TextEditingValue(text: mobileNumberText?.isNotEmpty == true ? mobileNumberText! : ""), // Use mobileNumberText directly
+                    initialValue: TextEditingValue(
+                        text: mobileNumberText?.isNotEmpty == true
+                            ? mobileNumberText!
+                            : ""), // Use mobileNumberText directly
                     optionsBuilder: (mobileNumberTextController) async {
-                      debugPrint("🔍 Autocomplete optionsBuilder called with text: '${mobileNumberTextController.text}'");
+                      debugPrint(
+                          "🔍 Autocomplete optionsBuilder called with text: '${mobileNumberTextController.text}'");
                       // debugPrint(mobileNumberTextController.text);
                       if (mobileNumberTextController.text.isEmpty) {
                         setState(() {
@@ -2284,9 +2597,12 @@ class BillingPageState extends State<BillingPage> {
                       debugPrint("  - Customer ID: ${selection.id}");
                       debugPrint("  - Customer Name: ${selection.name}");
                       debugPrint("  - Customer Phone: ${selection.phone}");
-                      debugPrint("  - Current salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
-                      debugPrint("  - Current mobileNumberText: '$mobileNumberText'");
-                      debugPrint("  - Current mobileNumberTextController.text: '${mobileNumberTextController.text}'");
+                      debugPrint(
+                          "  - Current salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
+                      debugPrint(
+                          "  - Current mobileNumberText: '$mobileNumberText'");
+                      debugPrint(
+                          "  - Current mobileNumberTextController.text: '${mobileNumberTextController.text}'");
 
                       // Update the global customer selection provider
                       Provider.of<CustomerSelectionProvider>(context,
@@ -2300,26 +2616,32 @@ class BillingPageState extends State<BillingPage> {
                           .fetchCartDataFromApi(
                               customerId: selection.id ?? 0,
                               accessToken: accessToken ?? '');
-                      
+
                       debugPrint("📝 BEFORE setState:");
-                      debugPrint("  - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
+                      debugPrint(
+                          "  - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
                       debugPrint("  - mobileNumberText: '$mobileNumberText'");
-                      
+
                       setState(() {
                         mobileNumberText = "";
                         selectedCustomerID = selection.id!;
                         selectedCustomerPhone = selection.phone;
                         selectedCustomer = selection;
                         // **FIX: Update our class controller for consistency**
-                        mobileNumberTextController.text = "${selection.name} ${selection.phone}";
+                        mobileNumberTextController.text =
+                            "${selection.name} ${selection.phone}";
                       });
 
                       debugPrint("📝 AFTER setState:");
-                      debugPrint("  - mobileNumberText set to: '$mobileNumberText'");
+                      debugPrint(
+                          "  - mobileNumberText set to: '$mobileNumberText'");
                       debugPrint("  - selectedCustomerID: $selectedCustomerID");
-                      debugPrint("  - selectedCustomerPhone: $selectedCustomerPhone");
-                      debugPrint("  - salesExecutivemobileNumberText remains: '$salesExecutivemobileNumberText'");
-                      debugPrint("  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
+                      debugPrint(
+                          "  - selectedCustomerPhone: $selectedCustomerPhone");
+                      debugPrint(
+                          "  - salesExecutivemobileNumberText remains: '$salesExecutivemobileNumberText'");
+                      debugPrint(
+                          "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
                       debugPrint("  - isCustomerFound: $isCustomerFound");
                       debugPrint("===== NORMAL CUSTOMER SELECTION END =====");
                     },
@@ -2327,11 +2649,14 @@ class BillingPageState extends State<BillingPage> {
                         TextEditingController autoCompleteController,
                         FocusNode focusNode,
                         VoidCallback onFieldSubmitted) {
-                      debugPrint("🎨 fieldViewBuilder called - controller text: '${autoCompleteController.text}'");
-                      
+                      debugPrint(
+                          "🎨 fieldViewBuilder called - controller text: '${autoCompleteController.text}'");
+
                       // **FIX: Sync the autocomplete controller with our state**
-                      if (mobileNumberText?.isNotEmpty == true && autoCompleteController.text != mobileNumberText) {
-                        debugPrint("🔄 SYNC: Setting autocomplete controller text to: '$mobileNumberText'");
+                      if (mobileNumberText?.isNotEmpty == true &&
+                          autoCompleteController.text != mobileNumberText) {
+                        debugPrint(
+                            "🔄 SYNC: Setting autocomplete controller text to: '$mobileNumberText'");
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           if (autoCompleteController.text != mobileNumberText) {
                             autoCompleteController.text = mobileNumberText!;
@@ -2457,7 +2782,8 @@ class BillingPageState extends State<BillingPage> {
                               // **FIX: Also update our class controller for consistency**
                               mobileNumberTextController.text = value;
                             });
-                            debugPrint("  - Set mobileNumberText: '$mobileNumberText'");
+                            debugPrint(
+                                "  - Set mobileNumberText: '$mobileNumberText'");
                             debugPrint("  - Cleared customer selection");
                           },
                           style: buildCustomStyle(
@@ -2550,10 +2876,12 @@ class BillingPageState extends State<BillingPage> {
             onTap: () => {
               debugPrint("❌ CLEAR CUSTOMER BUTTON PRESSED"),
               debugPrint("  - Before clear:"),
-              debugPrint("    - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'"),
+              debugPrint(
+                  "    - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'"),
               debugPrint("    - mobileNumberText: '$mobileNumberText'"),
-              debugPrint("    - mobileNumberTextController.text: '${mobileNumberTextController.text}'"),
-              
+              debugPrint(
+                  "    - mobileNumberTextController.text: '${mobileNumberTextController.text}'"),
+
               // Clear the global customer selection provider
               Provider.of<CustomerSelectionProvider>(context, listen: false)
                   .clearSelectedCustomer(),
@@ -2568,12 +2896,14 @@ class BillingPageState extends State<BillingPage> {
                 isCustomerFound = false;
                 salesExecutivemobileNumberText = "";
               }),
-              
+
               debugPrint("  - After clear:"),
-              debugPrint("    - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'"),
+              debugPrint(
+                  "    - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'"),
               debugPrint("    - mobileNumberText: '$mobileNumberText'"),
-              debugPrint("    - mobileNumberTextController.text: '${mobileNumberTextController.text}'"),
-              
+              debugPrint(
+                  "    - mobileNumberTextController.text: '${mobileNumberTextController.text}'"),
+
               showScaffold(
                 context: context,
                 message: 'Customer Details Cleared Successfully',
@@ -2792,26 +3122,30 @@ class BillingPageState extends State<BillingPage> {
         debugPrint("  - selectedCustomerPhone: '$selectedCustomerPhone'");
         debugPrint("  - mobileNumberText: '$mobileNumberText' 🔍");
         debugPrint("  - selectedCustomerID: $selectedCustomerID");
-        debugPrint("  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
-        
+        debugPrint(
+            "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
+
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
         String? customerPhoneToSave;
-        
+
         if (selectedCustomerID != null) {
           // Customer is selected from list
           customerPhoneToSave = selectedCustomerPhone;
-          debugPrint("  ✅ Customer from list - using selectedCustomerPhone: '$customerPhoneToSave'");
+          debugPrint(
+              "  ✅ Customer from list - using selectedCustomerPhone: '$customerPhoneToSave'");
         } else if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
           // Phone number entered directly (not from customer list)
           customerPhoneToSave = mobileNumberText;
-          debugPrint("  ✅ Phone-only order - using mobileNumberText: '$customerPhoneToSave'");
+          debugPrint(
+              "  ✅ Phone-only order - using mobileNumberText: '$customerPhoneToSave'");
         } else {
           // Fallback to selectedCustomerPhone
           customerPhoneToSave = selectedCustomerPhone;
-          debugPrint("  ⚠️ Fallback - using selectedCustomerPhone: '$customerPhoneToSave'");
+          debugPrint(
+              "  ⚠️ Fallback - using selectedCustomerPhone: '$customerPhoneToSave'");
         }
-        
+
         localProductProvider.updateSavedOrder(
           currentOrder.id,
           customerName: customerNameToSave,
@@ -2837,31 +3171,35 @@ class BillingPageState extends State<BillingPage> {
       } else {
         // Save as new order
         debugPrint("💾 Saving as new order");
-        
+
         // Debug customer info being saved
         debugPrint("📝 SAVING NEW ORDER - Customer info:");
         debugPrint("  - selectedCustomer?.name: '${selectedCustomer?.name}'");
         debugPrint("  - selectedCustomerPhone: '$selectedCustomerPhone'");
         debugPrint("  - mobileNumberText: '$mobileNumberText' 🔍");
         debugPrint("  - selectedCustomerID: $selectedCustomerID");
-        debugPrint("  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
-        
+        debugPrint(
+            "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
+
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
         String? customerPhoneToSave;
-        
+
         if (selectedCustomerID != null) {
           // Customer is selected from list
           customerPhoneToSave = selectedCustomerPhone;
-          debugPrint("  ✅ Customer from list - using selectedCustomerPhone: '$customerPhoneToSave'");
+          debugPrint(
+              "  ✅ Customer from list - using selectedCustomerPhone: '$customerPhoneToSave'");
         } else if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
           // Phone number entered directly (not from customer list)
           customerPhoneToSave = mobileNumberText;
-          debugPrint("  ✅ Phone-only order - using mobileNumberText: '$customerPhoneToSave'");
+          debugPrint(
+              "  ✅ Phone-only order - using mobileNumberText: '$customerPhoneToSave'");
         } else {
           // Fallback to selectedCustomerPhone
           customerPhoneToSave = selectedCustomerPhone;
-          debugPrint("  ⚠️ Fallback - using selectedCustomerPhone: '$customerPhoneToSave'");
+          debugPrint(
+              "  ⚠️ Fallback - using selectedCustomerPhone: '$customerPhoneToSave'");
         }
 
         String paymentMethod = "";
@@ -2923,7 +3261,7 @@ class BillingPageState extends State<BillingPage> {
 
       resetAutocomplete();
       _focusTextField();
-      
+
       // Reset to default sales executive after saving
       _fetchCustomers();
     } catch (error) {
@@ -2999,23 +3337,26 @@ class BillingPageState extends State<BillingPage> {
         } else {
           // If the order couldn't be moved (shouldn't happen), create a new confirmed order
           debugPrint("💾 Creating new confirmed order (fallback)");
-          
+
           // **FIX**: Properly determine customer info for phone-only orders
           String? customerNameToSave = selectedCustomer?.name;
           String? customerPhoneToSave;
-          
+
           if (selectedCustomerID != null) {
             // Customer is selected from list
             customerPhoneToSave = selectedCustomerPhone;
-            debugPrint("  ✅ Save&Print(fallback) - Customer from list: '$customerPhoneToSave'");
+            debugPrint(
+                "  ✅ Save&Print(fallback) - Customer from list: '$customerPhoneToSave'");
           } else if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
             // Phone number entered directly (not from customer list)
             customerPhoneToSave = mobileNumberText;
-            debugPrint("  ✅ Save&Print(fallback) - Phone-only order: '$customerPhoneToSave'");
+            debugPrint(
+                "  ✅ Save&Print(fallback) - Phone-only order: '$customerPhoneToSave'");
           } else {
             // Fallback to selectedCustomerPhone
             customerPhoneToSave = selectedCustomerPhone;
-            debugPrint("  ⚠️ Save&Print(fallback) - Fallback: '$customerPhoneToSave'");
+            debugPrint(
+                "  ⚠️ Save&Print(fallback) - Fallback: '$customerPhoneToSave'");
           }
 
           String paymentMethod = "";
@@ -3052,19 +3393,21 @@ class BillingPageState extends State<BillingPage> {
       } else {
         // Create a new confirmed order
         debugPrint("💾 Creating new confirmed order");
-        
+
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
         String? customerPhoneToSave;
-        
+
         if (selectedCustomerID != null) {
           // Customer is selected from list
           customerPhoneToSave = selectedCustomerPhone;
-          debugPrint("  ✅ Save&Print - Customer from list: '$customerPhoneToSave'");
+          debugPrint(
+              "  ✅ Save&Print - Customer from list: '$customerPhoneToSave'");
         } else if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
           // Phone number entered directly (not from customer list)
           customerPhoneToSave = mobileNumberText;
-          debugPrint("  ✅ Save&Print - Phone-only order: '$customerPhoneToSave'");
+          debugPrint(
+              "  ✅ Save&Print - Phone-only order: '$customerPhoneToSave'");
         } else {
           // Fallback to selectedCustomerPhone
           customerPhoneToSave = selectedCustomerPhone;
@@ -3137,7 +3480,7 @@ class BillingPageState extends State<BillingPage> {
 
       resetAutocomplete();
       _focusTextField();
-      
+
       // Reset to default sales executive after saving
       _fetchCustomers();
     } catch (error) {
@@ -3175,18 +3518,21 @@ class BillingPageState extends State<BillingPage> {
         debugPrint("  - Customer Phone: '${currentOrder.customerPhone}'");
         debugPrint("  - Payment Method: ${currentOrder.paymentMethod}");
         debugPrint("  - Delivery Method: ${currentOrder.deliveryMethod}");
-        
+
         // **DEBUG**: Log all saved orders to check for phone number mixing
         debugPrint("🔍 ALL SAVED ORDERS IN MEMORY:");
         for (int i = 0; i < localProductProvider.savedOrders.length; i++) {
           final order = localProductProvider.savedOrders[i];
-          debugPrint("  [$i] ${order.orderNumber} - Phone: '${order.customerPhone}' - Name: '${order.customerName}'");
+          debugPrint(
+              "  [$i] ${order.orderNumber} - Phone: '${order.customerPhone}' - Name: '${order.customerName}'");
         }
-        
+
         debugPrint("📝 CURRENT STATE BEFORE LOADING:");
-        debugPrint("  - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
+        debugPrint(
+            "  - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
         debugPrint("  - mobileNumberText: '$mobileNumberText'");
-        debugPrint("  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
+        debugPrint(
+            "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
         debugPrint("  - selectedCustomerID: $selectedCustomerID");
         debugPrint("  - selectedCustomerPhone: $selectedCustomerPhone");
         debugPrint("  - isCustomerFound: $isCustomerFound");
@@ -3195,7 +3541,7 @@ class BillingPageState extends State<BillingPage> {
         // **FIX: Restore all order details to the UI**
         setState(() {
           debugPrint("🔄 INSIDE setState - Starting restore process");
-          
+
           // **FIX: Clear ALL customer-related state variables first to prevent cross-contamination**
           debugPrint("🧹 CLEARING ALL CUSTOMER STATE VARIABLES");
           salesExecutivemobileNumberText = "";
@@ -3206,41 +3552,52 @@ class BillingPageState extends State<BillingPage> {
           isCustomerFound = false;
           mobileNumberTextController.clear();
           debugPrint("  ✅ All customer state variables cleared");
-          
+
           // Clear current customer selection provider
           Provider.of<CustomerSelectionProvider>(context, listen: false)
               .clearSelectedCustomer();
           debugPrint("  ✅ Cleared customer selection provider");
 
           // Restore customer information
-          if (currentOrder.customerId != null || currentOrder.customerPhone != null) {
+          if (currentOrder.customerId != null ||
+              currentOrder.customerPhone != null) {
             debugPrint("📋 Customer info found in saved order");
             selectedCustomerID = currentOrder.customerId;
             selectedCustomerPhone = currentOrder.customerPhone;
             debugPrint("  - Set selectedCustomerID: $selectedCustomerID");
-            debugPrint("  - Set selectedCustomerPhone: '$selectedCustomerPhone'");
-            
+            debugPrint(
+                "  - Set selectedCustomerPhone: '$selectedCustomerPhone'");
+
             // **FIX: Check if this is the default sales executive customer**
-            final salesExecutiveProvider = Provider.of<SalesExecutiveProvider>(context, listen: false);
-            final currentExecutive = salesExecutiveProvider.getCurrentUser(context);
+            final salesExecutiveProvider =
+                Provider.of<SalesExecutiveProvider>(context, listen: false);
+            final currentExecutive =
+                salesExecutiveProvider.getCurrentUser(context);
             debugPrint("🔍 Checking if default sales executive customer:");
             debugPrint("  - Current Executive ID: ${currentExecutive?.id}");
             debugPrint("  - Current Executive Name: ${currentExecutive?.name}");
-            debugPrint("  - Current Executive Phone: ${currentExecutive?.phone}");
-            debugPrint("  - Saved Order Customer ID: ${currentOrder.customerId}");
-            
+            debugPrint(
+                "  - Current Executive Phone: ${currentExecutive?.phone}");
+            debugPrint(
+                "  - Saved Order Customer ID: ${currentOrder.customerId}");
+
             bool isDefaultSalesExecutiveCustomer = false;
-            
-            if (currentExecutive != null && currentOrder.customerId == currentExecutive.id) {
+
+            if (currentExecutive != null &&
+                currentOrder.customerId == currentExecutive.id) {
               // This is the default sales executive customer - keep read-only behavior
               isDefaultSalesExecutiveCustomer = true;
               salesExecutivemobileNumberText = currentOrder.customerPhone ?? "";
-              debugPrint("✅ Loading default sales executive customer (read-only)");
-              debugPrint("  - Set salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
-              
+              debugPrint(
+                  "✅ Loading default sales executive customer (read-only)");
+              debugPrint(
+                  "  - Set salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
+
               // Always show name + phone for sales executive
-              if (currentExecutive.name != null && currentExecutive.name!.isNotEmpty) {
-                mobileNumberTextController.text = "${currentExecutive.name} ${currentExecutive.phone}";
+              if (currentExecutive.name != null &&
+                  currentExecutive.name!.isNotEmpty) {
+                mobileNumberTextController.text =
+                    "${currentExecutive.name} ${currentExecutive.phone}";
               } else {
                 mobileNumberTextController.text = currentExecutive.phone ?? "";
               }
@@ -3248,12 +3605,16 @@ class BillingPageState extends State<BillingPage> {
               // This is a different customer - make field editable
               salesExecutivemobileNumberText = "";
               debugPrint("✅ Loading different customer (editable)");
-              debugPrint("  - Cleared salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
+              debugPrint(
+                  "  - Cleared salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
             }
-            
+
             // Find and set the full customer object if available
-            if (customerList != null && customerList!.isNotEmpty && currentOrder.customerId != null) {
-              debugPrint("🔍 Searching for customer in list of ${customerList!.length} customers");
+            if (customerList != null &&
+                customerList!.isNotEmpty &&
+                currentOrder.customerId != null) {
+              debugPrint(
+                  "🔍 Searching for customer in list of ${customerList!.length} customers");
               try {
                 selectedCustomer = customerList!.firstWhere(
                   (customer) => customer.id == currentOrder.customerId,
@@ -3262,25 +3623,29 @@ class BillingPageState extends State<BillingPage> {
                 debugPrint("  - ID: ${selectedCustomer!.id}");
                 debugPrint("  - Name: '${selectedCustomer!.name}'");
                 debugPrint("  - Phone: '${selectedCustomer!.phone}'");
-                
+
                 // Update the global customer selection provider
                 Provider.of<CustomerSelectionProvider>(context, listen: false)
                     .setSelectedCustomer(selectedCustomer!);
                 debugPrint("  ✅ Updated global customer selection provider");
-                
+
                 // **FIX: If this is NOT the sales executive customer, show in autocomplete field**
                 if (!isDefaultSalesExecutiveCustomer) {
                   // **FIX: Use the exact same format as normal customer selection**
                   String textToSet = "";
-                  if (selectedCustomer!.name != null && selectedCustomer!.name!.isNotEmpty) {
-                    textToSet = "${selectedCustomer!.name} ${selectedCustomer!.phone}";
-                    debugPrint("  📝 Setting text with name+phone: '$textToSet'");
+                  if (selectedCustomer!.name != null &&
+                      selectedCustomer!.name!.isNotEmpty) {
+                    textToSet =
+                        "${selectedCustomer!.name} ${selectedCustomer!.phone}";
+                    debugPrint(
+                        "  📝 Setting text with name+phone: '$textToSet'");
                   } else {
                     textToSet = selectedCustomer!.phone ?? "";
-                    debugPrint("  📝 Setting text with phone only: '$textToSet'");
+                    debugPrint(
+                        "  📝 Setting text with phone only: '$textToSet'");
                   }
                   mobileNumberTextController.text = textToSet;
-                  
+
                   // **FIX: For custom phone orders, mobileNumberText should be the phone number**
                   if (isDefaultSalesExecutiveCustomer) {
                     mobileNumberText = selectedCustomer!.phone ?? "";
@@ -3291,15 +3656,17 @@ class BillingPageState extends State<BillingPage> {
                     // Regular customer from list, clear mobileNumberText
                     mobileNumberText = "";
                   }
-                  debugPrint("  - Set mobileNumberText to: '$mobileNumberText'");
-                  debugPrint("  - Set mobileNumberTextController.text to: '${mobileNumberTextController.text}'");
+                  debugPrint(
+                      "  - Set mobileNumberText to: '$mobileNumberText'");
+                  debugPrint(
+                      "  - Set mobileNumberTextController.text to: '${mobileNumberTextController.text}'");
                 }
-                
+
                 isCustomerFound = true;
                 debugPrint("  - Set isCustomerFound: $isCustomerFound");
-                
               } catch (e) {
-                debugPrint("⚠️ Customer not found in list, creating virtual customer");
+                debugPrint(
+                    "⚠️ Customer not found in list, creating virtual customer");
                 debugPrint("  - Error: $e");
                 // Create a virtual customer if not found in list
                 selectedCustomer = CustomerListModelData(
@@ -3311,16 +3678,18 @@ class BillingPageState extends State<BillingPage> {
                 debugPrint("    - ID: ${selectedCustomer!.id}");
                 debugPrint("    - Name: '${selectedCustomer!.name}'");
                 debugPrint("    - Phone: '${selectedCustomer!.phone}'");
-                
+
                 Provider.of<CustomerSelectionProvider>(context, listen: false)
                     .setSelectedCustomer(selectedCustomer!);
                 debugPrint("  ✅ Updated global customer selection provider");
-                
+
                 // **FIX: Handle case where name might be null/empty**
                 String textToSet = "";
-                if (selectedCustomer!.name != null && selectedCustomer!.name!.isNotEmpty) {
+                if (selectedCustomer!.name != null &&
+                    selectedCustomer!.name!.isNotEmpty) {
                   // Show name + phone (normal format)
-                  textToSet = "${selectedCustomer!.name} ${selectedCustomer!.phone}";
+                  textToSet =
+                      "${selectedCustomer!.name} ${selectedCustomer!.phone}";
                   debugPrint("  📝 Setting text with name+phone: '$textToSet'");
                 } else {
                   // Show only phone number if no name available
@@ -3328,75 +3697,89 @@ class BillingPageState extends State<BillingPage> {
                   debugPrint("  📝 Setting text with phone only: '$textToSet'");
                 }
                 mobileNumberTextController.text = textToSet;
-                
+
                 // **FIX: Set mobileNumberText correctly based on order type**
                 if (isDefaultSalesExecutiveCustomer) {
                   mobileNumberText = selectedCustomer!.phone ?? "";
-                } else if (currentOrder.customerId == null && currentOrder.customerPhone != null) {
+                } else if (currentOrder.customerId == null &&
+                    currentOrder.customerPhone != null) {
                   // This is a phone-only order, set mobileNumberText to the phone
                   mobileNumberText = currentOrder.customerPhone;
-                  debugPrint("  - Set mobileNumberText for phone-only case: '$mobileNumberText'");
+                  debugPrint(
+                      "  - Set mobileNumberText for phone-only case: '$mobileNumberText'");
                 } else {
                   // Regular customer from list, clear mobileNumberText
                   mobileNumberText = "";
-                  debugPrint("  - Set mobileNumberText to: '$mobileNumberText'");
+                  debugPrint(
+                      "  - Set mobileNumberText to: '$mobileNumberText'");
                 }
-                
-                debugPrint("  - Set mobileNumberTextController.text to: '${mobileNumberTextController.text}'");
-                
+
+                debugPrint(
+                    "  - Set mobileNumberTextController.text to: '${mobileNumberTextController.text}'");
+
                 isCustomerFound = currentOrder.customerId != null;
                 debugPrint("  - Set isCustomerFound: $isCustomerFound");
               }
-                          } else {
-                debugPrint("📋 No customer list available or customer ID is null");
-                
-                // Check if we have at least a phone number
-                if (currentOrder.customerPhone != null && currentOrder.customerPhone!.isNotEmpty) {
-                  debugPrint("  - Found phone number: '${currentOrder.customerPhone}'");
-                  
-                  // Create virtual customer with available data
-                  selectedCustomer = CustomerListModelData(
-                    id: currentOrder.customerId,
-                    name: currentOrder.customerName,
-                    phone: currentOrder.customerPhone,
-                  );
-                  
-                  // If we have a customer ID, set it in the provider
-                  if (currentOrder.customerId != null) {
-                    Provider.of<CustomerSelectionProvider>(context, listen: false)
-                        .setSelectedCustomer(selectedCustomer!);
-                  }
-                  
-                  // **FIX: Handle case where name might be null/empty**
-                  if (currentOrder.customerName != null && currentOrder.customerName!.isNotEmpty) {
-                    // Show name + phone (normal format)
-                    mobileNumberTextController.text = "${currentOrder.customerName} ${currentOrder.customerPhone}";
-                    debugPrint("  📝 Setting text with name+phone: '${mobileNumberTextController.text}'");
-                  } else {
-                    // Show only phone number if no name available
-                    mobileNumberTextController.text = currentOrder.customerPhone ?? "";
-                    debugPrint("  📝 Setting text with phone only: '${mobileNumberTextController.text}'");
-                  }
-                  
-                  // **FIX: Set mobileNumberText correctly based on order type**
-                  if (isDefaultSalesExecutiveCustomer) {
-                    mobileNumberText = currentOrder.customerPhone ?? "";
-                  } else if (currentOrder.customerId == null) {
-                    // This is a phone-only order, set mobileNumberText to the phone
-                    mobileNumberText = currentOrder.customerPhone ?? "";
-                    debugPrint("  - Set mobileNumberText for phone-only case: '$mobileNumberText'");
-                  } else {
-                    // Regular customer from list, clear mobileNumberText
-                    mobileNumberText = "";
-                  }
-                  
-                  isCustomerFound = currentOrder.customerId != null;
-                  debugPrint("  - Set isCustomerFound: $isCustomerFound");
+            } else {
+              debugPrint(
+                  "📋 No customer list available or customer ID is null");
+
+              // Check if we have at least a phone number
+              if (currentOrder.customerPhone != null &&
+                  currentOrder.customerPhone!.isNotEmpty) {
+                debugPrint(
+                    "  - Found phone number: '${currentOrder.customerPhone}'");
+
+                // Create virtual customer with available data
+                selectedCustomer = CustomerListModelData(
+                  id: currentOrder.customerId,
+                  name: currentOrder.customerName,
+                  phone: currentOrder.customerPhone,
+                );
+
+                // If we have a customer ID, set it in the provider
+                if (currentOrder.customerId != null) {
+                  Provider.of<CustomerSelectionProvider>(context, listen: false)
+                      .setSelectedCustomer(selectedCustomer!);
                 }
+
+                // **FIX: Handle case where name might be null/empty**
+                if (currentOrder.customerName != null &&
+                    currentOrder.customerName!.isNotEmpty) {
+                  // Show name + phone (normal format)
+                  mobileNumberTextController.text =
+                      "${currentOrder.customerName} ${currentOrder.customerPhone}";
+                  debugPrint(
+                      "  📝 Setting text with name+phone: '${mobileNumberTextController.text}'");
+                } else {
+                  // Show only phone number if no name available
+                  mobileNumberTextController.text =
+                      currentOrder.customerPhone ?? "";
+                  debugPrint(
+                      "  📝 Setting text with phone only: '${mobileNumberTextController.text}'");
+                }
+
+                // **FIX: Set mobileNumberText correctly based on order type**
+                if (isDefaultSalesExecutiveCustomer) {
+                  mobileNumberText = currentOrder.customerPhone ?? "";
+                } else if (currentOrder.customerId == null) {
+                  // This is a phone-only order, set mobileNumberText to the phone
+                  mobileNumberText = currentOrder.customerPhone ?? "";
+                  debugPrint(
+                      "  - Set mobileNumberText for phone-only case: '$mobileNumberText'");
+                } else {
+                  // Regular customer from list, clear mobileNumberText
+                  mobileNumberText = "";
+                }
+
+                isCustomerFound = currentOrder.customerId != null;
+                debugPrint("  - Set isCustomerFound: $isCustomerFound");
               }
+            }
           } else {
             // No customer info in saved order - reset to default behavior
-            debugPrint("📋 No customer info in saved order, resetting to default");
+            debugPrint(
+                "📋 No customer info in saved order, resetting to default");
             salesExecutivemobileNumberText = ""; // Make field editable
             selectedCustomerID = null;
             selectedCustomerPhone = null;
@@ -3404,7 +3787,7 @@ class BillingPageState extends State<BillingPage> {
             mobileNumberTextController.clear();
             mobileNumberText = "";
             isCustomerFound = false;
-            
+
             // Clear customer selection provider
             Provider.of<CustomerSelectionProvider>(context, listen: false)
                 .clearSelectedCustomer();
@@ -3431,8 +3814,10 @@ class BillingPageState extends State<BillingPage> {
 
           // Restore payment amounts
           _paidAmountController.text = currentOrder.paidAmount ?? "0.0";
-          _balanceAmount = double.tryParse(currentOrder.balanceAmount ?? "0.0") ?? 0.0;
-          _userChangedPaidAmount = true; // Mark as user-set to prevent auto-update
+          _balanceAmount =
+              double.tryParse(currentOrder.balanceAmount ?? "0.0") ?? 0.0;
+          _userChangedPaidAmount =
+              true; // Mark as user-set to prevent auto-update
 
           // Restore transaction details
           _transactionNumberController.text = currentOrder.transactionId ?? "";
@@ -3451,7 +3836,8 @@ class BillingPageState extends State<BillingPage> {
           _carNumberController.text = currentOrder.carNumber ?? "";
 
           // Restore coupon if any
-          if (currentOrder.couponId != null && currentOrder.couponId!.isNotEmpty) {
+          if (currentOrder.couponId != null &&
+              currentOrder.couponId!.isNotEmpty) {
             coupenCodeTextController.text = currentOrder.couponId!;
             isCouponApplied = true;
           } else {
@@ -3459,19 +3845,22 @@ class BillingPageState extends State<BillingPage> {
             isCouponApplied = false;
           }
           debugPrint("📝 FINAL STATE AFTER LOADING:");
-          debugPrint("  - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
+          debugPrint(
+              "  - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
           debugPrint("  - mobileNumberText: '$mobileNumberText' 🔍");
-          debugPrint("  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
+          debugPrint(
+              "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
           debugPrint("  - selectedCustomerID: $selectedCustomerID");
           debugPrint("  - selectedCustomerPhone: '$selectedCustomerPhone'");
           debugPrint("  - selectedCustomer?.name: '${selectedCustomer?.name}'");
           debugPrint("  - isCustomerFound: $isCustomerFound");
-          debugPrint("  - 🔍 SUMMARY: Order '${currentOrder.orderNumber}' with phone '${currentOrder.customerPhone}' → mobileNumberText='$mobileNumberText'");
+          debugPrint(
+              "  - 🔍 SUMMARY: Order '${currentOrder.orderNumber}' with phone '${currentOrder.customerPhone}' → mobileNumberText='$mobileNumberText'");
         });
 
         debugPrint("✅ Order details restored to UI successfully");
         debugPrint("===== SAVED ORDER LOADING END =====");
-        
+
         // Force a complete rebuild of the autocomplete widget
         WidgetsBinding.instance.addPostFrameCallback((_) {
           debugPrint("🔄 Post-frame callback - forcing rebuild");
@@ -3484,7 +3873,7 @@ class BillingPageState extends State<BillingPage> {
             });
           }
         });
-        
+
         showScaffold(
           context: context,
           message: "Order loaded for editing",
@@ -3708,7 +4097,7 @@ class BillingPageState extends State<BillingPage> {
               _commentController.clear();
             });
             resetAutocomplete();
-            
+
             // Reset to default sales executive after confirming
             _fetchCustomers();
           } else {
@@ -3902,7 +4291,7 @@ class BillingPageState extends State<BillingPage> {
               _commentController.clear();
             });
             resetAutocomplete();
-            
+
             // Reset to default sales executive after confirming
             _fetchCustomers();
           } else {
@@ -4000,18 +4389,19 @@ class BillingPageState extends State<BillingPage> {
   }
 
   void resetAutocomplete({bool shouldFetchCustomers = true}) {
-    debugPrint("🔄 resetAutocomplete called - shouldFetchCustomers: $shouldFetchCustomers");
+    debugPrint(
+        "🔄 resetAutocomplete called - shouldFetchCustomers: $shouldFetchCustomers");
     setState(() {
       _autocompletePhoneKey = GlobalKey(); // Reset the key to force rebuild
       _autocompleteProductKey = GlobalKey(); // Reset the key to force rebuild
       isCustomerFound = false;
       _userChangedPaidAmount = false; // Reset paid amount flag
-      
+
       // Only fetch customers if explicitly requested (not when loading saved orders)
       if (shouldFetchCustomers) {
         _fetchCustomers();
       }
-      
+
       deliveryMethodId = "3";
       deliveryMethod = "Store Takeaway";
       iconColor = 1;
@@ -4147,43 +4537,45 @@ class BillingPageState extends State<BillingPage> {
 
   // Public method to reset to default sales executive (for external calls)
   void resetToDefaultSalesExecutive() {
-    debugPrint("🔄 BILLING: Public method called - resetting to default sales executive...");
-    
+    debugPrint(
+        "🔄 BILLING: Public method called - resetting to default sales executive...");
+
     // Clear the current order being edited
-    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
     localProductProvider.clearCurrentOrder();
-    
+
     // Reset all form fields
     setState(() {
       // Clear payment and delivery states
       iconColor = 1; // Default to cash
       deliveryMethod = "Store Takeaway";
       deliveryMethodId = "3";
-      
+
       // Clear all controllers
       coupenCodeTextController.clear();
       _transactionNumberController.clear();
       _paidAmountController.clear();
       _carNumberController.clear();
       _commentController.clear();
-      
+
       // Reset other flags
       isCouponApplied = false;
       _balanceAmount = 0;
       _userChangedPaidAmount = false;
-      
+
       // Clear product entry fields
       quantityController.clear();
       barcodeController.clear();
       selectedProductIdController.clear();
       unitPriceController.clear();
       selectedProductNameController.clear();
-      
+
       // Reset autocomplete keys
       _autocompletePhoneKey = GlobalKey();
       _autocompleteProductKey = GlobalKey();
     });
-    
+
     _onSalesExecutiveChanged();
     resetAutocomplete();
   }
@@ -4193,17 +4585,21 @@ class BillingPageState extends State<BillingPage> {
     debugPrint("===== PUBLIC SAVE CURRENT ORDER START =====");
     debugPrint("💾 BILLING: Public method called - saving current order...");
     debugPrint("📝 Current customer state:");
-    debugPrint("  - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
+    debugPrint(
+        "  - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
     debugPrint("  - mobileNumberText: '$mobileNumberText'");
-    debugPrint("  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
+    debugPrint(
+        "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
     debugPrint("  - selectedCustomerID: $selectedCustomerID");
     debugPrint("  - selectedCustomerPhone: '$selectedCustomerPhone'");
     debugPrint("  - selectedCustomer?.name: '${selectedCustomer?.name}'");
     debugPrint("  - isCustomerFound: $isCustomerFound");
-    debugPrint("  - Payment Method: ${iconColor == 1 ? 'CASH' : iconColor == 2 ? 'CARD' : iconColor == 3 ? 'UPI' : 'None'}");
+    debugPrint(
+        "  - Payment Method: ${iconColor == 1 ? 'CASH' : iconColor == 2 ? 'CARD' : iconColor == 3 ? 'UPI' : 'None'}");
     debugPrint("  - Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
     debugPrint("  - Comment: '${_commentController.text}'");
-    debugPrint("  - Cart Items: ${Provider.of<LocalProductProvider>(context, listen: false).cartItems.length}");
+    debugPrint(
+        "  - Cart Items: ${Provider.of<LocalProductProvider>(context, listen: false).cartItems.length}");
     _saveOrder();
     debugPrint("===== PUBLIC SAVE CURRENT ORDER END =====");
   }
