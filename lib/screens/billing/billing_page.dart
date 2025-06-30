@@ -663,15 +663,62 @@ class BillingPageState extends State<BillingPage> {
                                         child: _buildCartItemsTable(size),
                                       ),
                                       const SizedBox(height: 5),
-                                      if (_isBottomSectionVisible) // Conditionally show the section
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
+                                      // Always visible section
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          // Customer selection - always visible
+                                          Expanded(
+                                            flex:
+                                                _isBottomSectionVisible ? 3 : 4,
+                                            child: Container(
+                                              color: Colors.white,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 16.0,
+                                                      vertical: 10),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.start,
+                                                children: [
+                                                  _buildMobileNumberInput(
+                                                      size: size,
+                                                      mobileNumberTextController:
+                                                          mobileNumberTextController),
+                                                  if (_isBottomSectionVisible) ...[
+                                                    const SizedBox(height: 10),
+                                                    Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        _buildPaymentMethodSelection(),
+                                                      ],
+                                                    ),
+                                                  ] else ...[
+                                                    const SizedBox(height: 10),
+                                                    _buildQuickAccessIcons(),
+                                                  ],
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          // Collapsible middle section
+                                          if (_isBottomSectionVisible)
                                             Expanded(
-                                              flex: 3,
+                                              flex: 2,
+                                              child:
+                                                  _buildDeliveryMethodSelection(),
+                                            ),
+                                          // Payment summary - always visible
+                                          Expanded(
+                                              flex: _isBottomSectionVisible
+                                                  ? 3
+                                                  : 4,
                                               child: Container(
                                                 color: Colors.white,
                                                 padding:
@@ -684,51 +731,19 @@ class BillingPageState extends State<BillingPage> {
                                                   mainAxisAlignment:
                                                       MainAxisAlignment.start,
                                                   children: [
-                                                    _buildMobileNumberInput(
-                                                        size: size,
-                                                        mobileNumberTextController:
-                                                            mobileNumberTextController),
-                                                    const SizedBox(height: 10),
-                                                    Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        _buildPaymentMethodSelection(),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            Expanded(
-                                              flex: 2,
-                                              child:
-                                                  _buildDeliveryMethodSelection(),
-                                            ),
-                                            Expanded(
-                                                flex: 3,
-                                                child: Container(
-                                                  color: Colors.white,
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 16.0,
-                                                      vertical: 10),
-                                                  child: Column(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment.start,
-                                                    children: [
+                                                    if (_isBottomSectionVisible) ...[
                                                       _buildCouponInput(),
                                                       const SizedBox(
                                                           height: 10),
-                                                      _buildPaymentSummary(),
                                                     ],
-                                                  ),
-                                                )),
-                                          ],
-                                        ),
+                                                    _buildPaymentSummary(
+                                                        compact:
+                                                            !_isBottomSectionVisible),
+                                                  ],
+                                                ),
+                                              )),
+                                        ],
+                                      ),
                                       const SizedBox(height: 10),
                                       _buildActionButtons(),
                                     ],
@@ -883,7 +898,6 @@ class BillingPageState extends State<BillingPage> {
               // Tab content
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.all(8),
                   child: _selectedSidebarTab == 0
                       ? const SideBarProductList()
                       : _buildOrdersTab(),
@@ -1011,27 +1025,6 @@ class BillingPageState extends State<BillingPage> {
         ),
 
         // Quick Access section with improved header
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-          child: const Row(
-            children: [
-              Icon(
-                Icons.category_outlined,
-                size: 16,
-                color: ColorManager.kPrimaryColor,
-              ),
-              SizedBox(width: 6),
-              Text(
-                'Quick Access',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: ColorManager.kPrimaryColor,
-                ),
-              ),
-            ],
-          ),
-        ),
 
         // HorizontalProductViewLocal in grid format
         Expanded(
@@ -1912,11 +1905,67 @@ class BillingPageState extends State<BillingPage> {
     );
   }
 
-  Widget _buildPaymentSummary() {
+  Widget _buildPaymentSummary({bool compact = false}) {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: true);
 
     localProductProvider.cartTotal; // Call this to ensure priceSummary is set
+
+    if (compact) {
+      // Compact view: Only show Net amount, Discount, and Total
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          BuildPaymentRow(
+            amount: "",
+            title: "Payment Summary",
+            firstRowTextStyle: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s14,
+              0.21,
+              ColorManager.kPrimaryColor,
+            ),
+            color: ColorManager.kPrimaryColor,
+          ),
+          const SizedBox(height: 5),
+          BuildPaymentRow(
+            amount:
+                "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
+            title: "Net amount",
+            color: ColorManager.textColor,
+          ),
+          // if (localProductProvider.priceSummary!.discount > 0)
+          BuildPaymentRow(
+            amount:
+                "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)}",
+            title: "Discount",
+            color: ColorManager.textColor,
+          ),
+          const Divider(thickness: 2),
+          BuildPaymentRow(
+            amount:
+                "INR ${AmountHelper.formatAmount(localProductProvider.cartTotal)}",
+            title: "Total Payable",
+            secondRowTextStyle: buildCustomStyle(
+              FontWeightManager.bold,
+              FontSize.s15,
+              0.23,
+              ColorManager.textColor,
+            ),
+            firstRowTextStyle: buildCustomStyle(
+              FontWeightManager.bold,
+              FontSize.s15,
+              0.23,
+              ColorManager.textColor,
+            ),
+            color: ColorManager.textColor,
+          ),
+        ],
+      );
+    }
+
+    // Full view
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.start,
@@ -4330,6 +4379,176 @@ class BillingPageState extends State<BillingPage> {
     });
   }
 
+  Widget _buildQuickAccessIcons() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        const SizedBox(width: 5),
+        // Payment Method Icon
+        _buildQuickAccessIcon(
+          icon: iconColor == 1
+              ? Icons.payments
+              : iconColor == 2
+                  ? Icons.credit_card
+                  : Icons.phone_android,
+          label: iconColor == 1
+              ? 'Cash'
+              : iconColor == 2
+                  ? 'Card'
+                  : 'UPI',
+          color: ColorManager.kPrimaryColor,
+          onTap: () => _showPaymentMethodModal(),
+        ),
+        const SizedBox(width: 12),
+        // Delivery Method Icon
+        _buildQuickAccessIcon(
+          icon: deliveryMethod == "Store Takeaway"
+              ? Icons.store
+              : deliveryMethod == "Car Delivery"
+                  ? Icons.car_rental
+                  : deliveryMethod == "Door Delivery"
+                      ? Icons.doorbell_outlined
+                      : Icons.local_shipping,
+          label: deliveryMethod.split(' ').first,
+          color: ColorManager.kButtonBlue,
+          onTap: () => _showDeliveryMethodModal(),
+        ),
+        const SizedBox(width: 12),
+        // Coupon Icon
+        _buildQuickAccessIcon(
+          icon: isCouponApplied ? Icons.discount : Icons.local_offer_outlined,
+          label: isCouponApplied ? 'Applied' : 'Coupon',
+          color: isCouponApplied
+              ? ColorManager.kButtonGreen
+              : ColorManager.kButtonYellow,
+          onTap: () => _showCouponModal(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickAccessIcon({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: BuildBoxShadowContainer(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        blurRadius: 4,
+        circleRadius: 5,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: color,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.14,
+                color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPaymentMethodModal() {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+
+    // Ensure paid amount is set based on current payment method
+    String currentPaidAmount = _paidAmountController.text;
+    if (currentPaidAmount.isEmpty || !_userChangedPaidAmount) {
+      // If no paid amount set or it wasn't manually changed, set it to cart total
+      currentPaidAmount = localProductProvider.cartTotal.toStringAsFixed(3);
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => PaymentMethodModal(
+        initialIconColor: iconColor,
+        initialTransactionNumber: _transactionNumberController.text,
+        initialPaidAmount: currentPaidAmount,
+        cartTotal: localProductProvider.cartTotal,
+        onPaymentMethodSelected:
+            (selectedIconColor, transactionNumber, paidAmount, balance) {
+          setState(() {
+            iconColor = selectedIconColor;
+            _transactionNumberController.text = transactionNumber;
+            _paidAmountController.text = paidAmount;
+            _balanceAmount = balance;
+            _userChangedPaidAmount =
+                true; // Mark as manually changed since it's from modal
+          });
+        },
+      ),
+    );
+  }
+
+  void _showDeliveryMethodModal() {
+    showDialog(
+      context: context,
+      builder: (context) => DeliveryMethodModal(
+        initialDeliveryMethod: deliveryMethod,
+        initialDeliveryMethodId: deliveryMethodId,
+        initialCarNumber: _carNumberController.text,
+        initialComment: _commentController.text,
+        onDeliveryMethodSelected: (method, methodId, carNumber, comment) {
+          setState(() {
+            deliveryMethod = method;
+            deliveryMethodId = methodId;
+            _carNumberController.text = carNumber;
+            _commentController.text = comment;
+          });
+        },
+      ),
+    );
+  }
+
+  void _showCouponModal() {
+    showDialog(
+      context: context,
+      builder: (context) => CouponModal(
+        initialCouponCode: coupenCodeTextController.text,
+        isCouponApplied: isCouponApplied,
+        onCouponAction: (couponCode, shouldApply) async {
+          if (shouldApply) {
+            coupenCodeTextController.text = couponCode;
+            await _applyCoupon();
+          } else {
+            setState(() {
+              isCouponApplied = false;
+              coupenCodeTextController.clear();
+
+              // Fetch the cart data again after removing the coupon
+              String? accessToken =
+                  Provider.of<AuthModel>(context, listen: false).token;
+              int? customerId =
+                  Provider.of<AuthModel>(context, listen: false).userId;
+
+              Provider.of<CartProvider>(context, listen: false)
+                  .fetchCartDataFromApi(
+                customerId: customerId!,
+                accessToken: accessToken ?? '',
+              );
+            });
+          }
+        },
+      ),
+    );
+  }
+
   Future<void> _applyCoupon() async {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     double? totalAmount =
@@ -4625,6 +4844,547 @@ class BillingPageState extends State<BillingPage> {
 
     // Re-fetch customers to set new default based on new executive
     _fetchCustomers();
+  }
+}
+
+// Payment Method Modal
+class PaymentMethodModal extends StatefulWidget {
+  final int initialIconColor;
+  final String initialTransactionNumber;
+  final String initialPaidAmount;
+  final double cartTotal;
+  final Function(int, String, String, double) onPaymentMethodSelected;
+
+  const PaymentMethodModal({
+    Key? key,
+    required this.initialIconColor,
+    required this.initialTransactionNumber,
+    required this.initialPaidAmount,
+    required this.cartTotal,
+    required this.onPaymentMethodSelected,
+  }) : super(key: key);
+
+  @override
+  State<PaymentMethodModal> createState() => _PaymentMethodModalState();
+}
+
+class _PaymentMethodModalState extends State<PaymentMethodModal> {
+  late int iconColor;
+  late TextEditingController transactionNumberController;
+  late TextEditingController paidAmountController;
+  late FocusNode paidAmountFocusNode;
+  double balanceAmount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    iconColor = widget.initialIconColor;
+    transactionNumberController =
+        TextEditingController(text: widget.initialTransactionNumber);
+
+    // Initialize paid amount - if empty or zero, set to cart total
+    String initialPaidAmount = widget.initialPaidAmount;
+    if (initialPaidAmount.isEmpty || double.tryParse(initialPaidAmount) == 0) {
+      initialPaidAmount = widget.cartTotal.toStringAsFixed(3);
+    }
+    paidAmountController = TextEditingController(text: initialPaidAmount);
+    paidAmountFocusNode = FocusNode();
+
+    // Calculate initial balance
+    _calculateBalance();
+
+    // Add listener for paid amount focus
+    paidAmountFocusNode.addListener(() {
+      if (paidAmountFocusNode.hasFocus) {
+        paidAmountController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: paidAmountController.text.length,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    transactionNumberController.dispose();
+    paidAmountController.dispose();
+    paidAmountFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _calculateBalance() {
+    double paidAmount = double.tryParse(paidAmountController.text) ?? 0.00;
+    double balance = paidAmount - widget.cartTotal;
+    if (balance < 0) {
+      balance = 0.00;
+    }
+    setState(() {
+      balanceAmount = balance;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Size size = MediaQuery.of(context).size;
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: BuildBoxShadowContainer(
+        width: 450,
+        circleRadius: 12,
+        color: Colors.white,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Payment Method',
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s16,
+                    0.21,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                _buildPaymentOption(1, 'Cash', ImageAssets.cashIcon),
+                const SizedBox(width: 10),
+                _buildPaymentOption(2, 'Card', ImageAssets.creditCardIcon),
+                const SizedBox(width: 10),
+                _buildPaymentOption(3, 'UPI', ImageAssets.creditCardIcon),
+              ],
+            ),
+            if (iconColor != 1) ...[
+              const SizedBox(height: 20),
+              buildColumnWidgetForTextFields(
+                controller: transactionNumberController,
+                size: size,
+                height: size.height * .06,
+                hintText: 'Tr Reference No:',
+              ),
+            ],
+            const SizedBox(height: 20),
+            // Paid Amount Section
+            BuildPaymentRow(
+              amount: "",
+              title: "Paid Amount",
+              firstRowTextStyle: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s14,
+                0.21,
+                ColorManager.textColor,
+              ),
+              color: ColorManager.textColor,
+            ),
+            const SizedBox(height: 10),
+            buildColumnWidgetForTextFields(
+              controller: paidAmountController,
+              size: size,
+              onchanged: (value) {
+                _calculateBalance();
+              },
+              focusNode: paidAmountFocusNode,
+              height: size.height * .06,
+              hintText: 'Enter Paid Amount Here:',
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 15),
+            BuildPaymentRow(
+              amount: "INR ${balanceAmount.toStringAsFixed(3)}",
+              title: "Balance amount",
+              secondRowTextStyle: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s15,
+                0.18,
+                ColorManager.textColorRed,
+              ),
+              firstRowTextStyle: buildCustomStyle(
+                FontWeightManager.bold,
+                FontSize.s15,
+                0.23,
+                ColorManager.textColorRed,
+              ),
+              color: ColorManager.textColorRed,
+            ),
+            const SizedBox(height: 20),
+            CustomRoundButton(
+              title: "Apply",
+              fct: () {
+                widget.onPaymentMethodSelected(
+                  iconColor,
+                  transactionNumberController.text,
+                  paidAmountController.text,
+                  balanceAmount,
+                );
+                Navigator.of(context).pop();
+              },
+              fontSize: FontSize.s14,
+              height: 45,
+              width: double.infinity,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentOption(int value, String label, String icon) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            iconColor = value;
+            // Auto-fill paid amount when payment method is selected
+            if (paidAmountController.text.isEmpty ||
+                double.tryParse(paidAmountController.text) == 0) {
+              paidAmountController.text = widget.cartTotal.toStringAsFixed(3);
+              _calculateBalance();
+            }
+          });
+        },
+        child: BuildBoxShadowContainer(
+          border: iconColor == value
+              ? Border.all(color: ColorManager.kPrimaryColor)
+              : null,
+          padding: const EdgeInsets.all(12),
+          blurRadius: 4,
+          circleRadius: 5,
+          child: Column(
+            children: [
+              WebsafeSvg.asset(
+                icon,
+                width: 20,
+                height: 20,
+                color: Colors.black,
+                fit: BoxFit.none,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.12,
+                  Colors.black,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Delivery Method Modal
+class DeliveryMethodModal extends StatefulWidget {
+  final String initialDeliveryMethod;
+  final String initialDeliveryMethodId;
+  final String initialCarNumber;
+  final String initialComment;
+  final Function(String, String, String, String) onDeliveryMethodSelected;
+
+  const DeliveryMethodModal({
+    Key? key,
+    required this.initialDeliveryMethod,
+    required this.initialDeliveryMethodId,
+    required this.initialCarNumber,
+    required this.initialComment,
+    required this.onDeliveryMethodSelected,
+  }) : super(key: key);
+
+  @override
+  State<DeliveryMethodModal> createState() => _DeliveryMethodModalState();
+}
+
+class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
+  late String deliveryMethod;
+  late String deliveryMethodId;
+  late TextEditingController carNumberController;
+  late TextEditingController commentController;
+
+  @override
+  void initState() {
+    super.initState();
+    deliveryMethod = widget.initialDeliveryMethod;
+    deliveryMethodId = widget.initialDeliveryMethodId;
+    carNumberController = TextEditingController(text: widget.initialCarNumber);
+    commentController = TextEditingController(text: widget.initialComment);
+  }
+
+  @override
+  void dispose() {
+    carNumberController.dispose();
+    commentController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Size size = MediaQuery.of(context).size;
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: BuildBoxShadowContainer(
+        circleRadius: 12,
+        color: Colors.white,
+        width: 600,
+        padding: const EdgeInsets.all(20),
+        child: Consumer<DeliveryMethodsProvider>(
+          builder: (context, provider, child) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Delivery Method',
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s16,
+                        0.21,
+                        ColorManager.kPrimaryColor,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: provider.deliveryMethods.map((method) {
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          deliveryMethod = method.name;
+                          deliveryMethodId = method.id;
+                        });
+                      },
+                      child: BuildBoxShadowContainer(
+                        border: deliveryMethod == method.name
+                            ? Border.all(color: ColorManager.kPrimaryColor)
+                            : null,
+                        padding: const EdgeInsets.all(12),
+                        blurRadius: 4,
+                        circleRadius: 5,
+                        child: Column(
+                          children: [
+                            Icon(
+                              method.name == "Store Takeaway"
+                                  ? Icons.store
+                                  : method.name == "Car Delivery"
+                                      ? Icons.car_rental
+                                      : method.name == "Door Delivery"
+                                          ? Icons.doorbell_outlined
+                                          : Icons.local_shipping,
+                              size: 20,
+                              color: Colors.black,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              method.name,
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s12,
+                                0.12,
+                                Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+                if (deliveryMethod == "Car Delivery") ...[
+                  buildColumnWidgetForTextFields(
+                    controller: carNumberController,
+                    size: size,
+                    height: size.height * .06,
+                    hintText: 'Car Number:',
+                    width: 600,
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                buildColumnWidgetForTextFields(
+                  controller: commentController,
+                  size: size,
+                  height: size.height * .06,
+                  hintText: 'Comment:',
+                  width: 600,
+                ),
+                const SizedBox(height: 20),
+                CustomRoundButton(
+                  title: "Apply",
+                  fct: () {
+                    widget.onDeliveryMethodSelected(
+                      deliveryMethod,
+                      deliveryMethodId,
+                      carNumberController.text,
+                      commentController.text,
+                    );
+                    Navigator.of(context).pop();
+                  },
+                  fontSize: FontSize.s14,
+                  height: 45,
+                  width: double.infinity,
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// Coupon Modal
+class CouponModal extends StatefulWidget {
+  final String initialCouponCode;
+  final bool isCouponApplied;
+  final Function(String, bool) onCouponAction;
+
+  const CouponModal({
+    Key? key,
+    required this.initialCouponCode,
+    required this.isCouponApplied,
+    required this.onCouponAction,
+  }) : super(key: key);
+
+  @override
+  State<CouponModal> createState() => _CouponModalState();
+}
+
+class _CouponModalState extends State<CouponModal> {
+  late TextEditingController couponController;
+  late bool isCouponApplied;
+
+  @override
+  void initState() {
+    super.initState();
+    couponController = TextEditingController(text: widget.initialCouponCode);
+    isCouponApplied = widget.isCouponApplied;
+  }
+
+  @override
+  void dispose() {
+    couponController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: BuildBoxShadowContainer(
+        circleRadius: 12,
+        color: Colors.white,
+        width: 400,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Apply Coupon',
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s16,
+                    0.21,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            BuildBoxShadowContainer(
+              circleRadius: 7,
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.only(left: 15),
+              height: 50,
+              child: TextField(
+                controller: couponController,
+                enabled: !isCouponApplied,
+                decoration: InputDecoration(
+                  hintText: 'Enter Coupon Code',
+                  hintStyle: buildCustomStyle(
+                    FontWeight.w500,
+                    12,
+                    0.27,
+                    Colors.grey.withOpacity(.5),
+                  ),
+                  border: InputBorder.none,
+                ),
+                style: buildCustomStyle(
+                  FontWeight.w500,
+                  12,
+                  0.27,
+                  Colors.black.withOpacity(.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                if (isCouponApplied) ...[
+                  Expanded(
+                    child: CustomRoundButton(
+                      title: "Remove",
+                      fct: () {
+                        widget.onCouponAction('', false);
+                        Navigator.of(context).pop();
+                      },
+                      fontSize: FontSize.s14,
+                      height: 45,
+                      width: double.infinity,
+                      boxColor: ColorManager.kButtonRed,
+                      borderColor: ColorManager.kButtonRed,
+                    ),
+                  ),
+                ] else ...[
+                  Expanded(
+                    child: CustomRoundButton(
+                      title: "Apply",
+                      fct: () {
+                        widget.onCouponAction(couponController.text, true);
+                        Navigator.of(context).pop();
+                      },
+                      fontSize: FontSize.s14,
+                      height: 45,
+                      width: double.infinity,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
