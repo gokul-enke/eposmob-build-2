@@ -535,124 +535,90 @@ class ThermalPrinter {
 
       String slNumber = (i + 1).toString();
 
-      // First row: SL# + Product Name
-      List<PosColumn> productNameRow = [];
-
-      if (displayConfig?['showSLNumber']?.visible == true) {
-        productNameRow.add(PosColumn(
-            text: '$slNumber',
-            width: 1,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: true,
-                height: is58mm ? textSizeSmall : textSizeSmall)));
-      }
-
-      if (displayConfig?['showParticulars']?.visible == true) {
-        // Product name takes full width: 11 (when SL visible) or 12 (when SL hidden)
-        int productNameWidth =
-            displayConfig?['showSLNumber']?.visible == true ? 11 : 12;
-
-        // Calculate character limit for product name based on width
-        int maxCharsPerLine =
-            is58mm ? 28 : 44; // Conservative estimate for character wrapping
-        if (displayConfig?['showSLNumber']?.visible == false) {
-          maxCharsPerLine =
-              is58mm ? 32 : 48; // Conservative estimate for character wrapping
-        }
-
-        if (productName.length <= maxCharsPerLine) {
-          // Product name fits in one line - add the product name column to existing row
-          productNameRow.add(PosColumn(
-              text: productName,
-              width: productNameWidth,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.left,
-                  bold: false,
-                  height: is58mm ? textSizeSmall : textSizeSmall)));
-
-          bytes += generator.row(productNameRow);
+      // Product Name Row using date/time row approach (SL + Product Name in one column, empty space in second column)
+      if (displayConfig?['showParticulars']?.visible == true || displayConfig?['showSLNumber']?.visible == true) {
+        // Calculate character limit based on 48-character printer width
+        // Using 6+6 column split like date/time row
+        int maxCharsPerLine = 32; // Half of 48 characters for the first column
+        
+        // Build the left column text (SL + Product Name)
+        String leftColumnText = '';
+        if (displayConfig?['showSLNumber']?.visible == true && displayConfig?['showParticulars']?.visible == true) {
+          // Both SL and product name
+          leftColumnText = '$slNumber $productName';
+        } else if (displayConfig?['showSLNumber']?.visible == true) {
+          // Only SL number
+          leftColumnText = slNumber;
         } else {
-          // Product name needs multiple lines - split properly
-          String remainingName = productName;
-          bool isFirstLine = true;
-
-          while (remainingName.isNotEmpty) {
-            String currentLine;
-
-            if (remainingName.length <= maxCharsPerLine) {
-              currentLine = remainingName;
-              remainingName = '';
-            } else {
-              // Find a good break point (prefer breaking at spaces)
-              int breakPoint = maxCharsPerLine;
-
-              for (int i = maxCharsPerLine - 1;
-                  i >= maxCharsPerLine - 10 && i >= 0;
-                  i--) {
-                if (i < remainingName.length && remainingName[i] == ' ') {
-                  breakPoint = i;
-                  break;
-                }
-              }
-
-              currentLine = remainingName.substring(0, breakPoint).trim();
-              remainingName = remainingName.substring(breakPoint).trim();
-            }
-
-            List<PosColumn> nameLineRow = [];
-
-            if (isFirstLine &&
-                displayConfig?['showSLNumber']?.visible == true) {
-              nameLineRow.add(PosColumn(
-                  text: '$slNumber',
-                  width: 1,
-                  styles: PosStyles(
-                      fontType: fontType,
-                      align: PosAlign.left,
-                      bold: true,
-                      height: is58mm ? textSizeSmall : textSizeSmall)));
-            } else if (!isFirstLine &&
-                displayConfig?['showSLNumber']?.visible == true) {
-              // Empty space for SL column on continuation lines
-              nameLineRow.add(PosColumn(
-                  text: '',
-                  width: 1,
-                  styles: PosStyles(
-                      fontType: fontType, align: PosAlign.left, bold: false)));
-            }
-
-            nameLineRow.add(PosColumn(
-                text: currentLine,
-                width: productNameWidth,
+          // Only product name
+          leftColumnText = productName;
+        }
+        
+        if (leftColumnText.length <= maxCharsPerLine) {
+          // Text fits in one line - use the date/time row approach
+          bytes += generator.row([
+            PosColumn(
+                text: leftColumnText,
+                width: 8,
                 styles: PosStyles(
                     fontType: fontType,
                     align: PosAlign.left,
                     bold: false,
-                    height: is58mm ? textSizeSmall : textSizeSmall)));
-
-            bytes += generator.row(nameLineRow);
-            isFirstLine = false;
+                    height: is58mm ? textSizeSmall : textSizeSmall)),
+            PosColumn(
+                text: '', // Empty space like in date/time row
+                width: 4,
+                styles: PosStyles(
+                    fontType: fontType,
+                    align: PosAlign.right,
+                    bold: false,
+                    height: is58mm ? textSizeSmall : textSizeSmall)),
+          ]);
+        } else {
+          // Text needs wrapping - split into multiple lines
+          String remainingText = leftColumnText;
+          
+          while (remainingText.isNotEmpty) {
+            String currentLine;
+            
+            if (remainingText.length <= maxCharsPerLine) {
+              currentLine = remainingText;
+              remainingText = '';
+            } else {
+              // Find a good break point (prefer breaking at spaces)
+              int breakPoint = maxCharsPerLine;
+              
+              for (int i = maxCharsPerLine - 1; i >= maxCharsPerLine - 10 && i >= 0; i--) {
+                if (i < remainingText.length && remainingText[i] == ' ') {
+                  breakPoint = i;
+                  break;
+                }
+              }
+              
+              currentLine = remainingText.substring(0, breakPoint).trim();
+              remainingText = remainingText.substring(breakPoint).trim();
+            }
+            
+            bytes += generator.row([
+              PosColumn(
+                  text: currentLine,
+                  width: 8,
+                  styles: PosStyles(
+                      fontType: fontType,
+                      align: PosAlign.left,
+                      bold: false,
+                      height: is58mm ? textSizeSmall : textSizeSmall)),
+              PosColumn(
+                  text: '', // Empty space
+                  width: 4,
+                  styles: PosStyles(
+                      fontType: fontType,
+                      align: PosAlign.right,
+                      bold: false,
+                      height: is58mm ? textSizeSmall : textSizeSmall)),
+            ]);
           }
         }
-      } else if (displayConfig?['showSLNumber']?.visible == true) {
-        // Only SL number, no product name - fill the row to width 12
-        productNameRow.add(PosColumn(
-            text: '$slNumber',
-            width: 1,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: true,
-                height: is58mm ? textSizeSmall : textSizeSmall)));
-        productNameRow.add(PosColumn(
-            text: '',
-            width: 11,
-            styles: PosStyles(
-                fontType: fontType, align: PosAlign.left, bold: true)));
-        bytes += generator.row(productNameRow);
       }
 
       // Second row: Price details
@@ -1148,17 +1114,14 @@ class ThermalPrinter {
 
     // Use the terms from displayConfig or DocumentConfig
     List<String> termsList = terms.split('\n');
-
-    // Determine if we're using 58mm paper for text wrapping
-    bool is58mm = selectedPaperSize == '58mm';
-
+    
     for (var term in termsList) {
       if (term.trim().isNotEmpty) {
         String termText = term.trim();
-
-        // Calculate character limit based on paper size and font
-        int maxCharsPerLine = is58mm ? 40 : 64; // Adjust based on paper width
-
+        
+        // Calculate character limit based on 48-character printer width
+        int maxCharsPerLine = 48; // Based on your printer's actual character width
+        
         if (termText.length <= maxCharsPerLine) {
           // Text fits in one line
           bytes += generator.row([
@@ -1166,8 +1129,7 @@ class ThermalPrinter {
                 text: termText,
                 width: 12,
                 styles: const PosStyles(
-                    fontType:
-                        PosFontType.fontB, // Use the passed fontType parameter
+                    fontType: PosFontType.fontB, // Use the passed fontType parameter
                     align: PosAlign.left,
                     bold: false,
                     height: textSizeSmall,
@@ -1176,37 +1138,34 @@ class ThermalPrinter {
         } else {
           // Text needs to be wrapped to multiple lines
           String remainingText = termText;
-
+          
           while (remainingText.isNotEmpty) {
             String currentLine;
-
+            
             if (remainingText.length <= maxCharsPerLine) {
               currentLine = remainingText;
               remainingText = '';
             } else {
               // Find a good break point (prefer breaking at spaces)
               int breakPoint = maxCharsPerLine;
-
-              for (int i = maxCharsPerLine - 1;
-                  i >= maxCharsPerLine - 10 && i >= 0;
-                  i--) {
+              
+              for (int i = maxCharsPerLine - 1; i >= maxCharsPerLine - 10 && i >= 0; i--) {
                 if (i < remainingText.length && remainingText[i] == ' ') {
                   breakPoint = i;
                   break;
                 }
               }
-
+              
               currentLine = remainingText.substring(0, breakPoint).trim();
               remainingText = remainingText.substring(breakPoint).trim();
             }
-
+            
             bytes += generator.row([
               PosColumn(
                   text: currentLine,
                   width: 12,
                   styles: const PosStyles(
-                      fontType: PosFontType
-                          .fontB, // Use the passed fontType parameter
+                      fontType: PosFontType.fontB, // Use the passed fontType parameter
                       align: PosAlign.left,
                       bold: false,
                       height: textSizeSmall,
