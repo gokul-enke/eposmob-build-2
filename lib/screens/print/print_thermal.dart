@@ -536,14 +536,16 @@ class ThermalPrinter {
       String slNumber = (i + 1).toString();
 
       // Product Name Row using date/time row approach (SL + Product Name in one column, empty space in second column)
-      if (displayConfig?['showParticulars']?.visible == true || displayConfig?['showSLNumber']?.visible == true) {
+      if (displayConfig?['showParticulars']?.visible == true ||
+          displayConfig?['showSLNumber']?.visible == true) {
         // Calculate character limit based on 48-character printer width
         // Using 6+6 column split like date/time row
-        int maxCharsPerLine = 32; // Half of 48 characters for the first column
-        
+        int maxCharsPerLine = 40; // Half of 48 characters for the first column
+
         // Build the left column text (SL + Product Name)
         String leftColumnText = '';
-        if (displayConfig?['showSLNumber']?.visible == true && displayConfig?['showParticulars']?.visible == true) {
+        if (displayConfig?['showSLNumber']?.visible == true &&
+            displayConfig?['showParticulars']?.visible == true) {
           // Both SL and product name
           leftColumnText = '$slNumber $productName';
         } else if (displayConfig?['showSLNumber']?.visible == true) {
@@ -553,13 +555,13 @@ class ThermalPrinter {
           // Only product name
           leftColumnText = productName;
         }
-        
+
         if (leftColumnText.length <= maxCharsPerLine) {
           // Text fits in one line - use the date/time row approach
           bytes += generator.row([
             PosColumn(
                 text: leftColumnText,
-                width: 8,
+                width: 11,
                 styles: PosStyles(
                     fontType: fontType,
                     align: PosAlign.left,
@@ -567,7 +569,7 @@ class ThermalPrinter {
                     height: is58mm ? textSizeSmall : textSizeSmall)),
             PosColumn(
                 text: '', // Empty space like in date/time row
-                width: 4,
+                width: 1,
                 styles: PosStyles(
                     fontType: fontType,
                     align: PosAlign.right,
@@ -577,32 +579,34 @@ class ThermalPrinter {
         } else {
           // Text needs wrapping - split into multiple lines
           String remainingText = leftColumnText;
-          
+
           while (remainingText.isNotEmpty) {
             String currentLine;
-            
+
             if (remainingText.length <= maxCharsPerLine) {
               currentLine = remainingText;
               remainingText = '';
             } else {
               // Find a good break point (prefer breaking at spaces)
               int breakPoint = maxCharsPerLine;
-              
-              for (int i = maxCharsPerLine - 1; i >= maxCharsPerLine - 10 && i >= 0; i--) {
+
+              for (int i = maxCharsPerLine - 1;
+                  i >= maxCharsPerLine - 10 && i >= 0;
+                  i--) {
                 if (i < remainingText.length && remainingText[i] == ' ') {
                   breakPoint = i;
                   break;
                 }
               }
-              
+
               currentLine = remainingText.substring(0, breakPoint).trim();
               remainingText = remainingText.substring(breakPoint).trim();
             }
-            
+
             bytes += generator.row([
               PosColumn(
                   text: currentLine,
-                  width: 8,
+                  width: 11,
                   styles: PosStyles(
                       fontType: fontType,
                       align: PosAlign.left,
@@ -610,7 +614,7 @@ class ThermalPrinter {
                       height: is58mm ? textSizeSmall : textSizeSmall)),
               PosColumn(
                   text: '', // Empty space
-                  width: 4,
+                  width: 1,
                   styles: PosStyles(
                       fontType: fontType,
                       align: PosAlign.right,
@@ -1114,14 +1118,15 @@ class ThermalPrinter {
 
     // Use the terms from displayConfig or DocumentConfig
     List<String> termsList = terms.split('\n');
-    
+
     for (var term in termsList) {
       if (term.trim().isNotEmpty) {
         String termText = term.trim();
-        
+
         // Calculate character limit based on 48-character printer width
-        int maxCharsPerLine = 48; // Based on your printer's actual character width
-        
+        int maxCharsPerLine =
+            48; // Based on your printer's actual character width
+
         if (termText.length <= maxCharsPerLine) {
           // Text fits in one line
           bytes += generator.row([
@@ -1129,7 +1134,8 @@ class ThermalPrinter {
                 text: termText,
                 width: 12,
                 styles: const PosStyles(
-                    fontType: PosFontType.fontB, // Use the passed fontType parameter
+                    fontType:
+                        PosFontType.fontB, // Use the passed fontType parameter
                     align: PosAlign.left,
                     bold: false,
                     height: textSizeSmall,
@@ -1138,34 +1144,37 @@ class ThermalPrinter {
         } else {
           // Text needs to be wrapped to multiple lines
           String remainingText = termText;
-          
+
           while (remainingText.isNotEmpty) {
             String currentLine;
-            
+
             if (remainingText.length <= maxCharsPerLine) {
               currentLine = remainingText;
               remainingText = '';
             } else {
               // Find a good break point (prefer breaking at spaces)
               int breakPoint = maxCharsPerLine;
-              
-              for (int i = maxCharsPerLine - 1; i >= maxCharsPerLine - 10 && i >= 0; i--) {
+
+              for (int i = maxCharsPerLine - 1;
+                  i >= maxCharsPerLine - 10 && i >= 0;
+                  i--) {
                 if (i < remainingText.length && remainingText[i] == ' ') {
                   breakPoint = i;
                   break;
                 }
               }
-              
+
               currentLine = remainingText.substring(0, breakPoint).trim();
               remainingText = remainingText.substring(breakPoint).trim();
             }
-            
+
             bytes += generator.row([
               PosColumn(
                   text: currentLine,
                   width: 12,
                   styles: const PosStyles(
-                      fontType: PosFontType.fontB, // Use the passed fontType parameter
+                      fontType: PosFontType
+                          .fontB, // Use the passed fontType parameter
                       align: PosAlign.left,
                       bold: false,
                       height: textSizeSmall,
