@@ -555,8 +555,12 @@ class ThermalPrinter {
             displayConfig?['showSLNumber']?.visible == true ? 11 : 12;
 
         // Calculate character limit for product name based on width
-        int maxCharsPerLine = productNameWidth *
-            3; // Conservative estimate for character wrapping
+        int maxCharsPerLine =
+            is58mm ? 28 : 44; // Conservative estimate for character wrapping
+        if (displayConfig?['showSLNumber']?.visible == false) {
+          maxCharsPerLine =
+              is58mm ? 32 : 48; // Conservative estimate for character wrapping
+        }
 
         if (productName.length <= maxCharsPerLine) {
           // Product name fits in one line - add the product name column to existing row
@@ -1144,17 +1148,17 @@ class ThermalPrinter {
 
     // Use the terms from displayConfig or DocumentConfig
     List<String> termsList = terms.split('\n');
-    
+
     // Determine if we're using 58mm paper for text wrapping
     bool is58mm = selectedPaperSize == '58mm';
-    
+
     for (var term in termsList) {
       if (term.trim().isNotEmpty) {
         String termText = term.trim();
-        
+
         // Calculate character limit based on paper size and font
-        int maxCharsPerLine = is58mm ? 32 : 64; // Adjust based on paper width
-        
+        int maxCharsPerLine = is58mm ? 40 : 64; // Adjust based on paper width
+
         if (termText.length <= maxCharsPerLine) {
           // Text fits in one line
           bytes += generator.row([
@@ -1162,7 +1166,8 @@ class ThermalPrinter {
                 text: termText,
                 width: 12,
                 styles: const PosStyles(
-                    fontType: PosFontType.fontB, // Use the passed fontType parameter
+                    fontType:
+                        PosFontType.fontB, // Use the passed fontType parameter
                     align: PosAlign.left,
                     bold: false,
                     height: textSizeSmall,
@@ -1171,34 +1176,37 @@ class ThermalPrinter {
         } else {
           // Text needs to be wrapped to multiple lines
           String remainingText = termText;
-          
+
           while (remainingText.isNotEmpty) {
             String currentLine;
-            
+
             if (remainingText.length <= maxCharsPerLine) {
               currentLine = remainingText;
               remainingText = '';
             } else {
               // Find a good break point (prefer breaking at spaces)
               int breakPoint = maxCharsPerLine;
-              
-              for (int i = maxCharsPerLine - 1; i >= maxCharsPerLine - 10 && i >= 0; i--) {
+
+              for (int i = maxCharsPerLine - 1;
+                  i >= maxCharsPerLine - 10 && i >= 0;
+                  i--) {
                 if (i < remainingText.length && remainingText[i] == ' ') {
                   breakPoint = i;
                   break;
                 }
               }
-              
+
               currentLine = remainingText.substring(0, breakPoint).trim();
               remainingText = remainingText.substring(breakPoint).trim();
             }
-            
+
             bytes += generator.row([
               PosColumn(
                   text: currentLine,
                   width: 12,
                   styles: const PosStyles(
-                      fontType: PosFontType.fontB, // Use the passed fontType parameter
+                      fontType: PosFontType
+                          .fontB, // Use the passed fontType parameter
                       align: PosAlign.left,
                       bold: false,
                       height: textSizeSmall,
