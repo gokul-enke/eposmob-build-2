@@ -207,7 +207,7 @@ class SideMenu extends StatelessWidget {
                 sideBarController.index.value = 2;
               },
               onTapTitle2: () {
-                sideBarController.index.value = 56;
+                sideBarController.index.value = 54;
               },
               onTapTitle3: () {
                 sideBarController.index.value = 50;
@@ -232,7 +232,7 @@ class SideMenu extends StatelessWidget {
               },
               selected: sideBarController.index.value == 2 ||
                   sideBarController.index.value == 51 ||
-                  sideBarController.index.value == 56 ||
+                  sideBarController.index.value == 54 ||
                   sideBarController.index.value == 50 ||
                   sideBarController.index.value == 49 ||
                   sideBarController.index.value == 11,
@@ -358,9 +358,9 @@ class SideMenu extends StatelessWidget {
               iconPath: ImageAssets.printIcon,
               title: 'Printer',
               onTap: () {
-                sideBarController.index.value = 55;
+                sideBarController.index.value = 53; 
               },
-              selected: sideBarController.index.value == 55,
+              selected: sideBarController.index.value == 53,
             ),
           ),
           DrawerListTile(

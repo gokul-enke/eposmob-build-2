@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -503,6 +504,56 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       bool orderProcessed = false;
 
       try {
+        // Handle multi-payment if stored as JSON
+        String? paymentMethod = order.paymentMethod;
+        String? paidAmount = order.paidAmount;
+        List<String>? paymentMethods;
+        List<Map<String, dynamic>>? paidMethods;
+        
+        if (paymentMethod != null && paymentMethod.startsWith('{')) {
+          try {
+            Map<String, dynamic> multiPaymentData = json.decode(paymentMethod);
+            if (multiPaymentData['isMultiPayment'] == true) {
+              // Extract multi-payment data
+              paymentMethods = List<String>.from(multiPaymentData['methods'] ?? []);
+              Map<String, dynamic> amounts = Map<String, dynamic>.from(multiPaymentData['amounts'] ?? {});
+              
+              paidMethods = [];
+              if (amounts['CASH'] != null && amounts['CASH'] != "0") {
+                paidMethods.add({
+                  "method": "CASH",
+                  "amount": double.tryParse(amounts['CASH']) ?? 0,
+                });
+              }
+              if (amounts['CARD'] != null && amounts['CARD'] != "0") {
+                paidMethods.add({
+                  "method": "CARD",
+                  "amount": double.tryParse(amounts['CARD']) ?? 0,
+                });
+              }
+              if (amounts['UPI'] != null && amounts['UPI'] != "0") {
+                paidMethods.add({
+                  "method": "UPI",
+                  "amount": double.tryParse(amounts['UPI']) ?? 0,
+                });
+              }
+              
+              // For multi-payment, set single payment fields to null
+              paymentMethod = null;
+              paidAmount = null;
+            }
+          } catch (e) {
+            debugPrint("Error parsing multi-payment data during sync: $e");
+            // Fallback to single payment
+            paymentMethod = order.paymentMethod ?? "CASH";
+            paidAmount = order.paidAmount ?? order.total.toString();
+          }
+        } else {
+          // Single payment method
+          paymentMethod = order.paymentMethod ?? "CASH";
+          paidAmount = order.paidAmount ?? order.total.toString();
+        }
+        
         // Call API to add order and WAIT for completion
         final cartProvider = Provider.of<CartProvider>(context, listen: false);
         final response = await cartProvider.addToOrderAPI(
@@ -514,8 +565,10 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           totalPrice: order.total.toString(),
           customerId: order.customerId,
           customerPhone: order.customerPhone ?? "",
-          paymentMethod: order.paymentMethod ?? "CASH", // Use stored payment method or default
-          paidAmount: order.paidAmount ?? order.total.toString(),
+          paymentMethod: paymentMethod,
+          paidAmount: paidAmount,
+          paymentMethods: paymentMethods,
+          paidMethods: paidMethods,
           balanceAmount: order.balanceAmount ?? "0.0",
           couponId: order.couponId,
           comment: order.comment,
