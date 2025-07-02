@@ -69,11 +69,41 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
                       ),
                     ),
             ),
-            Expanded(child: widget.child),
+            // Wrap child in a stateful widget to preserve its state
+            Expanded(
+              child: _PreservedChild(
+                child: widget.child,
+              ),
+            ),
           ],
         ),
       ],
     );
+  }
+}
+
+// Helper widget to preserve child state during parent rebuilds
+class _PreservedChild extends StatefulWidget {
+  final Widget child;
+  
+  const _PreservedChild({
+    Key? key,
+    required this.child,
+  }) : super(key: key);
+
+  @override
+  _PreservedChildState createState() => _PreservedChildState();
+}
+
+class _PreservedChildState extends State<_PreservedChild> 
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
 

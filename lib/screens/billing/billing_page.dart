@@ -38,7 +38,6 @@ import 'package:pos_machine/widgets/horizontal_product_view_local.dart';
 import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:pos_machine/widgets/sidebar_product_list.dart';
-import 'package:pos_machine/widgets/stock_selection_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
@@ -112,7 +111,7 @@ class _PriceTextFieldState extends State<_PriceTextField> {
           controller: controller,
           focusNode: focusNode,
           keyboardType: TextInputType.number,
-          style: const TextStyle(fontSize: 12),
+          style: const TextStyle(fontSize: 16),
           decoration: const InputDecoration(
             isDense: true,
             contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
@@ -120,7 +119,7 @@ class _PriceTextFieldState extends State<_PriceTextField> {
             hintText: 'Price',
             hintStyle: TextStyle(
               color: Colors.grey,
-              fontSize: 12,
+              fontSize: 16,
             ),
           ),
           onTap: () {
@@ -235,7 +234,7 @@ class _MrpTextFieldState extends State<_MrpTextField> {
           controller: controller,
           focusNode: focusNode,
           keyboardType: TextInputType.number,
-          style: const TextStyle(fontSize: 12),
+          style: const TextStyle(fontSize: 16),
           decoration: const InputDecoration(
             isDense: true,
             contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
@@ -243,7 +242,7 @@ class _MrpTextFieldState extends State<_MrpTextField> {
             hintText: 'MRP',
             hintStyle: TextStyle(
               color: Colors.grey,
-              fontSize: 12,
+              fontSize: 16,
             ),
           ),
           onTap: () {
@@ -295,7 +294,11 @@ class _MrpTextFieldState extends State<_MrpTextField> {
   }
 }
 
-class BillingPageState extends State<BillingPage> {
+class BillingPageState extends State<BillingPage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   final TextEditingController mobileNumberTextController =
       TextEditingController();
   final TextEditingController coupenCodeTextController =
@@ -323,6 +326,19 @@ class BillingPageState extends State<BillingPage> {
   String deliveryMethodId = "";
   double _balanceAmount = 0;
   UniqueKey keyTile = UniqueKey();
+
+  // Multi-payment method controllers
+  final TextEditingController _cashAmountController = TextEditingController();
+  final TextEditingController _cardAmountController = TextEditingController();
+  final TextEditingController _upiAmountController = TextEditingController();
+  final FocusNode _cashAmountFocusNode = FocusNode();
+  final FocusNode _cardAmountFocusNode = FocusNode();
+  final FocusNode _upiAmountFocusNode = FocusNode();
+
+  // Payment method selection states
+  bool _isCashSelected = true;
+  bool _isCardSelected = false;
+  bool _isUpiSelected = false;
   bool isInitLoading = false;
   List<CustomerListModelData>? customerList = [];
   CustomerListModelData? selectedCustomer;
@@ -352,11 +368,11 @@ class BillingPageState extends State<BillingPage> {
   bool isLoadingConfirmOrder = false;
   bool isLoadingSaveOrderAndPrint = false;
   bool isLoadingAddItem = false;
-  bool _isBottomSectionVisible = true; // Add this for hide/show functionality
+  bool _isBottomSectionVisible = false; // Hide billing details panel by default
 
   // Add these variables for the new sidebar
   bool _isSidebarVisible = true;
-  int _selectedSidebarTab = 0; // 0 for products, 1 for orders/categories
+  int _selectedSidebarTab = 1; // 0 for products, 1 for orders/categories - default to orders tab
 
   Timer? _debounce;
   Timer? _debounceTimer;
@@ -371,6 +387,9 @@ class BillingPageState extends State<BillingPage> {
   // Add this variable to track internet connectivity
   bool _hasInternet = true;
   late StreamSubscription<InternetConnectionStatus> _internetSubscription;
+  
+  // Add flag to track if customer was manually selected
+  bool _isCustomerManuallySelected = false;
 
   @override
   void initState() {
@@ -386,6 +405,12 @@ class BillingPageState extends State<BillingPage> {
     deliveryMethodId = "3";
     deliveryMethod = "Store Takeaway";
     iconColor = 1;
+
+    // Initialize multi-payment with cash selected by default
+    _isCashSelected = true;
+    _isCardSelected = false;
+    _isUpiSelected = false;
+
     _fetchCustomers();
 
     _quantityFocusNode.addListener(() {
@@ -438,6 +463,14 @@ class BillingPageState extends State<BillingPage> {
     _quantityFocusNode.dispose();
     _unitPriceFocusNode.dispose();
     _paidAmountFocusNode.dispose();
+
+    // Dispose multi-payment controllers and focus nodes
+    _cashAmountController.dispose();
+    _cardAmountController.dispose();
+    _upiAmountController.dispose();
+    _cashAmountFocusNode.dispose();
+    _cardAmountFocusNode.dispose();
+    _upiAmountFocusNode.dispose();
 
     _debounce?.cancel();
     _debounceTimer?.cancel();
@@ -495,6 +528,14 @@ class BillingPageState extends State<BillingPage> {
   }
 
   Future<void> _fetchCustomers() async {
+    // If customer was manually selected (either from list or phone entry), don't reset to default
+    if (_isCustomerManuallySelected && (selectedCustomerID != null || mobileNumberText?.isNotEmpty == true)) {
+      debugPrint("🛡️ Customer manually selected, skipping reset to default");
+      debugPrint("  - selectedCustomerID: $selectedCustomerID");
+      debugPrint("  - mobileNumberText: '$mobileNumberText'");
+      return;
+    }
+    
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
 
     try {
@@ -612,6 +653,8 @@ class BillingPageState extends State<BillingPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    
     debugPrint("🔨 BillingPage build() called");
     debugPrint(
         "  - Current salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
@@ -1704,7 +1747,7 @@ class BillingPageState extends State<BillingPage> {
                                         '${index + 1}',
                                         style: buildCustomStyle(
                                           FontWeightManager.regular,
-                                          12,
+                                          16,
                                           0.21,
                                           ColorManager.textColor,
                                         ),
@@ -1724,7 +1767,7 @@ class BillingPageState extends State<BillingPage> {
                                         item.product.productName ?? 'Unknown',
                                         style: buildCustomStyle(
                                           FontWeightManager.regular,
-                                          12,
+                                          14,
                                           0.21,
                                           ColorManager.textColor,
                                         ),
@@ -1745,7 +1788,7 @@ class BillingPageState extends State<BillingPage> {
                                         item.product.unit ?? '-',
                                         style: buildCustomStyle(
                                           FontWeightManager.regular,
-                                          12,
+                                          16,
                                           0.21,
                                           ColorManager.textColor,
                                         ),
@@ -1822,7 +1865,7 @@ class BillingPageState extends State<BillingPage> {
                                         child: Text(
                                           (item.price! * item.quantity)
                                               .toStringAsFixed(3),
-                                          style: const TextStyle(fontSize: 12),
+                                          style: const TextStyle(fontSize: 16),
                                           textAlign: TextAlign.left,
                                         ),
                                       ),
@@ -2046,12 +2089,14 @@ class BillingPageState extends State<BillingPage> {
 
   Widget _buildPaymentMethodSelection() {
     Size size = MediaQuery.of(context).size;
+    return Consumer<LocalProductProvider>(
+      builder: (context, localProductProvider, child) {
     return Column(
       children: [
         BuildPaymentRow(
           amount: "",
           padding: const EdgeInsets.only(left: 5.0),
-          title: "Payment Method",
+              title: "Payment Methods",
           firstRowTextStyle: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s14,
@@ -2060,229 +2105,105 @@ class BillingPageState extends State<BillingPage> {
           ),
           color: ColorManager.kPrimaryColor,
         ),
-        Padding(
-          padding: const EdgeInsets.only(left: 5.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    iconColor = 1; // Cash selected
-                    final localProductProvider =
-                        Provider.of<LocalProductProvider>(context,
-                            listen: false);
-                    _paidAmountController.text =
-                        localProductProvider.cartTotal.toStringAsFixed(3);
-                    _userChangedPaidAmount =
-                        false; // Reset flag since this is auto-set
-                    _getBalanceAmount(); // Update balance immediately
-                  });
-                },
-                child: BuildBoxShadowContainer(
-                  border: iconColor == 1
-                      ? Border.all(color: ColorManager.kPrimaryColor)
-                      : null,
-                  margin: const EdgeInsets.only(top: 10),
-                  padding: const EdgeInsets.all(8),
-                  blurRadius: 4,
-                  circleRadius: 5,
-                  child: Column(
-                    children: [
-                      WebsafeSvg.asset(
-                        ImageAssets.cashIcon,
-                        width: 15,
-                        height: 15,
-                        color: Colors.black,
-                        fit: BoxFit.none,
-                      ),
-                      Text(
-                        'Cash',
-                        style: buildCustomStyle(FontWeightManager.medium,
-                            FontSize.s10, 0.12, Colors.black),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    iconColor = 2; // Card selected
-                    final localProductProvider =
-                        Provider.of<LocalProductProvider>(context,
-                            listen: false);
-                    _paidAmountController.text =
-                        localProductProvider.cartTotal.toStringAsFixed(3);
-                    _userChangedPaidAmount =
-                        false; // Reset flag since this is auto-set
-                    _getBalanceAmount(); // Update balance immediately
-                  });
-                },
-                child: BuildBoxShadowContainer(
-                  border: iconColor == 2
-                      ? Border.all(color: ColorManager.kPrimaryColor)
-                      : null,
-                  margin: const EdgeInsets.only(left: 10, top: 10),
-                  padding: const EdgeInsets.only(
-                      left: 12, top: 8, bottom: 8, right: 12),
-                  blurRadius: 4,
-                  circleRadius: 5,
-                  child: Column(
-                    children: [
-                      WebsafeSvg.asset(
-                        ImageAssets.creditCardIcon,
-                        width: 15,
-                        height: 15,
-                        color: Colors.black,
-                        fit: BoxFit.none,
-                      ),
-                      Text(
-                        'Card',
-                        style: buildCustomStyle(FontWeightManager.medium,
-                            FontSize.s10, 0.12, Colors.black),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    iconColor = 3; // UPI selected
-                    final localProductProvider =
-                        Provider.of<LocalProductProvider>(context,
-                            listen: false);
-                    _paidAmountController.text =
-                        localProductProvider.cartTotal.toStringAsFixed(3);
-                    _userChangedPaidAmount =
-                        false; // Reset flag since this is auto-set
-                    _getBalanceAmount(); // Update balance immediately
-                  });
-                },
-                child: BuildBoxShadowContainer(
-                  border: iconColor == 3
-                      ? Border.all(color: ColorManager.kPrimaryColor)
-                      : null,
-                  margin: const EdgeInsets.only(left: 10, top: 10),
-                  padding: const EdgeInsets.only(
-                      left: 12, top: 8, bottom: 8, right: 12),
-                  blurRadius: 4,
-                  circleRadius: 5,
-                  child: Column(
-                    children: [
-                      WebsafeSvg.asset(
-                        ImageAssets.creditCardIcon,
-                        width: 15,
-                        height: 15,
-                        color: Colors.black,
-                        fit: BoxFit.none,
-                      ),
-                      Text(
-                        'Upi',
-                        style: buildCustomStyle(FontWeightManager.medium,
-                            FontSize.s10, 0.12, Colors.black),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (iconColor != 1)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 10),
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: buildColumnWidgetForTextFields(
-                        controller: _transactionNumberController,
-                        size: size,
-                        height: size.height * .06,
-                        hintText: 'Tr Reference No:',
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        if (iconColor == 1 || iconColor == 2 || iconColor == 3)
-          Consumer<LocalProductProvider>(
-            builder: (context, localProductProvider, child) {
-              // Use addPostFrameCallback to defer the update
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                // Check if the widget is still mounted, a payment method is selected,
-                // AND the paid amount field does NOT have focus.
-                // Only auto-update if user hasn't manually changed the paid amount
-                if (mounted &&
-                    (iconColor == 1 || iconColor == 2 || iconColor == 3) &&
-                    !_paidAmountFocusNode.hasFocus &&
-                    !_userChangedPaidAmount) {
-                  // Add this condition
-                  final newPaidAmount =
-                      localProductProvider.cartTotal.toStringAsFixed(3);
-                  // Only update if the value is different to prevent infinite loops
-                  if (_paidAmountController.text != newPaidAmount) {
-                    _paidAmountController.text = newPaidAmount;
-                    _getBalanceAmount(); // Update balance immediately
-                  }
-                }
-              });
+            const SizedBox(height: 10),
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 10),
-                  BuildPaymentRow(
-                    amount: "",
-                    title: "Paid Amount",
-                    padding: const EdgeInsets.only(left: 5.0),
-                    firstRowTextStyle: buildCustomStyle(
-                      FontWeightManager.semiBold,
-                      FontSize.s14,
-                      0.21,
-                      ColorManager.textColor,
-                    ),
-                    color: ColorManager.textColor,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: buildColumnWidgetForTextFields(
-                      controller: _paidAmountController,
-                      size: size,
-                      onchanged: (value) {
-                        _userChangedPaidAmount =
-                            true; // Mark as manually changed
-                        _getBalanceAmount();
-                      },
-                      focusNode: _paidAmountFocusNode, // Add this line
-                      height: size.height * .06,
-                      hintText: 'Enter Paid Amount Here:',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  BuildPaymentRow(
-                    amount: "INR ${_balanceAmount.toStringAsFixed(3)}",
-                    title: "Balance amount",
-                    padding: const EdgeInsets.only(left: 5.0, right: 5.0),
-                    secondRowTextStyle: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s15,
-                      0.18,
-                      ColorManager.textColorRed,
-                    ),
-                    firstRowTextStyle: buildCustomStyle(
-                      FontWeightManager.bold,
-                      FontSize.s15,
-                      0.23,
-                      ColorManager.textColorRed,
-                    ),
-                    color: ColorManager.textColorRed,
-                  ),
+            // Cash Payment
+            _buildPaymentMethodRow(
+              isSelected: _isCashSelected,
+              icon: ImageAssets.cashIcon,
+              label: 'Cash',
+              controller: _cashAmountController,
+              focusNode: _cashAmountFocusNode,
+              size: size,
+              onToggle: () {
+                  setState(() {
+                  _isCashSelected = !_isCashSelected;
+                  if (!_isCashSelected) {
+                    _cashAmountController.clear();
+                  } else {
+                    _autoFillPaymentAmount();
+                  }
+                  _updateBalanceAmount();
+                  });
+                },
+              onAmountChanged: (value) {
+                _updateBalanceAmount();
+              },
+            ),
+
+            const SizedBox(height: 8),
+
+            // Card Payment
+            _buildPaymentMethodRow(
+              isSelected: _isCardSelected,
+              icon: ImageAssets.creditCardIcon,
+              label: 'Card',
+              controller: _cardAmountController,
+              focusNode: _cardAmountFocusNode,
+              size: size,
+              onToggle: () {
+                  setState(() {
+                  _isCardSelected = !_isCardSelected;
+                  if (!_isCardSelected) {
+                    _cardAmountController.clear();
+                  } else {
+                    _autoFillPaymentAmount();
+                  }
+                  _updateBalanceAmount();
+                  });
+                },
+              onAmountChanged: (value) {
+                _updateBalanceAmount();
+              },
+            ),
+
+            const SizedBox(height: 8),
+
+            // UPI Payment
+            _buildPaymentMethodRow(
+              isSelected: _isUpiSelected,
+              icon: ImageAssets.creditCardIcon,
+              label: 'UPI',
+              controller: _upiAmountController,
+              focusNode: _upiAmountFocusNode,
+                        size: size,
+              onToggle: () {
+                setState(() {
+                  _isUpiSelected = !_isUpiSelected;
+                  if (!_isUpiSelected) {
+                    _upiAmountController.clear();
+                  } else {
+                    _autoFillPaymentAmount();
+                  }
+                  _updateBalanceAmount();
+                });
+              },
+              onAmountChanged: (value) {
+                _updateBalanceAmount();
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            // Transaction Reference Field - Show only if Card or UPI is selected
+            if (_isCardSelected || _isUpiSelected) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                child: buildColumnWidgetForTextFields(
+                  controller: _transactionNumberController,
+                  size: size,
+                  height: size.height * .05,
+                  hintText: 'Transaction Reference Number',
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Total Paid and Balance Display
+            _buildPaymentSummaryRow(localProductProvider),
                 ],
               );
             },
-          ),
-      ],
     );
   }
 
@@ -2545,7 +2466,10 @@ class BillingPageState extends State<BillingPage> {
     debugPrint(
         "  - Showing: ${salesExecutivemobileNumberText != "" ? "READ-ONLY field" : "AUTOCOMPLETE field"}");
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -2562,8 +2486,8 @@ class BillingPageState extends State<BillingPage> {
                 child: BuildBoxShadowContainer(
                   circleRadius: 7,
                   alignment: Alignment.centerLeft,
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 0, vertical: 0),
                   padding: const EdgeInsets.only(left: 15),
                   height: size.height * .07,
                   width: size.width / 3,
@@ -2583,11 +2507,13 @@ class BillingPageState extends State<BillingPage> {
                           _highlightedCustomerIndex =
                               null; // Reset highlighted index
                         });
-                        return const Iterable<CustomerListModelData>.empty();
+                            return const Iterable<
+                                CustomerListModelData>.empty();
                       }
 
                       String? accessToken =
-                          Provider.of<AuthModel>(context, listen: false).token;
+                              Provider.of<AuthModel>(context, listen: false)
+                                  .token;
                       // debugPrint("accessToken From AuthModel $accessToken");
                       // debugPrint(mobileNumberTextController.text);
 
@@ -2607,10 +2533,11 @@ class BillingPageState extends State<BillingPage> {
                         if (response["status"] == "success") {
                           CustomerListModel customerListModel =
                               CustomerListModel.fromJson(response);
-                          List<CustomerListModelData>? filteredCustomerList =
-                              customerListModel.data;
+                              List<CustomerListModelData>?
+                                  filteredCustomerList = customerListModel.data;
 
-                          if (mobileNumberTextController.text.length == 10 &&
+                              if (mobileNumberTextController.text.length ==
+                                      10 &&
                               filteredCustomerList!.length == 1) {
                             setState(() {
                               isCustomerFound = true;
@@ -2621,10 +2548,12 @@ class BillingPageState extends State<BillingPage> {
                             });
                           }
 
-                          _currentCustomerOptions = filteredCustomerList ?? [];
+                              _currentCustomerOptions =
+                                  filteredCustomerList ?? [];
                           return filteredCustomerList!.isNotEmpty
                               ? filteredCustomerList
-                              : const Iterable<CustomerListModelData>.empty();
+                                  : const Iterable<
+                                      CustomerListModelData>.empty();
                         } else {
                           // debugPrint('Error in response: ${response["message"]}');
                         }
@@ -2638,10 +2567,12 @@ class BillingPageState extends State<BillingPage> {
                       return const Iterable<
                           CustomerListModelData>.empty(); // Return empty if no customers found
                     },
-                    displayStringForOption: (CustomerListModelData customer) =>
+                        displayStringForOption:
+                            (CustomerListModelData customer) =>
                         "${customer.name} ${customer.phone}",
                     onSelected: (CustomerListModelData selection) {
-                      debugPrint("===== NORMAL CUSTOMER SELECTION START =====");
+                          debugPrint(
+                              "===== NORMAL CUSTOMER SELECTION START =====");
                       debugPrint("👤 CUSTOMER SELECTED:");
                       debugPrint("  - Customer ID: ${selection.id}");
                       debugPrint("  - Customer Name: ${selection.name}");
@@ -2659,7 +2590,8 @@ class BillingPageState extends State<BillingPage> {
                           .setSelectedCustomer(selection);
 
                       String? accessToken =
-                          Provider.of<AuthModel>(context, listen: false).token;
+                              Provider.of<AuthModel>(context, listen: false)
+                                  .token;
                       // debugPrint("accessToken From AuthModel $accessToken");
                       Provider.of<CartProvider>(context, listen: false)
                           .fetchCartDataFromApi(
@@ -2669,7 +2601,8 @@ class BillingPageState extends State<BillingPage> {
                       debugPrint("📝 BEFORE setState:");
                       debugPrint(
                           "  - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
-                      debugPrint("  - mobileNumberText: '$mobileNumberText'");
+                          debugPrint(
+                              "  - mobileNumberText: '$mobileNumberText'");
 
                       setState(() {
                         mobileNumberText = "";
@@ -2679,12 +2612,15 @@ class BillingPageState extends State<BillingPage> {
                         // **FIX: Update our class controller for consistency**
                         mobileNumberTextController.text =
                             "${selection.name} ${selection.phone}";
+                        // Mark as manually selected
+                        _isCustomerManuallySelected = true;
                       });
 
                       debugPrint("📝 AFTER setState:");
                       debugPrint(
                           "  - mobileNumberText set to: '$mobileNumberText'");
-                      debugPrint("  - selectedCustomerID: $selectedCustomerID");
+                          debugPrint(
+                              "  - selectedCustomerID: $selectedCustomerID");
                       debugPrint(
                           "  - selectedCustomerPhone: $selectedCustomerPhone");
                       debugPrint(
@@ -2692,7 +2628,8 @@ class BillingPageState extends State<BillingPage> {
                       debugPrint(
                           "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
                       debugPrint("  - isCustomerFound: $isCustomerFound");
-                      debugPrint("===== NORMAL CUSTOMER SELECTION END =====");
+                          debugPrint(
+                              "===== NORMAL CUSTOMER SELECTION END =====");
                     },
                     fieldViewBuilder: (BuildContext context,
                         TextEditingController autoCompleteController,
@@ -2707,7 +2644,8 @@ class BillingPageState extends State<BillingPage> {
                         debugPrint(
                             "🔄 SYNC: Setting autocomplete controller text to: '$mobileNumberText'");
                         WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (autoCompleteController.text != mobileNumberText) {
+                              if (autoCompleteController.text !=
+                                  mobileNumberText) {
                             autoCompleteController.text = mobileNumberText!;
                           }
                         });
@@ -2721,15 +2659,18 @@ class BillingPageState extends State<BillingPage> {
                               setState(() {
                                 if (_highlightedCustomerIndex == null) {
                                   _highlightedCustomerIndex = 0;
-                                } else if (_currentCustomerOptions.isNotEmpty &&
+                                    } else if (_currentCustomerOptions
+                                            .isNotEmpty &&
                                     _highlightedCustomerIndex! <
-                                        _currentCustomerOptions.length - 1) {
+                                            _currentCustomerOptions.length -
+                                                1) {
                                   _highlightedCustomerIndex =
                                       _highlightedCustomerIndex! + 1;
                                 }
                               });
                               // Scroll to show the highlighted item
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
                                 _scrollToHighlightedCustomer();
                               });
                             } else if (event.logicalKey ==
@@ -2743,7 +2684,8 @@ class BillingPageState extends State<BillingPage> {
                                 }
                               });
                               // Scroll to show the highlighted item
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
                                 _scrollToHighlightedCustomer();
                               });
                             } else if (event.logicalKey ==
@@ -2754,12 +2696,13 @@ class BillingPageState extends State<BillingPage> {
                                   _highlightedCustomerIndex! <
                                       _currentCustomerOptions.length) {
                                 // Get the selected customer
-                                final selectedCust = _currentCustomerOptions[
+                                    final selectedCust =
+                                        _currentCustomerOptions[
                                     _highlightedCustomerIndex!];
 
                                 // Process the selection - this should match the onSelected behavior
-                                String? accessToken = Provider.of<AuthModel>(
-                                        context,
+                                    String? accessToken =
+                                        Provider.of<AuthModel>(context,
                                         listen: false)
                                     .token;
                                 Provider.of<CartProvider>(context,
@@ -2777,9 +2720,11 @@ class BillingPageState extends State<BillingPage> {
                                 setState(() {
                                   mobileNumberText = "";
                                   selectedCustomerID = selectedCust.id!;
-                                  selectedCustomerPhone = selectedCust.phone;
+                                      selectedCustomerPhone =
+                                          selectedCust.phone;
                                   selectedCustomer = selectedCust;
                                   isCustomerFound = true;
+                                  _isCustomerManuallySelected = true; // Mark as manually selected
                                 });
 
                                 // Unfocus to close the dropdown
@@ -2807,8 +2752,8 @@ class BillingPageState extends State<BillingPage> {
                                 maxHeight: 25,
                                 maxWidth:
                                     30), // Constrains the suffix icon size
-                            suffixIcon:
-                                (isCustomerFound || selectedCustomerID != null)
+                                suffixIcon: (isCustomerFound ||
+                                        selectedCustomerID != null)
                                     ? const Padding(
                                         padding: EdgeInsets.only(right: 8.0),
                                         child: Icon(
@@ -2830,6 +2775,16 @@ class BillingPageState extends State<BillingPage> {
                               isCustomerFound = false;
                               // **FIX: Also update our class controller for consistency**
                               mobileNumberTextController.text = value;
+                              
+                              // Mark as manually selected if user is typing a phone number
+                              if (value.isNotEmpty && value.length >= 10) {
+                                _isCustomerManuallySelected = true;
+                                debugPrint("  - Marked as manually selected (phone entry)");
+                              } else if (value.isEmpty) {
+                                // Reset manual selection if field is cleared
+                                _isCustomerManuallySelected = false;
+                                debugPrint("  - Reset manual selection (field cleared)");
+                              }
                             });
                             debugPrint(
                                 "  - Set mobileNumberText: '$mobileNumberText'");
@@ -2855,14 +2810,16 @@ class BillingPageState extends State<BillingPage> {
                           child: Container(
                             width: MediaQuery.of(context).size.width / 3,
                             color: Colors.white,
-                            constraints: const BoxConstraints(maxHeight: 200),
+                                constraints:
+                                    const BoxConstraints(maxHeight: 200),
                             child: ListView.builder(
                               controller: _customerScrollController,
                               padding: const EdgeInsets.all(8.0),
                               shrinkWrap: true,
                               physics: const BouncingScrollPhysics(),
                               itemCount: options.length,
-                              itemBuilder: (BuildContext context, int index) {
+                                  itemBuilder:
+                                      (BuildContext context, int index) {
                                 final CustomerListModelData option =
                                     options.elementAt(index);
                                 final bool isHighlighted =
@@ -2899,7 +2856,8 @@ class BillingPageState extends State<BillingPage> {
                                             0.27,
                                             isHighlighted
                                                 ? Colors.blue.shade800
-                                                : Colors.black.withOpacity(.5),
+                                                    : Colors.black
+                                                        .withOpacity(.5),
                                           ),
                                         ),
                                         hoverColor: Colors.grey[200],
@@ -2944,6 +2902,8 @@ class BillingPageState extends State<BillingPage> {
                 selectedCustomer = null;
                 isCustomerFound = false;
                 salesExecutivemobileNumberText = "";
+                _isCustomerManuallySelected = false; // Reset the flag
+                debugPrint("  - Reset manual selection (clear button pressed)");
               }),
 
               debugPrint("  - After clear:"),
@@ -2993,6 +2953,73 @@ class BillingPageState extends State<BillingPage> {
         //     ),
         //   ),
         // ],
+          ],
+        ),
+        // Customer Balance Display
+        if (selectedCustomer?.balance != null && _shouldShowCustomerBalance())
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0, left: 5.0),
+            child: _buildCustomerBalance(selectedCustomer!.balance!),
+          ),
+      ],
+    );
+  }
+
+  bool _shouldShowCustomerBalance() {
+    // Don't show balance if no customer is selected
+    if (selectedCustomer?.phone == null) {
+      return false;
+    }
+
+    // Get current sales executive
+    final salesExecutiveProvider =
+        Provider.of<SalesExecutiveProvider>(context, listen: false);
+    final currentExecutive = salesExecutiveProvider.getCurrentUser(context);
+
+    // Don't show balance if selected customer's phone matches current sales executive's phone
+    if (currentExecutive?.phone != null &&
+        selectedCustomer!.phone == currentExecutive!.phone) {
+      return false;
+    }
+
+    return true;
+  }
+
+  Widget _buildCustomerBalance(double balance) {
+    Color balanceColor;
+    String balanceText;
+
+    if (balance > 0) {
+      balanceColor = Colors.green;
+      balanceText = "+${balance.toStringAsFixed(2)}";
+    } else if (balance < 0) {
+      balanceColor = Colors.red;
+      balanceText = balance.toStringAsFixed(2);
+    } else {
+      balanceColor = Colors.black;
+      balanceText = balance.toStringAsFixed(2);
+    }
+
+    return Row(
+      children: [
+        Text(
+          'Balance: ',
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.14,
+            Colors.grey.shade600,
+          ),
+        ),
+        Text(
+          'INR $balanceText',
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s12,
+            0.14,
+            balanceColor,
+          ),
+        ),
       ],
     );
   }
@@ -3083,6 +3110,14 @@ class BillingPageState extends State<BillingPage> {
         _paidAmountController.clear();
         _balanceAmount = 0;
         _userChangedPaidAmount = false; // Reset paid amount flag
+
+        // Reset multi-payment fields
+        _isCashSelected = true;
+        _isCardSelected = false;
+        _isUpiSelected = false;
+        _cashAmountController.clear();
+        _cardAmountController.clear();
+        _upiAmountController.clear();
         _autocompleteProductKey = GlobalKey();
         quantityController.clear();
         barcodeController.clear();
@@ -3306,6 +3341,7 @@ class BillingPageState extends State<BillingPage> {
         _userChangedPaidAmount = false; // Reset paid amount flag
         _carNumberController.clear();
         _commentController.clear();
+        _isCustomerManuallySelected = false; // Reset manual selection after save
       });
 
       resetAutocomplete();
@@ -3525,6 +3561,7 @@ class BillingPageState extends State<BillingPage> {
         _userChangedPaidAmount = false; // Reset paid amount flag
         _carNumberController.clear();
         _commentController.clear();
+        _isCustomerManuallySelected = false; // Reset manual selection after save
       });
 
       resetAutocomplete();
@@ -3543,6 +3580,20 @@ class BillingPageState extends State<BillingPage> {
         isLoadingSaveOrderAndPrint = false;
       });
     }
+  }
+
+  // Reset manual selection when loading an order
+  void _resetManualSelection() {
+    setState(() {
+      _isCustomerManuallySelected = false;
+    });
+  }
+
+  // Check if we have a manually entered phone number
+  bool _hasManuallyEnteredPhone() {
+    return mobileNumberText?.isNotEmpty == true && 
+           mobileNumberText!.length >= 10 && 
+           selectedCustomerID == null;
   }
 
   // Function to load a saved order for editing
@@ -4380,23 +4431,242 @@ class BillingPageState extends State<BillingPage> {
     });
   }
 
+  // Multi-payment helper methods
+  void _updateBalanceAmount() {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    double cartTotal = localProductProvider.cartTotal;
+
+    double totalPaid = _getTotalPaidAmount();
+    double balance = totalPaid - cartTotal;
+
+    if (balance < 0) {
+      balance = 0.0;
+    }
+
+    setState(() {
+      _balanceAmount = balance;
+    });
+  }
+
+  double _getTotalPaidAmount() {
+    double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
+    double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
+    double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
+    return cashAmount + cardAmount + upiAmount;
+  }
+
+  void _autoFillPaymentAmount() {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    double cartTotal = localProductProvider.cartTotal;
+    double totalPaid = _getTotalPaidAmount();
+    double remaining = cartTotal - totalPaid;
+
+    if (remaining > 0) {
+      // Find the first selected payment method that has no amount and fill it
+      if (_isCashSelected && _cashAmountController.text.isEmpty) {
+        _cashAmountController.text = remaining.toStringAsFixed(2);
+      } else if (_isCardSelected && _cardAmountController.text.isEmpty) {
+        _cardAmountController.text = remaining.toStringAsFixed(2);
+      } else if (_isUpiSelected && _upiAmountController.text.isEmpty) {
+        _upiAmountController.text = remaining.toStringAsFixed(2);
+      }
+    }
+  }
+
+  List<String> _getSelectedPaymentMethods() {
+    List<String> methods = [];
+    if (_isCashSelected &&
+        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
+      methods.add("CASH");
+    }
+    if (_isCardSelected &&
+        (double.tryParse(_cardAmountController.text) ?? 0) > 0) {
+      methods.add("CARD");
+    }
+    if (_isUpiSelected &&
+        (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
+      methods.add("UPI");
+    }
+    return methods;
+  }
+
+  List<Map<String, dynamic>> _getPaidMethods() {
+    List<Map<String, dynamic>> paidMethods = [];
+
+    if (_isCashSelected &&
+        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
+      paidMethods.add({
+        "method": "CASH",
+        "amount": double.tryParse(_cashAmountController.text) ?? 0,
+      });
+    }
+
+    if (_isCardSelected &&
+        (double.tryParse(_cardAmountController.text) ?? 0) > 0) {
+      paidMethods.add({
+        "method": "CARD",
+        "amount": double.tryParse(_cardAmountController.text) ?? 0,
+      });
+    }
+
+    if (_isUpiSelected &&
+        (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
+      paidMethods.add({
+        "method": "UPI",
+        "amount": double.tryParse(_upiAmountController.text) ?? 0,
+      });
+    }
+
+    return paidMethods;
+  }
+
+  Widget _buildPaymentMethodRow({
+    required bool isSelected,
+    required String icon,
+    required String label,
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required Size size,
+    required VoidCallback onToggle,
+    required void Function(String?) onAmountChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5.0),
+      child: Row(
+        children: [
+          // Payment method icon (visual indicator only)
+          BuildBoxShadowContainer(
+            border: isSelected
+                ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
+                : Border.all(color: Colors.grey.shade300),
+            padding: const EdgeInsets.all(8),
+            blurRadius: 4,
+            circleRadius: 5,
+            width: 70,
+            child: Column(
+              children: [
+                WebsafeSvg.asset(
+                  icon,
+                  width: 14,
+                  height: 14,
+                  color: isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                  fit: BoxFit.none,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s9,
+                    0.12,
+                    isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 10),
+
+          // Amount input field - always visible
+          Expanded(
+            child: buildColumnWidgetForTextFields(
+              controller: controller,
+              size: size,
+              height: size.height * .05,
+              hintText: 'Enter $label amount',
+              keyboardType: TextInputType.number,
+              focusNode: focusNode,
+              onchanged: (value) {
+                // Auto-enable/disable based on amount
+                double amount = double.tryParse(value ?? '') ?? 0;
+                if (amount > 0 && !isSelected) {
+                  onToggle(); // Enable the payment method
+                } else if (amount == 0 && isSelected) {
+                  onToggle(); // Disable the payment method
+                }
+                onAmountChanged(value);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentSummaryRow(LocalProductProvider localProductProvider) {
+    double totalPaid = _getTotalPaidAmount();
+
+    return Column(
+      children: [
+        BuildPaymentRow(
+          amount: "INR ${totalPaid.toStringAsFixed(2)}",
+          title: "Total Paid",
+          padding: const EdgeInsets.only(left: 5.0, right: 5.0),
+          firstRowTextStyle: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s14,
+            0.18,
+            ColorManager.kPrimaryColor,
+          ),
+          secondRowTextStyle: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s14,
+            0.18,
+            ColorManager.kPrimaryColor,
+          ),
+          color: ColorManager.kPrimaryColor,
+        ),
+        const SizedBox(height: 8),
+        BuildPaymentRow(
+          amount: "INR ${_balanceAmount.toStringAsFixed(2)}",
+          title: "Balance Amount",
+          padding: const EdgeInsets.only(left: 5.0, right: 5.0),
+          secondRowTextStyle: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s15,
+            0.18,
+            _balanceAmount > 0
+                ? ColorManager.kButtonGreen
+                : ColorManager.textColorRed,
+          ),
+          firstRowTextStyle: buildCustomStyle(
+            FontWeightManager.bold,
+            FontSize.s15,
+            0.23,
+            _balanceAmount > 0
+                ? ColorManager.kButtonGreen
+                : ColorManager.textColorRed,
+          ),
+          color: _balanceAmount > 0
+              ? ColorManager.kButtonGreen
+              : ColorManager.textColorRed,
+        ),
+      ],
+    );
+  }
+
   Widget _buildQuickAccessIcons() {
-    return Row(
+    return Consumer<LocalProductProvider>(
+      builder: (context, localProductProvider, child) {
+        double totalPaid = _getTotalPaidAmount();
+        double cartTotal = localProductProvider.cartTotal;
+        double balance = totalPaid - cartTotal;
+        if (balance < 0) balance = 0.0;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
         const SizedBox(width: 5),
         // Payment Method Icon
         _buildQuickAccessIcon(
-          icon: iconColor == 1
-              ? Icons.payments
-              : iconColor == 2
-                  ? Icons.credit_card
-                  : Icons.phone_android,
-          label: iconColor == 1
-              ? 'Cash'
-              : iconColor == 2
-                  ? 'Card'
-                  : 'UPI',
+                  icon: _getPaymentIcon(),
+                  label: _getPaymentLabel(),
           color: ColorManager.kPrimaryColor,
           onTap: () => _showPaymentMethodModal(),
         ),
@@ -4417,15 +4687,128 @@ class BillingPageState extends State<BillingPage> {
         const SizedBox(width: 12),
         // Coupon Icon
         _buildQuickAccessIcon(
-          icon: isCouponApplied ? Icons.discount : Icons.local_offer_outlined,
+                  icon: isCouponApplied
+                      ? Icons.discount
+                      : Icons.local_offer_outlined,
           label: isCouponApplied ? 'Applied' : 'Coupon',
           color: isCouponApplied
               ? ColorManager.kButtonGreen
               : ColorManager.kButtonYellow,
           onTap: () => _showCouponModal(),
-        ),
-      ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Payment Summary in minimized view
+            Padding(
+              padding: const EdgeInsets.only(left: 5.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Total Paid: ',
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s13,
+                          0.14,
+                          ColorManager.textColor,
+                        ),
+                      ),
+                      Text(
+                        'INR ${totalPaid.toStringAsFixed(2)}',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s13,
+                          0.14,
+                          ColorManager.kPrimaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 10),
+                  Row(
+                    children: [
+                      Text(
+                        'Balance: ',
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s13,
+                          0.14,
+                          ColorManager.textColor,
+                        ),
+                      ),
+                      Text(
+                        'INR ${balance.toStringAsFixed(2)}',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s13,
+                          0.14,
+                          balance > 0
+                              ? ColorManager.kButtonGreen
+                              : ColorManager.textColorRed,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  IconData _getPaymentIcon() {
+    List<String> activeMethods = [];
+    if (_isCashSelected &&
+        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
+      activeMethods.add('Cash');
+    }
+    if (_isCardSelected &&
+        (double.tryParse(_cardAmountController.text) ?? 0) > 0) {
+      activeMethods.add('Card');
+    }
+    if (_isUpiSelected &&
+        (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
+      activeMethods.add('UPI');
+    }
+
+    if (activeMethods.length > 1) {
+      return Icons.account_balance_wallet; // Multiple payment methods
+    } else if (activeMethods.contains('Cash')) {
+      return Icons.payments;
+    } else if (activeMethods.contains('Card')) {
+      return Icons.credit_card;
+    } else if (activeMethods.contains('UPI')) {
+      return Icons.phone_android;
+    }
+    return Icons.payment; // Default
+  }
+
+  String _getPaymentLabel() {
+    List<String> activeMethods = [];
+    if (_isCashSelected &&
+        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
+      activeMethods.add('Cash');
+    }
+    if (_isCardSelected &&
+        (double.tryParse(_cardAmountController.text) ?? 0) > 0) {
+      activeMethods.add('Card');
+    }
+    if (_isUpiSelected &&
+        (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
+      activeMethods.add('UPI');
+    }
+
+    if (activeMethods.length > 1) {
+      return 'Multi'; // Multiple payment methods
+    } else if (activeMethods.length == 1) {
+      return activeMethods.first;
+    }
+    return 'Payment'; // Default
   }
 
   Widget _buildQuickAccessIcon({
@@ -4468,29 +4851,28 @@ class BillingPageState extends State<BillingPage> {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
-    // Ensure paid amount is set based on current payment method
-    String currentPaidAmount = _paidAmountController.text;
-    if (currentPaidAmount.isEmpty || !_userChangedPaidAmount) {
-      // If no paid amount set or it wasn't manually changed, set it to cart total
-      currentPaidAmount = localProductProvider.cartTotal.toStringAsFixed(3);
-    }
-
     showDialog(
       context: context,
       builder: (context) => PaymentMethodModal(
-        initialIconColor: iconColor,
+        initialIsCashSelected: _isCashSelected,
+        initialIsCardSelected: _isCardSelected,
+        initialIsUpiSelected: _isUpiSelected,
+        initialCashAmount: _cashAmountController.text,
+        initialCardAmount: _cardAmountController.text,
+        initialUpiAmount: _upiAmountController.text,
         initialTransactionNumber: _transactionNumberController.text,
-        initialPaidAmount: currentPaidAmount,
         cartTotal: localProductProvider.cartTotal,
-        onPaymentMethodSelected:
-            (selectedIconColor, transactionNumber, paidAmount, balance) {
+        onPaymentMethodSelected: (isCash, isCard, isUpi, cashAmount, cardAmount,
+            upiAmount, transactionNumber) {
           setState(() {
-            iconColor = selectedIconColor;
+            _isCashSelected = isCash;
+            _isCardSelected = isCard;
+            _isUpiSelected = isUpi;
+            _cashAmountController.text = cashAmount;
+            _cardAmountController.text = cardAmount;
+            _upiAmountController.text = upiAmount;
             _transactionNumberController.text = transactionNumber;
-            _paidAmountController.text = paidAmount;
-            _balanceAmount = balance;
-            _userChangedPaidAmount =
-                true; // Mark as manually changed since it's from modal
+            _updateBalanceAmount();
           });
         },
       ),
@@ -4735,6 +5117,14 @@ class BillingPageState extends State<BillingPage> {
     debugPrint(
         "🔄 BILLING: Sales executive changed, updating default customer...");
 
+    // Don't reset if customer was manually selected (either from list or phone entry)
+    if (_isCustomerManuallySelected && (selectedCustomerID != null || mobileNumberText?.isNotEmpty == true)) {
+      debugPrint("🛡️ Customer manually selected, skipping reset");
+      debugPrint("  - selectedCustomerID: $selectedCustomerID");
+      debugPrint("  - mobileNumberText: '$mobileNumberText'");
+      return;
+    }
+
     // Clear current customer selection
     Provider.of<CustomerSelectionProvider>(context, listen: false)
         .clearSelectedCustomer();
@@ -4749,6 +5139,7 @@ class BillingPageState extends State<BillingPage> {
       salesExecutivemobileNumberText = "";
       mobileNumberTextController.clear();
       _autocompletePhoneKey = GlobalKey(); // Reset autocomplete
+      _isCustomerManuallySelected = false;
     });
 
     // Re-fetch customers to set new default based on new executive
@@ -4848,19 +5239,28 @@ class BillingPageState extends State<BillingPage> {
   }
 }
 
-// Payment Method Modal
+// Multi-Payment Method Modal
 class PaymentMethodModal extends StatefulWidget {
-  final int initialIconColor;
+  final bool initialIsCashSelected;
+  final bool initialIsCardSelected;
+  final bool initialIsUpiSelected;
+  final String initialCashAmount;
+  final String initialCardAmount;
+  final String initialUpiAmount;
   final String initialTransactionNumber;
-  final String initialPaidAmount;
   final double cartTotal;
-  final Function(int, String, String, double) onPaymentMethodSelected;
+  final Function(bool, bool, bool, String, String, String, String)
+      onPaymentMethodSelected;
 
   const PaymentMethodModal({
     Key? key,
-    required this.initialIconColor,
+    required this.initialIsCashSelected,
+    required this.initialIsCardSelected,
+    required this.initialIsUpiSelected,
+    required this.initialCashAmount,
+    required this.initialCardAmount,
+    required this.initialUpiAmount,
     required this.initialTransactionNumber,
-    required this.initialPaidAmount,
     required this.cartTotal,
     required this.onPaymentMethodSelected,
   }) : super(key: key);
@@ -4870,36 +5270,70 @@ class PaymentMethodModal extends StatefulWidget {
 }
 
 class _PaymentMethodModalState extends State<PaymentMethodModal> {
-  late int iconColor;
+  late bool isCashSelected;
+  late bool isCardSelected;
+  late bool isUpiSelected;
+  late TextEditingController cashAmountController;
+  late TextEditingController cardAmountController;
+  late TextEditingController upiAmountController;
   late TextEditingController transactionNumberController;
-  late TextEditingController paidAmountController;
-  late FocusNode paidAmountFocusNode;
+  late FocusNode cashAmountFocusNode;
+  late FocusNode cardAmountFocusNode;
+  late FocusNode upiAmountFocusNode;
   double balanceAmount = 0;
 
   @override
   void initState() {
     super.initState();
-    iconColor = widget.initialIconColor;
+
+    // Initialize selection states
+    isCashSelected = widget.initialIsCashSelected;
+    isCardSelected = widget.initialIsCardSelected;
+    isUpiSelected = widget.initialIsUpiSelected;
+
+    // Initialize controllers
+    cashAmountController =
+        TextEditingController(text: widget.initialCashAmount);
+    cardAmountController =
+        TextEditingController(text: widget.initialCardAmount);
+    upiAmountController = TextEditingController(text: widget.initialUpiAmount);
     transactionNumberController =
         TextEditingController(text: widget.initialTransactionNumber);
 
-    // Initialize paid amount - if empty or zero, set to cart total
-    String initialPaidAmount = widget.initialPaidAmount;
-    if (initialPaidAmount.isEmpty || double.tryParse(initialPaidAmount) == 0) {
-      initialPaidAmount = widget.cartTotal.toStringAsFixed(3);
-    }
-    paidAmountController = TextEditingController(text: initialPaidAmount);
-    paidAmountFocusNode = FocusNode();
+    // Initialize focus nodes
+    cashAmountFocusNode = FocusNode();
+    cardAmountFocusNode = FocusNode();
+    upiAmountFocusNode = FocusNode();
 
     // Calculate initial balance
     _calculateBalance();
 
-    // Add listener for paid amount focus
-    paidAmountFocusNode.addListener(() {
-      if (paidAmountFocusNode.hasFocus) {
-        paidAmountController.selection = TextSelection(
+    // Add focus listeners
+    cashAmountFocusNode.addListener(() {
+      if (cashAmountFocusNode.hasFocus &&
+          cashAmountController.text.isNotEmpty) {
+        cashAmountController.selection = TextSelection(
           baseOffset: 0,
-          extentOffset: paidAmountController.text.length,
+          extentOffset: cashAmountController.text.length,
+        );
+      }
+    });
+
+    cardAmountFocusNode.addListener(() {
+      if (cardAmountFocusNode.hasFocus &&
+          cardAmountController.text.isNotEmpty) {
+        cardAmountController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: cardAmountController.text.length,
+        );
+      }
+    });
+
+    upiAmountFocusNode.addListener(() {
+      if (upiAmountFocusNode.hasFocus && upiAmountController.text.isNotEmpty) {
+        upiAmountController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: upiAmountController.text.length,
         );
       }
     });
@@ -4907,21 +5341,49 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
   @override
   void dispose() {
+    cashAmountController.dispose();
+    cardAmountController.dispose();
+    upiAmountController.dispose();
     transactionNumberController.dispose();
-    paidAmountController.dispose();
-    paidAmountFocusNode.dispose();
+    cashAmountFocusNode.dispose();
+    cardAmountFocusNode.dispose();
+    upiAmountFocusNode.dispose();
     super.dispose();
   }
 
   void _calculateBalance() {
-    double paidAmount = double.tryParse(paidAmountController.text) ?? 0.00;
-    double balance = paidAmount - widget.cartTotal;
+    double totalPaid = _getTotalPaidAmount();
+    double balance = totalPaid - widget.cartTotal;
     if (balance < 0) {
-      balance = 0.00;
+      balance = 0.0;
     }
     setState(() {
       balanceAmount = balance;
     });
+  }
+
+  double _getTotalPaidAmount() {
+    double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
+    double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
+    double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
+    return cashAmount + cardAmount + upiAmount;
+  }
+
+  void _autoFillPaymentAmount() {
+    double totalPaid = _getTotalPaidAmount();
+    double remaining = widget.cartTotal - totalPaid;
+
+    if (remaining > 0) {
+      // Find the first selected payment method that has no amount and fill it
+      if (isCashSelected && cashAmountController.text.isEmpty) {
+        cashAmountController.text = remaining.toStringAsFixed(2);
+      } else if (isCardSelected && cardAmountController.text.isEmpty) {
+        cardAmountController.text = remaining.toStringAsFixed(2);
+      } else if (isUpiSelected && upiAmountController.text.isEmpty) {
+        upiAmountController.text = remaining.toStringAsFixed(2);
+      }
+    }
+    _calculateBalance();
   }
 
   @override
@@ -4930,7 +5392,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: BuildBoxShadowContainer(
-        width: 450,
+        width: 550,
         circleRadius: 12,
         color: Colors.white,
         padding: const EdgeInsets.all(20),
@@ -4942,7 +5404,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Payment Method',
+                  'Payment Methods',
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     FontSize.s16,
@@ -4957,76 +5419,161 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               ],
             ),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                _buildPaymentOption(1, 'Cash', ImageAssets.cashIcon),
-                const SizedBox(width: 10),
-                _buildPaymentOption(2, 'Card', ImageAssets.creditCardIcon),
-                const SizedBox(width: 10),
-                _buildPaymentOption(3, 'UPI', ImageAssets.creditCardIcon),
-              ],
+
+            // Cash Payment
+            _buildModalPaymentRow(
+              isSelected: isCashSelected,
+              icon: ImageAssets.cashIcon,
+              label: 'Cash',
+              controller: cashAmountController,
+              focusNode: cashAmountFocusNode,
+              size: size,
+              onToggle: () {
+                setState(() {
+                  isCashSelected = !isCashSelected;
+                  if (!isCashSelected) {
+                    cashAmountController.clear();
+                  } else {
+                    _autoFillPaymentAmount();
+                  }
+                  _calculateBalance();
+                });
+              },
             ),
-            if (iconColor != 1) ...[
-              const SizedBox(height: 20),
+
+            const SizedBox(height: 15),
+
+            // Card Payment
+            _buildModalPaymentRow(
+              isSelected: isCardSelected,
+              icon: ImageAssets.creditCardIcon,
+              label: 'Card',
+              controller: cardAmountController,
+              focusNode: cardAmountFocusNode,
+                size: size,
+              onToggle: () {
+                setState(() {
+                  isCardSelected = !isCardSelected;
+                  if (!isCardSelected) {
+                    cardAmountController.clear();
+                  } else {
+                    _autoFillPaymentAmount();
+                  }
+                  _calculateBalance();
+                });
+              },
+            ),
+
+            const SizedBox(height: 15),
+
+            // UPI Payment
+            _buildModalPaymentRow(
+              isSelected: isUpiSelected,
+              icon: ImageAssets.creditCardIcon,
+              label: 'UPI',
+              controller: upiAmountController,
+              focusNode: upiAmountFocusNode,
+              size: size,
+              onToggle: () {
+                setState(() {
+                  isUpiSelected = !isUpiSelected;
+                  if (!isUpiSelected) {
+                    upiAmountController.clear();
+                  } else {
+                    _autoFillPaymentAmount();
+                  }
+                  _calculateBalance();
+                });
+              },
+            ),
+
+            const SizedBox(height: 15),
+
+            // Transaction Reference Field - Show only if Card or UPI is selected
+            if (isCardSelected || isUpiSelected) ...[
+              Text(
+                'Transaction Reference',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s13,
+                  0.16,
+                  ColorManager.textColor,
+                ),
+              ),
+              const SizedBox(height: 8),
               buildColumnWidgetForTextFields(
                 controller: transactionNumberController,
                 size: size,
+                width: 600,
                 height: size.height * .06,
-                hintText: 'Tr Reference No:',
+                hintText: 'Enter transaction reference number',
               ),
+              const SizedBox(height: 15),
             ],
-            const SizedBox(height: 20),
-            // Paid Amount Section
-            BuildPaymentRow(
-              amount: "",
-              title: "Paid Amount",
-              firstRowTextStyle: buildCustomStyle(
-                FontWeightManager.semiBold,
+
+            // Payment Summary
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total Required: INR ${widget.cartTotal.toStringAsFixed(2)}',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
                 FontSize.s14,
-                0.21,
+                    0.18,
                 ColorManager.textColor,
               ),
-              color: ColorManager.textColor,
+                ),
+                Text(
+                  'Total Paid: INR ${_getTotalPaidAmount().toStringAsFixed(2)}',
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s14,
+                    0.18,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
+              ],
             ),
+
             const SizedBox(height: 10),
-            buildColumnWidgetForTextFields(
-              controller: paidAmountController,
-              size: size,
-              onchanged: (value) {
-                _calculateBalance();
-              },
-              focusNode: paidAmountFocusNode,
-              height: size.height * .06,
-              hintText: 'Enter Paid Amount Here:',
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 15),
+
             BuildPaymentRow(
-              amount: "INR ${balanceAmount.toStringAsFixed(3)}",
-              title: "Balance amount",
+              amount: "INR ${balanceAmount.toStringAsFixed(2)}",
+              title: "Balance Amount",
               secondRowTextStyle: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s15,
                 0.18,
-                ColorManager.textColorRed,
+                balanceAmount > 0
+                    ? ColorManager.kButtonGreen
+                    : ColorManager.textColorRed,
               ),
               firstRowTextStyle: buildCustomStyle(
                 FontWeightManager.bold,
                 FontSize.s15,
                 0.23,
-                ColorManager.textColorRed,
+                balanceAmount > 0
+                    ? ColorManager.kButtonGreen
+                    : ColorManager.textColorRed,
               ),
-              color: ColorManager.textColorRed,
+              color: balanceAmount > 0
+                  ? ColorManager.kButtonGreen
+                  : ColorManager.textColorRed,
             ),
+
             const SizedBox(height: 20),
             CustomRoundButton(
-              title: "Apply",
+              title: "Apply Payment Methods",
               fct: () {
                 widget.onPaymentMethodSelected(
-                  iconColor,
+                  isCashSelected,
+                  isCardSelected,
+                  isUpiSelected,
+                  cashAmountController.text,
+                  cardAmountController.text,
+                  upiAmountController.text,
                   transactionNumberController.text,
-                  paidAmountController.text,
-                  balanceAmount,
                 );
                 Navigator.of(context).pop();
               },
@@ -5040,34 +5587,33 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     );
   }
 
-  Widget _buildPaymentOption(int value, String label, String icon) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            iconColor = value;
-            // Auto-fill paid amount when payment method is selected
-            if (paidAmountController.text.isEmpty ||
-                double.tryParse(paidAmountController.text) == 0) {
-              paidAmountController.text = widget.cartTotal.toStringAsFixed(3);
-              _calculateBalance();
-            }
-          });
-        },
-        child: BuildBoxShadowContainer(
-          border: iconColor == value
-              ? Border.all(color: ColorManager.kPrimaryColor)
-              : null,
+  Widget _buildModalPaymentRow({
+    required bool isSelected,
+    required String icon,
+    required String label,
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required Size size,
+    required VoidCallback onToggle,
+  }) {
+    return Row(
+      children: [
+        // Payment method icon (visual indicator only)
+        BuildBoxShadowContainer(
+          border: isSelected
+              ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
+              : Border.all(color: Colors.grey.shade300),
           padding: const EdgeInsets.all(12),
           blurRadius: 4,
           circleRadius: 5,
+          width: 90,
           child: Column(
             children: [
               WebsafeSvg.asset(
                 icon,
-                width: 20,
-                height: 20,
-                color: Colors.black,
+                width: 18,
+                height: 18,
+                color: isSelected ? ColorManager.kPrimaryColor : Colors.grey,
                 fit: BoxFit.none,
               ),
               const SizedBox(height: 4),
@@ -5075,15 +5621,39 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                 label,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
-                  FontSize.s12,
+                  FontSize.s11,
                   0.12,
-                  Colors.black,
+                  isSelected ? ColorManager.kPrimaryColor : Colors.grey,
                 ),
               ),
             ],
           ),
         ),
-      ),
+
+        const SizedBox(width: 15),
+
+        // Amount input field - always visible
+        Expanded(
+          child: buildColumnWidgetForTextFields(
+            controller: controller,
+            size: size,
+            height: size.height * .06,
+            hintText: 'Enter $label amount',
+            keyboardType: TextInputType.number,
+            focusNode: focusNode,
+            onchanged: (value) {
+              // Auto-enable/disable based on amount
+              double amount = double.tryParse(value ?? '') ?? 0;
+              if (amount > 0 && !isSelected) {
+                onToggle(); // Enable the payment method
+              } else if (amount == 0 && isSelected) {
+                onToggle(); // Disable the payment method
+              }
+              _calculateBalance();
+            },
+          ),
+        ),
+      ],
     );
   }
 }
