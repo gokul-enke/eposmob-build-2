@@ -12,7 +12,6 @@ import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
-import 'package:pos_machine/models/delivery_method.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
@@ -21,7 +20,6 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
-import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
@@ -42,256 +40,17 @@ import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 
+// Import modals
+import 'package:pos_machine/screens/billing/widgets/payment_method_modal.dart';
+import 'package:pos_machine/screens/billing/widgets/delivery_method_modal.dart';
+import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
+import 'package:pos_machine/screens/billing/widgets/price_fields.dart';
+
 class BillingPage extends StatefulWidget {
   const BillingPage({super.key});
 
   @override
   State<BillingPage> createState() => BillingPageState();
-}
-
-// Custom widget for price text field with stable controller and focus node
-class _PriceTextField extends StatefulWidget {
-  final dynamic item;
-  final dynamic localProductProvider;
-
-  const _PriceTextField({
-    Key? key,
-    required this.item,
-    required this.localProductProvider,
-  }) : super(key: key);
-
-  @override
-  State<_PriceTextField> createState() => _PriceTextFieldState();
-}
-
-class _PriceTextFieldState extends State<_PriceTextField> {
-  late TextEditingController controller;
-  late FocusNode focusNode;
-
-  @override
-  void initState() {
-    super.initState();
-    controller = TextEditingController(text: widget.item.price.toString());
-    focusNode = FocusNode();
-  }
-
-  @override
-  void didUpdateWidget(_PriceTextField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Update controller text if price has changed
-    if (oldWidget.item.price != widget.item.price) {
-      controller.text = widget.item.price.toString();
-    }
-  }
-
-  @override
-  void dispose() {
-    controller.dispose();
-    focusNode.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<LocalProductProvider>(
-      builder: (context, localProductProvider, child) {
-        // Check if the price has changed and update the controller if needed
-        final currentPrice = widget.item.price.toString();
-        if (!focusNode.hasFocus && controller.text != currentPrice) {
-          // Only update if user is not currently editing the field
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              controller.text = currentPrice;
-            }
-          });
-        }
-
-        return TextField(
-          textAlign: TextAlign.left,
-          controller: controller,
-          focusNode: focusNode,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(fontSize: 16),
-          decoration: const InputDecoration(
-            isDense: true,
-            contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-            border: InputBorder.none,
-            hintText: 'Price',
-            hintStyle: TextStyle(
-              color: Colors.grey,
-              fontSize: 16,
-            ),
-          ),
-          onTap: () {
-            // Use a post-frame callback to ensure text selection happens after the tap is processed
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (controller.text.isNotEmpty && focusNode.hasFocus) {
-                controller.selection = TextSelection(
-                  baseOffset: 0,
-                  extentOffset: controller.text.length,
-                );
-              }
-            });
-          },
-          onChanged: (newPrice) {
-            // Validate and update immediately on change
-            final parsedPrice = double.tryParse(newPrice);
-            if (parsedPrice != null && parsedPrice >= 0) {
-              widget.localProductProvider.updateItemPrice(
-                widget.item.product.productId!,
-                widget.item.selectedStock,
-                parsedPrice,
-              );
-            } else if (newPrice.isEmpty) {
-              // Allow empty field for editing
-              widget.localProductProvider.updateItemPrice(
-                widget.item.product.productId!,
-                widget.item.selectedStock,
-                0.0,
-              );
-            }
-          },
-          onSubmitted: (newPrice) {
-            // Validate and update on submit
-            final parsedPrice = double.tryParse(newPrice);
-            if (parsedPrice != null && parsedPrice >= 0) {
-              widget.localProductProvider.updateItemPrice(
-                widget.item.product.productId!,
-                widget.item.selectedStock,
-                parsedPrice,
-              );
-            } else {
-              // Revert to original price if invalid
-              controller.text = widget.item.price.toString();
-            }
-          },
-        );
-      },
-    );
-  }
-}
-
-// Custom widget for MRP text field with stable controller and focus node
-class _MrpTextField extends StatefulWidget {
-  final dynamic item;
-  final dynamic localProductProvider;
-
-  const _MrpTextField({
-    Key? key,
-    required this.item,
-    required this.localProductProvider,
-  }) : super(key: key);
-
-  @override
-  State<_MrpTextField> createState() => _MrpTextFieldState();
-}
-
-class _MrpTextFieldState extends State<_MrpTextField> {
-  late TextEditingController controller;
-  late FocusNode focusNode;
-
-  @override
-  void initState() {
-    super.initState();
-    controller =
-        TextEditingController(text: (widget.item.mrp ?? 0.0).toString());
-    focusNode = FocusNode();
-  }
-
-  @override
-  void didUpdateWidget(_MrpTextField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Update controller text if MRP has changed
-    if (oldWidget.item.mrp != widget.item.mrp) {
-      controller.text = (widget.item.mrp ?? 0.0).toString();
-    }
-  }
-
-  @override
-  void dispose() {
-    controller.dispose();
-    focusNode.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<LocalProductProvider>(
-      builder: (context, localProductProvider, child) {
-        // Check if the MRP has changed and update the controller if needed
-        final currentMrp = (widget.item.mrp ?? 0.0).toString();
-        if (!focusNode.hasFocus && controller.text != currentMrp) {
-          // Only update if user is not currently editing the field
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              controller.text = currentMrp;
-            }
-          });
-        }
-
-        return TextField(
-          textAlign: TextAlign.left,
-          controller: controller,
-          focusNode: focusNode,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(fontSize: 16),
-          decoration: const InputDecoration(
-            isDense: true,
-            contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-            border: InputBorder.none,
-            hintText: 'MRP',
-            hintStyle: TextStyle(
-              color: Colors.grey,
-              fontSize: 16,
-            ),
-          ),
-          onTap: () {
-            // Use a post-frame callback to ensure text selection happens after the tap is processed
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (controller.text.isNotEmpty && focusNode.hasFocus) {
-                controller.selection = TextSelection(
-                  baseOffset: 0,
-                  extentOffset: controller.text.length,
-                );
-              }
-            });
-          },
-          onChanged: (newMrp) {
-            // Validate and update immediately on change
-            final parsedMrp = double.tryParse(newMrp);
-            if (parsedMrp != null && parsedMrp >= 0) {
-              widget.localProductProvider.updateItemMrp(
-                widget.item.product.productId!,
-                widget.item.selectedStock,
-                parsedMrp,
-              );
-            } else if (newMrp.isEmpty) {
-              // Allow empty field for editing
-              widget.localProductProvider.updateItemMrp(
-                widget.item.product.productId!,
-                widget.item.selectedStock,
-                0.0,
-              );
-            }
-          },
-          onSubmitted: (newMrp) {
-            // Validate and update on submit
-            final parsedMrp = double.tryParse(newMrp);
-            if (parsedMrp != null && parsedMrp >= 0) {
-              widget.localProductProvider.updateItemMrp(
-                widget.item.product.productId!,
-                widget.item.selectedStock,
-                parsedMrp,
-              );
-            } else {
-              // Revert to original MRP if invalid
-              controller.text = (widget.item.mrp ?? 0.0).toString();
-            }
-          },
-        );
-      },
-    );
-  }
 }
 
 class BillingPageState extends State<BillingPage>
@@ -314,14 +73,12 @@ class BillingPageState extends State<BillingPage>
   GlobalKey _autocompleteProductKey = GlobalKey();
 
   // Flag to track if user has manually changed the paid amount
-  bool _userChangedPaidAmount = false;
 
   String? mobileNumberText = "";
   String? salesExecutivemobileNumberText = "";
   int? selectedCustomerID;
   String? selectedCustomerPhone;
   CartProvider cartProvider = CartProvider();
-  int iconColor = 0;
   String deliveryMethod = "";
   String deliveryMethodId = "";
   double _balanceAmount = 0;
@@ -368,7 +125,6 @@ class BillingPageState extends State<BillingPage>
   bool isLoadingConfirmOrder = false;
   bool isLoadingSaveOrderAndPrint = false;
   bool isLoadingAddItem = false;
-  bool _isBottomSectionVisible = false; // Hide billing details panel by default
 
   // Add these variables for the new sidebar
   bool _isSidebarVisible = true;
@@ -405,7 +161,6 @@ class BillingPageState extends State<BillingPage>
         .addListener(_handlePaidAmountFocusChange); // Add this line
     deliveryMethodId = "3";
     deliveryMethod = "Store Takeaway";
-    iconColor = 1;
 
     // Initialize multi-payment with cash selected by default
     _isCashSelected = true;
@@ -708,17 +463,16 @@ class BillingPageState extends State<BillingPage>
                                         child: _buildCartItemsTable(size),
                                       ),
                                       const SizedBox(height: 5),
-                                      // Always visible section
+                                      // Always show minimized view with quick access icons
                                       Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          // Customer selection - always visible
+                                          // Customer selection
                                           Expanded(
-                                            flex:
-                                                _isBottomSectionVisible ? 3 : 4,
+                                            flex: 4,
                                             child: Container(
                                               color: Colors.white,
                                               padding:
@@ -734,59 +488,32 @@ class BillingPageState extends State<BillingPage>
                                                       size: size,
                                                       mobileNumberTextController:
                                                           mobileNumberTextController),
-                                                  if (_isBottomSectionVisible) ...[
-                                                    const SizedBox(height: 10),
-                                                    Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        _buildPaymentMethodSelection(),
-                                                      ],
-                                                    ),
-                                                  ] else ...[
-                                                    const SizedBox(height: 10),
-                                                    _buildQuickAccessIcons(),
-                                                  ],
+                                                  const SizedBox(height: 10),
+                                                  _buildQuickAccessIcons(),
                                                 ],
                                               ),
                                             ),
                                           ),
-                                          // Collapsible middle section
-                                          if (_isBottomSectionVisible)
-                                            Expanded(
-                                              flex: 2,
-                                              child:
-                                                  _buildDeliveryMethodSelection(),
-                                            ),
-                                          // Payment summary - always visible
+                                          // Payment summary
                                           Expanded(
-                                              flex: _isBottomSectionVisible
-                                                  ? 3
-                                                  : 4,
-                                              child: Container(
-                                                color: Colors.white,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 16.0,
-                                                        vertical: 10),
-                                                child: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.start,
-                                                  children: [
-                                                    if (_isBottomSectionVisible) ...[
-                                                      _buildCouponInput(),
-                                                      const SizedBox(
-                                                          height: 10),
-                                                    ],
-                                                    _buildPaymentSummary(
-                                                        compact:
-                                                            !_isBottomSectionVisible),
-                                                  ],
-                                                ),
-                                              )),
+                                            flex: 4,
+                                            child: Container(
+                                              color: Colors.white,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 16.0,
+                                                      vertical: 10),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.start,
+                                                children: [
+                                                  _buildPaymentSummary(
+                                                      compact: true),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 10),
@@ -807,8 +534,6 @@ class BillingPageState extends State<BillingPage>
                         flex: 1,
                         child: _buildSidebar(),
                       ),
-
-                    // Sidebar toggle button - moved to be positioned absolutely
                   ],
                 ),
               ),
@@ -1828,7 +1553,7 @@ class BillingPageState extends State<BillingPage>
                                           vertical: 2),
                                       child: SizedBox(
                                         width: 70,
-                                        child: _MrpTextField(
+                                        child: MrpTextField(
                                           item: item,
                                           localProductProvider:
                                               localProductProvider,
@@ -1846,7 +1571,7 @@ class BillingPageState extends State<BillingPage>
                                           vertical: 2),
                                       child: SizedBox(
                                         width: 70,
-                                        child: _PriceTextField(
+                                        child: PriceTextField(
                                           item: item,
                                           localProductProvider:
                                               localProductProvider,
@@ -2086,370 +1811,6 @@ class BillingPageState extends State<BillingPage>
           color: ColorManager.textColor,
         ),
       ],
-    );
-  }
-
-  Widget _buildPaymentMethodSelection() {
-    Size size = MediaQuery.of(context).size;
-    return Consumer<LocalProductProvider>(
-      builder: (context, localProductProvider, child) {
-        return Column(
-          children: [
-            BuildPaymentRow(
-              amount: "",
-              padding: const EdgeInsets.only(left: 5.0),
-              title: "Payment Methods",
-              firstRowTextStyle: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s14,
-                0.21,
-                ColorManager.kPrimaryColor,
-              ),
-              color: ColorManager.kPrimaryColor,
-            ),
-            const SizedBox(height: 10),
-
-            // Cash Payment
-            _buildPaymentMethodRow(
-              isSelected: _isCashSelected,
-              icon: ImageAssets.cashIcon,
-              label: 'Cash',
-              controller: _cashAmountController,
-              focusNode: _cashAmountFocusNode,
-              size: size,
-              onToggle: () {
-                setState(() {
-                  _isCashSelected = !_isCashSelected;
-                  if (!_isCashSelected) {
-                    _cashAmountController.clear();
-                  } else {
-                    _autoFillPaymentAmount();
-                  }
-                  _updateBalanceAmount();
-                });
-              },
-              onAmountChanged: (value) {
-                _updateBalanceAmount();
-              },
-            ),
-
-            const SizedBox(height: 8),
-
-            // Card Payment
-            _buildPaymentMethodRow(
-              isSelected: _isCardSelected,
-              icon: ImageAssets.creditCardIcon,
-              label: 'Card',
-              controller: _cardAmountController,
-              focusNode: _cardAmountFocusNode,
-              size: size,
-              onToggle: () {
-                setState(() {
-                  _isCardSelected = !_isCardSelected;
-                  if (!_isCardSelected) {
-                    _cardAmountController.clear();
-                  } else {
-                    _autoFillPaymentAmount();
-                  }
-                  _updateBalanceAmount();
-                });
-              },
-              onAmountChanged: (value) {
-                _updateBalanceAmount();
-              },
-            ),
-
-            const SizedBox(height: 8),
-
-            // UPI Payment
-            _buildPaymentMethodRow(
-              isSelected: _isUpiSelected,
-              icon: ImageAssets.creditCardIcon,
-              label: 'UPI',
-              controller: _upiAmountController,
-              focusNode: _upiAmountFocusNode,
-              size: size,
-              onToggle: () {
-                setState(() {
-                  _isUpiSelected = !_isUpiSelected;
-                  if (!_isUpiSelected) {
-                    _upiAmountController.clear();
-                  } else {
-                    _autoFillPaymentAmount();
-                  }
-                  _updateBalanceAmount();
-                });
-              },
-              onAmountChanged: (value) {
-                _updateBalanceAmount();
-              },
-            ),
-
-            const SizedBox(height: 12),
-
-            // Transaction Reference Field - Show only if Card or UPI is selected
-            if (_isCardSelected || _isUpiSelected) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                child: buildColumnWidgetForTextFields(
-                  controller: _transactionNumberController,
-                  size: size,
-                  height: size.height * .05,
-                  hintText: 'Transaction Reference Number',
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-
-            // Total Paid and Balance Display
-            _buildPaymentSummaryRow(localProductProvider),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildDeliveryMethodSelection() {
-    Size size = MediaQuery.of(context).size;
-
-    return Consumer<DeliveryMethodsProvider>(
-      builder: (context, provider, child) {
-        if (provider.isLoading) {
-          return Container();
-        }
-
-        // Group delivery methods into pairs for 2 items per row
-        List<List<DeliveryMethod>> groupedMethods = [];
-        for (int i = 0; i < provider.deliveryMethods.length; i += 2) {
-          if (i + 1 < provider.deliveryMethods.length) {
-            // Add a pair
-            groupedMethods.add(
-                [provider.deliveryMethods[i], provider.deliveryMethods[i + 1]]);
-          } else {
-            // Add the last item if there's an odd number
-            groupedMethods.add([provider.deliveryMethods[i]]);
-          }
-        }
-
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          color: Colors.white,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Column of rows, each with max 2 delivery methods
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: groupedMethods.map((row) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: row.map((method) {
-                            return Expanded(
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.only(right: 5, left: 5),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      deliveryMethod = method.name;
-                                      deliveryMethodId = method.id;
-                                    });
-                                  },
-                                  child: BuildBoxShadowContainer(
-                                    border: deliveryMethod == method.name
-                                        ? Border.all(
-                                            color: ColorManager.kPrimaryColor)
-                                        : null,
-                                    padding: const EdgeInsets.all(8),
-                                    blurRadius: 4,
-                                    circleRadius: 5,
-                                    child: Column(
-                                      children: [
-                                        Icon(
-                                          method.name == "Store Takeaway"
-                                              ? Icons.store
-                                              : method.name == "Car Delivery"
-                                                  ? Icons.car_rental
-                                                  : method.name ==
-                                                          "Door Delivery"
-                                                      ? Icons.doorbell_outlined
-                                                      : Icons.local_shipping,
-                                          size: 16,
-                                          color: Colors.black,
-                                        ),
-                                        Text(
-                                          method.name,
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s10,
-                                            0.12,
-                                            Colors.black,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    if (deliveryMethod == "Car Delivery")
-                      buildColumnWidgetForTextFields(
-                        controller: _carNumberController,
-                        size: size,
-                        margin: const EdgeInsets.all(0),
-                        height: size.height * .06,
-                        hintText: 'Car Number:',
-                      ),
-                    if (deliveryMethod == "Car Delivery")
-                      const SizedBox(height: 10),
-                    buildColumnWidgetForTextFields(
-                      controller: _commentController,
-                      margin: const EdgeInsets.all(0),
-                      size: size,
-                      height: size.height * .06,
-                      hintText: 'Comment:',
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildActionButton(
-            text: 'Clear Cart',
-            color: ColorManager.kButtonRed,
-            onPressed: _clearCart,
-            isLoading: isLoadingClearCart,
-          ),
-          _buildActionButton(
-            text: 'Save Order',
-            color: ColorManager.kButtonYellow,
-            onPressed: _saveOrder,
-            isLoading: isLoadingSaveOrder,
-          ),
-          if (_hasInternet) ...[
-            _buildActionButton(
-              text: 'Confirm and Print',
-              color: ColorManager.kButtonBlue,
-              onPressed: _createOrderAndPrint,
-              isLoading: isLoadingCreateOrder,
-            ),
-            _buildActionButton(
-              text: 'Confirm Order',
-              color: ColorManager.kButtonGreen,
-              onPressed: _confirmOrder,
-              isLoading: isLoadingConfirmOrder,
-            ),
-          ],
-          if (!_hasInternet) ...[
-            _buildActionButton(
-              text: 'Save and Print',
-              color: ColorManager.kButtonYellow,
-              onPressed: _saveOrderAndPrint,
-              isLoading: isLoadingSaveOrderAndPrint,
-            ),
-          ],
-          // Hide/Show toggle button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _isBottomSectionVisible = !_isBottomSectionVisible;
-                });
-              },
-              child: Container(
-                width: 35,
-                height: 35,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10.0),
-                  color: ColorManager.kPrimaryColor,
-                ),
-                child: Center(
-                  child: Icon(
-                    _isBottomSectionVisible
-                        ? Icons.keyboard_arrow_down
-                        : Icons.keyboard_arrow_up,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required String text,
-    required Color color,
-    required VoidCallback onPressed,
-    required bool isLoading,
-  }) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: GestureDetector(
-          onTap: isLoading ? null : onPressed,
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10.0),
-              color: color,
-            ),
-            child: Center(
-              child: isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Text(
-                      text,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -3009,7 +2370,7 @@ class BillingPageState extends State<BillingPage>
     return Row(
       children: [
         Text(
-          'Balance: ',
+          'Customer Balance: ',
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s12,
@@ -3030,75 +2391,89 @@ class BillingPageState extends State<BillingPage>
     );
   }
 
-  Widget _buildCouponInput() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: BuildBoxShadowContainer(
-            circleRadius: 7,
-            alignment: Alignment.centerLeft,
-            margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-            padding: const EdgeInsets.only(left: 15),
-            height: MediaQuery.of(context).size.height * .07,
-            width: MediaQuery.of(context).size.width / 3,
-            child: TextField(
-              controller: coupenCodeTextController,
-              enabled: !isCouponApplied,
-              decoration: InputDecoration(
-                hintText: 'Apply Coupon',
-                hintStyle: buildCustomStyle(
-                  FontWeight.w500,
-                  12,
-                  0.27,
-                  Colors.grey.withOpacity(.5),
-                ),
-                border: InputBorder.none,
-              ),
-              style: buildCustomStyle(
-                FontWeight.w500,
-                12,
-                0.27,
-                Colors.black.withOpacity(.5),
-              ),
+  Widget _buildActionButtons() {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildActionButton(
+            text: 'Clear Cart',
+            color: ColorManager.kButtonRed,
+            onPressed: _clearCart,
+            isLoading: isLoadingClearCart,
+          ),
+          _buildActionButton(
+            text: 'Save Order',
+            color: ColorManager.kButtonYellow,
+            onPressed: _saveOrder,
+            isLoading: isLoadingSaveOrder,
+          ),
+          if (_hasInternet) ...[
+            _buildActionButton(
+              text: 'Confirm and Print',
+              color: ColorManager.kButtonBlue,
+              onPressed: _createOrderAndPrint,
+              isLoading: isLoadingCreateOrder,
+            ),
+            _buildActionButton(
+              text: 'Confirm Order',
+              color: ColorManager.kButtonGreen,
+              onPressed: _confirmOrder,
+              isLoading: isLoadingConfirmOrder,
+            ),
+          ],
+          if (!_hasInternet) ...[
+            _buildActionButton(
+              text: 'Save and Print',
+              color: ColorManager.kButtonYellow,
+              onPressed: _saveOrderAndPrint,
+              isLoading: isLoadingSaveOrderAndPrint,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required String text,
+    required Color color,
+    required VoidCallback onPressed,
+    required bool isLoading,
+  }) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: GestureDetector(
+          onTap: isLoading ? null : onPressed,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10.0),
+              color: color,
+            ),
+            child: Center(
+              child: isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      text,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
           ),
         ),
-        const SizedBox(width: 10),
-        if (isCouponApplied) // Show remove button if coupon is applied
-          CustomRoundButton(
-            title: "Remove",
-            fct: () => {
-              setState(() {
-                isCouponApplied = false; // Reset coupon state
-                coupenCodeTextController.clear(); // Clear the coupon code
-                // Fetch the cart data again after removing the coupon
-                String? accessToken =
-                    Provider.of<AuthModel>(context, listen: false).token;
-                int? customerId =
-                    Provider.of<AuthModel>(context, listen: false).userId;
-
-                Provider.of<CartProvider>(context, listen: false)
-                    .fetchCartDataFromApi(
-                  customerId: customerId!,
-                  accessToken: accessToken ?? '',
-                );
-              })
-            },
-            fontSize: FontSize.s14,
-            height: MediaQuery.of(context).size.height * .07,
-            width: 100,
-          )
-        else
-          CustomRoundButton(
-            title: "Apply",
-            fct: _applyCoupon,
-            fontSize: FontSize.s14,
-            height: MediaQuery.of(context).size.height * .07,
-            width: 100,
-          ),
-      ],
+      ),
     );
   }
 
@@ -3110,12 +2485,10 @@ class BillingPageState extends State<BillingPage>
     try {
       Provider.of<LocalProductProvider>(context, listen: false).clearCart();
       setState(() {
-        iconColor = 1; // Reset to default cash payment method
         coupenCodeTextController.clear();
         _transactionNumberController.clear();
         _paidAmountController.clear();
         _balanceAmount = 0;
-        _userChangedPaidAmount = false; // Reset paid amount flag
 
         // Reset multi-payment fields
         _isCashSelected = true;
@@ -3197,21 +2570,26 @@ class BillingPageState extends State<BillingPage>
       if (currentOrder != null) {
         // Update existing order
         debugPrint("💾 Updating existing order: ${currentOrder.orderNumber}");
-        
-        // Determine payment method and data
+
+        // Get payment method and data using multi-payment system
         String paymentMethod = "";
         String paidAmount = "";
-        
-        // Check if multi-payment is being used
+
         List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
         if (selectedPaymentMethods.length > 1) {
           // Multi-payment: store as JSON
           Map<String, dynamic> multiPaymentData = {
             "methods": selectedPaymentMethods,
             "amounts": {
-              "CASH": _cashAmountController.text.isNotEmpty ? _cashAmountController.text : "0",
-              "CARD": _cardAmountController.text.isNotEmpty ? _cardAmountController.text : "0",
-              "UPI": _upiAmountController.text.isNotEmpty ? _upiAmountController.text : "0",
+              "CASH": _cashAmountController.text.isNotEmpty
+                  ? _cashAmountController.text
+                  : "0",
+              "CARD": _cardAmountController.text.isNotEmpty
+                  ? _cardAmountController.text
+                  : "0",
+              "UPI": _upiAmountController.text.isNotEmpty
+                  ? _upiAmountController.text
+                  : "0",
             },
             "isMultiPayment": true
           };
@@ -3229,15 +2607,9 @@ class BillingPageState extends State<BillingPage>
               paidAmount = _upiAmountController.text;
             }
           } else {
-            // Fallback to old iconColor logic
-            if (iconColor == 1) {
-              paymentMethod = "CASH";
-            } else if (iconColor == 2) {
-              paymentMethod = "CARD";
-            } else if (iconColor == 3) {
-              paymentMethod = "UPI";
-            }
-            paidAmount = _paidAmountController.text;
+            // Default to cash if no payment method selected
+            paymentMethod = "CASH";
+            paidAmount = "0";
           }
         }
 
@@ -3330,7 +2702,7 @@ class BillingPageState extends State<BillingPage>
         // Determine payment method and data
         String paymentMethod = "";
         String paidAmount = "";
-        
+
         // Check if multi-payment is being used
         List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
         if (selectedPaymentMethods.length > 1) {
@@ -3338,9 +2710,15 @@ class BillingPageState extends State<BillingPage>
           Map<String, dynamic> multiPaymentData = {
             "methods": selectedPaymentMethods,
             "amounts": {
-              "CASH": _cashAmountController.text.isNotEmpty ? _cashAmountController.text : "0",
-              "CARD": _cardAmountController.text.isNotEmpty ? _cardAmountController.text : "0",
-              "UPI": _upiAmountController.text.isNotEmpty ? _upiAmountController.text : "0",
+              "CASH": _cashAmountController.text.isNotEmpty
+                  ? _cashAmountController.text
+                  : "0",
+              "CARD": _cardAmountController.text.isNotEmpty
+                  ? _cardAmountController.text
+                  : "0",
+              "UPI": _upiAmountController.text.isNotEmpty
+                  ? _upiAmountController.text
+                  : "0",
             },
             "isMultiPayment": true
           };
@@ -3358,15 +2736,9 @@ class BillingPageState extends State<BillingPage>
               paidAmount = _upiAmountController.text;
             }
           } else {
-            // Fallback to old iconColor logic
-            if (iconColor == 1) {
-              paymentMethod = "CASH";
-            } else if (iconColor == 2) {
-              paymentMethod = "CARD";
-            } else if (iconColor == 3) {
-              paymentMethod = "UPI";
-            }
-            paidAmount = _paidAmountController.text;
+            // Default to cash if no payment method selected
+            paymentMethod = "CASH";
+            paidAmount = "0";
           }
         }
 
@@ -3400,7 +2772,8 @@ class BillingPageState extends State<BillingPage>
         mobileNumberText = ""; // Clear the variable
         selectedCustomerID = null;
         selectedCustomerPhone = null;
-        iconColor = 1; // Reset to default cash payment method
+        // Remove iconColor reset
+        // iconColor = 1; // DELETE THIS LINE
         mobileNumberTextController.clear();
         quantityController.clear();
         barcodeController.clear();
@@ -3413,7 +2786,6 @@ class BillingPageState extends State<BillingPage>
         _transactionNumberController.clear();
         _paidAmountController.clear();
         _balanceAmount = 0;
-        _userChangedPaidAmount = false; // Reset paid amount flag
         _carNumberController.clear();
         _commentController.clear();
         _isCustomerManuallySelected =
@@ -3431,6 +2803,7 @@ class BillingPageState extends State<BillingPage>
       _focusTextField();
 
       // Reset to default sales executive after saving
+      _clearCart();
       _fetchCustomers();
     } catch (error) {
       debugPrint(error.toString());
@@ -3439,7 +2812,6 @@ class BillingPageState extends State<BillingPage>
         message: "Failed to save order. Please try again.",
       );
     } finally {
-      _clearCart();
       setState(() {
         isLoadingSaveOrder = false; // Indicate that loading has finished
       });
@@ -3531,7 +2903,7 @@ class BillingPageState extends State<BillingPage>
           // Determine payment method and data
           String paymentMethod = "";
           String paidAmount = "";
-          
+
           // Check if multi-payment is being used
           List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
           if (selectedPaymentMethods.length > 1) {
@@ -3539,9 +2911,15 @@ class BillingPageState extends State<BillingPage>
             Map<String, dynamic> multiPaymentData = {
               "methods": selectedPaymentMethods,
               "amounts": {
-                "CASH": _cashAmountController.text.isNotEmpty ? _cashAmountController.text : "0",
-                "CARD": _cardAmountController.text.isNotEmpty ? _cardAmountController.text : "0",
-                "UPI": _upiAmountController.text.isNotEmpty ? _upiAmountController.text : "0",
+                "CASH": _cashAmountController.text.isNotEmpty
+                    ? _cashAmountController.text
+                    : "0",
+                "CARD": _cardAmountController.text.isNotEmpty
+                    ? _cardAmountController.text
+                    : "0",
+                "UPI": _upiAmountController.text.isNotEmpty
+                    ? _upiAmountController.text
+                    : "0",
               },
               "isMultiPayment": true
             };
@@ -3559,15 +2937,9 @@ class BillingPageState extends State<BillingPage>
                 paidAmount = _upiAmountController.text;
               }
             } else {
-              // Fallback to old iconColor logic
-              if (iconColor == 1) {
-                paymentMethod = "CASH";
-              } else if (iconColor == 2) {
-                paymentMethod = "CARD";
-              } else if (iconColor == 3) {
-                paymentMethod = "UPI";
-              }
-              paidAmount = _paidAmountController.text;
+              // Default to cash if no payment method selected
+              paymentMethod = "CASH";
+              paidAmount = "0";
             }
           }
 
@@ -3597,68 +2969,68 @@ class BillingPageState extends State<BillingPage>
         // Create a new confirmed order
         debugPrint("💾 Creating new confirmed order");
 
-                  // **FIX**: Properly determine customer info for phone-only orders
-          String? customerNameToSave = selectedCustomer?.name;
-          String? customerPhoneToSave;
+        // **FIX**: Properly determine customer info for phone-only orders
+        String? customerNameToSave = selectedCustomer?.name;
+        String? customerPhoneToSave;
 
-          if (selectedCustomerID != null) {
-            // Customer is selected from list
-            customerPhoneToSave = selectedCustomerPhone;
-            debugPrint(
-                "  ✅ Save&Print - Customer from list: '$customerPhoneToSave'");
-          } else if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
-            // Phone number entered directly (not from customer list)
-            customerPhoneToSave = mobileNumberText;
-            debugPrint(
-                "  ✅ Save&Print - Phone-only order: '$customerPhoneToSave'");
-          } else {
-            // Fallback to selectedCustomerPhone
-            customerPhoneToSave = selectedCustomerPhone;
-            debugPrint("  ⚠️ Save&Print - Fallback: '$customerPhoneToSave'");
-          }
+        if (selectedCustomerID != null) {
+          // Customer is selected from list
+          customerPhoneToSave = selectedCustomerPhone;
+          debugPrint(
+              "  ✅ Save&Print - Customer from list: '$customerPhoneToSave'");
+        } else if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
+          // Phone number entered directly (not from customer list)
+          customerPhoneToSave = mobileNumberText;
+          debugPrint(
+              "  ✅ Save&Print - Phone-only order: '$customerPhoneToSave'");
+        } else {
+          // Fallback to selectedCustomerPhone
+          customerPhoneToSave = selectedCustomerPhone;
+          debugPrint("  ⚠️ Save&Print - Fallback: '$customerPhoneToSave'");
+        }
 
-          // Determine payment method and data
-          String paymentMethod = "";
-          String paidAmount = "";
-          
-          // Check if multi-payment is being used
-          List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-          if (selectedPaymentMethods.length > 1) {
-            // Multi-payment: store as JSON
-            Map<String, dynamic> multiPaymentData = {
-              "methods": selectedPaymentMethods,
-              "amounts": {
-                "CASH": _cashAmountController.text.isNotEmpty ? _cashAmountController.text : "0",
-                "CARD": _cardAmountController.text.isNotEmpty ? _cardAmountController.text : "0",
-                "UPI": _upiAmountController.text.isNotEmpty ? _upiAmountController.text : "0",
-              },
-              "isMultiPayment": true
-            };
-            paymentMethod = json.encode(multiPaymentData);
-            paidAmount = _getTotalPaidAmount().toString();
-          } else {
-            // Single payment method
-            if (selectedPaymentMethods.isNotEmpty) {
-              paymentMethod = selectedPaymentMethods.first;
-              if (paymentMethod == "CASH") {
-                paidAmount = _cashAmountController.text;
-              } else if (paymentMethod == "CARD") {
-                paidAmount = _cardAmountController.text;
-              } else if (paymentMethod == "UPI") {
-                paidAmount = _upiAmountController.text;
-              }
-            } else {
-              // Fallback to old iconColor logic
-              if (iconColor == 1) {
-                paymentMethod = "CASH";
-              } else if (iconColor == 2) {
-                paymentMethod = "CARD";
-              } else if (iconColor == 3) {
-                paymentMethod = "UPI";
-              }
-              paidAmount = _paidAmountController.text;
+        // Determine payment method and data
+        String paymentMethod = "";
+        String paidAmount = "";
+
+        // Check if multi-payment is being used
+        List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
+        if (selectedPaymentMethods.length > 1) {
+          // Multi-payment: store as JSON
+          Map<String, dynamic> multiPaymentData = {
+            "methods": selectedPaymentMethods,
+            "amounts": {
+              "CASH": _cashAmountController.text.isNotEmpty
+                  ? _cashAmountController.text
+                  : "0",
+              "CARD": _cardAmountController.text.isNotEmpty
+                  ? _cardAmountController.text
+                  : "0",
+              "UPI": _upiAmountController.text.isNotEmpty
+                  ? _upiAmountController.text
+                  : "0",
+            },
+            "isMultiPayment": true
+          };
+          paymentMethod = json.encode(multiPaymentData);
+          paidAmount = _getTotalPaidAmount().toString();
+        } else {
+          // Single payment method
+          if (selectedPaymentMethods.isNotEmpty) {
+            paymentMethod = selectedPaymentMethods.first;
+            if (paymentMethod == "CASH") {
+              paidAmount = _cashAmountController.text;
+            } else if (paymentMethod == "CARD") {
+              paidAmount = _cardAmountController.text;
+            } else if (paymentMethod == "UPI") {
+              paidAmount = _upiAmountController.text;
             }
+          } else {
+            // Default to cash if no payment method selected
+            paymentMethod = "CASH";
+            paidAmount = "0";
           }
+        }
 
         orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
           customerName: customerNameToSave,
@@ -3697,7 +3069,8 @@ class BillingPageState extends State<BillingPage>
         mobileNumberText = ""; // Clear the variable
         selectedCustomerID = null;
         selectedCustomerPhone = null;
-        iconColor = 1; // Reset to default cash payment method
+        // Remove iconColor reset
+        // iconColor = 1; // DELETE THIS LINE
         mobileNumberTextController.clear();
         quantityController.clear();
         barcodeController.clear();
@@ -3710,7 +3083,6 @@ class BillingPageState extends State<BillingPage>
         _transactionNumberController.clear();
         _paidAmountController.clear();
         _balanceAmount = 0;
-        _userChangedPaidAmount = false; // Reset paid amount flag
         _carNumberController.clear();
         _commentController.clear();
         _isCustomerManuallySelected =
@@ -3721,6 +3093,7 @@ class BillingPageState extends State<BillingPage>
       _focusTextField();
 
       // Reset to default sales executive after saving
+      _clearCart();
       _fetchCustomers();
     } catch (error) {
       debugPrint(error.toString());
@@ -3729,25 +3102,10 @@ class BillingPageState extends State<BillingPage>
         message: "Failed to save order. Please try again.",
       );
     } finally {
-      _clearCart();
       setState(() {
         isLoadingSaveOrderAndPrint = false;
       });
     }
-  }
-
-  // Reset manual selection when loading an order
-  void _resetManualSelection() {
-    setState(() {
-      _isCustomerManuallySelected = false;
-    });
-  }
-
-  // Check if we have a manually entered phone number
-  bool _hasManuallyEnteredPhone() {
-    return mobileNumberText?.isNotEmpty == true &&
-        mobileNumberText!.length >= 10 &&
-        selectedCustomerID == null;
   }
 
   // Function to load a saved order for editing
@@ -4053,11 +3411,14 @@ class BillingPageState extends State<BillingPage>
             // Check if it's a JSON string (multi-payment)
             if (currentOrder.paymentMethod!.startsWith('{')) {
               try {
-                Map<String, dynamic> multiPaymentData = json.decode(currentOrder.paymentMethod!);
+                Map<String, dynamic> multiPaymentData =
+                    json.decode(currentOrder.paymentMethod!);
                 if (multiPaymentData['isMultiPayment'] == true) {
-                  List<String> methods = List<String>.from(multiPaymentData['methods'] ?? []);
-                  Map<String, dynamic> amounts = Map<String, dynamic>.from(multiPaymentData['amounts'] ?? {});
-                  
+                  List<String> methods =
+                      List<String>.from(multiPaymentData['methods'] ?? []);
+                  Map<String, dynamic> amounts = Map<String, dynamic>.from(
+                      multiPaymentData['amounts'] ?? {});
+
                   // Reset all payment methods first
                   _isCashSelected = false;
                   _isCardSelected = false;
@@ -4065,7 +3426,7 @@ class BillingPageState extends State<BillingPage>
                   _cashAmountController.clear();
                   _cardAmountController.clear();
                   _upiAmountController.clear();
-                  
+
                   // Restore multi-payment selections and amounts
                   if (methods.contains("CASH")) {
                     _isCashSelected = true;
@@ -4079,34 +3440,30 @@ class BillingPageState extends State<BillingPage>
                     _isUpiSelected = true;
                     _upiAmountController.text = amounts['UPI'] ?? "0";
                   }
-                  
+
                   // Clear iconColor for multi-payment
-                  iconColor = 0;
+                  // iconColor = 0; // DELETE THIS LINE
                 }
               } catch (e) {
                 debugPrint("Error parsing multi-payment data: $e");
                 // Fall back to single payment method
                 switch (currentOrder.paymentMethod?.toUpperCase()) {
                   case "CASH":
-                    iconColor = 1;
                     _isCashSelected = true;
                     _isCardSelected = false;
                     _isUpiSelected = false;
                     break;
                   case "CARD":
-                    iconColor = 2;
                     _isCashSelected = false;
                     _isCardSelected = true;
                     _isUpiSelected = false;
                     break;
                   case "UPI":
-                    iconColor = 3;
                     _isCashSelected = false;
                     _isCardSelected = false;
                     _isUpiSelected = true;
                     break;
                   default:
-                    iconColor = 1; // Default to cash
                     _isCashSelected = true;
                     _isCardSelected = false;
                     _isUpiSelected = false;
@@ -4116,41 +3473,37 @@ class BillingPageState extends State<BillingPage>
               // Single payment method
               switch (currentOrder.paymentMethod?.toUpperCase()) {
                 case "CASH":
-                  iconColor = 1;
                   _isCashSelected = true;
                   _isCardSelected = false;
                   _isUpiSelected = false;
                   break;
                 case "CARD":
-                  iconColor = 2;
                   _isCashSelected = false;
                   _isCardSelected = true;
                   _isUpiSelected = false;
                   break;
                 case "UPI":
-                  iconColor = 3;
                   _isCashSelected = false;
                   _isCardSelected = false;
                   _isUpiSelected = true;
                   break;
                 default:
-                  iconColor = 1; // Default to cash
                   _isCashSelected = true;
                   _isCardSelected = false;
                   _isUpiSelected = false;
               }
             }
           } else {
-            iconColor = 1; // Default to cash
+            // Default to cash if no payment method
+            // iconColor = 1; // DELETE THIS LINE
           }
 
           // Restore payment amounts
           _paidAmountController.text = currentOrder.paidAmount ?? "0.0";
           _balanceAmount =
               double.tryParse(currentOrder.balanceAmount ?? "0.0") ?? 0.0;
-          _userChangedPaidAmount =
-              true; // Mark as user-set to prevent auto-update
-          
+// Mark as user-set to prevent auto-update
+
           // For single payment methods, also populate the individual payment controllers
           if (!currentOrder.paymentMethod!.startsWith('{')) {
             String paidAmount = currentOrder.paidAmount ?? "0.0";
@@ -4242,16 +3595,8 @@ class BillingPageState extends State<BillingPage>
     debugPrint("Create Order and Print pressed");
     debugPrint("🚀 API REQUEST STARTING - Create Order and Print");
 
-    // Debug multi-payment detection
-    List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-    List<Map<String, dynamic>> paidMethods = _getPaidMethods();
-    bool isMultiPayment = selectedPaymentMethods.length > 1;
-
-    debugPrint("💰 Multi-payment check: $isMultiPayment");
-    debugPrint("💰 Selected payment methods: $selectedPaymentMethods");
-    debugPrint("💰 Paid methods: $paidMethods");
     setState(() {
-      isLoadingCreateOrder = true; // Indicate that loading has started
+      isLoadingCreateOrder = true;
     });
     try {
       if (selectedCustomerID == null && mobileNumberText == "") {
@@ -4259,225 +3604,225 @@ class BillingPageState extends State<BillingPage>
           context: context,
           message: "Please select a customer",
         );
-      } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
+        return;
+      }
+
+      // Check if any payment method is selected
+      List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
+      if (selectedPaymentMethods.isEmpty) {
         showScaffoldError(
           context: context,
-          message: "Please chose a Payment Method",
+          message: "Please select a payment method",
         );
-      } else if (deliveryMethod == "Car Delivery" &&
-          _carNumberController.text == "") {
+        return;
+      }
+
+      if (deliveryMethod == "Car Delivery" && _carNumberController.text == "") {
         showScaffoldError(
           context: context,
           message: "Please enter Car Number",
         );
-      } else {
-        String? accessToken =
-            Provider.of<AuthModel>(context, listen: false).token;
-        // debugPrint("accessToken From AuthModel $accessToken");
-        final provider = Provider.of<CartProvider>(context, listen: false);
-        int? cartId = provider.getCartIDForOrder;
-        debugPrint("📦 Cart ID for order: $cartId");
+        return;
+      }
 
-        String paymentMethod = "";
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      // debugPrint("accessToken From AuthModel $accessToken");
+      final provider = Provider.of<CartProvider>(context, listen: false);
+      int? cartId = provider.getCartIDForOrder;
+      debugPrint("📦 Cart ID for order: $cartId");
 
-        if (iconColor == 1) {
-          paymentMethod = "CASH";
-        } else if (iconColor == 2) {
-          paymentMethod = "CARD";
-        } else if (iconColor == 3) {
-          paymentMethod = "UPI";
-        }
-        debugPrint("💰 Payment Method: $paymentMethod");
+      String paymentMethod = "";
 
-        final localProductProvider =
-            Provider.of<LocalProductProvider>(context, listen: false);
-        final cartItems = localProductProvider.cartItems;
+      if (selectedPaymentMethods.contains("CASH")) {
+        paymentMethod = "CASH";
+      } else if (selectedPaymentMethods.contains("CARD")) {
+        paymentMethod = "CARD";
+      } else if (selectedPaymentMethods.contains("UPI")) {
+        paymentMethod = "UPI";
+      }
+      debugPrint("💰 Payment Method: $paymentMethod");
 
-        if (localProductProvider.cartItems.isEmpty) {
-          showScaffoldError(
-            context: context,
-            message: "Please add items to cart",
-          );
-          return;
-        }
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      final cartItems = localProductProvider.cartItems;
 
-        // Validate that all items have valid pricing before API call
-        bool hasInvalidPricing = localProductProvider.cartItems.any((item) =>
-            item.price == null ||
-            item.price! < 0 ||
-            item.mrp == null ||
-            item.mrp! < 0);
+      if (localProductProvider.cartItems.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: "Please add items to cart",
+        );
+        return;
+      }
 
-        if (hasInvalidPricing) {
-          showScaffoldError(
-            context: context,
-            message:
-                "Please ensure all items have valid prices and MRP before confirming order",
-          );
-          return;
-        }
+      // Validate that all items have valid pricing before API call
+      bool hasInvalidPricing = localProductProvider.cartItems.any((item) =>
+          item.price == null ||
+          item.price! < 0 ||
+          item.mrp == null ||
+          item.mrp! < 0);
 
-        List<Map<String, dynamic>> items = [];
+      if (hasInvalidPricing) {
+        showScaffoldError(
+          context: context,
+          message:
+              "Please ensure all items have valid prices and MRP before confirming order",
+        );
+        return;
+      }
 
-        for (var item in cartItems) {
-          debugPrint("📦 Order Item: ${item.product.productName}");
-          debugPrint("  - Product ID: ${item.product.productId}");
-          debugPrint("  - Quantity: ${item.quantity}");
-          debugPrint("  - Custom Price: ${item.price}");
-          debugPrint("  - Custom MRP: ${item.mrp}");
-          debugPrint("  - Stock ID: ${item.selectedStock?.id}");
+      List<Map<String, dynamic>> items = [];
 
-          items.add({
-            'product_id': item.product.productId,
-            'quantity': item.quantity,
-            'price': item.price,
-            'mrp': item.mrp, // 🔧 FIX: Include custom MRP in API call
-            'stock_id': item
-                .selectedStock?.id, // 🔧 FIX: Include stock_id for consistency
-          });
-        }
+      for (var item in cartItems) {
+        debugPrint("📦 Order Item: ${item.product.productName}");
+        debugPrint("  - Product ID: ${item.product.productId}");
+        debugPrint("  - Quantity: ${item.quantity}");
+        debugPrint("  - Custom Price: ${item.price}");
+        debugPrint("  - Custom MRP: ${item.mrp}");
+        debugPrint("  - Stock ID: ${item.selectedStock?.id}");
 
-        debugPrint("📋 Order Items: ${items.length} products");
-        debugPrint(
-            "💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
-        debugPrint("👤 Customer ID: $selectedCustomerID");
-        debugPrint(
-            "📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
-        debugPrint(
-            "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
-        debugPrint(
-            "🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
-
-        await Provider.of<CartProvider>(context, listen: false)
-            .addToOrderAPI(
-          items: items,
-          cartIds: cartId ?? 0,
-          accessToken: accessToken ?? "",
-          transactionId: _transactionNumberController.text,
-          totalPrice: Provider.of<LocalProductProvider>(context, listen: false)
-              .priceSummary!
-              .netTotal
-              .toString(),
-          customerId: selectedCustomerID,
-          customerPhone: selectedCustomerPhone ?? mobileNumberText,
-          // Use multi-payment format if available, otherwise fallback to single payment
-          paymentMethod:
-              _getSelectedPaymentMethods().length > 1 ? null : paymentMethod,
-          paidAmount: _getSelectedPaymentMethods().length > 1
-              ? null
-              : _paidAmountController.text,
-          paymentMethods: _getSelectedPaymentMethods().length > 1
-              ? _getSelectedPaymentMethods()
-              : null,
-          paidMethods: _getSelectedPaymentMethods().length > 1
-              ? _getPaidMethods()
-              : null,
-          balanceAmount: _balanceAmount.toString(),
-          couponId: isCouponApplied ? coupenCodeTextController.text : null,
-          comment: _commentController.text,
-          deliveryMethodId: deliveryMethodId,
-          carNumber: _carNumberController.text,
-          status: "confirmed",
-        )
-            .then((response) async {
-          debugPrint(
-              "✅ API RESPONSE - Create Order and Print: ${json.encode(response)}");
-          if (response["order_id"] != null) {
-            showScaffold(
-              context: context,
-              message: "Order Saved Successfully",
-            );
-
-            // Delete the current order if it exists in local storage
-            if (localProductProvider.currentOrder != null) {
-              localProductProvider
-                  .deleteSavedOrder(localProductProvider.currentOrder!.id);
-            }
-
-            localProductProvider.clearCart();
-
-            try {
-              String ordersId = response["order_number"].toString();
-              String? accessToken =
-                  Provider.of<AuthModel>(context, listen: false).token;
-
-              debugPrint(
-                  "🔍 Fetching order details for print - Order #$ordersId");
-              final OrderDetailsresponse = await SalesProvider()
-                  .listOrderDetails(context, ordersId, accessToken ?? "");
-              debugPrint("✅ Order details received for printing");
-
-              OrderDetailsModel orderDetails =
-                  OrderDetailsModel.fromJson(OrderDetailsresponse);
-
-              String? formattedTotal =
-                  orderDetails.data?.cart?.priceSummary?.netTotal.toString();
-              String? savedTotal =
-                  orderDetails.data?.cart?.priceSummary?.savedTotal.toString();
-
-              String storeName = orderDetails.data!.cart!.storeName ?? "";
-              String orderDate = orderDetails.data!.orderDate ?? "";
-
-              debugPrint(
-                  "🖨️ Navigating to print page for order #${orderDetails.data!.orderNumber}");
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PrintPage(
-                    storeName: storeName,
-                    cartItems: orderDetails.data!.cart!.cartItems!,
-                    formattedTotal: formattedTotal!,
-                    savedTotal: savedTotal!,
-                    orderDate: orderDate,
-                    orderNumber: orderDetails.data!.orderNumber ?? "",
-                  ),
-                ),
-              );
-            } catch (error) {
-              debugPrint("❌ Error fetching order details for print: $error");
-            }
-
-            // Clear the mobile number after successful save
-            setState(() {
-              mobileNumberText = ""; // Clear the variable
-              selectedCustomerID = null;
-              selectedCustomerPhone = null;
-              iconColor = 1; // Reset to default cash payment method
-              mobileNumberTextController.clear();
-              quantityController.clear();
-              barcodeController.clear();
-              selectedProductIdController.clear();
-              unitPriceController.clear();
-              isCustomerFound = false;
-              selectedCustomer = null;
-              isCouponApplied = false;
-              coupenCodeTextController.clear();
-              _transactionNumberController.clear();
-              _paidAmountController.clear();
-              _balanceAmount = 0;
-              _userChangedPaidAmount = false; // Reset paid amount flag
-              _carNumberController.clear();
-              _commentController.clear();
-            });
-            resetAutocomplete();
-
-            // Reset to default sales executive after confirming
-            _fetchCustomers();
-          } else {
-            debugPrint("❌ API ERROR - Create Order and Print failed");
-            showScaffoldError(
-              context: context,
-              message: "Failed to Save Order",
-              // message: "${addToOrderModel.message}",
-            );
-          }
+        items.add({
+          'product_id': item.product.productId,
+          'quantity': item.quantity,
+          'price': item.price,
+          'mrp': item.mrp, // 🔧 FIX: Include custom MRP in API call
+          'stock_id': item
+              .selectedStock?.id, // 🔧 FIX: Include stock_id for consistency
         });
       }
+
+      debugPrint("📋 Order Items: ${items.length} products");
+      debugPrint(
+          "💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
+      debugPrint("👤 Customer ID: $selectedCustomerID");
+      debugPrint(
+          "📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
+      debugPrint(
+          "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
+      debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
+
+      await Provider.of<CartProvider>(context, listen: false)
+          .addToOrderAPI(
+        items: items,
+        cartIds: cartId ?? 0,
+        accessToken: accessToken ?? "",
+        transactionId: _transactionNumberController.text,
+        totalPrice: Provider.of<LocalProductProvider>(context, listen: false)
+            .priceSummary!
+            .netTotal
+            .toString(),
+        customerId: selectedCustomerID,
+        customerPhone: selectedCustomerPhone ?? mobileNumberText,
+        // Always use multi-payment format
+        paymentMethod: null,
+        paidAmount: null,
+        paymentMethods: selectedPaymentMethods,
+        paidMethods: _getPaidMethods(),
+        balanceAmount: _balanceAmount.toString(),
+        couponId: isCouponApplied ? coupenCodeTextController.text : null,
+        comment: _commentController.text,
+        deliveryMethodId: deliveryMethodId,
+        carNumber: _carNumberController.text,
+        status: "confirmed",
+      )
+          .then((response) async {
+        debugPrint(
+            "✅ API RESPONSE - Create Order and Print: ${json.encode(response)}");
+        if (response["order_id"] != null) {
+          showScaffold(
+            context: context,
+            message: "Order Saved Successfully",
+          );
+
+          // Delete the current order if it exists in local storage
+          if (localProductProvider.currentOrder != null) {
+            localProductProvider
+                .deleteSavedOrder(localProductProvider.currentOrder!.id);
+          }
+
+          localProductProvider.clearCart();
+
+          try {
+            String ordersId = response["order_number"].toString();
+            String? accessToken =
+                Provider.of<AuthModel>(context, listen: false).token;
+
+            debugPrint(
+                "🔍 Fetching order details for print - Order #$ordersId");
+            final OrderDetailsresponse = await SalesProvider()
+                .listOrderDetails(context, ordersId, accessToken ?? "");
+            debugPrint("✅ Order details received for printing");
+
+            OrderDetailsModel orderDetails =
+                OrderDetailsModel.fromJson(OrderDetailsresponse);
+
+            String? formattedTotal =
+                orderDetails.data?.cart?.priceSummary?.netTotal.toString();
+            String? savedTotal =
+                orderDetails.data?.cart?.priceSummary?.savedTotal.toString();
+
+            String storeName = orderDetails.data!.cart!.storeName ?? "";
+            String orderDate = orderDetails.data!.orderDate ?? "";
+
+            debugPrint(
+                "🖨️ Navigating to print page for order #${orderDetails.data!.orderNumber}");
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PrintPage(
+                  storeName: storeName,
+                  cartItems: orderDetails.data!.cart!.cartItems!,
+                  formattedTotal: formattedTotal!,
+                  savedTotal: savedTotal!,
+                  orderDate: orderDate,
+                  orderNumber: orderDetails.data!.orderNumber ?? "",
+                ),
+              ),
+            );
+          } catch (error) {
+            debugPrint("❌ Error fetching order details for print: $error");
+          }
+
+          // Clear the mobile number after successful save
+          setState(() {
+            mobileNumberText = ""; // Clear the variable
+            selectedCustomerID = null;
+            selectedCustomerPhone = null;
+            // Remove iconColor reset
+            // iconColor = 1; // DELETE THIS LINE
+            mobileNumberTextController.clear();
+            quantityController.clear();
+            barcodeController.clear();
+            selectedProductIdController.clear();
+            unitPriceController.clear();
+            isCustomerFound = false;
+            selectedCustomer = null;
+            isCouponApplied = false;
+            coupenCodeTextController.clear();
+            _transactionNumberController.clear();
+            _paidAmountController.clear();
+            _balanceAmount = 0;
+            _carNumberController.clear();
+            _commentController.clear();
+          });
+          resetAutocomplete();
+
+          // Reset to default sales executive after confirming
+          _fetchCustomers();
+        } else {
+          debugPrint("❌ API ERROR - Create Order and Print failed");
+          showScaffoldError(
+            context: context,
+            message: "Failed to Save Order",
+            // message: "${addToOrderModel.message}",
+          );
+        }
+      });
+      _clearCart();
       _focusTextField();
     } catch (error) {
       debugPrint("❌ EXCEPTION in _createOrderAndPrint: $error");
     } finally {
-      _clearCart();
       // Set loading to false at the end of the function
       setState(() {
         isLoadingCreateOrder = false; // Indicate that loading has finished
@@ -4495,19 +3840,11 @@ class BillingPageState extends State<BillingPage>
       );
       return; // Stop execution if no internet
     }
-    debugPrint("Create Order pressed");
+    debugPrint("Confirm Order pressed");
     debugPrint("🚀 API REQUEST STARTING - Confirm Order");
 
-    // Debug multi-payment detection
-    List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-    List<Map<String, dynamic>> paidMethods = _getPaidMethods();
-    bool isMultiPayment = selectedPaymentMethods.length > 1;
-
-    debugPrint("💰 Multi-payment check: $isMultiPayment");
-    debugPrint("💰 Selected payment methods: $selectedPaymentMethods");
-    debugPrint("💰 Paid methods: $paidMethods");
     setState(() {
-      isLoadingConfirmOrder = true; // Indicate that loading has started
+      isLoadingConfirmOrder = true;
     });
     try {
       if (selectedCustomerID == null && mobileNumberText == "") {
@@ -4515,178 +3852,178 @@ class BillingPageState extends State<BillingPage>
           context: context,
           message: "Please select a customer",
         );
-      } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
+        return;
+      }
+
+      // Check if any payment method is selected
+      List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
+      if (selectedPaymentMethods.isEmpty) {
         showScaffoldError(
           context: context,
-          message: "Please chose a Payment Method",
+          message: "Please select a payment method",
         );
-      } else if (deliveryMethod == "Car Delivery" &&
-          _carNumberController.text == "") {
+        return;
+      }
+
+      if (deliveryMethod == "Car Delivery" && _carNumberController.text == "") {
         showScaffoldError(
           context: context,
           message: "Please enter Car Number",
         );
-      } else {
-        String? accessToken =
-            Provider.of<AuthModel>(context, listen: false).token;
-        // debugPrint("accessToken From AuthModel $accessToken");
-        final provider = Provider.of<CartProvider>(context, listen: false);
-        int? cartId = provider.getCartIDForOrder;
-        debugPrint("📦 Cart ID for order: $cartId");
-
-        String paymentMethod = "";
-
-        if (iconColor == 1) {
-          paymentMethod = "CASH";
-        } else if (iconColor == 2) {
-          paymentMethod = "CARD";
-        } else if (iconColor == 3) {
-          paymentMethod = "UPI";
-        }
-        debugPrint("💰 Payment Method: $paymentMethod");
-
-        final localProductProvider =
-            Provider.of<LocalProductProvider>(context, listen: false);
-        final cartItems = localProductProvider.cartItems;
-
-        if (localProductProvider.cartItems.isEmpty) {
-          showScaffoldError(
-            context: context,
-            message: "Please add items to cart",
-          );
-          return;
-        }
-
-        // Validate that all items have valid pricing before API call
-        bool hasInvalidPricing = localProductProvider.cartItems.any((item) =>
-            item.price == null ||
-            item.price! < 0 ||
-            item.mrp == null ||
-            item.mrp! < 0);
-
-        if (hasInvalidPricing) {
-          showScaffoldError(
-            context: context,
-            message:
-                "Please ensure all items have valid prices and MRP before confirming order",
-          );
-          return;
-        }
-
-        List<Map<String, dynamic>> items = [];
-
-        for (var item in cartItems) {
-          debugPrint("📦 Order Item: ${item.product.productName}");
-          debugPrint("  - Product ID: ${item.product.productId}");
-          debugPrint("  - Quantity: ${item.quantity}");
-          debugPrint("  - Custom Price: ${item.price}");
-          debugPrint("  - Custom MRP: ${item.mrp}");
-          debugPrint("  - Stock ID: ${item.selectedStock?.id}");
-
-          items.add({
-            'product_id': item.product.productId,
-            'quantity': item.quantity,
-            'price': item.price,
-            'mrp': item.mrp, // 🔧 FIX: Include custom MRP in API call
-            'stock_id': item.selectedStock?.id,
-          });
-        }
-
-        debugPrint("📋 Order Items: ${items.length} products");
-        debugPrint(
-            "💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
-        debugPrint("👤 Customer ID: $selectedCustomerID");
-        debugPrint(
-            "📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
-        debugPrint(
-            "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
-        debugPrint(
-            "🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
-
-        await Provider.of<CartProvider>(context, listen: false)
-            .addToOrderAPI(
-          items: items,
-          cartIds: cartId ?? 0,
-          accessToken: accessToken ?? "",
-          transactionId: _transactionNumberController.text,
-          totalPrice: Provider.of<LocalProductProvider>(context, listen: false)
-              .priceSummary!
-              .netTotal
-              .toString(),
-          customerId: selectedCustomerID,
-          customerPhone: selectedCustomerPhone ?? mobileNumberText,
-          // Use multi-payment format if available, otherwise fallback to single payment
-          paymentMethod:
-              _getSelectedPaymentMethods().length > 1 ? null : paymentMethod,
-          paidAmount: _getSelectedPaymentMethods().length > 1
-              ? null
-              : _paidAmountController.text,
-          paymentMethods: _getSelectedPaymentMethods().length > 1
-              ? _getSelectedPaymentMethods()
-              : null,
-          paidMethods: _getSelectedPaymentMethods().length > 1
-              ? _getPaidMethods()
-              : null,
-          balanceAmount: _balanceAmount.toString(),
-          couponId: isCouponApplied ? coupenCodeTextController.text : null,
-          comment: _commentController.text,
-          deliveryMethodId: deliveryMethodId,
-          carNumber: _carNumberController.text,
-          status: "confirmed",
-        )
-            .then((response) {
-          debugPrint(
-              "✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
-          if (response["order_id"] != null) {
-            showScaffold(
-              context: context,
-              message: "Order Confirmed Successfully",
-            );
-
-            // Delete the current order if it exists in local storage
-            if (localProductProvider.currentOrder != null) {
-              localProductProvider
-                  .deleteSavedOrder(localProductProvider.currentOrder!.id);
-            }
-
-            localProductProvider.clearCart();
-
-            // Clear the mobile number after successful save
-            setState(() {
-              mobileNumberText = ""; // Clear the variable
-              selectedCustomerID = null;
-              selectedCustomerPhone = null;
-              iconColor = 1; // Reset to default cash payment method
-              mobileNumberTextController.clear();
-              quantityController.clear();
-              barcodeController.clear();
-              selectedProductIdController.clear();
-              unitPriceController.clear();
-              isCustomerFound = false;
-              selectedCustomer = null;
-              isCouponApplied = false;
-              coupenCodeTextController.clear();
-              _transactionNumberController.clear();
-              _paidAmountController.clear();
-              _balanceAmount = 0;
-              _userChangedPaidAmount = false; // Reset paid amount flag
-              _carNumberController.clear();
-              _commentController.clear();
-            });
-            resetAutocomplete();
-
-            // Reset to default sales executive after confirming
-            _fetchCustomers();
-          } else {
-            debugPrint("❌ API ERROR - Confirm Order failed");
-            showScaffoldError(
-              context: context,
-              message: "Failed to Confirm Order",
-            );
-          }
-        });
-        _focusTextField();
+        return;
       }
+
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      // debugPrint("accessToken From AuthModel $accessToken");
+      final provider = Provider.of<CartProvider>(context, listen: false);
+      int? cartId = provider.getCartIDForOrder;
+      debugPrint("📦 Cart ID for order: $cartId");
+
+      String paymentMethod = "";
+
+      if (selectedPaymentMethods.contains("CASH")) {
+        paymentMethod = "CASH";
+      } else if (selectedPaymentMethods.contains("CARD")) {
+        paymentMethod = "CARD";
+      } else if (selectedPaymentMethods.contains("UPI")) {
+        paymentMethod = "UPI";
+      }
+      debugPrint("💰 Payment Method: $paymentMethod");
+
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      final cartItems = localProductProvider.cartItems;
+
+      if (localProductProvider.cartItems.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: "Please add items to cart",
+        );
+        return;
+      }
+
+      // Validate that all items have valid pricing before API call
+      bool hasInvalidPricing = localProductProvider.cartItems.any((item) =>
+          item.price == null ||
+          item.price! < 0 ||
+          item.mrp == null ||
+          item.mrp! < 0);
+
+      if (hasInvalidPricing) {
+        showScaffoldError(
+          context: context,
+          message:
+              "Please ensure all items have valid prices and MRP before confirming order",
+        );
+        return;
+      }
+
+      List<Map<String, dynamic>> items = [];
+
+      for (var item in cartItems) {
+        debugPrint("📦 Order Item: ${item.product.productName}");
+        debugPrint("  - Product ID: ${item.product.productId}");
+        debugPrint("  - Quantity: ${item.quantity}");
+        debugPrint("  - Custom Price: ${item.price}");
+        debugPrint("  - Custom MRP: ${item.mrp}");
+        debugPrint("  - Stock ID: ${item.selectedStock?.id}");
+
+        items.add({
+          'product_id': item.product.productId,
+          'quantity': item.quantity,
+          'price': item.price,
+          'mrp': item.mrp, // 🔧 FIX: Include custom MRP in API call
+          'stock_id': item.selectedStock?.id,
+        });
+      }
+
+      debugPrint("📋 Order Items: ${items.length} products");
+      debugPrint(
+          "💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
+      debugPrint("👤 Customer ID: $selectedCustomerID");
+      debugPrint(
+          "📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
+      debugPrint(
+          "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
+      debugPrint("�� Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
+
+      await Provider.of<CartProvider>(context, listen: false)
+          .addToOrderAPI(
+        items: items,
+        cartIds: cartId ?? 0,
+        accessToken: accessToken ?? "",
+        transactionId: _transactionNumberController.text,
+        totalPrice: Provider.of<LocalProductProvider>(context, listen: false)
+            .priceSummary!
+            .netTotal
+            .toString(),
+        customerId: selectedCustomerID,
+        customerPhone: selectedCustomerPhone ?? mobileNumberText,
+        // Always use multi-payment format
+        paymentMethod: null,
+        paidAmount: null,
+        paymentMethods: selectedPaymentMethods,
+        paidMethods: _getPaidMethods(),
+        balanceAmount: _balanceAmount.toString(),
+        couponId: isCouponApplied ? coupenCodeTextController.text : null,
+        comment: _commentController.text,
+        deliveryMethodId: deliveryMethodId,
+        carNumber: _carNumberController.text,
+        status: "confirmed",
+      )
+          .then((response) {
+        debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
+        if (response["order_id"] != null) {
+          showScaffold(
+            context: context,
+            message: "Order Confirmed Successfully",
+          );
+
+          // Delete the current order if it exists in local storage
+          if (localProductProvider.currentOrder != null) {
+            localProductProvider
+                .deleteSavedOrder(localProductProvider.currentOrder!.id);
+          }
+
+          localProductProvider.clearCart();
+
+          // Clear the mobile number after successful save
+          setState(() {
+            mobileNumberText = ""; // Clear the variable
+            selectedCustomerID = null;
+            selectedCustomerPhone = null;
+            // Remove iconColor reset
+            // iconColor = 1; // DELETE THIS LINE
+            mobileNumberTextController.clear();
+            quantityController.clear();
+            barcodeController.clear();
+            selectedProductIdController.clear();
+            unitPriceController.clear();
+            isCustomerFound = false;
+            selectedCustomer = null;
+            isCouponApplied = false;
+            coupenCodeTextController.clear();
+            _transactionNumberController.clear();
+            _paidAmountController.clear();
+            _balanceAmount = 0;
+            _carNumberController.clear();
+            _commentController.clear();
+          });
+          resetAutocomplete();
+
+          // Reset to default sales executive after confirming
+          _fetchCustomers();
+          _clearCart();
+        } else {
+          debugPrint("❌ API ERROR - Confirm Order failed");
+          showScaffoldError(
+            context: context,
+            message: "Failed to Confirm Order",
+          );
+        }
+      });
+      _focusTextField();
     } catch (error) {
       debugPrint("❌ EXCEPTION in _confirmOrder: $error");
     } finally {
@@ -4696,21 +4033,6 @@ class BillingPageState extends State<BillingPage>
       });
       debugPrint("🏁 Confirm Order process completed");
     }
-  }
-
-  void _getBalanceAmount() {
-    // debugPrint(_paidAmountController.text);
-    num netTotal = Provider.of<LocalProductProvider>(context, listen: false)
-        .priceSummary!
-        .netTotal;
-    double paidAmount = double.tryParse(_paidAmountController.text) ?? 0.00;
-    double balanceAmount = paidAmount - netTotal;
-    if (balanceAmount < 0) {
-      balanceAmount = 0.00;
-    }
-    setState(() {
-      _balanceAmount = balanceAmount;
-    });
   }
 
   // Multi-payment helper methods
@@ -4736,25 +4058,6 @@ class BillingPageState extends State<BillingPage>
     double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
     return cashAmount + cardAmount + upiAmount;
-  }
-
-  void _autoFillPaymentAmount() {
-    final localProductProvider =
-        Provider.of<LocalProductProvider>(context, listen: false);
-    double cartTotal = localProductProvider.cartTotal;
-    double totalPaid = _getTotalPaidAmount();
-    double remaining = cartTotal - totalPaid;
-
-    if (remaining > 0) {
-      // Find the first selected payment method that has no amount and fill it
-      if (_isCashSelected && _cashAmountController.text.isEmpty) {
-        _cashAmountController.text = remaining.toStringAsFixed(2);
-      } else if (_isCardSelected && _cardAmountController.text.isEmpty) {
-        _cardAmountController.text = remaining.toStringAsFixed(2);
-      } else if (_isUpiSelected && _upiAmountController.text.isEmpty) {
-        _upiAmountController.text = remaining.toStringAsFixed(2);
-      }
-    }
   }
 
   List<String> _getSelectedPaymentMethods() {
@@ -4802,132 +4105,6 @@ class BillingPageState extends State<BillingPage>
     }
 
     return paidMethods;
-  }
-
-  Widget _buildPaymentMethodRow({
-    required bool isSelected,
-    required String icon,
-    required String label,
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required Size size,
-    required VoidCallback onToggle,
-    required void Function(String?) onAmountChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5.0),
-      child: Row(
-        children: [
-          // Payment method icon (visual indicator only)
-          BuildBoxShadowContainer(
-            border: isSelected
-                ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
-                : Border.all(color: Colors.grey.shade300),
-            padding: const EdgeInsets.all(8),
-            blurRadius: 4,
-            circleRadius: 5,
-            width: 70,
-            child: Column(
-              children: [
-                WebsafeSvg.asset(
-                  icon,
-                  width: 14,
-                  height: 14,
-                  color: isSelected ? ColorManager.kPrimaryColor : Colors.grey,
-                  fit: BoxFit.none,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s9,
-                    0.12,
-                    isSelected ? ColorManager.kPrimaryColor : Colors.grey,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 10),
-
-          // Amount input field - always visible
-          Expanded(
-            child: buildColumnWidgetForTextFields(
-              controller: controller,
-              size: size,
-              height: size.height * .05,
-              hintText: 'Enter $label amount',
-              keyboardType: TextInputType.number,
-              focusNode: focusNode,
-              onchanged: (value) {
-                // Auto-enable/disable based on amount
-                double amount = double.tryParse(value ?? '') ?? 0;
-                if (amount > 0 && !isSelected) {
-                  onToggle(); // Enable the payment method
-                } else if (amount == 0 && isSelected) {
-                  onToggle(); // Disable the payment method
-                }
-                onAmountChanged(value);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentSummaryRow(LocalProductProvider localProductProvider) {
-    double totalPaid = _getTotalPaidAmount();
-
-    return Column(
-      children: [
-        BuildPaymentRow(
-          amount: "INR ${totalPaid.toStringAsFixed(2)}",
-          title: "Total Paid",
-          padding: const EdgeInsets.only(left: 5.0, right: 5.0),
-          firstRowTextStyle: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s14,
-            0.18,
-            ColorManager.kPrimaryColor,
-          ),
-          secondRowTextStyle: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s14,
-            0.18,
-            ColorManager.kPrimaryColor,
-          ),
-          color: ColorManager.kPrimaryColor,
-        ),
-        const SizedBox(height: 8),
-        BuildPaymentRow(
-          amount: "INR ${_balanceAmount.toStringAsFixed(2)}",
-          title: "Balance Amount",
-          padding: const EdgeInsets.only(left: 5.0, right: 5.0),
-          secondRowTextStyle: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s15,
-            0.18,
-            _balanceAmount > 0
-                ? ColorManager.kButtonGreen
-                : ColorManager.textColorRed,
-          ),
-          firstRowTextStyle: buildCustomStyle(
-            FontWeightManager.bold,
-            FontSize.s15,
-            0.23,
-            _balanceAmount > 0
-                ? ColorManager.kButtonGreen
-                : ColorManager.textColorRed,
-          ),
-          color: _balanceAmount > 0
-              ? ColorManager.kButtonGreen
-              : ColorManager.textColorRed,
-        ),
-      ],
-    );
   }
 
   Widget _buildQuickAccessIcons() {
@@ -5276,19 +4453,18 @@ class BillingPageState extends State<BillingPage>
     debugPrint(
         "🔄 resetAutocomplete called - shouldFetchCustomers: $shouldFetchCustomers");
     setState(() {
-      _autocompletePhoneKey = GlobalKey(); // Reset the key to force rebuild
-      _autocompleteProductKey = GlobalKey(); // Reset the key to force rebuild
+      _autocompletePhoneKey = GlobalKey();
+      _autocompleteProductKey = GlobalKey();
       isCustomerFound = false;
-      _userChangedPaidAmount = false; // Reset paid amount flag
 
-      // Only fetch customers if explicitly requested (not when loading saved orders)
       if (shouldFetchCustomers) {
         _fetchCustomers();
       }
 
       deliveryMethodId = "3";
       deliveryMethod = "Store Takeaway";
-      iconColor = 1;
+      // Remove iconColor reset
+      // iconColor = 1; // DELETE THIS LINE
     });
     Provider.of<LocalProductProvider>(context, listen: false)
         .resetSelectedProduct();
@@ -5442,7 +4618,7 @@ class BillingPageState extends State<BillingPage>
     // Reset all form fields
     setState(() {
       // Clear payment and delivery states
-      iconColor = 1; // Default to cash
+      // iconColor = 1; // Default to cash
       deliveryMethod = "Store Takeaway";
       deliveryMethodId = "3";
 
@@ -5456,7 +4632,6 @@ class BillingPageState extends State<BillingPage>
       // Reset other flags
       isCouponApplied = false;
       _balanceAmount = 0;
-      _userChangedPaidAmount = false;
 
       // Clear product entry fields
       quantityController.clear();
@@ -5488,8 +4663,6 @@ class BillingPageState extends State<BillingPage>
     debugPrint("  - selectedCustomerPhone: '$selectedCustomerPhone'");
     debugPrint("  - selectedCustomer?.name: '${selectedCustomer?.name}'");
     debugPrint("  - isCustomerFound: $isCustomerFound");
-    debugPrint(
-        "  - Payment Method: ${iconColor == 1 ? 'CASH' : iconColor == 2 ? 'CARD' : iconColor == 3 ? 'UPI' : 'None'}");
     debugPrint("  - Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
     debugPrint("  - Comment: '${_commentController.text}'");
     debugPrint(
@@ -5519,846 +4692,5 @@ class BillingPageState extends State<BillingPage>
 
     // Re-fetch customers to set new default based on new executive
     _fetchCustomers();
-  }
-}
-
-// Multi-Payment Method Modal
-class PaymentMethodModal extends StatefulWidget {
-  final bool initialIsCashSelected;
-  final bool initialIsCardSelected;
-  final bool initialIsUpiSelected;
-  final String initialCashAmount;
-  final String initialCardAmount;
-  final String initialUpiAmount;
-  final String initialTransactionNumber;
-  final double cartTotal;
-  final Function(bool, bool, bool, String, String, String, String)
-      onPaymentMethodSelected;
-
-  const PaymentMethodModal({
-    Key? key,
-    required this.initialIsCashSelected,
-    required this.initialIsCardSelected,
-    required this.initialIsUpiSelected,
-    required this.initialCashAmount,
-    required this.initialCardAmount,
-    required this.initialUpiAmount,
-    required this.initialTransactionNumber,
-    required this.cartTotal,
-    required this.onPaymentMethodSelected,
-  }) : super(key: key);
-
-  @override
-  State<PaymentMethodModal> createState() => _PaymentMethodModalState();
-}
-
-class _PaymentMethodModalState extends State<PaymentMethodModal> {
-  late bool isCashSelected;
-  late bool isCardSelected;
-  late bool isUpiSelected;
-  late TextEditingController cashAmountController;
-  late TextEditingController cardAmountController;
-  late TextEditingController upiAmountController;
-  late TextEditingController transactionNumberController;
-  late FocusNode cashAmountFocusNode;
-  late FocusNode cardAmountFocusNode;
-  late FocusNode upiAmountFocusNode;
-  double balanceAmount = 0;
-
-  @override
-  void initState() {
-    super.initState();
-
-    // Initialize selection states
-    isCashSelected = widget.initialIsCashSelected;
-    isCardSelected = widget.initialIsCardSelected;
-    isUpiSelected = widget.initialIsUpiSelected;
-
-    // Initialize controllers
-    cashAmountController =
-        TextEditingController(text: widget.initialCashAmount);
-    cardAmountController =
-        TextEditingController(text: widget.initialCardAmount);
-    upiAmountController = TextEditingController(text: widget.initialUpiAmount);
-    transactionNumberController =
-        TextEditingController(text: widget.initialTransactionNumber);
-
-    // Initialize focus nodes
-    cashAmountFocusNode = FocusNode();
-    cardAmountFocusNode = FocusNode();
-    upiAmountFocusNode = FocusNode();
-
-    // Calculate initial balance
-    _calculateBalance();
-
-    // Add focus listeners
-    cashAmountFocusNode.addListener(() {
-      if (cashAmountFocusNode.hasFocus &&
-          cashAmountController.text.isNotEmpty) {
-        cashAmountController.selection = TextSelection(
-          baseOffset: 0,
-          extentOffset: cashAmountController.text.length,
-        );
-      }
-    });
-
-    cardAmountFocusNode.addListener(() {
-      if (cardAmountFocusNode.hasFocus &&
-          cardAmountController.text.isNotEmpty) {
-        cardAmountController.selection = TextSelection(
-          baseOffset: 0,
-          extentOffset: cardAmountController.text.length,
-        );
-      }
-    });
-
-    upiAmountFocusNode.addListener(() {
-      if (upiAmountFocusNode.hasFocus && upiAmountController.text.isNotEmpty) {
-        upiAmountController.selection = TextSelection(
-          baseOffset: 0,
-          extentOffset: upiAmountController.text.length,
-        );
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    cashAmountController.dispose();
-    cardAmountController.dispose();
-    upiAmountController.dispose();
-    transactionNumberController.dispose();
-    cashAmountFocusNode.dispose();
-    cardAmountFocusNode.dispose();
-    upiAmountFocusNode.dispose();
-    super.dispose();
-  }
-
-  void _calculateBalance() {
-    double totalPaid = _getTotalPaidAmount();
-    double balance = totalPaid - widget.cartTotal;
-    if (balance < 0) {
-      balance = 0.0;
-    }
-    setState(() {
-      balanceAmount = balance;
-    });
-  }
-
-  double _getTotalPaidAmount() {
-    double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
-    double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
-    double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-    return cashAmount + cardAmount + upiAmount;
-  }
-
-  void _autoFillPaymentAmount() {
-    double totalPaid = _getTotalPaidAmount();
-    double remaining = widget.cartTotal - totalPaid;
-
-    if (remaining > 0) {
-      // Find the first selected payment method that has no amount and fill it
-      if (isCashSelected && cashAmountController.text.isEmpty) {
-        cashAmountController.text = remaining.toStringAsFixed(2);
-      } else if (isCardSelected && cardAmountController.text.isEmpty) {
-        cardAmountController.text = remaining.toStringAsFixed(2);
-      } else if (isUpiSelected && upiAmountController.text.isEmpty) {
-        upiAmountController.text = remaining.toStringAsFixed(2);
-      }
-    }
-    _calculateBalance();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: BuildBoxShadowContainer(
-        width: 550,
-        circleRadius: 12,
-        color: Colors.white,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Payment Methods',
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s16,
-                    0.21,
-                    ColorManager.kPrimaryColor,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Cash Payment
-            _buildModalPaymentRow(
-              isSelected: isCashSelected,
-              icon: ImageAssets.cashIcon,
-              label: 'Cash',
-              controller: cashAmountController,
-              focusNode: cashAmountFocusNode,
-              size: size,
-              onToggle: () {
-                setState(() {
-                  isCashSelected = !isCashSelected;
-                  if (!isCashSelected) {
-                    cashAmountController.clear();
-                  } else {
-                    _autoFillPaymentAmount();
-                  }
-                  _calculateBalance();
-                });
-              },
-            ),
-
-            const SizedBox(height: 15),
-
-            // Card Payment
-            _buildModalPaymentRow(
-              isSelected: isCardSelected,
-              icon: ImageAssets.creditCardIcon,
-              label: 'Card',
-              controller: cardAmountController,
-              focusNode: cardAmountFocusNode,
-              size: size,
-              onToggle: () {
-                setState(() {
-                  isCardSelected = !isCardSelected;
-                  if (!isCardSelected) {
-                    cardAmountController.clear();
-                  } else {
-                    _autoFillPaymentAmount();
-                  }
-                  _calculateBalance();
-                });
-              },
-            ),
-
-            const SizedBox(height: 15),
-
-            // UPI Payment
-            _buildModalPaymentRow(
-              isSelected: isUpiSelected,
-              icon: ImageAssets.creditCardIcon,
-              label: 'UPI',
-              controller: upiAmountController,
-              focusNode: upiAmountFocusNode,
-              size: size,
-              onToggle: () {
-                setState(() {
-                  isUpiSelected = !isUpiSelected;
-                  if (!isUpiSelected) {
-                    upiAmountController.clear();
-                  } else {
-                    _autoFillPaymentAmount();
-                  }
-                  _calculateBalance();
-                });
-              },
-            ),
-
-            const SizedBox(height: 15),
-
-            // Transaction Reference Field - Show only if Card or UPI is selected
-            if (isCardSelected || isUpiSelected) ...[
-              Text(
-                'Transaction Reference',
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s13,
-                  0.16,
-                  ColorManager.textColor,
-                ),
-              ),
-              const SizedBox(height: 8),
-              buildColumnWidgetForTextFields(
-                controller: transactionNumberController,
-                size: size,
-                width: 600,
-                height: size.height * .06,
-                hintText: 'Enter transaction reference number',
-              ),
-              const SizedBox(height: 15),
-            ],
-
-            // Payment Summary
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total Required: INR ${widget.cartTotal.toStringAsFixed(2)}',
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s14,
-                    0.18,
-                    ColorManager.textColor,
-                  ),
-                ),
-                Text(
-                  'Total Paid: INR ${_getTotalPaidAmount().toStringAsFixed(2)}',
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s14,
-                    0.18,
-                    ColorManager.kPrimaryColor,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 10),
-
-            BuildPaymentRow(
-              amount: "INR ${balanceAmount.toStringAsFixed(2)}",
-              title: "Balance Amount",
-              secondRowTextStyle: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s15,
-                0.18,
-                balanceAmount > 0
-                    ? ColorManager.kButtonGreen
-                    : ColorManager.textColorRed,
-              ),
-              firstRowTextStyle: buildCustomStyle(
-                FontWeightManager.bold,
-                FontSize.s15,
-                0.23,
-                balanceAmount > 0
-                    ? ColorManager.kButtonGreen
-                    : ColorManager.textColorRed,
-              ),
-              color: balanceAmount > 0
-                  ? ColorManager.kButtonGreen
-                  : ColorManager.textColorRed,
-            ),
-
-            const SizedBox(height: 20),
-            CustomRoundButton(
-              title: "Apply Payment Methods",
-              fct: () {
-                widget.onPaymentMethodSelected(
-                  isCashSelected,
-                  isCardSelected,
-                  isUpiSelected,
-                  cashAmountController.text,
-                  cardAmountController.text,
-                  upiAmountController.text,
-                  transactionNumberController.text,
-                );
-                Navigator.of(context).pop();
-              },
-              fontSize: FontSize.s14,
-              height: 45,
-              width: double.infinity,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModalPaymentRow({
-    required bool isSelected,
-    required String icon,
-    required String label,
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required Size size,
-    required VoidCallback onToggle,
-  }) {
-    return Row(
-      children: [
-        // Payment method icon (visual indicator only)
-        BuildBoxShadowContainer(
-          border: isSelected
-              ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
-              : Border.all(color: Colors.grey.shade300),
-          padding: const EdgeInsets.all(12),
-          blurRadius: 4,
-          circleRadius: 5,
-          width: 90,
-          child: Column(
-            children: [
-              WebsafeSvg.asset(
-                icon,
-                width: 18,
-                height: 18,
-                color: isSelected ? ColorManager.kPrimaryColor : Colors.grey,
-                fit: BoxFit.none,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s11,
-                  0.12,
-                  isSelected ? ColorManager.kPrimaryColor : Colors.grey,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(width: 15),
-
-        // Amount input field - always visible
-        Expanded(
-          child: buildColumnWidgetForTextFields(
-            controller: controller,
-            size: size,
-            height: size.height * .06,
-            hintText: 'Enter $label amount',
-            keyboardType: TextInputType.number,
-            focusNode: focusNode,
-            onchanged: (value) {
-              // Auto-enable/disable based on amount
-              double amount = double.tryParse(value ?? '') ?? 0;
-              if (amount > 0 && !isSelected) {
-                onToggle(); // Enable the payment method
-              } else if (amount == 0 && isSelected) {
-                onToggle(); // Disable the payment method
-              }
-              _calculateBalance();
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// Delivery Method Modal
-class DeliveryMethodModal extends StatefulWidget {
-  final String initialDeliveryMethod;
-  final String initialDeliveryMethodId;
-  final String initialCarNumber;
-  final String initialComment;
-  final Function(String, String, String, String) onDeliveryMethodSelected;
-
-  const DeliveryMethodModal({
-    Key? key,
-    required this.initialDeliveryMethod,
-    required this.initialDeliveryMethodId,
-    required this.initialCarNumber,
-    required this.initialComment,
-    required this.onDeliveryMethodSelected,
-  }) : super(key: key);
-
-  @override
-  State<DeliveryMethodModal> createState() => _DeliveryMethodModalState();
-}
-
-class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
-  late String deliveryMethod;
-  late String deliveryMethodId;
-  late TextEditingController carNumberController;
-  late TextEditingController commentController;
-
-  @override
-  void initState() {
-    super.initState();
-    deliveryMethod = widget.initialDeliveryMethod;
-    deliveryMethodId = widget.initialDeliveryMethodId;
-    carNumberController = TextEditingController(text: widget.initialCarNumber);
-    commentController = TextEditingController(text: widget.initialComment);
-  }
-
-  @override
-  void dispose() {
-    carNumberController.dispose();
-    commentController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: BuildBoxShadowContainer(
-        circleRadius: 12,
-        color: Colors.white,
-        width: 600,
-        padding: const EdgeInsets.all(20),
-        child: Consumer<DeliveryMethodsProvider>(
-          builder: (context, provider, child) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Delivery Method',
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s16,
-                        0.21,
-                        ColorManager.kPrimaryColor,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: provider.deliveryMethods.map((method) {
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          deliveryMethod = method.name;
-                          deliveryMethodId = method.id;
-                        });
-                      },
-                      child: BuildBoxShadowContainer(
-                        border: deliveryMethod == method.name
-                            ? Border.all(color: ColorManager.kPrimaryColor)
-                            : null,
-                        padding: const EdgeInsets.all(12),
-                        blurRadius: 4,
-                        circleRadius: 5,
-                        child: Column(
-                          children: [
-                            Icon(
-                              method.name == "Store Takeaway"
-                                  ? Icons.store
-                                  : method.name == "Car Delivery"
-                                      ? Icons.car_rental
-                                      : method.name == "Door Delivery"
-                                          ? Icons.doorbell_outlined
-                                          : Icons.local_shipping,
-                              size: 20,
-                              color: Colors.black,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              method.name,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.12,
-                                Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 20),
-                if (deliveryMethod == "Car Delivery") ...[
-                  buildColumnWidgetForTextFields(
-                    controller: carNumberController,
-                    size: size,
-                    height: size.height * .06,
-                    hintText: 'Car Number:',
-                    width: 600,
-                  ),
-                  const SizedBox(height: 10),
-                ],
-                buildColumnWidgetForTextFields(
-                  controller: commentController,
-                  size: size,
-                  height: size.height * .06,
-                  hintText: 'Comment:',
-                  width: 600,
-                ),
-                const SizedBox(height: 20),
-                CustomRoundButton(
-                  title: "Apply",
-                  fct: () {
-                    widget.onDeliveryMethodSelected(
-                      deliveryMethod,
-                      deliveryMethodId,
-                      carNumberController.text,
-                      commentController.text,
-                    );
-                    Navigator.of(context).pop();
-                  },
-                  fontSize: FontSize.s14,
-                  height: 45,
-                  width: double.infinity,
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-// Coupon Modal
-class CouponModal extends StatefulWidget {
-  final String initialCouponCode;
-  final bool isCouponApplied;
-  final Function(String, bool) onCouponAction;
-
-  const CouponModal({
-    Key? key,
-    required this.initialCouponCode,
-    required this.isCouponApplied,
-    required this.onCouponAction,
-  }) : super(key: key);
-
-  @override
-  State<CouponModal> createState() => _CouponModalState();
-}
-
-class _CouponModalState extends State<CouponModal> {
-  late TextEditingController couponController;
-  late bool isCouponApplied;
-
-  @override
-  void initState() {
-    super.initState();
-    couponController = TextEditingController(text: widget.initialCouponCode);
-    isCouponApplied = widget.isCouponApplied;
-  }
-
-  @override
-  void dispose() {
-    couponController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: BuildBoxShadowContainer(
-        circleRadius: 12,
-        color: Colors.white,
-        width: 400,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Apply Coupon',
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s16,
-                    0.21,
-                    ColorManager.kPrimaryColor,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            BuildBoxShadowContainer(
-              circleRadius: 7,
-              alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.only(left: 15),
-              height: 50,
-              child: TextField(
-                controller: couponController,
-                enabled: !isCouponApplied,
-                decoration: InputDecoration(
-                  hintText: 'Enter Coupon Code',
-                  hintStyle: buildCustomStyle(
-                    FontWeight.w500,
-                    12,
-                    0.27,
-                    Colors.grey.withOpacity(.5),
-                  ),
-                  border: InputBorder.none,
-                ),
-                style: buildCustomStyle(
-                  FontWeight.w500,
-                  12,
-                  0.27,
-                  Colors.black.withOpacity(.5),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                if (isCouponApplied) ...[
-                  Expanded(
-                    child: CustomRoundButton(
-                      title: "Remove",
-                      fct: () {
-                        widget.onCouponAction('', false);
-                        Navigator.of(context).pop();
-                      },
-                      fontSize: FontSize.s14,
-                      height: 45,
-                      width: double.infinity,
-                      boxColor: ColorManager.kButtonRed,
-                      borderColor: ColorManager.kButtonRed,
-                    ),
-                  ),
-                ] else ...[
-                  Expanded(
-                    child: CustomRoundButton(
-                      title: "Apply",
-                      fct: () {
-                        widget.onCouponAction(couponController.text, true);
-                        Navigator.of(context).pop();
-                      },
-                      fontSize: FontSize.s14,
-                      height: 45,
-                      width: double.infinity,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Price Selection Modal Widget
-class PriceSelectionModal extends StatelessWidget {
-  final Function(double) onPriceSelected;
-  final String productName;
-
-  const PriceSelectionModal({
-    Key? key,
-    required this.onPriceSelected,
-    required this.productName,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Container(
-        width: 400,
-        height: 500,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Text(
-              'Select Price for',
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s16,
-                0.18,
-                ColorManager.textColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              productName,
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s14,
-                0.16,
-                ColorManager.kPrimaryColor,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  childAspectRatio: 1.2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                ),
-                itemCount: 20,
-                itemBuilder: (context, index) {
-                  final price = (index + 1).toDouble();
-                  return GestureDetector(
-                    onTap: () {
-                      onPriceSelected(price);
-                      Navigator.of(context).pop();
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: ColorManager.kPrimaryColor.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '₹${price.toStringAsFixed(0)}',
-                          style: buildCustomStyle(
-                            FontWeightManager.semiBold,
-                            FontSize.s14,
-                            0.16,
-                            ColorManager.kPrimaryColor,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Container(
-                      height: 45,
-                      decoration: BoxDecoration(
-                        color: ColorManager.kButtonRed,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Cancel',
-                          style: buildCustomStyle(
-                            FontWeightManager.semiBold,
-                            FontSize.s14,
-                            0.16,
-                            Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
