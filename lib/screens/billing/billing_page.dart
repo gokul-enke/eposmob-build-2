@@ -284,12 +284,34 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> _fetchCustomers() async {
+    debugPrint("🔍 _fetchCustomers() called");
+    debugPrint("  - _isCustomerManuallySelected: $_isCustomerManuallySelected");
+    debugPrint("  - selectedCustomerID: $selectedCustomerID");
+    debugPrint("  - mobileNumberText: '$mobileNumberText'");
+    debugPrint("  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
+    
     // If customer was manually selected (either from list or phone entry), don't reset to default
     if (_isCustomerManuallySelected &&
         (selectedCustomerID != null || mobileNumberText?.isNotEmpty == true)) {
       debugPrint("🛡️ Customer manually selected, skipping reset to default");
       debugPrint("  - selectedCustomerID: $selectedCustomerID");
       debugPrint("  - mobileNumberText: '$mobileNumberText'");
+      return;
+    }
+
+    // Additional check: if the text field contains user-entered data that's not the sales executive's info, preserve it
+    if (mobileNumberTextController.text.isNotEmpty && 
+        !mobileNumberTextController.text.contains("${Provider.of<SalesExecutiveProvider>(context, listen: false).getCurrentUser(context)?.name ?? ''} ${Provider.of<SalesExecutiveProvider>(context, listen: false).getCurrentUser(context)?.phone ?? ''}")) {
+      debugPrint("🛡️ Text field contains user data, preserving manual entry");
+      debugPrint("  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
+      
+      // Mark as manually selected and preserve the current state
+      setState(() {
+        _isCustomerManuallySelected = true;
+        if (mobileNumberText?.isEmpty == true) {
+          mobileNumberText = mobileNumberTextController.text;
+        }
+      });
       return;
     }
 
@@ -373,6 +395,9 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _focusTextField() {
+    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    Provider.of<CustomerProvider>(context, listen: false)
+        .loadAllCustomers(accessToken!);
     // debugPrint("Focusing Text Field");
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
@@ -1977,6 +2002,7 @@ class BillingPageState extends State<BillingPage>
                                 "${selection.name} ${selection.phone}";
                             // Mark as manually selected
                             _isCustomerManuallySelected = true;
+                            debugPrint("  - 🔒 Marked as manually selected (customer from list)");
                           });
 
                           debugPrint("📝 AFTER setState:");
@@ -2144,12 +2170,12 @@ class BillingPageState extends State<BillingPage>
                                   if (value.isNotEmpty && value.length >= 10) {
                                     _isCustomerManuallySelected = true;
                                     debugPrint(
-                                        "  - Marked as manually selected (phone entry)");
+                                        "  - 🔒 Marked as manually selected (phone entry): '$value'");
                                   } else if (value.isEmpty) {
                                     // Reset manual selection if field is cleared
                                     _isCustomerManuallySelected = false;
                                     debugPrint(
-                                        "  - Reset manual selection (field cleared)");
+                                        "  - 🔓 Reset manual selection (field cleared)");
                                   }
                                 });
                                 debugPrint(
@@ -2508,7 +2534,7 @@ class BillingPageState extends State<BillingPage>
         context: context,
         message: "Cart Cleared Succesfully",
       );
-      resetAutocomplete();
+      resetAutocomplete(shouldFetchCustomers: false); // Don't reset customer selection when clearing cart
       _focusTextField();
     } catch (e) {
       debugPrint("Error clearing cart: $e");
@@ -2799,12 +2825,14 @@ class BillingPageState extends State<BillingPage>
         _upiAmountController.clear();
       });
 
-      resetAutocomplete();
+      resetAutocomplete(shouldFetchCustomers: false); // Preserve customer selection after saving
       _focusTextField();
 
-      // Reset to default sales executive after saving
-      _clearCart();
-      _fetchCustomers();
+      // Reset to default sales executive after saving only if no manual customer was selected
+      if (!_isCustomerManuallySelected) {
+        _clearCart();
+        _fetchCustomers();
+      }
     } catch (error) {
       debugPrint(error.toString());
       showScaffoldError(
@@ -3089,12 +3117,14 @@ class BillingPageState extends State<BillingPage>
             false; // Reset manual selection after save
       });
 
-      resetAutocomplete();
+      resetAutocomplete(shouldFetchCustomers: false); // Preserve customer selection after saving
       _focusTextField();
 
-      // Reset to default sales executive after saving
-      _clearCart();
-      _fetchCustomers();
+      // Reset to default sales executive after saving only if no manual customer was selected
+      if (!_isCustomerManuallySelected) {
+        _clearCart();
+        _fetchCustomers();
+      }
     } catch (error) {
       debugPrint(error.toString());
       showScaffoldError(
@@ -3805,10 +3835,12 @@ class BillingPageState extends State<BillingPage>
             _carNumberController.clear();
             _commentController.clear();
           });
-          resetAutocomplete();
+          resetAutocomplete(shouldFetchCustomers: false); // Preserve customer selection after confirming
 
-          // Reset to default sales executive after confirming
-          _fetchCustomers();
+          // Reset to default sales executive after confirming only if no manual customer was selected
+          if (!_isCustomerManuallySelected) {
+            _fetchCustomers();
+          }
         } else {
           debugPrint("❌ API ERROR - Create Order and Print failed");
           showScaffoldError(
@@ -4010,11 +4042,13 @@ class BillingPageState extends State<BillingPage>
             _carNumberController.clear();
             _commentController.clear();
           });
-          resetAutocomplete();
+          resetAutocomplete(shouldFetchCustomers: false); // Preserve customer selection after confirming
 
-          // Reset to default sales executive after confirming
-          _fetchCustomers();
-          _clearCart();
+          // Reset to default sales executive after confirming only if no manual customer was selected
+          if (!_isCustomerManuallySelected) {
+            _fetchCustomers();
+            _clearCart();
+          }
         } else {
           debugPrint("❌ API ERROR - Confirm Order failed");
           showScaffoldError(
@@ -4452,13 +4486,21 @@ class BillingPageState extends State<BillingPage>
   void resetAutocomplete({bool shouldFetchCustomers = true}) {
     debugPrint(
         "🔄 resetAutocomplete called - shouldFetchCustomers: $shouldFetchCustomers");
+    debugPrint("  - _isCustomerManuallySelected: $_isCustomerManuallySelected");
+    debugPrint("  - mobileNumberText: '$mobileNumberText'");
+    debugPrint("  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
+    
     setState(() {
       _autocompletePhoneKey = GlobalKey();
       _autocompleteProductKey = GlobalKey();
       isCustomerFound = false;
 
-      if (shouldFetchCustomers) {
+      // Only fetch customers if requested AND no customer was manually selected
+      if (shouldFetchCustomers && !_isCustomerManuallySelected) {
+        debugPrint("  - Calling _fetchCustomers() because no manual selection detected");
         _fetchCustomers();
+      } else if (shouldFetchCustomers && _isCustomerManuallySelected) {
+        debugPrint("  - Skipping _fetchCustomers() because customer was manually selected");
       }
 
       deliveryMethodId = "3";

@@ -55,17 +55,36 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   void initState() {
     super.initState();
 
-    // Initialize selection states
-    isCashSelected = widget.initialIsCashSelected;
-    isCardSelected = widget.initialIsCardSelected;
-    isUpiSelected = widget.initialIsUpiSelected;
+    // Always preselect cash as default if no payment methods are currently selected
+    bool hasAnySelection = widget.initialIsCashSelected || 
+                          widget.initialIsCardSelected || 
+                          widget.initialIsUpiSelected;
+    
+    if (!hasAnySelection) {
+      // No payment method selected, default to cash
+      isCashSelected = true;
+      isCardSelected = false;
+      isUpiSelected = false;
+    } else {
+      // Use existing selections
+      isCashSelected = widget.initialIsCashSelected;
+      isCardSelected = widget.initialIsCardSelected;
+      isUpiSelected = widget.initialIsUpiSelected;
+    }
 
-    // Initialize controllers
-    cashAmountController =
-        TextEditingController(text: widget.initialCashAmount);
-    cardAmountController =
-        TextEditingController(text: widget.initialCardAmount);
-    upiAmountController = TextEditingController(text: widget.initialUpiAmount);
+    // Initialize controllers - don't fill with "0", use existing values or empty
+    cashAmountController = TextEditingController(
+        text: widget.initialCashAmount.isEmpty || widget.initialCashAmount == "0" 
+            ? "" 
+            : widget.initialCashAmount);
+    cardAmountController = TextEditingController(
+        text: widget.initialCardAmount.isEmpty || widget.initialCardAmount == "0" 
+            ? "" 
+            : widget.initialCardAmount);
+    upiAmountController = TextEditingController(
+        text: widget.initialUpiAmount.isEmpty || widget.initialUpiAmount == "0" 
+            ? "" 
+            : widget.initialUpiAmount);
     transactionNumberController =
         TextEditingController(text: widget.initialTransactionNumber);
 
@@ -144,15 +163,41 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
     if (remaining > 0) {
       // Find the first selected payment method that has no amount and fill it
-      if (isCashSelected && cashAmountController.text.isEmpty) {
+      if (isCashSelected && (cashAmountController.text.isEmpty || cashAmountController.text == "0")) {
         cashAmountController.text = remaining.toStringAsFixed(2);
-      } else if (isCardSelected && cardAmountController.text.isEmpty) {
+      } else if (isCardSelected && (cardAmountController.text.isEmpty || cardAmountController.text == "0")) {
         cardAmountController.text = remaining.toStringAsFixed(2);
-      } else if (isUpiSelected && upiAmountController.text.isEmpty) {
+      } else if (isUpiSelected && (upiAmountController.text.isEmpty || upiAmountController.text == "0")) {
         upiAmountController.text = remaining.toStringAsFixed(2);
       }
     }
     _calculateBalance();
+  }
+
+  void _togglePaymentMethod(String paymentType) {
+    setState(() {
+      switch (paymentType) {
+        case 'cash':
+          isCashSelected = !isCashSelected;
+          if (!isCashSelected) {
+            cashAmountController.clear();
+          }
+          break;
+        case 'card':
+          isCardSelected = !isCardSelected;
+          if (!isCardSelected) {
+            cardAmountController.clear();
+          }
+          break;
+        case 'upi':
+          isUpiSelected = !isUpiSelected;
+          if (!isUpiSelected) {
+            upiAmountController.clear();
+          }
+          break;
+      }
+      _calculateBalance();
+    });
   }
 
   @override
@@ -197,17 +242,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               controller: cashAmountController,
               focusNode: cashAmountFocusNode,
               size: size,
-              onToggle: () {
-                setState(() {
-                  isCashSelected = !isCashSelected;
-                  if (!isCashSelected) {
-                    cashAmountController.clear();
-                  } else {
-                    _autoFillPaymentAmount();
-                  }
-                  _calculateBalance();
-                });
-              },
+              onToggle: () => _togglePaymentMethod('cash'),
             ),
 
             const SizedBox(height: 15),
@@ -220,17 +255,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               controller: cardAmountController,
               focusNode: cardAmountFocusNode,
               size: size,
-              onToggle: () {
-                setState(() {
-                  isCardSelected = !isCardSelected;
-                  if (!isCardSelected) {
-                    cardAmountController.clear();
-                  } else {
-                    _autoFillPaymentAmount();
-                  }
-                  _calculateBalance();
-                });
-              },
+              onToggle: () => _togglePaymentMethod('card'),
             ),
 
             const SizedBox(height: 15),
@@ -243,17 +268,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               controller: upiAmountController,
               focusNode: upiAmountFocusNode,
               size: size,
-              onToggle: () {
-                setState(() {
-                  isUpiSelected = !isUpiSelected;
-                  if (!isUpiSelected) {
-                    upiAmountController.clear();
-                  } else {
-                    _autoFillPaymentAmount();
-                  }
-                  _calculateBalance();
-                });
-              },
+              onToggle: () => _togglePaymentMethod('upi'),
             ),
 
             const SizedBox(height: 15),
@@ -367,35 +382,38 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   }) {
     return Row(
       children: [
-        // Payment method icon (visual indicator only)
-        BuildBoxShadowContainer(
-          border: isSelected
-              ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
-              : Border.all(color: Colors.grey.shade300),
-          padding: const EdgeInsets.all(12),
-          blurRadius: 4,
-          circleRadius: 5,
-          width: 90,
-          child: Column(
-            children: [
-              WebsafeSvg.asset(
-                icon,
-                width: 18,
-                height: 18,
-                color: isSelected ? ColorManager.kPrimaryColor : Colors.grey,
-                fit: BoxFit.none,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s11,
-                  0.12,
-                  isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+        // Payment method icon - Now clickable for selection/deselection
+        GestureDetector(
+          onTap: onToggle,
+          child: BuildBoxShadowContainer(
+            border: isSelected
+                ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
+                : Border.all(color: Colors.grey.shade300),
+            padding: const EdgeInsets.all(12),
+            blurRadius: 4,
+            circleRadius: 5,
+            width: 90,
+            child: Column(
+              children: [
+                WebsafeSvg.asset(
+                  icon,
+                  width: 18,
+                  height: 18,
+                  color: isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                  fit: BoxFit.none,
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.12,
+                    isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
 
@@ -414,9 +432,34 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               // Auto-enable/disable based on amount
               double amount = double.tryParse(value ?? '') ?? 0;
               if (amount > 0 && !isSelected) {
-                onToggle(); // Enable the payment method
-              } else if (amount == 0 && isSelected) {
-                onToggle(); // Disable the payment method
+                setState(() {
+                  switch (label.toLowerCase()) {
+                    case 'cash':
+                      isCashSelected = true;
+                      break;
+                    case 'card':
+                      isCardSelected = true;
+                      break;
+                    case 'upi':
+                      isUpiSelected = true;
+                      break;
+                  }
+                });
+              } else if (amount == 0 && isSelected && value?.isEmpty == true) {
+                // Only disable if the field is completely empty, not just "0"
+                setState(() {
+                  switch (label.toLowerCase()) {
+                    case 'cash':
+                      isCashSelected = false;
+                      break;
+                    case 'card':
+                      isCardSelected = false;
+                      break;
+                    case 'upi':
+                      isUpiSelected = false;
+                      break;
+                  }
+                });
               }
               _calculateBalance();
             },
