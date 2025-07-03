@@ -145,13 +145,12 @@ class _CompactQuantityControlLocalState
           selectedStock: widget.selectedStock,
         );
       } else if (newQuantity < widget.quantity) {
-        // Calculate difference for decrements too
-        final num difference = widget.quantity - newQuantity;
-        // Call decrementCartItem for each item to remove
-        for (int i = 0; i < difference; i++) {
-          localProductProvider.decrementCartItem(
-              widget.productId, widget.selectedStock);
-        }
+        // Directly set the desired quantity (supports fractional values)
+        localProductProvider.setCartItemQuantity(
+          widget.productId,
+          widget.selectedStock,
+          newQuantity,
+        );
       }
     } finally {
       _isUpdating = false;

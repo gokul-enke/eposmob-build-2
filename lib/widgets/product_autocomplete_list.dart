@@ -84,31 +84,38 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
     if (query.isEmpty) {
       return const <GetProduct>[];
     }
-    
-    final productProvider = Provider.of<LocalProductProvider>(context, listen: false);
-    
+
+    final productProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+
     // Search through the complete products list, not the filtered one
     return productProvider.products
-        .where((product) => 
-            (product.productName ?? '').toLowerCase().contains(query.toLowerCase()))
+        .where((product) => (product.productName ?? '')
+            .toLowerCase()
+            .contains(query.toLowerCase()))
         .toList();
   }
 
   Future<void> _handleProductSelection(GetProduct product) async {
     debugPrint("🎯 AUTOCOMPLETE PRODUCT SELECTION:");
     debugPrint("  - Product: ${product.productName}");
+    debugPrint("  - Product Unit: ${product.unit}");
     debugPrint("  - Product ID: ${product.productId}");
-    
+
     // Get customer info from global provider
-    final customerSelectionProvider = Provider.of<CustomerSelectionProvider>(context, listen: false);
-    debugPrint("  - Customer from provider: ${customerSelectionProvider.selectedCustomerName}");
-    debugPrint("  - Customer ID from provider: ${customerSelectionProvider.selectedCustomerID}");
-    
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    debugPrint(
+        "  - Customer from provider: ${customerSelectionProvider.selectedCustomerName}");
+    debugPrint(
+        "  - Customer ID from provider: ${customerSelectionProvider.selectedCustomerID}");
+
     await ProductCartHelper.handleProductSelection(
       context: context,
       product: product,
       onSelected: widget.onSelected,
-      addToCartDirectly: false, // Prefill form fields for review before adding to cart
+      addToCartDirectly:
+          false, // Prefill form fields for review before adding to cart
       // Customer info will be fetched from global provider in the helper
     );
   }
@@ -127,10 +134,10 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
             currentOptions = const Iterable<GetProduct>.empty();
             return currentOptions;
           }
-          
+
           // Use our independent search method instead of calling listAllProducts
           final searchResults = _searchProducts(textEditingValue.text);
-          
+
           // Reset highlighted index when options change
           _highlightedOptionIndex = null;
           currentOptions = searchResults;

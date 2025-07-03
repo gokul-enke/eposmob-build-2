@@ -1809,6 +1809,51 @@ class LocalProductProvider extends ChangeNotifier {
     };
   }
 
+  /// Sets the exact quantity of a cart item. Supports fractional quantities.
+  /// If [newQuantity] is 0 or less, the item is removed from the cart.
+  /// Stock levels are adjusted based on the difference between old and new quantities.
+  void setCartItemQuantity(int productId, Stock? selectedStock, num newQuantity) {
+    debugPrint("🔄 SET CART ITEM QUANTITY STARTED");
+    debugPrint("Product ID: $productId");
+    debugPrint("Selected Stock: ${selectedStock?.id}");
+    debugPrint("Requested Quantity: $newQuantity");
+    debugPrint("Stock Management Enabled: $isStockEnabled");
+
+    int index = _cartItems.indexWhere((item) =>
+        item.product.productId == productId &&
+        (item.selectedStock?.id == selectedStock?.id ||
+            (item.selectedStock == null && selectedStock == null)));
+
+    if (index == -1) {
+      debugPrint("⚠️ Cart item not found – cannot set quantity");
+      return;
+    }
+
+    final currentQuantity = _cartItems[index].quantity;
+    final num difference = newQuantity - currentQuantity; // positive if increasing
+
+    // Handle stock adjustment if enabled
+    if (isStockEnabled && selectedStock != null && difference != 0) {
+      // If difference is positive we are selling more → deduct stock (-difference)
+      // If difference is negative we are reducing sale → restore stock (+abs(difference))
+      _updateStockQuantity(selectedStock, -difference, "SET_CART_ITEM_QUANTITY");
+    }
+
+    if (newQuantity <= 0) {
+      // Remove item
+      debugPrint("🗑️ New quantity <= 0 – removing item from cart");
+      _cartItems.removeAt(index);
+    } else {
+      // Update quantity
+      _cartItems[index].quantity = newQuantity;
+      debugPrint("✅ Quantity updated: $currentQuantity → $newQuantity");
+    }
+
+    _saveCartToHive();
+    notifyListeners();
+    debugPrint("🔄 SET CART ITEM QUANTITY COMPLETED");
+  }
+
   // End of LocalProductProvider
 }
 
