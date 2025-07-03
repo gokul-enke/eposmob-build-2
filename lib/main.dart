@@ -24,6 +24,7 @@ import 'package:pos_machine/providers/report_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:provider/provider.dart';
 import 'controllers/sidebar_controller.dart';
 import 'providers/carousel_provider.dart';
@@ -106,6 +107,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SalesExecutiveProvider()),
         ChangeNotifierProvider(create: (_) => DocumentConfigProvider()),
         ChangeNotifierProvider(create: (_) => StockProvider()),
+        ChangeNotifierProvider(
+          create: (_) => TransactionProvider(),
+        ),
       ],
       child: GetMaterialApp(
         debugShowCheckedModeBanner: false,

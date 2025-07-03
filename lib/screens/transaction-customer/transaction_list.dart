@@ -32,7 +32,8 @@ class _CustomerTransactionListScreenState
   final SideBarController sideBarController = Get.put(SideBarController());
   bool initLoading = false;
   List<ListTransaction>? listTransaction = [];
-  List<ListTransaction>? allTransactions = []; // Store all transactions for filtering
+  List<ListTransaction>? allTransactions =
+      []; // Store all transactions for filtering
   String searchAmount = '';
   DateTime? selectedDate;
   int currentPage = 1;
@@ -89,14 +90,15 @@ class _CustomerTransactionListScreenState
 
     // Apply filters
     List<ListTransaction> filteredList = [...allTransactions!];
-    
+
     if (searchAmount.isNotEmpty) {
-      filteredList = filteredList.where((transaction) => 
-        transaction.amount != null && 
-        transaction.amount!.contains(searchAmount)
-      ).toList();
+      filteredList = filteredList
+          .where((transaction) =>
+              transaction.amount != null &&
+              transaction.amount!.contains(searchAmount))
+          .toList();
     }
-    
+
     if (selectedDate != null) {
       // Assuming transactions have a date field that can be compared
       // If you have a createdAt or date field, replace this with the actual field
@@ -114,23 +116,24 @@ class _CustomerTransactionListScreenState
     // Calculate pagination
     totalPages = (filteredList.length / itemsPerPage).ceil();
     totalPages = totalPages == 0 ? 1 : totalPages;
-    
+
     // Ensure current page is valid
     if (currentPage > totalPages) {
       currentPage = totalPages;
     }
-    
+
     // Apply pagination
     int startIndex = (currentPage - 1) * itemsPerPage;
     int endIndex = startIndex + itemsPerPage;
-    
+
     if (startIndex >= filteredList.length) {
       listTransaction = [];
     } else {
-      endIndex = endIndex > filteredList.length ? filteredList.length : endIndex;
+      endIndex =
+          endIndex > filteredList.length ? filteredList.length : endIndex;
       listTransaction = filteredList.sublist(startIndex, endIndex);
     }
-    
+
     setState(() {});
   }
 
@@ -217,8 +220,8 @@ class _CustomerTransactionListScreenState
                   children: [
                     Text(
                       "Transaction Management",
-                      style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-                          0.30, ColorManager.textColor),
+                      style: buildCustomStyle(FontWeightManager.semiBold,
+                          FontSize.s20, 0.30, ColorManager.textColor),
                     ),
                   ],
                 ),
@@ -259,7 +262,8 @@ class _CustomerTransactionListScreenState
                                   onchanged: (value) {
                                     setState(() {
                                       searchAmount = value!;
-                                      currentPage = 1; // Reset to first page on search
+                                      currentPage =
+                                          1; // Reset to first page on search
                                     });
                                     applyFilters();
                                   },
@@ -300,7 +304,8 @@ class _CustomerTransactionListScreenState
                                       onDateSelected: (DateTime date) {
                                         setState(() {
                                           selectedDate = date;
-                                          currentPage = 1; // Reset to first page on date change
+                                          currentPage =
+                                              1; // Reset to first page on date change
                                         });
                                         applyFilters();
                                       },
@@ -399,128 +404,168 @@ class _CustomerTransactionListScreenState
                                             physics:
                                                 const BouncingScrollPhysics(),
                                             scrollDirection: Axis.vertical,
-                                            child: listTransaction == null || listTransaction!.isEmpty
-                                              ? Container(
-                                                  height: 300,
-                                                  width: double.infinity,
-                                                  alignment: Alignment.center,
-                                                  child: Column(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
-                                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                                    children: [
-                                                      Icon(
-                                                        Icons.receipt_long,
-                                                        size: 60,
-                                                        color: ColorManager.kPrimaryColor.withOpacity(0.7),
-                                                      ),
-                                                      const SizedBox(height: 15),
-                                                      Text(
-                                                        'No transactions found',
-                                                        style: buildCustomStyle(
-                                                          FontWeightManager.medium,
-                                                          FontSize.s18,
-                                                          0.27,
-                                                          ColorManager.textColor,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 8),
-                                                      Text(
-                                                        'Try adjusting your search criteria',
-                                                        style: buildCustomStyle(
-                                                          FontWeightManager.regular,
-                                                          FontSize.s14,
-                                                          0.20,
-                                                          Colors.grey,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                )
-                                              : Table(
-                                                columnWidths: const {
-                                                  0: FlexColumnWidth(0.5), // No
-                                                  1: FlexColumnWidth(2.0), // Name
-                                                  2: FlexColumnWidth(1.0), // Type
-                                                  3: FlexColumnWidth(1.5), // Amount
-                                                  4: FlexColumnWidth(1.0), // Status
-                                                  5: FlexColumnWidth(1.0), // Action
-                                                },
-                                                border: null,
-                                                defaultVerticalAlignment:
-                                                    TableCellVerticalAlignment.middle,
-                                                children: [
-                                                  // Table Rows
-                                                  ...listTransaction!.asMap().entries.map((entry) {
-                                                    final int index = entry.key;
-                                                    final transaction = entry.value;
-                                                    return TableRow(
-                                                      decoration: BoxDecoration(
-                                                        color: index % 2 == 0
-                                                            ? Colors.white
-                                                            : Colors.grey
-                                                                .withOpacity(0.1),
-                                                      ),
+                                            child: listTransaction == null ||
+                                                    listTransaction!.isEmpty
+                                                ? Container(
+                                                    height: 300,
+                                                    width: double.infinity,
+                                                    alignment: Alignment.center,
+                                                    child: Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .center,
                                                       children: [
-                                                        _buildTableCell(
-                                                            '${index + 1 + (currentPage - 1) * itemsPerPage}'),
-                                                        _buildTableCell("Name"),
-                                                        _buildTableCell(
-                                                            "${transaction.type}"),
-                                                        _buildTableCell(
-                                                            "${transaction.currency} ${transaction.amount}"),
-                                                        _buildTableCell(
-                                                            "${transaction.status}"),
-                                                        Center(
-                                                          child: Padding(
-                                                            padding:
-                                                                const EdgeInsets.all(
-                                                                    8.0),
-                                                            child:
-                                                                BuildBoxShadowContainer(
-                                                              margin:
-                                                                  const EdgeInsets
-                                                                          .only(
-                                                                      left: 5,
-                                                                      right: 5),
-                                                              circleRadius: 5,
-                                                              child: IconButton(
-                                                                icon: Icon(
-                                                                  Icons.visibility,
-                                                                  size: 18,
-                                                                  color: ColorManager
-                                                                      .kPrimaryColor
-                                                                      .withOpacity(
-                                                                          0.9),
-                                                                ),
-                                                                onPressed: () {
-                                                                  invoiceProvider
-                                                                      .callDetailsOfTransaction(
-                                                                    id: transaction
-                                                                            .id ??
-                                                                        0,
-                                                                    accessToken:
-                                                                        token ?? "",
-                                                                  );
-                                                                  sideBarController
-                                                                      .index
-                                                                      .value = 30;
-                                                                },
-                                                                constraints:
-                                                                    const BoxConstraints(
-                                                                  minWidth: 36,
-                                                                  minHeight: 36,
-                                                                ),
-                                                                padding:
-                                                                    EdgeInsets.zero,
-                                                              ),
-                                                            ),
+                                                        Icon(
+                                                          Icons.receipt_long,
+                                                          size: 60,
+                                                          color: ColorManager
+                                                              .kPrimaryColor
+                                                              .withOpacity(0.7),
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 15),
+                                                        Text(
+                                                          'No transactions found',
+                                                          style:
+                                                              buildCustomStyle(
+                                                            FontWeightManager
+                                                                .medium,
+                                                            FontSize.s18,
+                                                            0.27,
+                                                            ColorManager
+                                                                .textColor,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 8),
+                                                        Text(
+                                                          'Try adjusting your search criteria',
+                                                          style:
+                                                              buildCustomStyle(
+                                                            FontWeightManager
+                                                                .regular,
+                                                            FontSize.s14,
+                                                            0.20,
+                                                            Colors.grey,
                                                           ),
                                                         ),
                                                       ],
-                                                    );
-                                                  }).toList(),
-                                                ],
-                                              ),
+                                                    ),
+                                                  )
+                                                : Table(
+                                                    columnWidths: const {
+                                                      0: FlexColumnWidth(
+                                                          0.5), // No
+                                                      1: FlexColumnWidth(
+                                                          2.0), // Name
+                                                      2: FlexColumnWidth(
+                                                          1.0), // Type
+                                                      3: FlexColumnWidth(
+                                                          1.5), // Amount
+                                                      4: FlexColumnWidth(
+                                                          1.0), // Status
+                                                      5: FlexColumnWidth(
+                                                          1.0), // Action
+                                                    },
+                                                    border: null,
+                                                    defaultVerticalAlignment:
+                                                        TableCellVerticalAlignment
+                                                            .middle,
+                                                    children: [
+                                                      // Table Rows
+                                                      ...listTransaction!
+                                                          .asMap()
+                                                          .entries
+                                                          .map((entry) {
+                                                        final int index =
+                                                            entry.key;
+                                                        final transaction =
+                                                            entry.value;
+                                                        return TableRow(
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: index % 2 ==
+                                                                    0
+                                                                ? Colors.white
+                                                                : Colors.grey
+                                                                    .withOpacity(
+                                                                        0.1),
+                                                          ),
+                                                          children: [
+                                                            _buildTableCell(
+                                                                '${index + 1 + (currentPage - 1) * itemsPerPage}'),
+                                                            _buildTableCell(
+                                                                "Name"),
+                                                            _buildTableCell(
+                                                                "${transaction.type}"),
+                                                            _buildTableCell(
+                                                                "${transaction.currency} ${transaction.amount}"),
+                                                            _buildTableCell(
+                                                                "${transaction.status}"),
+                                                            Center(
+                                                              child: Padding(
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                        .all(
+                                                                        8.0),
+                                                                child:
+                                                                    BuildBoxShadowContainer(
+                                                                  margin:
+                                                                      const EdgeInsets
+                                                                          .only(
+                                                                          left:
+                                                                              5,
+                                                                          right:
+                                                                              5),
+                                                                  circleRadius:
+                                                                      5,
+                                                                  child:
+                                                                      IconButton(
+                                                                    icon: Icon(
+                                                                      Icons
+                                                                          .visibility,
+                                                                      size: 18,
+                                                                      color: ColorManager
+                                                                          .kPrimaryColor
+                                                                          .withOpacity(
+                                                                              0.9),
+                                                                    ),
+                                                                    onPressed:
+                                                                        () {
+                                                                      invoiceProvider
+                                                                          .callDetailsOfTransaction(
+                                                                        id: transaction.id ??
+                                                                            0,
+                                                                        accessToken:
+                                                                            token ??
+                                                                                "",
+                                                                      );
+                                                                      sideBarController
+                                                                          .index
+                                                                          .value = 30;
+                                                                    },
+                                                                    constraints:
+                                                                        const BoxConstraints(
+                                                                      minWidth:
+                                                                          36,
+                                                                      minHeight:
+                                                                          36,
+                                                                    ),
+                                                                    padding:
+                                                                        EdgeInsets
+                                                                            .zero,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        );
+                                                      }).toList(),
+                                                    ],
+                                                  ),
                                           ),
                                         ),
                                       ),

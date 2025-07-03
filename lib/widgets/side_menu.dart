@@ -327,6 +327,20 @@ class SideMenu extends StatelessWidget {
             ),
           ),
           Obx(
+            () => DrawerListTileExpandableColumn(
+                onTapTitle1: () {
+                  sideBarController.index.value = 4;
+                },
+                listTitle1: "Supplier Transactions",
+                iconPath: ImageAssets.transactionIcon,
+                title: 'Transactions',
+                onTap: () {
+                  sideBarController.index.value = 4;
+                  // debugPrint(" 'Category',${sideBarController.index.value}");
+                },
+                selected: sideBarController.index.value == 4),
+          ),
+          Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.customerIcon,
               title: 'Customers',
