@@ -1,7 +1,7 @@
 class APPUrl {
   // static String baseURL = "https://epos.enke.ae";
-  // static String baseURL = "https://hypersouq.enke.in";
-  static String baseURL = "https://stagingepos.enke.ae";
+  static String baseURL = "https://hypersouq.enke.in";
+  // static String baseURL = "https://stagingepos.enke.ae";
   // static String baseURL = "https://epos.mevcakes.com";
   // static String baseURL = "https://epos.mevcakes.com";
   // static String baseURL = "https://kmstoys.enke.in";
@@ -146,4 +146,6 @@ class APPUrl {
   static String getRacksDataValues =
       '$baseURL/api/v1/master-data-values?code=RACKS';
   static String documentConfigs = '$baseURL/api/v1/document/document-configs';
+  static String supplierTransactions =
+      '$baseURL/api/v1/suppliers/list-transactions';
 }

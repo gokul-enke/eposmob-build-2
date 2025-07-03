@@ -3295,9 +3295,17 @@ class BillingPageState extends State<BillingPage>
                   } else if (currentOrder.customerId == null) {
                     // This is a phone-only order, set mobileNumberText to the phone
                     mobileNumberText = currentOrder.customerPhone ?? "";
+                    
+                    // **FIX: Mark as manually selected for phone-only orders**
+                    _isCustomerManuallySelected = true;
+                    debugPrint("  - 🔒 Marked as manually selected (phone-only order loading)");
                   } else {
                     // Regular customer from list, clear mobileNumberText
                     // mobileNumberText = ""; // <-- Don't clear, keep the text for display
+                    
+                    // **FIX: Mark as manually selected for customer from list**
+                    _isCustomerManuallySelected = true;
+                    debugPrint("  - 🔒 Marked as manually selected (customer from list loading)");
                   }
                   debugPrint(
                       "  - Set mobileNumberText to: '$mobileNumberText'");
@@ -3350,11 +3358,19 @@ class BillingPageState extends State<BillingPage>
                   mobileNumberText = currentOrder.customerPhone;
                   debugPrint(
                       "  - Set mobileNumberText for phone-only case: '$mobileNumberText'");
+                  
+                  // **FIX: Mark as manually selected for phone-only orders**
+                  _isCustomerManuallySelected = true;
+                  debugPrint("  - 🔒 Marked as manually selected (phone-only order loading)");
                 } else {
                   // Regular customer from list, clear mobileNumberText
                   mobileNumberText = "";
                   debugPrint(
                       "  - Set mobileNumberText to: '$mobileNumberText'");
+                  
+                  // **FIX: Mark as manually selected for customer from list**
+                  _isCustomerManuallySelected = true;
+                  debugPrint("  - 🔒 Marked as manually selected (customer from list loading)");
                 }
 
                 debugPrint(
@@ -3410,6 +3426,10 @@ class BillingPageState extends State<BillingPage>
                   mobileNumberText = currentOrder.customerPhone ?? "";
                   debugPrint(
                       "  - Set mobileNumberText for phone-only case: '$mobileNumberText'");
+                  
+                  // **FIX: Mark as manually selected for phone-only orders**
+                  _isCustomerManuallySelected = true;
+                  debugPrint("  - 🔒 Marked as manually selected (phone-only order loading)");
                 } else {
                   // Regular customer from list, clear mobileNumberText
                   mobileNumberText = "";
@@ -3581,6 +3601,7 @@ class BillingPageState extends State<BillingPage>
           debugPrint("  - selectedCustomerPhone: '$selectedCustomerPhone'");
           debugPrint("  - selectedCustomer?.name: '${selectedCustomer?.name}'");
           debugPrint("  - isCustomerFound: $isCustomerFound");
+          debugPrint("  - _isCustomerManuallySelected: $_isCustomerManuallySelected 🔒");
           debugPrint(
               "  - 🔍 SUMMARY: Order '${currentOrder.orderNumber}' with phone '${currentOrder.customerPhone}' → mobileNumberText='$mobileNumberText'");
         });
