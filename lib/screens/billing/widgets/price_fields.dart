@@ -72,7 +72,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
             hintText: 'Price',
             hintStyle: TextStyle(
               color: Colors.grey,
-              fontSize: 16,
+              fontSize: 11,
             ),
           ),
           onTap: () {
@@ -195,7 +195,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
             hintText: 'MRP',
             hintStyle: TextStyle(
               color: Colors.grey,
-              fontSize: 16,
+              fontSize: 11,
             ),
           ),
           onTap: () {

@@ -1493,7 +1493,7 @@ class BillingPageState extends State<BillingPage>
                                         '${index + 1}',
                                         style: buildCustomStyle(
                                           FontWeightManager.regular,
-                                          16,
+                                          11,
                                           0.21,
                                           ColorManager.textColor,
                                         ),
@@ -1513,7 +1513,7 @@ class BillingPageState extends State<BillingPage>
                                         item.product.productName ?? 'Unknown',
                                         style: buildCustomStyle(
                                           FontWeightManager.regular,
-                                          14,
+                                          11,
                                           0.21,
                                           ColorManager.textColor,
                                         ),
@@ -1534,7 +1534,7 @@ class BillingPageState extends State<BillingPage>
                                         item.product.unit ?? '-',
                                         style: buildCustomStyle(
                                           FontWeightManager.regular,
-                                          16,
+                                          11,
                                           0.21,
                                           ColorManager.textColor,
                                         ),
@@ -1611,7 +1611,7 @@ class BillingPageState extends State<BillingPage>
                                         child: Text(
                                           (item.price! * item.quantity)
                                               .toStringAsFixed(3),
-                                          style: const TextStyle(fontSize: 16),
+                                          style: const TextStyle(fontSize: 11),
                                           textAlign: TextAlign.left,
                                         ),
                                       ),
