@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:provider/provider.dart';
@@ -27,56 +28,21 @@ class CreateNewInvoiceScreen extends StatelessWidget {
     final TextEditingController paymentMethodRefController =
         TextEditingController();
     final TextEditingController amountController = TextEditingController();
-
     final TextEditingController fromIdController = TextEditingController();
     final TextEditingController commentController = TextEditingController();
     final TextEditingController particularsController = TextEditingController();
 
-    InvoiceProvider invoiceProvider = Provider.of<InvoiceProvider>(
-      context,
-    );
+    InvoiceProvider invoiceProvider = Provider.of<InvoiceProvider>(context);
 
     Map<String, String>? paymentList = invoiceProvider.getPaymentType;
     String? paymentSelected;
     String? invoiceSelected;
-    // Map<String, String>? getVoucherAccountTypesModelData =
-    //     invoiceProvider.getVoucherAccountTypes;
     Map<String, String>? getInvoiceAccountTypesModelData =
         invoiceProvider.getInvoiceAccountTypes;
     List<GetUsersModelData>? getUsersList = invoiceProvider.getUsersList;
     GetUsersModelData? selectedUser;
     GlobalKey<FormState> formKey = GlobalKey<FormState>();
     SideBarController sideBarController = Get.put(SideBarController());
-    // List<String> accountType = [
-    //   'Select an Account Type',
-    //   'Direct Income',
-    //   'Investments',
-    //   "Sales",
-    //   "Cash-In-Hand",
-    //   "Asset",
-    //   "Purchase Return",
-    //   "Project Income"
-    // ];
-    // List<String> users = [
-    //   'Select a user',
-    //   'Super Admin',
-    //   'Sales Executive',
-    // ];
-
-    // String? selectedFromUser;
-    // // Track the selected unit
-    // String? selectedAccountType;
-    // List<String> paymentMethod = [
-    //   'Select a Payment Method',
-    //   'COD',
-    //   'CASH',
-    //   'UPI',
-    //   'CARD',
-    //   'CHEQUE'
-    // ];
-
-    // Track the selected unit
-    // String? selectedPaymentMethod;
 
     return SafeArea(
       child: Container(
@@ -99,20 +65,22 @@ class CreateNewInvoiceScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  CustomBackButton(
+                    onPressed: () {
+                      sideBarController.index.value = 21;
+                    },
+                    text: 'Invoice List',
+                  ),
                   Text(
                     'Create New Invoice',
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s20, 0.30, ColorManager.textColor),
                   ),
-                  const SizedBox(
-                    height: 20,
-                  ),
+                  const SizedBox(height: 20),
                   SizedBox(
-                    // height: size.height * 0.8,
                     width: double.infinity,
                     child: BuildBoxShadowContainer(
                       circleRadius: 7,
-                      // margin: const EdgeInsets.only(bottom: 10),
                       blurRadius: 6,
                       padding: const EdgeInsets.only(
                           left: 10.0, right: 20, top: 30, bottom: 10),
@@ -124,18 +92,6 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                               children: [
                                 Row(
                                   children: [
-                                    // BuildDropDownStatic(
-                                    //   selectedItem: selectedAccountType,
-                                    //   size: size,
-                                    //   isStarRed: true,
-                                    //   isStar: true,
-                                    //   items: accountType,
-                                    //   hintText: 'Select An Account type',
-                                    //   title: 'Account type',
-                                    //   onChanged: (String? newValue) {
-                                    //     selectedAccountType = newValue!;
-                                    //   },
-                                    // ),
                                     Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -163,8 +119,7 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                             child:
                                                 DropdownButtonFormField<String>(
                                               decoration: const InputDecoration(
-                                                border: InputBorder
-                                                    .none, // Remove the underline
+                                                border: InputBorder.none,
                                               ),
                                               value: invoiceSelected,
                                               hint: Text(
@@ -200,10 +155,16 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                               onChanged: (String? value) {
                                                 invoiceSelected = value;
                                               },
+                                              validator: (value) {
+                                                if (value == null ||
+                                                    value.isEmpty) {
+                                                  return 'This field is required';
+                                                }
+                                                return null;
+                                              },
                                             ),
                                           ),
                                         ]),
-
                                     Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -231,8 +192,7 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                           child:
                                               DropdownButtonFormField<String>(
                                             decoration: const InputDecoration(
-                                              border: InputBorder
-                                                  .none, // Remove the underline
+                                              border: InputBorder.none,
                                             ),
                                             value: paymentSelected,
                                             hint: Text(
@@ -248,8 +208,7 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                             items: paymentList!.entries
                                                 .map((entry) {
                                               return DropdownMenuItem<String>(
-                                                value: entry
-                                                    .key, // Set the value for the dropdown item
+                                                value: entry.key,
                                                 child: Text(
                                                   entry.value,
                                                   style: buildCustomStyle(
@@ -259,53 +218,61 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                                     ColorManager.textColor
                                                         .withOpacity(.5),
                                                   ),
-                                                ), // Display the value as the dropdown item
+                                                ),
                                               );
                                             }).toList(),
                                             onChanged: (String? value) {
                                               paymentSelected = value;
                                             },
+                                            validator: (value) {
+                                              if (value == null ||
+                                                  value.isEmpty) {
+                                                return 'This field is required';
+                                              }
+                                              return null;
+                                            },
                                           ),
                                         ),
                                       ],
                                     ),
-                                    // BuildDropDownStatic(
-                                    //   selectedItem: selectedPaymentMethod,
-                                    //   size: size,
-                                    //   isLeft: true,
-                                    //   isStarRed: true,
-                                    //   isStar: true,
-                                    //   items: paymentMethod,
-                                    //   hintText: 'Select A Payment Method',
-                                    //   title: 'Payment Method',
-                                    //   onChanged: (String? newValue) {
-                                    //     selectedPaymentMethod = newValue!;
-                                    //   },
-                                    // ),
                                   ],
                                 ),
                                 Row(
                                   children: [
                                     BuildTextFieldColumn(
-                                        isLeft: false,
-                                        size: size,
-                                        isStarRed: true,
-                                        hintText: 'Ref',
-                                        isTextField: true,
-                                        read: false,
-                                        controller: paymentMethodRefController,
-                                        title: "Payment Method Ref"),
+                                      isLeft: false,
+                                      size: size,
+                                      isStarRed: true,
+                                      hintText: 'Ref',
+                                      isTextField: true,
+                                      read: false,
+                                      controller: paymentMethodRefController,
+                                      title: "Payment Method Ref",
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'This field is required';
+                                        }
+                                        return null;
+                                      },
+                                    ),
                                     BuildTextFieldColumn(
-                                        isLeft: true,
-                                        isStarRed: true,
-                                        isTextField: true,
-                                        size: size,
-                                        read: false,
-                                        textInputType: const TextInputType
-                                            .numberWithOptions(),
-                                        hintText: 'Amount',
-                                        controller: amountController,
-                                        title: "Amount"),
+                                      isLeft: true,
+                                      isStarRed: true,
+                                      isTextField: true,
+                                      size: size,
+                                      read: false,
+                                      textInputType: const TextInputType
+                                          .numberWithOptions(),
+                                      hintText: 'Amount',
+                                      controller: amountController,
+                                      title: "Amount",
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'This field is required';
+                                        }
+                                        return null;
+                                      },
+                                    ),
                                   ],
                                 ),
                                 Row(children: [
@@ -336,8 +303,7 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                         child: DropdownButtonFormField<
                                             GetUsersModelData>(
                                           decoration: const InputDecoration(
-                                            border: InputBorder
-                                                .none, // Remove the underline
+                                            border: InputBorder.none,
                                           ),
                                           value: selectedUser,
                                           hint: Text(
@@ -375,60 +341,42 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                               selectedUser = selectUser;
                                               fromIdController.text =
                                                   "${selectUser.id}";
-                                              // Update the selected category in the provider
                                             }
+                                          },
+                                          validator: (value) {
+                                            if (value == null) {
+                                              return 'This field is required';
+                                            }
+                                            return null;
                                           },
                                         ),
                                       ),
                                     ],
                                   ),
-                                  // BuildDropDownStatic(
-                                  //   selectedItem: selectedFromUser,
-                                  //   size: size,
-                                  //   isStarRed: true,
-                                  //   isStar: true,
-                                  //   items: users,
-                                  //   hintText: 'Select a User',
-                                  //   title: 'From',
-                                  //   onChanged: (String? newValue) {
-                                  //     selectedFromUser = newValue!;
-                                  //   },
-                                  // ),
                                   BuildTextFieldColumn(
-                                      isLeft: true,
-                                      size: size,
-                                      isStarRed: true,
-                                      hintText: 'Comment',
-                                      isTextField: true,
-                                      read: false,
-                                      maxlines: 3,
-                                      controller: commentController,
-                                      title: "Comment"),
-                                  // BuildDropDownStatic(
-                                  //   selectedItem: selectedToUser,
-                                  //   size: size,
-                                  //   isLeft: true,
-                                  //   isStarRed: true,
-                                  //   isStar: true,
-                                  //   items: users,
-                                  //   hintText: 'Select a User',
-                                  //   title: 'Supplier',
-                                  //   onChanged: (String? newValue) {
-                                  //     selectedToUser = newValue!;
-                                  //   },
-                                  // ),
+                                    isLeft: true,
+                                    size: size,
+                                    isStarRed: false,
+                                    hintText: 'Comment',
+                                    isTextField: true,
+                                    read: false,
+                                    maxlines: 3,
+                                    controller: commentController,
+                                    title: "Comment",
+                                  ),
                                 ]),
                                 Row(
                                   children: [
                                     BuildTextFieldColumn(
-                                        isLeft: false,
-                                        isStarRed: true,
-                                        isTextField: true,
-                                        size: size,
-                                        hintText: 'Particulars',
-                                        read: false,
-                                        controller: particularsController,
-                                        title: "Particulars"),
+                                      isLeft: false,
+                                      isStarRed: false,
+                                      isTextField: true,
+                                      size: size,
+                                      hintText: 'Particulars',
+                                      read: false,
+                                      controller: particularsController,
+                                      title: "Particulars",
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 45),
@@ -443,88 +391,71 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                           if (formKey.currentState!
                                               .validate()) {
                                             formKey.currentState!.save();
-                                            debugPrint(
-                                                " selectedUser $selectedUser  ${fromIdController.text}\t invoiceSelected $invoiceSelected\npaymentSelected  $paymentSelected");
-                                            if (fromIdController.text.isEmpty ||
-                                                paymentSelected == null ||
-                                                invoiceSelected == null ||
-                                                paymentMethodRefController
-                                                    .text.isEmpty ||
-                                                amountController.text.isEmpty) {
-                                              showScaffold(
+
+                                            showDialog(
                                                 context: context,
-                                                message:
-                                                    'Please Fill the Required Fields',
-                                              );
-                                            } else {
-                                              showDialog(
-                                                  context: context,
-                                                  barrierDismissible: false,
-                                                  builder: (context) {
-                                                    return const Center(
-                                                      child:
-                                                          CircularProgressIndicator
-                                                              .adaptive(),
-                                                    );
-                                                  });
+                                                barrierDismissible: false,
+                                                builder: (context) {
+                                                  return const Center(
+                                                    child:
+                                                        CircularProgressIndicator
+                                                            .adaptive(),
+                                                  );
+                                                });
 
-                                              String? accessToken =
-                                                  Provider.of<AuthModel>(
-                                                          context,
-                                                          listen: false)
-                                                      .token;
-                                              debugPrint(
-                                                  "accessToken From AuthModel $accessToken");
-                                              invoiceProvider
-                                                  .addVoucher(
-                                                      accountType:
-                                                          invoiceSelected ?? "",
-                                                      paymentMethod:
-                                                          paymentSelected ?? '',
-                                                      paymentMethodRef:
-                                                          paymentMethodRefController
-                                                              .text,
-                                                      amount:
-                                                          amountController.text,
-                                                      toUserID:
-                                                          fromIdController.text,
-                                                      comment: commentController
-                                                          .text,
-                                                      particular:
-                                                          particularsController
-                                                              .text,
-                                                      type: "invoice",
-                                                      accessToken:
-                                                          accessToken ?? "")
-                                                  .then((value) {
-                                                if (value["status"] ==
-                                                    "success") {
-                                                  showScaffold(
-                                                      context: context,
-                                                      message:
-                                                          value["message"]);
+                                            String? accessToken =
+                                                Provider.of<AuthModel>(context,
+                                                        listen: false)
+                                                    .token;
+                                            debugPrint(
+                                                "accessToken From AuthModel $accessToken");
+                                            invoiceProvider
+                                                .addVoucher(
+                                                    accountType:
+                                                        invoiceSelected ?? "",
+                                                    paymentMethod:
+                                                        paymentSelected ?? '',
+                                                    paymentMethodRef:
+                                                        paymentMethodRefController
+                                                            .text,
+                                                    amount:
+                                                        amountController.text,
+                                                    toUserID:
+                                                        fromIdController.text,
+                                                    comment:
+                                                        commentController.text,
+                                                    particular:
+                                                        particularsController
+                                                            .text,
+                                                    type: "invoice",
+                                                    accessToken:
+                                                        accessToken ?? "")
+                                                .then((value) {
+                                              if (value["status"] ==
+                                                  "success") {
+                                                showScaffold(
+                                                    context: context,
+                                                    message: value["message"]);
 
-                                                  Navigator.pop(context);
-                                                  sideBarController
-                                                      .index.value = 21;
-                                                } else {
-                                                  Navigator.pop(context);
-
-                                                  showScaffold(
-                                                      context: context,
-                                                      message:
-                                                          value["message"]);
-                                                }
+                                                Navigator.pop(context);
                                                 sideBarController.index.value =
                                                     21;
-                                              });
-                                            }
+                                              } else {
+                                                Navigator.pop(context);
+
+                                                showScaffold(
+                                                    context: context,
+                                                    message: value["message"]);
+                                              }
+                                              sideBarController.index.value =
+                                                  21;
+                                            });
                                           } else {
                                             showScaffold(
                                               context: context,
-                                              message: 'Failed',
+                                              message:
+                                                  'Please fill all required fields',
                                             );
-                                            sideBarController.index.value = 21;
                                           }
                                         },
                                         height: 50,

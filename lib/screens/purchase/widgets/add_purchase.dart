@@ -2,6 +2,7 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 
 import 'package:pos_machine/providers/purchase_provider.dart';
@@ -16,7 +17,7 @@ import '../../../controllers/sidebar_controller.dart';
 import '../../../models/category_list.dart';
 import '../../../models/get_product.dart';
 
-import '../../../models/get_store.dart';
+import '../../../models/get_store.dart'; 
 import '../../../models/get_suppliers.dart';
 import '../../../models/list_purchase.dart';
 
@@ -51,27 +52,28 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
   GlobalKey<FormState> formKey = GlobalKey<FormState>();
   SideBarController sideBarController = Get.put(SideBarController());
   int? purchaseId;
-  List<String> property = [
-    'Choose Unit',
-    'KG',
-    'PK',
-    "DZ",
-    "LT",
-  ];
+
+  // List<String> property = [
+  //   'Choose Unit',
+  //   'KG',
+  //   'PK',
+  //   "DZ",
+  //   "LT",
+  // ];
 
   // Track the selected unit
   String? selectedProperty;
-  List<String> store = [
-    'Select Store',
-    'Day Mart',
-  ];
+  // List<String> store = [
+  //   'Select Store',
+  //   'Day Mart',
+  // ];
 
   // Track the selected unit
-  String? selectedStore;
-  List<String> supplier = [
-    'Select Supplier ',
-    'Supplier',
-  ];
+  // String? selectedStore;
+  // List<String> supplier = [
+  //   'Select Supplier ',
+  //   'Supplier',
+  // ];
 
   // Track the selected unit
   String? selectedSupplier;
@@ -111,7 +113,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
         .then((value) {});
     purchaseItemList = purchaseProvider.purchaseItems;
     for (var v in purchaseItemList ?? []) {
-      debugPrint("Porchase Id ${v.purchaseId}");
+      // debugPrint("Porchase Id ${v.purchaseId}");
       purchaseId = v.purchaseId;
     }
     //  });
@@ -140,10 +142,10 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
             ? listPurchaseItemModel.data!.map((e) => purchaseId = e.purchaseId)
             : () {};
         for (var v in listPurchaseItemModel.data!) {
-          debugPrint("Porchase Id ${v.purchaseId}");
+          // debugPrint("Porchase Id ${v.purchaseId}");
           purchaseId = v.purchaseId;
         }
-        debugPrint("Porchase Id $purchaseId");
+        // debugPrint("Porchase Id $purchaseId");
       }
     });
     purchaseItemList = purchaseProvider.purchaseItems;
@@ -157,7 +159,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    debugPrint('zcccdcdc$accessToken');
+    // debugPrint('zcccdcdc$accessToken');
     // Access the CategoryProvider
     CategoryProvider categoryProvider =
         Provider.of<CategoryProvider>(context, listen: false);
@@ -171,7 +173,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
     GetStoreModelData? storeSelected;
     List<Category>? categoryList = categoryProvider.category;
     List<GetProduct>? productList =
-        gridSelectionProvider.getSelectedProductListAPI;
+        gridSelectionProvider.getCategoryProductList;
     Map<String, String>? unitList = purchaseProvider.getUnitList;
     return SafeArea(
       child: Container(
@@ -194,6 +196,15 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  CustomBackButton(
+                    onPressed: () {
+                      sideBarController.index.value = 19;
+                    },
+                    text: 'All Purchases',
+                    // Optionally, you can customize the color and size
+                    // color: ColorManager.customColor,
+                    // size: 20.0,
+                  ),
                   Text(
                     'Create New Purchase',
                     style: buildCustomStyle(FontWeightManager.semiBold,
@@ -232,8 +243,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                               BuildTextTile(
                                                 isStarRed: true,
                                                 isTextField: true,
-                                                title:
-                                                    "Select Parent Category ",
+                                                title: "Select Category ",
                                                 textStyle: buildCustomStyle(
                                                   FontWeightManager.regular,
                                                   FontSize.s14,
@@ -290,16 +300,46 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                         .toList(),
                                                     value:
                                                         selectedValueCategory,
-                                                    onChanged: (value) {
-                                                      setState(() {
-                                                        selectedValueCategory =
-                                                            value;
-                                                        if (value != null) {
+                                                    onChanged: (Category?
+                                                        selectedCategory) async {
+                                                      if (selectedCategory !=
+                                                          null) {
+                                                        categoryProvider
+                                                            .selectCategory(
+                                                          categoryList.indexOf(
+                                                              selectedCategory),
+                                                          selectedCategory
+                                                                  .categoryName ??
+                                                              '',
+                                                          selectedCategory
+                                                                  .productsCount ??
+                                                              0,
+                                                        );
+
+                                                        gridSelectionProvider
+                                                            .updateCategory(
+                                                                selectedCategory
+                                                                        .categoryId ??
+                                                                    0);
+
+                                                        setState(() {
+                                                          productList =
+                                                              gridSelectionProvider
+                                                                  .selectedProductsUpOnCategory;
+                                                        });
+
+                                                        await categoryProvider
+                                                            .setParentCategory(
+                                                                "${selectedCategory.categoryId ?? 0}");
+
+                                                        setState(() {
+                                                          selectedValueCategory =
+                                                              selectedCategory;
                                                           categoryIDController
                                                                   .text =
-                                                              "${value.categoryId ?? 1}";
-                                                        }
-                                                      });
+                                                              "${selectedCategory.categoryId ?? 1}";
+                                                        });
+                                                      }
                                                     },
                                                     buttonStyleData:
                                                         ButtonStyleData(
@@ -643,6 +683,13 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                 // readOnly: true,
                                                 keyboardType:
                                                     TextInputType.number,
+                                                validator: (value) {
+                                                  if (value == null ||
+                                                      value.isEmpty) {
+                                                    return 'This field is required';
+                                                  }
+                                                  return null;
+                                                },
                                                 cursorColor:
                                                     ColorManager.kPrimaryColor,
                                                 decoration: InputDecoration(
@@ -805,7 +852,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             BuildTextTile(
-                                              isStarRed: true,
+                                              isStarRed: false,
                                               isTextField: true,
                                               title: "Batch Number ",
                                               textStyle: buildCustomStyle(
@@ -833,6 +880,13 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                 //readOnly: true,
                                                 keyboardType:
                                                     TextInputType.number,
+                                                validator: (value) {
+                                                  if (value == null ||
+                                                      value.isEmpty) {
+                                                    return 'This field is required';
+                                                  }
+                                                  return null;
+                                                },
                                                 cursorColor:
                                                     ColorManager.kPrimaryColor,
                                                 decoration: InputDecoration(
@@ -987,7 +1041,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                               .text =
                                                           "${suppliersModelData.id ?? 1}";
                                                     });
-                                                  }
+                                                  } 
                                                 },
                                               ),
                                             ),
@@ -1080,7 +1134,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                               if (formKey.currentState!
                                                   .validate()) {
                                                 formKey.currentState!.save();
-                                                debugPrint("submit");
+                                                // debugPrint("submit");
                                                 debugPrint(
                                                     "categoryIdController.text ${categoryIDController.text}");
                                                 debugPrint(
@@ -1231,19 +1285,21 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                         offsetValue: const Offset(1, 1),
                                         child: Table(
                                           columnWidths: const {
-                                            0: FractionColumnWidth(0.08),
-                                            1: FractionColumnWidth(0.01),
+                                            0: FractionColumnWidth(0.01),
+                                            1: FractionColumnWidth(0.08),
                                             2: FractionColumnWidth(0.02),
                                             3: FractionColumnWidth(0.06),
                                             4: FractionColumnWidth(0.06),
-                                            5: FractionColumnWidth(0.05),
+                                            5: FractionColumnWidth(0.06),
+                                            6: FractionColumnWidth(0.06),
+                                            7: FractionColumnWidth(0.05),
                                           },
-                                          border: TableBorder.symmetric(
-                                              outside: const BorderSide(
+                                          border: const TableBorder.symmetric(
+                                              outside: BorderSide(
                                                   color: ColorManager
                                                       .tableBOrderColor,
                                                   width: 0.3),
-                                              inside: const BorderSide(
+                                              inside: BorderSide(
                                                   color: ColorManager
                                                       .tableBOrderColor,
                                                   width: 0.8)),
@@ -1255,6 +1311,28 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                     color: ColorManager
                                                         .tableBGColor),
                                                 children: [
+                                                  TableCell(
+                                                      verticalAlignment:
+                                                          TableCellVerticalAlignment
+                                                              .middle,
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(15.0),
+                                                        child: Center(
+                                                            child: Text(
+                                                          "No",
+                                                          style:
+                                                              buildCustomStyle(
+                                                            FontWeightManager
+                                                                .medium,
+                                                            FontSize.s12,
+                                                            0.18,
+                                                            ColorManager
+                                                                .kPrimaryColor,
+                                                          ),
+                                                        )),
+                                                      )),
                                                   TableCell(
                                                       verticalAlignment:
                                                           TableCellVerticalAlignment
@@ -1288,6 +1366,50 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                         child: Center(
                                                             child: Text(
                                                           "Quantity",
+                                                          style:
+                                                              buildCustomStyle(
+                                                            FontWeightManager
+                                                                .medium,
+                                                            FontSize.s12,
+                                                            0.18,
+                                                            ColorManager
+                                                                .kPrimaryColor,
+                                                          ),
+                                                        )),
+                                                      )),
+                                                  TableCell(
+                                                      verticalAlignment:
+                                                          TableCellVerticalAlignment
+                                                              .middle,
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(15.0),
+                                                        child: Center(
+                                                            child: Text(
+                                                          "Supplier Name",
+                                                          style:
+                                                              buildCustomStyle(
+                                                            FontWeightManager
+                                                                .medium,
+                                                            FontSize.s12,
+                                                            0.18,
+                                                            ColorManager
+                                                                .kPrimaryColor,
+                                                          ),
+                                                        )),
+                                                      )),
+                                                  TableCell(
+                                                      verticalAlignment:
+                                                          TableCellVerticalAlignment
+                                                              .middle,
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(15.0),
+                                                        child: Center(
+                                                            child: Text(
+                                                          "Store Name",
                                                           style:
                                                               buildCustomStyle(
                                                             FontWeightManager
@@ -1369,7 +1491,13 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
 
                                             // Map your order data to table rows here
                                             ...purchaseItemList!
-                                                .map((products) {
+                                                .toList()
+                                                .asMap()
+                                                .entries
+                                                .map((entry) {
+                                              int index = entry.key;
+                                              var products = entry.value;
+
                                               return TableRow(
                                                 children: [
                                                   TableCell(
@@ -1382,7 +1510,74 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                                 .all(15.0),
                                                         child: Center(
                                                           child: Text(
+                                                            (index + 1)
+                                                                .toString(),
+                                                            style:
+                                                                buildCustomStyle(
+                                                              FontWeightManager
+                                                                  .medium,
+                                                              FontSize.s9,
+                                                              0.13,
+                                                              Colors.black,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      )),
+                                                  TableCell(
+                                                      verticalAlignment:
+                                                          TableCellVerticalAlignment
+                                                              .middle,
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(15.0),
+                                                        child: Center(
+                                                          child: Text(
                                                             "${products.name}",
+                                                            style:
+                                                                buildCustomStyle(
+                                                              FontWeightManager
+                                                                  .medium,
+                                                              FontSize.s9,
+                                                              0.13,
+                                                              Colors.black,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      )),
+                                                  TableCell(
+                                                      verticalAlignment:
+                                                          TableCellVerticalAlignment
+                                                              .middle,
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(15.0),
+                                                        child: Center(
+                                                          child: Text(
+                                                            "${products.quantity}",
+                                                            style:
+                                                                buildCustomStyle(
+                                                              FontWeightManager
+                                                                  .medium,
+                                                              FontSize.s9,
+                                                              0.13,
+                                                              Colors.black,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      )),
+                                                  TableCell(
+                                                      verticalAlignment:
+                                                          TableCellVerticalAlignment
+                                                              .middle,
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(15.0),
+                                                        child: Center(
+                                                          child: Text(
+                                                            "${products.quantity}",
                                                             style:
                                                                 buildCustomStyle(
                                                               FontWeightManager
@@ -1448,7 +1643,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                                 .all(15.0),
                                                         child: Center(
                                                           child: Text(
-                                                            "${products.unitPrice}",
+                                                            "${products.unitPrice! * products.quantity!}",
                                                             style:
                                                                 buildCustomStyle(
                                                               FontWeightManager

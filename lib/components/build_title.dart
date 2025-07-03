@@ -60,7 +60,7 @@ class BuildTextTile extends StatelessWidget {
                             ),
                           )
                         : TextSpan(
-                            text: '*',
+                            text: '',
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s18,

@@ -50,6 +50,7 @@ class ViewCategory {
 
   final String? categoryImageFullPath;
   final String? categoryIconFullPath;
+  final CategoryNames? names;
 
   ViewCategory({
     this.id,
@@ -65,6 +66,7 @@ class ViewCategory {
     this.updatedAt,
     this.categoryIconFullPath,
     this.categoryImageFullPath,
+    this.names,
   });
 
   factory ViewCategory.fromJson(Map<String, dynamic> json) => ViewCategory(
@@ -79,6 +81,9 @@ class ViewCategory {
         status: json["status"],
         categoryIconFullPath: json["category_icon_full_path"],
         categoryImageFullPath: json["category_image_full_path"],
+        names: json["names"] == null
+            ? null
+            : CategoryNames.fromJson(json["names"]),
         createdAt: json["created_at"] == null
             ? null
             : DateTime.parse(json["created_at"]),
@@ -101,5 +106,30 @@ class ViewCategory {
         "status": status,
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),
+        "names": names?.toJson(),
+      };
+}
+
+class CategoryNames {
+  final String? en;
+  final String? hi;
+  final String? ar;
+
+  CategoryNames({
+    this.en,
+    this.hi,
+    this.ar,
+  });
+
+  factory CategoryNames.fromJson(Map<String, dynamic> json) => CategoryNames(
+        en: json["en"],
+        hi: json["hi"],
+        ar: json["ar"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "en": en,
+        "hi": hi,
+        "ar": ar,
       };
 }

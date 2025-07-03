@@ -49,13 +49,13 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
         if (value['status'] == 'success') {
           ListTransactionModel listTransactionModel =
               ListTransactionModel.fromJson(value);
-          listTransaction = listTransactionModel.data ?? [];
+          listTransaction = listTransactionModel.data?.transactions ?? [];
         } else {
           showScaffold(context: context, message: "Data Not Found");
         }
       });
     } catch (error) {
-      debugPrint(error.toString());
+      // debugPrint(error.toString());
     } finally {
       setState(() {
         initLoading = false;
@@ -65,7 +65,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    //  Size size = MediaQuery.of(context).size;
+    Size size = MediaQuery.of(context).size;
     String? token = Provider.of<AuthModel>(context, listen: false).token;
     InvoiceProvider invoiceProvider =
         Provider.of<InvoiceProvider>(context, listen: false);
@@ -92,56 +92,158 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Voucher List  ",
+                    "Voucher List",
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s20, 0.30, ColorManager.textColor),
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      SizedBox(
-                        height: 45,
-                        width: 180, //size.width * 0.5,
-                        child: TextFormField(
-                          onChanged: ((value) => setState(() {
-                                searchTextController.text = value;
-                              })),
-                          cursorColor: ColorManager.kPrimaryColor,
-                          cursorHeight: 13,
-                          controller: searchTextController,
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s10, 0.18, ColorManager.textColor),
-                          decoration: decoration.copyWith(
-                              hintText: "Search    ",
-                              hintStyle: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s10,
-                                  0.18,
-                                  ColorManager.textColor),
-                              // prefixIcon: const Icon(
-                              //   Icons.search,
-                              //   color: Colors.black,
-                              //   size: 35,
-                              // ),
-                              prefixIconColor: Colors.black),
-                        ),
-                      ),
-                      const SizedBox(
-                        width: 10,
-                      ),
-                      CustomRoundButton(
-                        title: "Create New Voucher",
-                        fct: () {
-                          sideBarController.index.value = 25;
-                        },
-                        fontSize: 12,
-                        height: 45,
-                        width: 200,
-                      ),
-                    ],
+                  CustomRoundButton(
+                    title: "Create New Voucher",
+                    fct: () {
+                      sideBarController.index.value = 25;
+                    },
+                    fontSize: 12,
+                    height: 45,
+                    width: 200,
                   ),
                 ],
               ),
+              const SizedBox(
+                height: 15,
+              ),
+              SizedBox(
+                height: 90,
+                child: Row(
+                  // scrollDirection: Axis.horizontal,
+                  // physics: const BouncingScrollPhysics(),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 10.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              "Name",
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s14,
+                                0.27,
+                                Colors.black.withOpacity(0.6),
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            height: 45,
+                            width: 120,
+                            child: TextFormField(
+                              onChanged: (value) {
+                                setState(() {
+                                  // Update state if needed
+                                });
+                              },
+                              cursorColor: ColorManager.kPrimaryColor,
+                              cursorHeight: 13,
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s10,
+                                0.18,
+                                ColorManager.textColor,
+                              ),
+                              decoration: decoration.copyWith(
+                                hintText: "Name",
+                                hintStyle: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s10,
+                                  0.18,
+                                  ColorManager.textColor,
+                                ),
+                                prefixIconColor: Colors.black,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 10.0, top: 30),
+                      child: CustomRoundButton(
+                        title: "Search",
+                        fct: (searchAccountBook) {},
+                        height: 45,
+                        width: size.width * 0.09,
+                        fontSize: FontSize.s12,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 10.0, top: 30),
+                      child: CustomRoundButton(
+                        title: "Reset",
+                        boxColor: Colors.white,
+                        textColor: ColorManager.kPrimaryColor,
+                        fct: (resetSearch) {},
+                        height: 45,
+                        width: size.width * 0.09,
+                        fontSize: FontSize.s12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Row(
+              //   mainAxisAlignment: MainAxisAlignment.end,
+              //   children: [
+              //     // Text(
+              //     //   "Voucher List  ",
+              //     //   style: buildCustomStyle(FontWeightManager.semiBold,
+              //     //       FontSize.s20, 0.30, ColorManager.textColor),
+              //     // ),
+              //     Row(
+              //       mainAxisAlignment: MainAxisAlignment.end,
+              //       children: [
+              //         SizedBox(
+              //           height: 45,
+              //           width: 180, //size.width * 0.5,
+              //           child: TextFormField(
+              //             onChanged: ((value) => setState(() {
+              //                   searchTextController.text = value;
+              //                 })),
+              //             cursorColor: ColorManager.kPrimaryColor,
+              //             cursorHeight: 13,
+              //             controller: searchTextController,
+              //             style: buildCustomStyle(FontWeightManager.medium,
+              //                 FontSize.s10, 0.18, ColorManager.textColor),
+              //             decoration: decoration.copyWith(
+              //                 hintText: "Search    ",
+              //                 hintStyle: buildCustomStyle(
+              //                     FontWeightManager.medium,
+              //                     FontSize.s10,
+              //                     0.18,
+              //                     ColorManager.textColor),
+              //                 // prefixIcon: const Icon(
+              //                 //   Icons.search,
+              //                 //   color: Colors.black,
+              //                 //   size: 35,
+              //                 // ),
+              //                 prefixIconColor: Colors.black),
+              //           ),
+              //         ),
+              //         const SizedBox(
+              //           width: 10,
+              //         ),
+              //         CustomRoundButton(
+              //           title: "Create New Voucher",
+              //           fct: () {
+              //             sideBarController.index.value = 25;
+              //           },
+              //           fontSize: 12,
+              //           height: 45,
+              //           width: 200,
+              //         ),
+              //       ],
+              //     ),
+              //   ],
+              // ),
               BuildBoxShadowContainer(
                   // height: size.height, //120,
                   margin: const EdgeInsets.only(top: 20),
@@ -156,10 +258,10 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                       4: FractionColumnWidth(0.06),
                       5: FractionColumnWidth(0.05),
                     },
-                    border: TableBorder.symmetric(
-                        outside: const BorderSide(
+                    border: const TableBorder.symmetric(
+                        outside: BorderSide(
                             color: ColorManager.tableBOrderColor, width: 0.3),
-                        inside: const BorderSide(
+                        inside: BorderSide(
                             color: ColorManager.tableBOrderColor, width: 0.8)),
                     defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                     children: [
@@ -255,11 +357,11 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                             .contains(searchTextController.text);
                       }).map((transaction) {
                         String? userName = invoiceProvider
-                            .getUserUpOnId(transaction.userId ?? 1);
+                            .getUserUpOnId(transaction.orderId ?? 1);
 
                         String? invoiceAccountType =
                             invoiceProvider.getInvoiceNameUpOnId(
-                                transaction.accountId ?? 1,
+                                transaction.orderId ?? 1,
                                 transaction.type ?? "");
                         return TableRow(
                           children: [

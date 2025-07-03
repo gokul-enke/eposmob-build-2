@@ -7,7 +7,7 @@ import '../../resources/style_manager.dart';
 
 class SupportScreen extends StatelessWidget {
   const SupportScreen({super.key});
-
+ 
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;

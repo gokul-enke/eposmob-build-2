@@ -4,6 +4,8 @@
 
 import 'dart:convert';
 
+import 'package:pos_machine/models/pagination.dart';
+
 ListStockModel listStockModelFromJson(String str) =>
     ListStockModel.fromJson(json.decode(str));
 
@@ -13,11 +15,13 @@ class ListStockModel {
   final String? status;
   final String? message;
   final List<ListStockModelData>? data;
+  final Pagination? pagination;
 
   ListStockModel({
     this.status,
     this.message,
     this.data,
+    this.pagination,
   });
 
   factory ListStockModel.fromJson(Map<String, dynamic> json) => ListStockModel(
@@ -25,8 +29,10 @@ class ListStockModel {
         message: json["message"],
         data: json["data"] == null
             ? []
-            : List<ListStockModelData>.from(
-                json["data"]!.map((x) => ListStockModelData.fromJson(x))),
+            : List<ListStockModelData>.from(json["data"]["data"]!
+                .map((x) => ListStockModelData.fromJson(x))),
+        pagination:
+            json["data"] == null ? null : Pagination.fromJson(json["data"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -35,114 +41,76 @@ class ListStockModel {
         "data": data == null
             ? []
             : List<dynamic>.from(data!.map((x) => x.toJson())),
+        "pagination": pagination?.toJson(),
       };
 }
 
 class ListStockModelData {
-  final int? id;
-  final int? productId;
-  final int? storeId;
-  final int? userId;
-  final int? quantity;
-  final String? unit;
-  final int? purchaseRate;
-  final int? retailPrice;
-  final int? wholesalePrice;
-  final int? wholesaleMinUnit;
-  final String? expiryDate;
-  final String? batchNumber;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
+  final int? stockId;
+  final String? barCode;
   final String? productName;
+  final String? categoryName;
+  final String? supplierName;
+  final String? orderDate;
+  final int? qty;
+  final String? retailPrice;
+  final String? wholesalePrice;
+  final String? purchaseRate;
+  final String? mrp;
+  final String? unit;
   final String? storeName;
-  final ProductDetails? product;
-  final StoreDetails? store;
-  final String? userName;
-  final List<dynamic>? stockProperties;
-
-  final UserDetails? user;
+  final String? rack;
 
   ListStockModelData({
-    this.id,
-    this.productId,
-    this.storeId,
-    this.userId,
-    this.quantity,
-    this.unit,
-    this.purchaseRate,
+    this.stockId,
+    this.barCode,
+    this.productName,
+    this.categoryName,
+    this.supplierName,
+    this.orderDate,
+    this.qty,
     this.retailPrice,
     this.wholesalePrice,
-    this.wholesaleMinUnit,
-    this.expiryDate,
-    this.batchNumber,
-    this.createdAt,
-    this.updatedAt,
-    this.productName,
+    this.purchaseRate,
+    this.mrp,
+    this.unit,
     this.storeName,
-    this.product,
-    this.store,
-    this.userName,
-    this.stockProperties,
-    this.user,
+    this.rack,
   });
 
   factory ListStockModelData.fromJson(Map<String, dynamic> json) =>
       ListStockModelData(
-        id: json["id"],
-        productId: json["product_id"],
-        storeId: json["store_id"],
-        userId: json["user_id"],
-        quantity: json["quantity"],
-        unit: json["unit"],
-        purchaseRate: json["purchase_rate"],
+        stockId: json["id"],
+        barCode: json["barcode"],
+        productName: json["product_name"],
+        categoryName: json["category_name"],
+        supplierName: json["supplier_name"],
+        orderDate: json["order_date"],
+        qty: json["qty"],
         retailPrice: json["retail_price"],
         wholesalePrice: json["wholesale_price"],
-        wholesaleMinUnit: json["wholesale_min_unit"],
-        expiryDate: json["expiry_date"],
-        //  == null
-        //     ? null
-        //     : DateTime.parse(json["expiry_date"]),
-        batchNumber: json["batch_number"],
-        createdAt: json["created_at"] == null
-            ? null
-            : DateTime.parse(json["created_at"]),
-        updatedAt: json["updated_at"] == null
-            ? null
-            : DateTime.parse(json["updated_at"]),
-        productName: json["product_name"],
+        purchaseRate: json["purchase_rate"],
+        mrp: json["mrp"],
+        unit: json["unit"],
         storeName: json["store_name"],
-        product: json["product"] == null
-            ? null
-            : ProductDetails.fromJson(json["product"]),
-        store:
-            json["store"] == null ? null : StoreDetails.fromJson(json["store"]),
-        userName: json["user_name"],
-        stockProperties: json["stock_properties"] == null
-            ? []
-            : List<dynamic>.from(json["stock_properties"]!.map((x) => x)),
-        user: json["user"] == null ? null : UserDetails.fromJson(json["user"]),
+        rack: json["rack"],
       );
 
   Map<String, dynamic> toJson() => {
-        "id": id,
-        "product_id": productId,
-        "store_id": storeId,
-        "user_id": userId,
-        "quantity": quantity,
-        "unit": unit,
-        "purchase_rate": purchaseRate,
+        "id": stockId,
+        "barcode": barCode,
+        "product_name": productName,
+        "category_name": categoryName,
+        "supplier_name": supplierName,
+        "order_date": orderDate,
+        "qty": qty,
         "retail_price": retailPrice,
         "wholesale_price": wholesalePrice,
-        "wholesale_min_unit": wholesaleMinUnit,
-        "expiry_date": expiryDate,
-        //  "${expiryDate!.year.toString().padLeft(4, '0')}-${expiryDate!.month.toString().padLeft(2, '0')}-${expiryDate!.day.toString().padLeft(2, '0')}",
-        "batch_number": batchNumber,
-        "created_at": createdAt?.toIso8601String(),
-        "updated_at": updatedAt?.toIso8601String(),
-        "product_name": productName,
+        "purchase_rate": purchaseRate,
+        "mrp": mrp,
+        "unit": unit,
         "store_name": storeName,
-        "product": product?.toJson(),
-        "store": store?.toJson(),
+        "rack": rack,
       };
 }
 

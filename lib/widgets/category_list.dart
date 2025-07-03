@@ -40,11 +40,11 @@ class CategoryList extends StatelessWidget {
             : const Row(
                 children: [
                   Expanded(
-                    flex: 6000,
+                    flex: 5500,
                     child: CategoryListItem(),
                   ),
                   Expanded(
-                    flex: 4000,
+                    flex: 4500,
                     child: OrderList(),
                   ),
                 ],

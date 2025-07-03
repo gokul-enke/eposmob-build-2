@@ -1,11 +1,6 @@
-// To parse this JSON data, do
-//
-//     final listCartModel = listCartModelFromJson(jsonString);
-
 import 'dart:convert';
 
 import 'package:pos_machine/models/add_to_cart.dart';
-import 'package:pos_machine/models/get_product.dart';
 
 ListCartModel listCartModelFromJson(String str) =>
     ListCartModel.fromJson(json.decode(str));
@@ -40,11 +35,13 @@ class ListCartModel {
 class ListCartModelData {
   final int? id;
   final int? customerId;
-  final int? userId;
+  final int? userId; // Changed to nullable to accommodate null in new response
   final int? itemCount;
   final int? storeId;
   final List<ListCartModelDataCartItem>? cartItems;
-  final PriceSummary? priceSummary;
+  final PriceSummary? priceSummary; // Updated to reflect new structure
+  final Map<String, double>?
+      taxAmounts; // Updated to double to accommodate decimal values
 
   ListCartModelData({
     this.id,
@@ -54,13 +51,14 @@ class ListCartModelData {
     this.storeId,
     this.cartItems,
     this.priceSummary,
+    this.taxAmounts,
   });
 
   factory ListCartModelData.fromJson(Map<String, dynamic> json) =>
       ListCartModelData(
         id: json["id"],
         customerId: json["customer_id"],
-        userId: json["user_id"],
+        userId: json["user_id"], // Keep nullability for userId
         itemCount: json["item_count"],
         storeId: json["store_id"],
         cartItems: json["cart_items"] == null
@@ -70,6 +68,12 @@ class ListCartModelData {
         priceSummary: json["price_summary"] == null
             ? null
             : PriceSummary.fromJson(json["price_summary"]),
+        taxAmounts: (json["tax_amounts"] is Map<String, dynamic>)
+            ? (json["tax_amounts"] as Map<String, dynamic>).map(
+                (k, v) =>
+                    MapEntry(k, (v as num).toDouble()), // Convert to double
+              )
+            : {}, // If it's not a map, return an empty map
       );
 
   Map<String, dynamic> toJson() => {
@@ -82,6 +86,8 @@ class ListCartModelData {
             ? []
             : List<dynamic>.from(cartItems!.map((x) => x.toJson())),
         "price_summary": priceSummary?.toJson(),
+        "tax_amounts":
+            taxAmounts != null ? Map<String, dynamic>.from(taxAmounts!) : null,
       };
 }
 
@@ -89,27 +95,33 @@ class ListCartModelDataCartItem {
   final int? id;
   final int? productId;
   final String? productName;
-
   final int? categoryId;
-  final int? quantity;
+  late final num? quantity;
   final String? productUnit;
-  final int? unitPrice;
+  final String? unitPrice;
+  final String? mrp;
   final String? totalPrice;
+  final String? taxRate; // Changed from int to String to match new response
+  final String? taxAmount; // Changed from int to String to match new response
   final String? currency;
   final DateTime? createdAt;
   final DateTime? updatedAt;
-  final List<Attachment>? productAttchment;
+  final ProductAttachment?
+      productAttachment; // Changed from List to single object
 
   ListCartModelDataCartItem({
     this.id,
     this.productId,
     this.productName,
-    this.productAttchment,
+    this.productAttachment,
     this.categoryId,
     this.quantity,
     this.productUnit,
     this.unitPrice,
+    this.mrp,
     this.totalPrice,
+    this.taxRate,
+    this.taxAmount,
     this.currency,
     this.createdAt,
     this.updatedAt,
@@ -120,15 +132,18 @@ class ListCartModelDataCartItem {
         id: json["id"],
         productId: json["product_id"],
         productName: json["product_name"],
-        productAttchment: json["product_attchment"] == null
-            ? []
-            : List<Attachment>.from(
-                json["product_attchment"]!.map((x) => Attachment.fromJson(x))),
+        productAttachment:
+            json["product_attachment"] == null // Updated to match new response
+                ? null
+                : ProductAttachment.fromJson(json["product_attachment"]),
         categoryId: json["category_id"],
-        quantity: json["quantity"],
+        quantity: num.tryParse(json["quantity"]),
         productUnit: json["product_unit"],
-        unitPrice: json["unit_price"],
+        unitPrice: (json["unit_price"]),
+        mrp: json["mrp"],
         totalPrice: json["total_price"],
+        taxRate: json["tax_rate"], // Now a String
+        taxAmount: json["tax_amount"], // Now a String
         currency: json["currency"],
         createdAt: json["created_at"] == null
             ? null
@@ -142,76 +157,98 @@ class ListCartModelDataCartItem {
         "id": id,
         "product_id": productId,
         "product_name": productName,
-        "product_attchment": productAttchment == null
-            ? []
-            : List<dynamic>.from(productAttchment!.map((x) => x.toJson())),
+        "product_attachment": productAttachment?.toJson(),
         "category_id": categoryId,
         "quantity": quantity,
         "product_unit": productUnit,
         "unit_price": unitPrice,
+        "mrp": mrp,
         "total_price": totalPrice,
+        "tax_rate": taxRate,
+        "tax_amount": taxAmount,
         "currency": currency,
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),
       };
 }
 
+class ProductAttachment {
+  final int? id;
+  final int? productId;
+  final String? title;
+  final int? isPrimary;
+  final String? fileType;
+  final String? filePath;
+  final String? status;
+  final String? alt;
+  final String? description;
+
+  ProductAttachment({
+    this.id,
+    this.productId,
+    this.title,
+    this.isPrimary,
+    this.fileType,
+    this.filePath,
+    this.status,
+    this.alt,
+    this.description,
+  });
+
+  factory ProductAttachment.fromJson(Map<String, dynamic> json) =>
+      ProductAttachment(
+        id: json["id"],
+        productId: json["product_id"],
+        title: json["title"],
+        isPrimary: json["is_primary"],
+        fileType: json["file_type"],
+        filePath: json["file_path"],
+        status: json["status"],
+        alt: json["alt"],
+        description: json["description"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "product_id": productId,
+        "title": title,
+        "is_primary": isPrimary,
+        "file_type": fileType,
+        "file_path": filePath,
+        "status": status,
+        "alt": alt,
+        "description": description,
+      };
+}
+
 // class PriceSummary {
-//     final int? subTotal;
-//     final int? totalTax;
-//     final int? netTotal;
-//     final int? discount;
-//     final int? netPayable;
+//   final double? subTotal; // Changed to double to match new response
+//   final double? totalTax; // Changed to double
+//   final double? netTotal; // Changed to double
+//   final int? discount; // Remains an integer
+//   final double? netPayable; // Changed to double
 
-//     PriceSummary({
-//         this.subTotal,
-//         this.totalTax,
-//         this.netTotal,
-//         this.discount,
-//         this.netPayable,
-//     });
+//   PriceSummary({
+//     this.subTotal,
+//     this.totalTax,
+//     this.netTotal,
+//     this.discount,
+//     this.netPayable,
+//   });
 
-//     factory PriceSummary.fromJson(Map<String, dynamic> json) => PriceSummary(
-//         subTotal: json["sub_total"],
-//         totalTax: json["total_tax"],
-//         netTotal: json["net_total"],
+//   factory PriceSummary.fromJson(Map<String, dynamic> json) => PriceSummary(
+//         subTotal: (json["sub_total"] as num?)?.toDouble(),
+//         totalTax: (json["total_tax"] as num?)?.toDouble(),
+//         netTotal: (json["net_total"] as num?)?.toDouble(),
 //         discount: json["discount"],
-//         netPayable: json["net_payable"],
-//     );
+//         netPayable: (json["net_payable"] as num?)?.toDouble(),
+//       );
 
-//     Map<String, dynamic> toJson() => {
+//   Map<String, dynamic> toJson() => {
 //         "sub_total": subTotal,
 //         "total_tax": totalTax,
 //         "net_total": netTotal,
 //         "discount": discount,
 //         "net_payable": netPayable,
-//     };
-// }
-// class ListCartModelDataPriceSummary {
-//   final String? subtotal;
-//   final String? taxAmount;
-//   final String? shippingCharge;
-//   final String? total;
-
-//   ListCartModelDataPriceSummary({
-//     this.subtotal,
-//     this.taxAmount,
-//     this.shippingCharge,
-//     this.total,
-//   });
-
-//   factory ListCartModelDataPriceSummary.fromJson(Map<String, dynamic> json) =>
-//       ListCartModelDataPriceSummary(
-//         subtotal: json["subtotal"],
-//         taxAmount: json["tax_amount"],
-//         shippingCharge: json["shipping_charge"],
-//         total: json["total"],
-//       );
-
-//   Map<String, dynamic> toJson() => {
-//         "subtotal": subtotal,
-//         "tax_amount": taxAmount,
-//         "shipping_charge": shippingCharge,
-//         "total": total,
 //       };
 // }

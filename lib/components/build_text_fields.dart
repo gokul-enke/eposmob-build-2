@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_title.dart';
-import 'package:web_date_picker/web_date_picker.dart';
 
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
@@ -64,22 +66,26 @@ class BuildTextFieldColumn extends StatelessWidget {
   final String? isDoubleTitle;
   final String? isDoubleHintText;
   final TextEditingController? isDoubleontroller;
-  const BuildTextFieldColumn(
-      {super.key,
-      required this.size,
-      this.maxlines,
-      this.read,
-      this.textInputType,
-      required this.controller,
-      this.hintText,
-      required this.title,
-      this.isStarRed,
-      this.isTextField,
-      required this.isLeft,
-      this.isDouble,
-      this.isDoubleTitle,
-      this.isDoubleHintText,
-      this.isDoubleontroller});
+  final String? Function(String?)? validator; // New validator parameter
+
+  const BuildTextFieldColumn({
+    Key? key,
+    required this.size,
+    this.maxlines,
+    this.read,
+    this.textInputType,
+    required this.controller,
+    this.hintText,
+    required this.title,
+    this.isStarRed,
+    this.isTextField,
+    required this.isLeft,
+    this.isDouble,
+    this.isDoubleTitle,
+    this.isDoubleHintText,
+    this.isDoubleontroller,
+    this.validator, // Add validator to constructor
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -131,6 +137,7 @@ class BuildTextFieldColumn extends StatelessWidget {
                     0.27,
                     ColorManager.textColor.withOpacity(.5),
                   ),
+                  validator: validator, // Apply validator
                 ),
               ),
             ],
@@ -185,6 +192,7 @@ class BuildTextFieldColumn extends StatelessWidget {
                         0.27,
                         ColorManager.textColor.withOpacity(.5),
                       ),
+                      validator: validator, // Apply validator
                     ),
                   ),
                   BuildBoxShadowContainer(
@@ -221,6 +229,7 @@ class BuildTextFieldColumn extends StatelessWidget {
                         0.27,
                         ColorManager.textColor.withOpacity(.5),
                       ),
+                      validator: validator, // Apply validator
                     ),
                   ),
                 ],
@@ -307,6 +316,12 @@ class BuildTextFieldColumn3 extends StatelessWidget {
                           ),
                         ),
                         controller: controller,
+                        // validator: (value) {
+                        //   if (value == null || value.isEmpty) {
+                        //     return 'This field is required';
+                        //   }
+                        //   return null;
+                        // },
                         style: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s12,
@@ -315,22 +330,26 @@ class BuildTextFieldColumn3 extends StatelessWidget {
                         ),
                       ),
                     )
-                  : Container(
-                      margin: isLeft
-                          ? const EdgeInsets.only(left: 8)
-                          : const EdgeInsets.symmetric(
-                              horizontal: 5, vertical: 0),
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 10.0),
-                        child: WebDatePicker(
-                          dateformat: "dd/MM/yyyy",
-                          height: size.height * .06,
-                          width: size.width / 4.3,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime(1900),
-                          lastDate: DateTime(2100),
-                          onChange: (value) {
-                            controller.text = value.toString();
+                  : BuildBoxShadowContainer(
+                      circleRadius: 7,
+                      alignment: Alignment.centerLeft,
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 0),
+                      height: size.height * .07,
+                      width: size.width / 4.5,
+                      child: Container(
+                        height: size.height * .06,
+                        width: size.width / 4.3,
+                        margin: isLeft
+                            ? const EdgeInsets.only(left: 8)
+                            : const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 0),
+                        child: CalendarPickerTableCell(
+                          onDateSelected: (date) {
+                            // debugPrint(date.toString());
+                            controller.text =
+                                DateFormat('yyyy-MM-dd').format(date);
+                            // debugPrint(DateFormat('yyyy-MM-dd').format(date));
                           },
                         ),
                       ),
@@ -430,6 +449,15 @@ class BuildTextFieldColumn3 extends StatelessWidget {
   }
 }
 
+DateTime parseDate(String date) {
+  try {
+    return DateFormat("dd/MM/yyyy").parse(date);
+  } catch (e) {
+    // debugPrint("Error parsing date: $e");
+    return DateTime.now();
+  }
+}
+
 class BuildDropDownStatic extends StatelessWidget {
   final Size size;
   final bool? isSmall;
@@ -524,29 +552,39 @@ class BuildDropDownStatic extends StatelessWidget {
   }
 }
 
-Widget buildColumnWidgetForTextFields(
-        {required TextEditingController controller,
-        required Size size,
-        double? width,
-        double? height,
-        EdgeInsetsGeometry? margin,
-        required bool isLeft,
-        required bool readOnly,
-        required String title,
-        required void Function(String?) onchanged,
-        required String hintText}) =>
+Widget buildColumnWidgetForTextFields({
+  TextEditingController? controller,
+  TextInputType? keyboardType,
+  List<TextInputFormatter>? inputFormatters,
+  required Size size,
+  double? width,
+  double? height,
+  bool isStarRed = false,
+  EdgeInsetsGeometry? margin,
+  bool isLeft = false,
+  bool readOnly = false,
+  String? title,
+  void Function(String?)? onchanged,
+  void Function(String?)? onSubmitted,
+  required String hintText,
+  String? Function(String?)? validator,
+  FocusNode? focusNode,
+  bool autofocus = false,
+}) =>
     Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BuildTextTile(
-          title: title,
-          textStyle: buildCustomStyle(
-            FontWeightManager.regular,
-            FontSize.s14,
-            0.27,
-            Colors.black.withOpacity(0.6),
+        if (title != null)
+          BuildTextTile(
+            title: title,
+            isStarRed: isStarRed,
+            textStyle: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.27,
+              Colors.black.withOpacity(0.6),
+            ),
           ),
-        ),
         BuildBoxShadowContainer(
           circleRadius: 7,
           alignment: Alignment.centerLeft,
@@ -558,19 +596,31 @@ Widget buildColumnWidgetForTextFields(
           width: width ?? size.width / 3, //3.05,
           child: TextFormField(
             onChanged: onchanged,
+            onFieldSubmitted: onSubmitted,
+            autofocus: autofocus,
+            focusNode: focusNode,
             readOnly: readOnly,
-            keyboardType: TextInputType.text,
+            keyboardType: keyboardType ?? TextInputType.text,
+            inputFormatters: inputFormatters,
             cursorColor: ColorManager.kPrimaryColor,
             decoration: InputDecoration(
-              border: InputBorder.none,
-              hintText: hintText,
-              hintStyle: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s13,
-                0.27,
-                ColorManager.textColor.withOpacity(.5),
-              ),
-            ),
+                border: InputBorder.none,
+                hintText: hintText,
+                hintStyle: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s11,
+                  0.27,
+                  ColorManager.textColor.withOpacity(.5),
+                ),
+                errorStyle: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.27,
+                  Colors.red, // Red color for error message
+                )
+                // .copyWith(height: 2), // Adjust line height for spacing
+                // contentPadding: const EdgeInsets.only(top: 0, bottom: 10.0),
+                ),
             controller: controller,
             style: buildCustomStyle(
               FontWeightManager.medium,
@@ -578,6 +628,7 @@ Widget buildColumnWidgetForTextFields(
               0.27,
               ColorManager.textColor.withOpacity(.5),
             ),
+            validator: validator, // Apply the validator
           ),
         ),
       ],

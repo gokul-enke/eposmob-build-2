@@ -1,7 +1,3 @@
-// To parse this JSON data, do
-//
-//     final dashBoardModel = dashBoardModelFromJson(jsonString);
-
 import 'dart:convert';
 
 DashBoardModel dashBoardModelFromJson(String str) =>
@@ -37,13 +33,11 @@ class DashBoardModel {
 
 class DashBoardModelData {
   final List<ProfileDetail>? profileDetails;
-  final Total? totalSales;
-  final Total? totalCustomers;
+  final TotalSales? totalSales;
 
   DashBoardModelData({
     this.profileDetails,
     this.totalSales,
-    this.totalCustomers,
   });
 
   factory DashBoardModelData.fromJson(Map<String, dynamic> json) =>
@@ -51,13 +45,10 @@ class DashBoardModelData {
         profileDetails: json["profile_details"] == null
             ? []
             : List<ProfileDetail>.from(
-                json["profile_details"]!.map((x) => ProfileDetail.fromJson(x))),
+                json["profile_details"].map((x) => ProfileDetail.fromJson(x))),
         totalSales: json["total_sales"] == null
             ? null
-            : Total.fromJson(json["total_sales"]),
-        totalCustomers: json["total_customers"] == null
-            ? null
-            : Total.fromJson(json["total_customers"]),
+            : TotalSales.fromJson(json["total_sales"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -65,7 +56,6 @@ class DashBoardModelData {
             ? []
             : List<dynamic>.from(profileDetails!.map((x) => x.toJson())),
         "total_sales": totalSales?.toJson(),
-        "total_customers": totalCustomers?.toJson(),
       };
 }
 
@@ -74,24 +64,12 @@ class ProfileDetail {
   final String? name;
   final String? email;
   final String? phone;
-  final String? phoneVerified;
-  final dynamic emailVerifiedAt;
-  final String? defaultPassword;
-  final int? doneBy;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
 
   ProfileDetail({
     this.id,
     this.name,
     this.email,
     this.phone,
-    this.phoneVerified,
-    this.emailVerifiedAt,
-    this.defaultPassword,
-    this.doneBy,
-    this.createdAt,
-    this.updatedAt,
   });
 
   factory ProfileDetail.fromJson(Map<String, dynamic> json) => ProfileDetail(
@@ -99,16 +77,6 @@ class ProfileDetail {
         name: json["name"],
         email: json["email"],
         phone: json["phone"],
-        phoneVerified: json["phone_verified"],
-        emailVerifiedAt: json["email_verified_at"],
-        defaultPassword: json["default_password"],
-        doneBy: json["done_by"],
-        createdAt: json["created_at"] == null
-            ? null
-            : DateTime.parse(json["created_at"]),
-        updatedAt: json["updated_at"] == null
-            ? null
-            : DateTime.parse(json["updated_at"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -116,35 +84,73 @@ class ProfileDetail {
         "name": name,
         "email": email,
         "phone": phone,
-        "phone_verified": phoneVerified,
-        "email_verified_at": emailVerifiedAt,
-        "default_password": defaultPassword,
-        "done_by": doneBy,
-        "created_at": createdAt?.toIso8601String(),
-        "updated_at": updatedAt?.toIso8601String(),
       };
 }
 
-class Total {
-  final int? today;
-  final int? week;
-  final int? month;
+class TotalSales {
+  final PeriodStats? today;
+  final PeriodStats? week;
+  final PeriodStats? month;
+  final PeriodStats? year;
+  final int? count;
+  final double? total;
 
-  Total({
+  TotalSales({
     this.today,
     this.week,
     this.month,
+    this.year,
+    this.count,
+    this.total,
   });
 
-  factory Total.fromJson(Map<String, dynamic> json) => Total(
-        today: json["today"],
-        week: json["week"],
-        month: json["month"],
+  factory TotalSales.fromJson(Map<String, dynamic> json) => TotalSales(
+        today:
+            json["today"] == null ? null : PeriodStats.fromJson(json["today"]),
+        week: json["week"] == null ? null : PeriodStats.fromJson(json["week"]),
+        month:
+            json["month"] == null ? null : PeriodStats.fromJson(json["month"]),
+        year: json["year"] == null ? null : PeriodStats.fromJson(json["year"]),
+        count: json["count"],
+        total: json["total"] is String
+            ? double.parse(json["total"])
+            : json["total"].toDouble(),
       );
 
   Map<String, dynamic> toJson() => {
-        "today": today,
-        "week": week,
-        "month": month,
+        "today": today?.toJson(),
+        "week": week?.toJson(),
+        "month": month?.toJson(),
+        "year": year?.toJson(),
+        "count": count,
+        "total": total,
+      };
+}
+
+class PeriodStats {
+  final double? totalSales;
+  final int? totalCustomers;
+  final double? totalAmount;
+
+  PeriodStats({
+    this.totalSales,
+    this.totalCustomers,
+    this.totalAmount,
+  });
+
+  factory PeriodStats.fromJson(Map<String, dynamic> json) => PeriodStats(
+        totalSales: json["total_sales"] is String
+            ? double.parse(json["total_sales"])
+            : json["total_sales"].toDouble(),
+        totalCustomers: json["total_customers"],
+        totalAmount: json["total_amount"] is String
+            ? double.parse(json["total_amount"])
+            : json["total_amount"].toDouble(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "total_sales": totalSales?.toStringAsFixed(2),
+        "total_customers": totalCustomers,
+        "total_amount": totalAmount?.toStringAsFixed(2),
       };
 }

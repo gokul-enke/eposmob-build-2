@@ -25,12 +25,12 @@ class AddToOrderModel {
       AddToOrderModel(
         status: json["status"],
         message: json["message"],
-        order: json["order"] == null ? null : Order.fromJson(json["order"]),
+        order: json["data"] == null ? null : Order.fromJson(json["data"]),
       );
 
   Map<String, dynamic> toJson() => {
         "status": status,
-        "order": order?.toJson(),
+        "data": order?.toJson(),
       };
 }
 

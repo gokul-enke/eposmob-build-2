@@ -1,7 +1,3 @@
-// To parse this JSON data, do
-//
-//     final orderDetailsModel = orderDetailsModelFromJson(jsonString);
-
 import 'dart:convert';
 
 OrderDetailsModel orderDetailsModelFromJson(String str) =>
@@ -36,20 +32,25 @@ class OrderDetailsModel {
 class OrderDetailsModelData {
   final int? ordersId;
   final int? storeId;
+  final String? storeName;
   final String? orderDate;
-  final List<OrderDetailsModelDataCart>? cart;
+  final OrderDetailsModelDataCart? cart;
   final String? orderNumber;
   final String? orderStatus;
   final OrderDetailsModelDataCustomerDetails? customerDetails;
   final OrderDetailsModelDataPriceSummary? priceSummary;
-  final dynamic paymentStatus;
-  final dynamic deliveryStatus;
+  final String? paymentStatus;
+  final String? deliveryStatus;
   final OrderDetailsModelDataPaymentDetails? paymentDetails;
   final List<OrderDetailsModelDataOrderProp>? orderProps;
+  final String? deliveryMethodId;
+  final String? deliveryMethodName;
+  final OrderReturns? orderReturns;
 
   OrderDetailsModelData({
     this.ordersId,
     this.storeId,
+    this.storeName,
     this.orderDate,
     this.cart,
     this.orderNumber,
@@ -60,17 +61,20 @@ class OrderDetailsModelData {
     this.deliveryStatus,
     this.paymentDetails,
     this.orderProps,
+    this.deliveryMethodId,
+    this.deliveryMethodName,
+    this.orderReturns,
   });
 
   factory OrderDetailsModelData.fromJson(Map<String, dynamic> json) =>
       OrderDetailsModelData(
         ordersId: json["orders_id"],
         storeId: json["store_id"],
+        storeName: json["store_name"],
         orderDate: json["order_date"],
         cart: json["cart"] == null
-            ? []
-            : List<OrderDetailsModelDataCart>.from(json["cart"]!
-                .map((x) => OrderDetailsModelDataCart.fromJson(x))),
+            ? null
+            : OrderDetailsModelDataCart.fromJson(json["cart"]),
         orderNumber: json["order_number"],
         orderStatus: json["order_status"],
         customerDetails: json["customer_details"] == null
@@ -91,15 +95,23 @@ class OrderDetailsModelData {
             ? []
             : List<OrderDetailsModelDataOrderProp>.from(json["order_props"]!
                 .map((x) => OrderDetailsModelDataOrderProp.fromJson(x))),
+        deliveryMethodId: json["delivery_method_id"].toString(),
+        deliveryMethodName: json["delivery_method_name"].toString(),
+        orderReturns: json["order_returns"] == null
+            ? null
+            : OrderReturns.fromJson(
+                json["order_returns"] is Map<String, dynamic>
+                    ? json["order_returns"]
+                    : {},
+              ),
       );
 
   Map<String, dynamic> toJson() => {
         "orders_id": ordersId,
         "store_id": storeId,
+        "store_name": storeName,
         "order_date": orderDate,
-        "cart": cart == null
-            ? []
-            : List<dynamic>.from(cart!.map((x) => x.toJson())),
+        "cart": cart?.toJson(),
         "order_number": orderNumber,
         "order_status": orderStatus,
         "customer_details": customerDetails?.toJson(),
@@ -110,6 +122,9 @@ class OrderDetailsModelData {
         "order_props": orderProps == null
             ? []
             : List<dynamic>.from(orderProps!.map((x) => x.toJson())),
+        "delivery_method_id": deliveryMethodId,
+        "delivery_method_name": deliveryMethodName,
+        "order_returns": orderReturns?.toJson(), // Serialize orderReturns
       };
 }
 
@@ -119,6 +134,7 @@ class OrderDetailsModelDataCart {
   final int? userId;
   final int? itemCount;
   final int? storeId;
+  final String? storeName;
   final List<OrderDetailsModelDataCartItem>? cartItems;
   final OrderDetailsModelDataPriceSummary? priceSummary;
 
@@ -128,6 +144,7 @@ class OrderDetailsModelDataCart {
     this.userId,
     this.itemCount,
     this.storeId,
+    this.storeName,
     this.cartItems,
     this.priceSummary,
   });
@@ -139,6 +156,7 @@ class OrderDetailsModelDataCart {
         userId: json["user_id"],
         itemCount: json["item_count"],
         storeId: json["store_id"],
+        storeName: json["store_name"],
         cartItems: json["cart_items"] == null
             ? []
             : List<OrderDetailsModelDataCartItem>.from(json["cart_items"]!
@@ -154,6 +172,7 @@ class OrderDetailsModelDataCart {
         "user_id": userId,
         "item_count": itemCount,
         "store_id": storeId,
+        "store_name": storeName,
         "cart_items": cartItems == null
             ? []
             : List<dynamic>.from(cartItems!.map((x) => x.toJson())),
@@ -165,12 +184,15 @@ class OrderDetailsModelDataCartItem {
   final int? id;
   final int? productId;
   final String? productName;
-  final List<OrderDetailsModelDataProductAttchment>? productAttchment;
+  final List<OrderDetailsModelDataProductAttachment>?
+      productAttachment; // Corrected spelling
   final int? categoryId;
-  final int? quantity;
+  final String? categoryName; // Added category name
+  final num? quantity;
   final String? productUnit;
-  final int? unitPrice;
-  final String? totalPrice;
+  final String? unitPrice;
+  final String? mrp;
+  final String? totalPrice; // Changed to int
   final String? currency;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -179,11 +201,13 @@ class OrderDetailsModelDataCartItem {
     this.id,
     this.productId,
     this.productName,
-    this.productAttchment,
+    this.productAttachment,
     this.categoryId,
+    this.categoryName,
     this.quantity,
     this.productUnit,
     this.unitPrice,
+    this.mrp,
     this.totalPrice,
     this.currency,
     this.createdAt,
@@ -195,16 +219,18 @@ class OrderDetailsModelDataCartItem {
         id: json["id"],
         productId: json["product_id"],
         productName: json["product_name"],
-        productAttchment: json["product_attchment"] == null
+        productAttachment: json["product_attachment"] == null
             ? []
-            : List<OrderDetailsModelDataProductAttchment>.from(
-                json["product_attchment"]!.map(
-                    (x) => OrderDetailsModelDataProductAttchment.fromJson(x))),
+            : List<OrderDetailsModelDataProductAttachment>.from(
+                json["product_attachment"]!.map(
+                    (x) => OrderDetailsModelDataProductAttachment.fromJson(x))),
         categoryId: json["category_id"],
-        quantity: json["quantity"],
+        categoryName: json["category_name"], // Added category name
+        quantity: num.tryParse(json["quantity"]),
         productUnit: json["product_unit"],
-        unitPrice: json["unit_price"],
-        totalPrice: json["total_price"],
+        unitPrice: json["unit_price"].toString(),
+        mrp: json["mrp"].toString(),
+        totalPrice: json["total_price"].toString(),
         currency: json["currency"],
         createdAt: json["created_at"] == null
             ? null
@@ -218,13 +244,15 @@ class OrderDetailsModelDataCartItem {
         "id": id,
         "product_id": productId,
         "product_name": productName,
-        "product_attchment": productAttchment == null
+        "product_attachment": productAttachment == null
             ? []
-            : List<dynamic>.from(productAttchment!.map((x) => x.toJson())),
+            : List<dynamic>.from(productAttachment!.map((x) => x.toJson())),
         "category_id": categoryId,
+        "category_name": categoryName, // Added category name
         "quantity": quantity,
         "product_unit": productUnit,
         "unit_price": unitPrice,
+        "mrp": mrp,
         "total_price": totalPrice,
         "currency": currency,
         "created_at": createdAt?.toIso8601String(),
@@ -232,7 +260,7 @@ class OrderDetailsModelDataCartItem {
       };
 }
 
-class OrderDetailsModelDataProductAttchment {
+class OrderDetailsModelDataProductAttachment {
   final int? id;
   final int? productId;
   final int? userId;
@@ -244,7 +272,7 @@ class OrderDetailsModelDataProductAttchment {
   final String? alt;
   final String? description;
 
-  OrderDetailsModelDataProductAttchment({
+  OrderDetailsModelDataProductAttachment({
     this.id,
     this.productId,
     this.userId,
@@ -257,9 +285,9 @@ class OrderDetailsModelDataProductAttchment {
     this.description,
   });
 
-  factory OrderDetailsModelDataProductAttchment.fromJson(
+  factory OrderDetailsModelDataProductAttachment.fromJson(
           Map<String, dynamic> json) =>
-      OrderDetailsModelDataProductAttchment(
+      OrderDetailsModelDataProductAttachment(
         id: json["id"],
         productId: json["product_id"],
         userId: json["user_id"],
@@ -287,16 +315,18 @@ class OrderDetailsModelDataProductAttchment {
 }
 
 class OrderDetailsModelDataPriceSummary {
-  final int? subTotal;
-  final int? totalTax;
-  final int? netTotal;
-  final int? discount;
-  final int? netPayable;
+  final num? subTotal;
+  final num? totalTax;
+  final num? netTotal;
+  final num? savedTotal;
+  final num? discount;
+  final num? netPayable;
 
   OrderDetailsModelDataPriceSummary({
     this.subTotal,
     this.totalTax,
     this.netTotal,
+    this.savedTotal,
     this.discount,
     this.netPayable,
   });
@@ -304,17 +334,19 @@ class OrderDetailsModelDataPriceSummary {
   factory OrderDetailsModelDataPriceSummary.fromJson(
           Map<String, dynamic> json) =>
       OrderDetailsModelDataPriceSummary(
-        subTotal: json["sub_total"],
-        totalTax: json["total_tax"],
-        netTotal: json["net_total"],
-        discount: json["discount"],
-        netPayable: json["net_payable"],
+        subTotal: json["sub_total"] is num ? json["sub_total"] : null,
+        totalTax: json["total_tax"] is num ? json["total_tax"] : null,
+        netTotal: json["net_total"] is num ? json["net_total"] : null,
+        savedTotal: json["total_saved"] is num ? json["total_saved"] : null,
+        discount: json["discount"] is num ? json["discount"] : null,
+        netPayable: json["net_payable"] is num ? json["net_payable"] : null,
       );
 
   Map<String, dynamic> toJson() => {
         "sub_total": subTotal,
         "total_tax": totalTax,
         "net_total": netTotal,
+        "total_saved": savedTotal,
         "discount": discount,
         "net_payable": netPayable,
       };
@@ -324,13 +356,15 @@ class OrderDetailsModelDataCustomerDetails {
   final String? name;
   final String? email;
   final String? phone;
-  final int? customerId;
+  final int? customerId; // Keep as int? if it's an int in JSON
+  final List<dynamic>? address; // Changed to List<dynamic>
 
   OrderDetailsModelDataCustomerDetails({
     this.name,
     this.email,
     this.phone,
     this.customerId,
+    this.address,
   });
 
   factory OrderDetailsModelDataCustomerDetails.fromJson(
@@ -339,7 +373,9 @@ class OrderDetailsModelDataCustomerDetails {
         name: json["name"],
         email: json["email"],
         phone: json["phone"],
-        customerId: json["customer_id"],
+        customerId: json["customer_id"], // Keep as int? if it's an int
+        address:
+            json["address"] == null ? [] : List<dynamic>.from(json["address"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -347,48 +383,126 @@ class OrderDetailsModelDataCustomerDetails {
         "email": email,
         "phone": phone,
         "customer_id": customerId,
+        "address": address,
       };
 }
 
 class OrderDetailsModelDataOrderProp {
-  final String? propsId;
-  final String? propsValue;
+  final int? propsId;
+  final String? propsCode;
+  final String? propsValue; // Change this to String?
 
   OrderDetailsModelDataOrderProp({
     this.propsId,
+    this.propsCode,
     this.propsValue,
   });
 
   factory OrderDetailsModelDataOrderProp.fromJson(Map<String, dynamic> json) =>
       OrderDetailsModelDataOrderProp(
         propsId: json["props_id"],
-        propsValue: json["props_value"],
+        propsCode: json["props_code"],
+        propsValue: json["props_value"] is String
+            ? json["props_value"]
+            : null, // Ensure it's a String
       );
 
   Map<String, dynamic> toJson() => {
         "props_id": propsId,
+        "props_code": propsCode,
         "props_value": propsValue,
       };
 }
 
 class OrderDetailsModelDataPaymentDetails {
-  final int? paymentId;
-  final String? paymentStatus;
+  final int? paymentId; // Nullable int for payment_id
+  final String? paymentStatus; // String for payment_status
+  final int? transactionId; // Nullable int for transaction_id
+  final String? paymentMethod; // String for payment_method
 
   OrderDetailsModelDataPaymentDetails({
     this.paymentId,
     this.paymentStatus,
+    this.transactionId,
+    this.paymentMethod,
   });
 
   factory OrderDetailsModelDataPaymentDetails.fromJson(
           Map<String, dynamic> json) =>
       OrderDetailsModelDataPaymentDetails(
-        paymentId: json["payment_id"],
-        paymentStatus: json["payment_status"],
+        paymentId: json["payment_id"], // This can be null
+        paymentStatus: json["payment_status"], // This is a String
+        transactionId: json["transaction_id"] is int
+            ? json["transaction_id"]
+            : null, // Ensure it's an int or null
+        paymentMethod: json["payment_method"], // This is a String
       );
 
   Map<String, dynamic> toJson() => {
         "payment_id": paymentId,
         "payment_status": paymentStatus,
+        "transaction_id": transactionId,
+        "payment_method": paymentMethod,
+      };
+}
+
+class OrderReturns {
+  final int? id;
+  final String? returnTotalAmount;
+  final List<OrderReturnItem>? returnItems; // This can be an empty list
+
+  OrderReturns({
+    this.id,
+    this.returnTotalAmount,
+    this.returnItems,
+  });
+
+  factory OrderReturns.fromJson(Map<String, dynamic> json) {
+    // Check if return_items is a List
+    return OrderReturns(
+      id: json["id"],
+      returnTotalAmount: json["return_total_amount"],
+      returnItems: json["return_items"] is List
+          ? List<OrderReturnItem>.from(
+              json["return_items"].map((x) => OrderReturnItem.fromJson(x)))
+          : [], // Default to empty list if not a List
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "return_total_amount": returnTotalAmount,
+        "return_items": returnItems == null
+            ? []
+            : List<dynamic>.from(returnItems!.map((x) => x.toJson())),
+      };
+}
+
+class OrderReturnItem {
+  final int? id;
+  final String? productName;
+  final int? quantity;
+  final String? reason;
+
+  OrderReturnItem({
+    this.id,
+    this.productName,
+    this.quantity,
+    this.reason,
+  });
+
+  factory OrderReturnItem.fromJson(Map<String, dynamic> json) =>
+      OrderReturnItem(
+        id: json["id"],
+        productName: json["product_name"],
+        quantity: json["quantity"],
+        reason: json["reason"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "product_name": productName,
+        "quantity": quantity,
+        "reason": reason,
       };
 }

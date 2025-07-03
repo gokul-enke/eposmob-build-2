@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_back_button.dart';
 
 import 'package:pos_machine/screens/product/widgets/view_image_or_video.dart';
 import 'package:pos_machine/screens/product/widgets/view_primary_details.dart';
@@ -68,7 +69,14 @@ class _ViewProductWidgetState extends State<ViewProductWidget>
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              CustomBackButton(
+                onPressed: () {
+                  sideBarController.index.value = 14;
+                },
+                text: 'All Products',
+              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

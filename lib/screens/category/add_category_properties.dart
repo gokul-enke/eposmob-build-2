@@ -7,7 +7,7 @@ import '../../resources/style_manager.dart';
 
 class AddCategoryPropertiesScreen extends StatelessWidget {
   const AddCategoryPropertiesScreen({super.key});
-
+ 
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;

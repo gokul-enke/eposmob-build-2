@@ -3,6 +3,7 @@ import 'package:drag_select_grid_view/drag_select_grid_view.dart';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_category_container.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_product_dummy.dart';
 import 'package:pos_machine/providers/carousel_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -41,12 +42,12 @@ class CategoryListItem extends StatelessWidget {
     final categoryProvider = Provider.of<CategoryProvider>(context);
     final productProvider =
         Provider.of<GridSelectionProvider>(context, listen: false);
-    List<GetProduct> p = Provider.of<GridSelectionProvider>(context)
-        .selectedProductsUpOnCategory;
+    // List<GetProduct> p = Provider.of<GridSelectionProvider>(context)
+    //     .selectedProductsUpOnCategory;
 //  String? accessToken =
 //           Provider.of<AuthModel>(context, listen: false).token;
     int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
-    debugPrint("CategoryListItem  customerId  : $customerId");
+    // debugPrint("CategoryListItem  customerId  : $customerId");
     // Provider.of<CartProvider>(context, listen: false)
     //     .fetchCartData(customerId: 1);
     // Load products when the widget is built
@@ -55,23 +56,32 @@ class CategoryListItem extends StatelessWidget {
     //   //  categoryProvider.listAllProducts(context, categoryId: 1);
     // });
 
-    debugPrint(size.width.toString());
+    // debugPrint(size.width.toString());
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Text(
-                  'Search Category',
-                  style: ResponsiveWidget.isMobile(context)
-                      ? buildCustomStyle(FontWeightManager.semiBold,
-                          FontSize.s12, 0.30, ColorManager.textColor)
-                      : buildCustomStyle(FontWeightManager.semiBold,
-                          FontSize.s20, 0.30, ColorManager.textColor),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Center(
+                      child: Text(
+                        'Search Category',
+                        style: ResponsiveWidget.isMobile(context)
+                            ? buildCustomStyle(FontWeightManager.semiBold,
+                                FontSize.s12, 0.30, ColorManager.textColor)
+                            : buildCustomStyle(FontWeightManager.semiBold,
+                                FontSize.s20, 0.30, ColorManager.textColor),
+                      ),
+                    )
+                  ],
                 ),
                 const SizedBox(
                   width: 10,
@@ -84,7 +94,7 @@ class CategoryListItem extends StatelessWidget {
                     //  controller: searchTextController,
                     cursorColor: ColorManager.kPrimaryColor,
                     onChanged: (query) {
-                      debugPrint(query);
+                      // debugPrint(query);
                       final filteredCategories =
                           categoryProvider.searchCategories(query);
 
@@ -96,13 +106,13 @@ class CategoryListItem extends StatelessWidget {
                         ImageAssets.categorySearchIcon,
                         fit: BoxFit.none,
                       ),
-                      suffixIcon: WebsafeSvg.asset(
-                        ImageAssets.barcodeIcon,
-                        fit: BoxFit.none,
-                      ),
+                      // suffixIcon: WebsafeSvg.asset(
+                      //   ImageAssets.barcodeIcon,
+                      //   fit: BoxFit.none,
+                      // ),
                       labelStyle: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s10, 0.10, ColorManager.textColor),
-                      hintText: 'Search category or product',
+                      hintText: 'Search category',
                       hintStyle: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s10, 0.13, ColorManager.textColor1),
                     ),
@@ -151,7 +161,8 @@ class CategoryListItem extends StatelessWidget {
 
                           // debugPrint(
                           //     "Inside category ListItem Widgetcategorys.categorySlug");
-                          // debugPrint(categorys.categorySlug);
+                          // debugPrint("categorys.categoryImage");
+                          // debugPrint(categorys.categoryIcon);
                           // debugPrint("${provider.category!.length}");
                           return GestureDetector(
                             onTap: () {
@@ -186,17 +197,16 @@ class CategoryListItem extends StatelessWidget {
                                         ? ColorManager.kPrimaryColor
                                         : ColorManager.textColor1,
                                     radius: 50,
-                                    child: Container(
-                                      height: 95,
-                                      width: 95,
-                                      decoration: const BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: Colors.white,
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: WebsafeSvg.asset(
-                                        ImageAssets.allCategoryIcon,
-                                        fit: BoxFit.none,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(
+                                          47.5), // Half of the height/width to make it a circle
+                                      child: Image.network(
+                                        provider.category![index]
+                                                .categoryIcon ??
+                                            'https://epos-bucket.s3.ap-southeast-1.amazonaws.com/images/Owtpjeb18CalthcsGsfnWlBIZxb137QI5TIneBdd.jpg',
+                                        fit: BoxFit.cover,
+                                        height: 95,
+                                        width: 95,
                                       ),
                                     ),
                                   ),
@@ -227,27 +237,69 @@ class CategoryListItem extends StatelessWidget {
             const SizedBox(
               width: 10,
             ),
-            RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                text:
-                    '${Provider.of<CategoryProvider>(context, listen: true).getCategoryText} \t',
-                style: buildCustomStyle(FontWeightManager.semiBold,
-                    FontSize.s15, 0.23, Colors.black),
-                children: <TextSpan>[
-                  TextSpan(
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
                     text:
-                        '(${Provider.of<GridSelectionProvider>(context, listen: true).productList!.length}) items',
-                    //  text: '(${categoryProvider.categoryCount}) items',
-                    style: buildCustomStyle(FontWeightManager.regular,
-                        FontSize.s10, 0.12, Colors.black),
+                        '${Provider.of<CategoryProvider>(context, listen: true).getCategoryText} \t',
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s15, 0.23, Colors.black),
+                    children: <TextSpan>[
+                      TextSpan(
+                        text:
+                            '(${Provider.of<GridSelectionProvider>(context, listen: true).productList!.length}) items',
+                        //  text: '(${categoryProvider.categoryCount}) items',
+                        style: buildCustomStyle(FontWeightManager.regular,
+                            FontSize.s10, 0.12, Colors.black),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(
+                  width: 10,
+                ),
+                Expanded(
+                  child: SizedBox(
+                    height: 100,
+                    child: TextField(
+                      cursorWidth: 1,
+                      //  controller: searchTextController,
+                      cursorColor: ColorManager.kPrimaryColor,
+                      onChanged: (query) {
+                        // debugPrint(query);
+                        final filteredProducts =
+                            productProvider.searchProducts(query);
+
+                        productProvider
+                            .updateFilteredProducts(filteredProducts);
+                      },
+                      decoration: decoration.copyWith(
+                        prefixIcon: WebsafeSvg.asset(
+                          ImageAssets.categorySearchIcon,
+                          fit: BoxFit.none,
+                        ),
+                        // suffixIcon: WebsafeSvg.asset(
+                        //   ImageAssets.barcodeIcon,
+                        //   fit: BoxFit.none,
+                        // ),
+                        labelStyle: buildCustomStyle(FontWeightManager.regular,
+                            FontSize.s10, 0.10, ColorManager.textColor),
+                        hintText: 'Search Product',
+                        hintStyle: buildCustomStyle(FontWeightManager.regular,
+                            FontSize.s10, 0.13, ColorManager.textColor1),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(
-              height: 10,
-            ),
+            // const SizedBox(
+            //   height: 10,
+            // ),
             SizedBox(
               height: size.height,
               child: Consumer<GridSelectionProvider>(
@@ -278,10 +330,10 @@ class CategoryListItem extends StatelessWidget {
                                 : 0.7,
                         crossAxisSpacing: 1.0,
                         mainAxisSpacing: 1.0),
-                    itemCount:
-                        p.length, //selectionProvider.getProducts!.length,
+                    itemCount: selectionProvider.productList!
+                        .length, //selectionProvider.getProducts!.length,
                     itemBuilder: (ctx, index, isSelected) {
-                      final product = p[index];
+                      final product = selectionProvider.productList![index];
                       // selectionProvider.productList![index];
                       //   final isSelected = product.isSelected;
                       final isSelected = selectionProvider.selectedProductList
@@ -289,23 +341,23 @@ class CategoryListItem extends StatelessWidget {
                       // final isSelected =
                       //     selectionProvider.selectedIndices.contains(index);
 
-                      debugPrint("selectionProvider.getProducts!.length");
-                      debugPrint("${selectionProvider.productList!.length}");
+                      // debugPrint("selectionProvider.getProducts!.length");
+                      // debugPrint("${selectionProvider.productList!.length}");
                       // if (selectionProvider.isLoading ||
                       //     selectionProvider.productList!.isEmpty) {
-                      if (p.isEmpty) {
+                      if (selectionProvider.productList!.isEmpty) {
                         return const BuildProductDummy();
                       } else {
                         String? file = "";
-                        debugPrint("file-$index$file");
+                        // debugPrint("file-$index$file");
                         for (var v in product.attachment ?? []) {
-                          debugPrint(v.filePath);
+                          // debugPrint(v.filePath);
 
                           if (v.isPrimary == 1) {
-                            debugPrint("file$file");
+                            // debugPrint("file$file");
                             file = v.filePath;
                           } else {
-                            debugPrint("fileShanidha$file");
+                            // debugPrint("fileShanidha$file");
                           }
                         }
 
@@ -344,7 +396,7 @@ class CategoryListItem extends StatelessWidget {
                                 onTap: () {
                                   selectionProvider.toggleSelectionProduct(
                                       index, product);
-                                  debugPrint("selected");
+                                  // debugPrint("selected");
                                   // selectionProvider.setSelection(true);
 
                                   showDialogFunctionForProductDetailsAnimated(
@@ -361,7 +413,7 @@ class CategoryListItem extends StatelessWidget {
                                           '',
                                       customerId ?? 1,
                                       selectionProvider.productList![index]
-                                              .category![0].name ??
+                                              .category!.name ??
                                           "",
                                       selectionProvider
                                               .productList![index].productId ??
@@ -377,7 +429,7 @@ class CategoryListItem extends StatelessWidget {
                                   //         productId: p[index].productId ?? 1,
                                   //         quantity: 1);
                                   debugPrint(
-                                      "product id ${p[index].productId}");
+                                      "product id ${selectionProvider.productList![index].productId}");
                                 },
                                 child: CategoryListItemWidget(
                                   file: file ?? "",
@@ -520,7 +572,7 @@ showDialogFunctionForProductDetails(
                         String? accessToken =
                             Provider.of<AuthModel>(context, listen: false)
                                 .token;
-                        debugPrint("accessToken From AuthModel $accessToken");
+                        // debugPrint("accessToken From AuthModel $accessToken");
                         Provider.of<CartProvider>(context, listen: false)
                             .addToCartAPI(
                                 customerId: customerId,
@@ -531,61 +583,17 @@ showDialogFunctionForProductDetails(
                           AddToCartModel addToCartModel =
                               AddToCartModel.fromJson(value);
                           if (value["status"] == "success") {
-                            ScaffoldMessenger.of(context)
-                              ..removeCurrentSnackBar()
-                              ..showSnackBar(SnackBar(
-                                  showCloseIcon: true,
-                                  dismissDirection: DismissDirection.up,
-                                  closeIconColor: Colors.white,
-                                  duration: const Duration(seconds: 2),
-                                  behavior: SnackBarBehavior.floating,
-                                  elevation: 0,
-                                  margin: EdgeInsets.only(
-                                      top: 50,
-                                      left: MediaQuery.of(context).size.width /
-                                          1.9,
-                                      right: 10),
-                                  backgroundColor: ColorManager.kPrimaryColor
-                                      .withOpacity(0.6),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10)),
-                                  content: Text(
-                                    addToCartModel.message ??
-                                        "Added To Cart", //  'Order Placed Successfully',
-                                    style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.12,
-                                        Colors.white),
-                                  )));
+                            showScaffold(
+                              context: context,
+                              message:
+                                  addToCartModel.message ?? "Added To Cart",
+                            ); //  'Order Placed Successfully',
                           } else {
-                            ScaffoldMessenger.of(context)
-                              ..removeCurrentSnackBar()
-                              ..showSnackBar(SnackBar(
-                                  showCloseIcon: true,
-                                  dismissDirection: DismissDirection.up,
-                                  closeIconColor: Colors.white,
-                                  duration: const Duration(seconds: 2),
-                                  behavior: SnackBarBehavior.floating,
-                                  elevation: 0,
-                                  margin: EdgeInsets.only(
-                                      top: 50,
-                                      left: MediaQuery.of(context).size.width /
-                                          1.9,
-                                      right: 10),
-                                  backgroundColor: ColorManager.kPrimaryColor
-                                      .withOpacity(0.6),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10)),
-                                  content: Text(
-                                    addToCartModel.message ??
-                                        "Error Occured !Try Again !", //  'Added To Cart',
-                                    style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.12,
-                                        Colors.white),
-                                  )));
+                            showScaffoldError(
+                              context: context,
+                              message: addToCartModel.message ??
+                                  "Error Occured !Try Again !", //  'Added To Cart',
+                            );
                           }
                         });
                       },
@@ -757,69 +765,17 @@ showDialogFunctionForProductDetailsAnimated(
                                 AddToCartModel addToCartModel =
                                     AddToCartModel.fromJson(value);
                                 if (value["status"] == "success") {
-                                  ScaffoldMessenger.of(context)
-                                    ..removeCurrentSnackBar()
-                                    ..showSnackBar(SnackBar(
-                                        showCloseIcon: true,
-                                        dismissDirection: DismissDirection.up,
-                                        closeIconColor: Colors.white,
-                                        duration: const Duration(seconds: 2),
-                                        behavior: SnackBarBehavior.floating,
-                                        elevation: 0,
-                                        margin: EdgeInsets.only(
-                                            top: 50,
-                                            left: MediaQuery.of(context)
-                                                    .size
-                                                    .width /
-                                                1.9,
-                                            right: 10),
-                                        backgroundColor: ColorManager
-                                            .kPrimaryColor
-                                            .withOpacity(0.6),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(10)),
-                                        content: Text(
-                                          addToCartModel.message ??
-                                              "Added To Cart !", //  'Order Placed Successfully',
-                                          style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.12,
-                                              Colors.white),
-                                        )));
+                                  showScaffold(
+                                    context: context,
+                                    message: addToCartModel.message ??
+                                        "Added To Cart !", //  'Order Placed Successfully',
+                                  );
                                 } else {
-                                  ScaffoldMessenger.of(context)
-                                    ..removeCurrentSnackBar()
-                                    ..showSnackBar(SnackBar(
-                                        showCloseIcon: true,
-                                        dismissDirection: DismissDirection.up,
-                                        closeIconColor: Colors.white,
-                                        duration: const Duration(seconds: 2),
-                                        behavior: SnackBarBehavior.floating,
-                                        elevation: 0,
-                                        margin: EdgeInsets.only(
-                                            top: 50,
-                                            left: MediaQuery.of(context)
-                                                    .size
-                                                    .width /
-                                                1.9,
-                                            right: 10),
-                                        backgroundColor: ColorManager
-                                            .kPrimaryColor
-                                            .withOpacity(0.6),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(10)),
-                                        content: Text(
-                                          addToCartModel.message ??
-                                              "Error Occured !Try Again !", //  'Added To Cart',
-                                          style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.12,
-                                              Colors.white),
-                                        )));
+                                  showScaffoldError(
+                                    context: context,
+                                    message: addToCartModel.message ??
+                                        "Error Occured !Try Again !", //  'Added To Cart',
+                                  );
                                 }
                               });
                             },
@@ -1117,7 +1073,7 @@ final List<Product> _items = [
 
 //   @override
 //   State<CategoryListItem> createState() => _CategoryListItemState();
-// // }
+// }
 
 // class _CategoryListItemState extends State<CategoryListItem> {
 //   final TextEditingController _searchTextController = TextEditingController();
@@ -1186,8 +1142,8 @@ final List<Product> _items = [
             //           final isSelected =
             //               selectionProvider.selectedIndices.contains(index);
             //           //    final product=selectionProvider.getProducts;
-            //           debugPrint("selectionProvider.getProducts!.length");
-            //           debugPrint("${selectionProvider.productList!.length}");
+            //           // debugPrint("selectionProvider.getProducts!.length");
+            //           // debugPrint("${selectionProvider.productList!.length}");
             //           if (selectionProvider.isLoading ||
             //               selectionProvider.productList!.isEmpty) {
             //             return const BuildProductDummy();

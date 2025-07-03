@@ -4,17 +4,17 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/main_screen.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
+import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/screens/login/forgot_password.dart';
 import 'package:provider/provider.dart';
-//import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../components/build_round_button.dart';
 import '../../components/build_title.dart';
 import '../../providers/auth_model.dart';
-
 import '../../providers/invoice_provider.dart';
 import '../../providers/purchase_provider.dart';
 import '../../resources/color_manager.dart';
@@ -41,7 +41,6 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   void initState() {
     super.initState();
-
     _loadUserEmailPassword();
   }
 
@@ -64,7 +63,7 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
-  void _handleRemeberme(bool value) {
+  void _handleRememberMe(bool value) {
     _rememberMe = value;
     SharedPreferences.getInstance().then(
       (prefs) {
@@ -143,6 +142,18 @@ class _SignInScreenState extends State<SignInScreen> {
                                   ),
                                   hintText: '*****@domain.com',
                                   hintStyle: buildTextFieldStyle,
+                                  errorBorder: const OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: Colors.red,
+                                      width: 2.0,
+                                    ),
+                                  ),
+                                  focusedErrorBorder: const OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: Colors.red,
+                                      width: 2.0,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -160,20 +171,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                 obscureText: _obscureText,
                                 cursorColor: ColorManager.kPrimaryColor,
                                 controller: _passwordTextController,
-
-                                // validator: (value) {
-                                //   RegExp regex = RegExp(
-                                //       r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$');
-                                //   if (value!.isEmpty) {
-                                //     return 'Please enter password here';
-                                //   } else {
-                                //     if (!regex.hasMatch(value)) {
-                                //       return 'Enter valid password';
-                                //     } else {
-                                //       return null;
-                                //     }
-                                //   }
-                                // },
+                                // validator:
+                                //     validatePassword, // Add validator here
                                 decoration: decoration.copyWith(
                                   hintText: '*******',
                                   iconColor: ColorManager.kPrimaryWithOpacity10,
@@ -197,6 +196,18 @@ class _SignInScreenState extends State<SignInScreen> {
                                           .withOpacity(0.5),
                                     ),
                                   ),
+                                  errorBorder: const OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: Colors.red,
+                                      width: 2.0,
+                                    ),
+                                  ),
+                                  focusedErrorBorder: const OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: Colors.red,
+                                      width: 2.0,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -215,7 +226,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                         onTap: () {
                                           setState(() {
                                             _rememberMe = !_rememberMe;
-                                            _handleRemeberme(_rememberMe);
+                                            _handleRememberMe(_rememberMe);
                                           });
                                         },
                                         child: Container(
@@ -231,8 +242,6 @@ class _SignInScreenState extends State<SignInScreen> {
                                             color: _rememberMe
                                                 ? ColorManager.kPrimaryColor
                                                 : Colors.white,
-                                            // borderRadius:
-                                            //     BorderRadius.circular(30),
                                           ),
                                           child: _rememberMe
                                               ? const Icon(
@@ -294,17 +303,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                     key: const Key("Button_Sign_in"),
                                     title: 'Continue',
                                     fct: () async {
-                                      // await Future.delayed(
-                                      //         const Duration(seconds: 1))
-                                      //     .then((value) => Navigator.push(
-                                      //         context,
-                                      //         MaterialPageRoute(
-                                      //             builder: (context) =>
-                                      //                 const MainScreen())));
-                                      if (_emailController.text.isNotEmpty ||
-                                          _passwordTextController
-                                              .text.isNotEmpty) {
-                                        debugPrint("hello");
+                                      if (_formKey.currentState!.validate()) {
+                                        // debugPrint("hello");
                                         showDialog(
                                             context: context,
                                             barrierDismissible: false,
@@ -320,7 +320,6 @@ class _SignInScreenState extends State<SignInScreen> {
                                                 _passwordTextController.text,
                                                 context)
                                             .then((value) async {
-                                          // Navigator.pop(context);
                                           if (value["status"] == "success") {
                                             ExecutiveModel executiveModel =
                                                 ExecutiveModel.fromJson(value);
@@ -336,10 +335,15 @@ class _SignInScreenState extends State<SignInScreen> {
                                                     0);
                                             SharedPreferenceProvider()
                                                 .saveAccessTokenandCustomerId(
-                                              executiveModelData?.accessToken ??
-                                                  "",
-                                              executiveModelData?.userId ?? 0,
-                                            );
+                                                    executiveModelData
+                                                            ?.accessToken ??
+                                                        "",
+                                                    executiveModelData
+                                                            ?.userId ??
+                                                        0,
+                                                    executiveModelData
+                                                            ?.userName ??
+                                                        "");
                                             SalesProvider salesProvider =
                                                 Provider.of<SalesProvider>(
                                                     context,
@@ -380,6 +384,26 @@ class _SignInScreenState extends State<SignInScreen> {
                                               context: context,
                                               message: '${value["message"]}',
                                             );
+
+                                            await Provider.of<
+                                                        LocalProductProvider>(
+                                                    context,
+                                                    listen: false)
+                                                .fetchProductsFromAPI();
+
+                                            // Load document configurations during login
+                                            try {
+                                              final docConfigProvider =
+                                                  Provider.of<DocumentConfigProvider>(
+                                                      context, listen: false);
+                                              await docConfigProvider.fetchDocumentConfigurations(
+                                                  accessToken: authModel.token ?? "");
+                                              debugPrint("Document configurations loaded successfully during login");
+                                            } catch (e) {
+                                              debugPrint("Warning: Failed to load document configurations during login: $e");
+                                              // Don't block login if document config fails
+                                            }
+
                                             Navigator.pop(context);
 
                                             await Future.delayed(
@@ -391,7 +415,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                                             const MainScreen())));
                                           } else {
                                             Navigator.pop(context);
-                                            showScaffold(
+                                            showScaffoldError(
                                               context: context,
                                               message: '${value["message"]}',
                                             );
@@ -418,10 +442,8 @@ class _SignInScreenState extends State<SignInScreen> {
     final form = _formKey.currentState;
     if (form!.validate()) {
       form.save();
-
       return true;
     }
-
     return false;
   }
 
@@ -435,8 +457,26 @@ class _SignInScreenState extends State<SignInScreen> {
         r'x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])';
     final regex = RegExp(pattern);
 
-    return value!.isNotEmpty && !regex.hasMatch(value)
-        ? 'Enter a valid email address'
-        : null;
+    if (value == null || value.isEmpty) {
+      return 'Email is required';
+    }
+
+    if (!regex.hasMatch(value)) {
+      return 'Enter a valid email address';
+    }
+
+    return null;
+  }
+
+  String? validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Password is required';
+    }
+    RegExp regex =
+        RegExp(r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$');
+    if (!regex.hasMatch(value)) {
+      return 'Enter a valid password';
+    }
+    return null;
   }
 }

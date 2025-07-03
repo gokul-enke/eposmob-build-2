@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_back_button.dart';
+import 'package:pos_machine/models/invoice_details.dart';
 
 import 'package:provider/provider.dart';
 
 import '../../../components/build_container_box.dart';
 import '../../../components/build_round_button.dart';
 import '../../../controllers/sidebar_controller.dart';
-import '../../../models/list_transaction.dart';
 
 import '../../../providers/invoice_provider.dart';
 import '../../../resources/color_manager.dart';
@@ -23,15 +24,13 @@ class ViewInvoiceDetailsWidget extends StatelessWidget {
     InvoiceProvider invoiceProvider = Provider.of<InvoiceProvider>(
       context,
     );
-    ListTransaction? listTransaction = invoiceProvider.getListTransaction;
-    debugPrint(listTransaction == null
-        ? "listTransaction"
-        : listTransaction.accountName);
+    InvoiceDetails? invoiceDetails = invoiceProvider.getInvoiceDetails;
+
     return SafeArea(
-        child: Container(
-      margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
+      child: Container(
+        margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
           boxShadow: const [
             BoxShadow(
@@ -40,44 +39,51 @@ class ViewInvoiceDetailsWidget extends StatelessWidget {
               offset: Offset(1, 1),
             ),
           ],
-          color: Colors.white),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-        child: ListView(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  " Invoice Details  ",
+          color: Colors.white,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+          child: ListView(
+            children: [
+              CustomBackButton(
+                onPressed: () {
+                  sideBarController.index.value = 21;
+                },
+                text: 'Invoice List',
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    " Invoice Details  ",
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s20, 0.30, ColorManager.textColor),
+                  ),
+                ],
+              ),
+              Container(
+                height: 60,
+                decoration: const BoxDecoration(
+                  color: ColorManager.kPrimaryColor,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(7),
+                    topRight: Radius.circular(7),
+                  ),
+                ),
+                padding: const EdgeInsets.only(
+                  left: 20,
+                  top: 20,
+                ),
+                margin: const EdgeInsets.only(
+                    top: 20, bottom: 0, left: 10, right: 10),
+                child: Text(
+                  " Details  ",
                   style: buildCustomStyle(FontWeightManager.semiBold,
-                      FontSize.s20, 0.30, ColorManager.textColor),
-                ),
-              ],
-            ),
-            Container(
-              height: 60,
-              decoration: const BoxDecoration(
-                color: ColorManager.kPrimaryColor,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(7),
-                  topRight: Radius.circular(7),
+                      FontSize.s15, 0.30, Colors.white),
                 ),
               ),
-              padding: const EdgeInsets.only(
-                left: 20,
-                top: 20,
-              ),
-              margin: const EdgeInsets.only(
-                  top: 20, bottom: 0, left: 10, right: 10),
-              child: Text(
-                " Details  ",
-                style: buildCustomStyle(FontWeightManager.semiBold,
-                    FontSize.s15, 0.30, Colors.white),
-              ),
-            ),
-            BuildBoxShadowContainer(
-                height: size.height, //120,
+              BuildBoxShadowContainer(
+                height: size.height * 0.5, // Adjust height as needed
                 margin: const EdgeInsets.only(
                     top: 0, bottom: 10, left: 10, right: 10),
                 padding: const EdgeInsets.only(
@@ -87,67 +93,33 @@ class ViewInvoiceDetailsWidget extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Customer Name : ${listTransaction == null ? "" : listTransaction.userName} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Amount : ${listTransaction == null ? "" : listTransaction.amount} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Transaction Type : ${listTransaction == null ? "" : listTransaction.type} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Payment Status :  ${listTransaction == null ? "" : listTransaction.status}  ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Date :  ${listTransaction == null ? "" : listTransaction.createdAt.toString().substring(0, 10)} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Customer email :  ${listTransaction == null ? "" : listTransaction.user!.email} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Customer Phone :  ${listTransaction == null ? "" : listTransaction.user!.phone} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.vertical,
+                          child: DataTable(
+                            columns: const [
+                              DataColumn(label: Text('Invoice')),
+                              DataColumn(label: Text('Item Name')),
+                              DataColumn(label: Text('Quantity')),
+                              DataColumn(label: Text('Unit Amount')),
+                              DataColumn(label: Text('Tax')),
+                              DataColumn(label: Text('Total Amount')),
+                            ],
+                            rows: invoiceDetails?.invoiceItems.map((item) {
+                                  return DataRow(cells: [
+                                    DataCell(Text(item.invoiceId.toString())),
+                                    DataCell(Text(item.itemName)),
+                                    DataCell(Text(item.quantity.toString())),
+                                    DataCell(Text(item.unitAmount)),
+                                    DataCell(Text(item.tax)),
+                                    DataCell(Text(item.totalAmount)),
+                                  ]);
+                                }).toList() ??
+                                [],
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 50),
@@ -166,10 +138,12 @@ class ViewInvoiceDetailsWidget extends StatelessWidget {
                       ),
                     ),
                   ],
-                )),
-          ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ));
+    );
   }
 }

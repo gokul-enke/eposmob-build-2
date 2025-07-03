@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_back_button.dart';
+import 'package:pos_machine/components/build_detail_row.dart';
 
 import 'package:provider/provider.dart';
 
@@ -24,9 +26,9 @@ class ViewVoucherDetailsWidget extends StatelessWidget {
       context,
     );
     ListTransaction? listTransaction = invoiceProvider.getListTransaction;
-    debugPrint(listTransaction == null
-        ? "listTransaction"
-        : listTransaction.accountName);
+    // debugPrint(listTransaction == null
+    //     ? "listTransaction"
+    //     : listTransaction.accountName);
     return SafeArea(
         child: Container(
       margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
@@ -45,6 +47,15 @@ class ViewVoucherDetailsWidget extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
         child: ListView(
           children: [
+            CustomBackButton(
+              onPressed: () {
+                sideBarController.index.value = 22;
+              },
+              text: 'Voucher List',
+              // Optionally, you can customize the color and size
+              // color: ColorManager.customColor,
+              // size: 20.0,
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -87,69 +98,46 @@ class ViewVoucherDetailsWidget extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Customer Name : ${listTransaction == null ? "" : listTransaction.userName} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
+                    BuildDetailRow(
+                      title1: "Customer Name",
+                      content1: listTransaction?.userName ?? "",
+                      title2: "Amount",
+                      content2: listTransaction?.amount ?? "",
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Amount : ${listTransaction == null ? "" : listTransaction.amount} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
+                    BuildDetailRow(
+                      title1: "Transaction Type",
+                      content1: listTransaction?.type ?? "",
+                      title2: "Payment Method",
+                      content2: listTransaction?.paymentMethod ?? "",
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Transaction Type : ${listTransaction == null ? "" : listTransaction.type} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
+                    BuildDetailRow(
+                      title1: "Reference",
+                      content1: listTransaction?.reference ?? "",
+                      title2: "Comment",
+                      content2: listTransaction?.transactionComment ?? "",
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Payment Status :  ${listTransaction == null ? "" : listTransaction.status}  ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Date :  ${listTransaction == null ? "" : listTransaction.createdAt.toString().substring(0, 10)} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Customer email :  ${listTransaction == null ? "" : listTransaction.user!.email} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Customer Phone :  ${listTransaction == null ? "" : listTransaction.user!.phone} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
-                    ),
+                    // BuildDetailRow(
+                    //   title1: "Particulars",
+                    //   content1: listTransaction?.particulars ?? "",
+                    //   title2: "Payment Status",
+                    //   content2: listTransaction?.status ?? "",
+                    // ),
+                    // BuildDetailRow(
+                    //   title1: "Date",
+                    //   content1: listTransaction?.createdAt
+                    //           ?.toString()
+                    //           .substring(0, 10) ??
+                    //       "",
+                    //   title2: "Customer Email",
+                    //   content2: listTransaction?.user?.email ?? "",
+                    // ),
+                    // BuildDetailRow(
+                    //   title1: "Customer Phone",
+                    //   content1: listTransaction?.user?.phone ?? "",
+                    //   title2:
+                    //       "", // Leave this empty if you don't have a second item for this row
+                    //   content2: "",
+                    // ),
                     const SizedBox(height: 50),
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0),

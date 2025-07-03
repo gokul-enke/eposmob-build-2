@@ -124,7 +124,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               fct: () async {
                                 if (_emailController.text.isNotEmpty &&
                                     _formKey.currentState!.validate()) {
-                                  debugPrint("hello");
+                                  // debugPrint("hello");
                                   showDialog(
                                       context: context,
                                       barrierDismissible: false,
@@ -140,7 +140,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       .then((value) async {
                                     // Navigator.pop(context);
                                     if (value["status"] == "success") {
-                                      debugPrint(value.toString());
+                                      // debugPrint(value.toString());
 
                                       showScaffold(
                                         context: context,
@@ -159,12 +159,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                           ForgotModelError.fromJson(value);
 
                                       Errors? errors = forgotModelError.errors;
-                                      debugPrint(errors!.email!.single);
+                                      // debugPrint(errors!.email!.single);
                                       Navigator.pop(context);
 
                                       showScaffold(
                                         context: context,
-                                        message: errors.email!.single,
+                                        message: errors!.email!.single,
                                       );
                                     }
                                   });

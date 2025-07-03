@@ -1,7 +1,3 @@
-// To parse this JSON data, do
-//
-//     final listTransactionModel = listTransactionModelFromJson(jsonString);
-
 import 'dart:convert';
 
 ListTransactionModel listTransactionModelFromJson(String str) =>
@@ -13,7 +9,7 @@ String listTransactionModelToJson(ListTransactionModel data) =>
 class ListTransactionModel {
   final String? status;
   final String? message;
-  final List<ListTransaction>? data;
+  final TransactionData? data;
 
   ListTransactionModel({
     this.status,
@@ -26,218 +22,190 @@ class ListTransactionModel {
         status: json["status"],
         message: json["message"],
         data: json["data"] == null
-            ? []
-            : List<ListTransaction>.from(
-                json["data"]!.map((x) => ListTransaction.fromJson(x))),
+            ? null
+            : TransactionData.fromJson(json["data"]),
       );
 
   Map<String, dynamic> toJson() => {
         "status": status,
         "message": message,
-        "data": data == null
+        "data": data?.toJson(),
+      };
+}
+
+class TransactionData {
+  final int? currentPage;
+  final List<ListTransaction>?
+      transactions; // Renamed to transactions for clarity
+  final String? firstPageUrl;
+  final int? from;
+  final int? lastPage;
+  final String? lastPageUrl;
+  final List<Link>? links;
+  final String? nextPageUrl;
+  final String? path;
+  final int? perPage;
+  final String? prevPageUrl;
+  final int? to;
+  final int? total;
+
+  TransactionData({
+    this.currentPage,
+    this.transactions,
+    this.firstPageUrl,
+    this.from,
+    this.lastPage,
+    this.lastPageUrl,
+    this.links,
+    this.nextPageUrl,
+    this.path,
+    this.perPage,
+    this.prevPageUrl,
+    this.to,
+    this.total,
+  });
+
+  factory TransactionData.fromJson(Map<String, dynamic> json) =>
+      TransactionData(
+        currentPage: json["current_page"],
+        transactions: json["data"] == null
             ? []
-            : List<dynamic>.from(data!.map((x) => x.toJson())),
+            : List<ListTransaction>.from(
+                json["data"].map((x) => ListTransaction.fromJson(x))),
+        firstPageUrl: json["first_page_url"],
+        from: json["from"],
+        lastPage: json["last_page"],
+        lastPageUrl: json["last_page_url"],
+        links: json["links"] == null
+            ? []
+            : List<Link>.from(json["links"].map((x) => Link.fromJson(x))),
+        nextPageUrl: json["next_page_url"],
+        path: json["path"],
+        perPage: json["per_page"],
+        prevPageUrl: json["prev_page_url"],
+        to: json["to"],
+        total: json["total"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "current_page": currentPage,
+        "data": transactions == null
+            ? []
+            : List<dynamic>.from(transactions!.map((x) => x.toJson())),
+        "first_page_url": firstPageUrl,
+        "from": from,
+        "last_page": lastPage,
+        "last_page_url": lastPageUrl,
+        "links": links == null
+            ? []
+            : List<dynamic>.from(links!.map((x) => x.toJson())),
+        "next_page_url": nextPageUrl,
+        "path": path,
+        "per_page": perPage,
+        "prev_page_url": prevPageUrl,
+        "to": to,
+        "total": total,
       };
 }
 
 class ListTransaction {
   final int? id;
-  final int? companyId;
-  final String? type;
+  final int? orderId;
   final String? paymentMethod;
-  final int? accountId;
+  final String? date; // Changed to String since it's just a date
+  final String? type;
+  final String? referenceId; // Changed from reference to reference_id
+  final String? transactionType; // Changed from type to transaction_type
   final String? amount;
   final String? currency;
-  final int? userId;
-  final int? orderId;
-  final String? transactionComment;
-  final dynamic reference;
+  final String? reference;
+  final String? transactionComment; // Kept as is
   final String? status;
-  final int? createdBy;
-  final int? verifiedBy;
   final DateTime? createdAt;
   final DateTime? updatedAt;
-  final String? userName;
-  final String? accountName;
-  final User? user;
-  final Account? account;
+
+  var userName;
 
   ListTransaction({
     this.id,
-    this.companyId,
-    this.type,
+    this.orderId,
     this.paymentMethod,
-    this.accountId,
+    this.date,
+    this.type,
+    this.referenceId,
+    this.transactionType,
     this.amount,
     this.currency,
-    this.userId,
-    this.orderId,
-    this.transactionComment,
     this.reference,
+    this.transactionComment,
     this.status,
-    this.createdBy,
-    this.verifiedBy,
     this.createdAt,
     this.updatedAt,
-    this.userName,
-    this.accountName,
-    this.user,
-    this.account,
   });
 
   factory ListTransaction.fromJson(Map<String, dynamic> json) =>
       ListTransaction(
         id: json["id"],
-        companyId: json["company_id"],
-        type: json["type"],
+        orderId: json["order_id"],
         paymentMethod: json["payment_method"],
-        accountId: json["account_id"],
+        date: json["date"], // Keeps the date as a string
+        type: json["type"],
+        referenceId:
+            json["reference_id"], // Changed from reference to reference_id
+        transactionType:
+            json["transaction_type"], // Changed from type to transaction_type
         amount: json["amount"],
         currency: json["currency"],
-        userId: json["user_id"],
-        orderId: json["order_id"],
-        transactionComment: json["transaction_comment"],
         reference: json["reference"],
+        transactionComment: json["transaction_comment"],
         status: json["status"],
-        createdBy: json["created_by"],
-        verifiedBy: json["verified_by"],
         createdAt: json["created_at"] == null
             ? null
             : DateTime.parse(json["created_at"]),
         updatedAt: json["updated_at"] == null
             ? null
             : DateTime.parse(json["updated_at"]),
-        userName: json["user_name"],
-        accountName: json["account_name"],
-        user: json["user"] == null ? null : User.fromJson(json["user"]),
-        account:
-            json["account"] == null ? null : Account.fromJson(json["account"]),
       );
 
   Map<String, dynamic> toJson() => {
         "id": id,
-        "company_id": companyId,
-        "type": type,
+        "order_id": orderId,
         "payment_method": paymentMethod,
-        "account_id": accountId,
+        "date": date,
+        "type": type,
+        "reference_id": referenceId, // Changed from reference to reference_id
+        "transaction_type":
+            transactionType, // Changed from type to transaction_type
         "amount": amount,
         "currency": currency,
-        "user_id": userId,
-        "order_id": orderId,
-        "transaction_comment": transactionComment,
         "reference": reference,
+        "transaction_comment": transactionComment,
         "status": status,
-        "created_by": createdBy,
-        "verified_by": verifiedBy,
-        "created_at": createdAt?.toIso8601String(),
-        "updated_at": updatedAt?.toIso8601String(),
-        "user_name": userName,
-        "account_name": accountName,
-        "user": user?.toJson(),
-        "account": account?.toJson(),
-      };
-}
-
-class Account {
-  final int? id;
-  final String? accountType;
-  final String? accountName;
-  final String? accountLabel;
-  final int? userId;
-  final int? storeId;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
-
-  Account({
-    this.id,
-    this.accountType,
-    this.accountName,
-    this.accountLabel,
-    this.userId,
-    this.storeId,
-    this.createdAt,
-    this.updatedAt,
-  });
-
-  factory Account.fromJson(Map<String, dynamic> json) => Account(
-        id: json["id"],
-        accountType: json["account_type"],
-        accountName: json["account_name"],
-        accountLabel: json["account_label"],
-        userId: json["user_id"],
-        storeId: json["store_id"],
-        createdAt: json["created_at"] == null
-            ? null
-            : DateTime.parse(json["created_at"]),
-        updatedAt: json["updated_at"] == null
-            ? null
-            : DateTime.parse(json["updated_at"]),
-      );
-
-  Map<String, dynamic> toJson() => {
-        "id": id,
-        "account_type": accountType,
-        "account_name": accountName,
-        "account_label": accountLabel,
-        "user_id": userId,
-        "store_id": storeId,
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),
       };
 }
 
-class User {
-  final int? id;
-  final String? name;
-  final String? email;
-  final String? phone;
-  final String? phoneVerified;
-  final dynamic emailVerifiedAt;
-  final String? defaultPassword;
-  final int? doneBy;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
+class Link {
+  final String? url;
+  final String? label;
+  final bool? active;
 
-  User({
-    this.id,
-    this.name,
-    this.email,
-    this.phone,
-    this.phoneVerified,
-    this.emailVerifiedAt,
-    this.defaultPassword,
-    this.doneBy,
-    this.createdAt,
-    this.updatedAt,
+  Link({
+    this.url,
+    this.label,
+    this.active,
   });
 
-  factory User.fromJson(Map<String, dynamic> json) => User(
-        id: json["id"],
-        name: json["name"],
-        email: json["email"],
-        phone: json["phone"],
-        phoneVerified: json["phone_verified"],
-        emailVerifiedAt: json["email_verified_at"],
-        defaultPassword: json["default_password"],
-        doneBy: json["done_by"],
-        createdAt: json["created_at"] == null
-            ? null
-            : DateTime.parse(json["created_at"]),
-        updatedAt: json["updated_at"] == null
-            ? null
-            : DateTime.parse(json["updated_at"]),
+  factory Link.fromJson(Map<String, dynamic> json) => Link(
+        url: json["url"],
+        label: json["label"],
+        active: json["active"],
       );
 
   Map<String, dynamic> toJson() => {
-        "id": id,
-        "name": name,
-        "email": email,
-        "phone": phone,
-        "phone_verified": phoneVerified,
-        "email_verified_at": emailVerifiedAt,
-        "default_password": defaultPassword,
-        "done_by": doneBy,
-        "created_at": createdAt?.toIso8601String(),
-        "updated_at": updatedAt?.toIso8601String(),
+        "url": url,
+        "label": label,
+        "active": active,
       };
 }

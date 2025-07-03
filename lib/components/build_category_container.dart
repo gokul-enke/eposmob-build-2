@@ -64,10 +64,10 @@ class BuildCategoryContainerDummy extends StatelessWidget {
         children: [
           CircleAvatar(
             backgroundColor: ColorManager.kPrimaryColor,
-            radius: 50,
+            radius: 40,
             child: Container(
-              height: 95,
-              width: 95,
+              height: 80,
+              width: 80,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white,

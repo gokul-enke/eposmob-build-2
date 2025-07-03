@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/responsive.dart';
@@ -9,15 +10,72 @@ import 'package:websafe_svg/websafe_svg.dart';
 import '../controllers/sidebar_controller.dart';
 import '../providers/auth_model.dart';
 import '../providers/authentication_providers.dart';
-import '../providers/cart.dart';
 
 import '../providers/sales_provider.dart';
 import '../providers/shared_preferences.dart';
+import '../providers/supplier_provider.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
 import '../screens/login/login.dart';
 import 'drawer_list_tile_expandable.dart';
+import '../widgets/user_switcher.dart';
+
+class CollapsibleSidebar extends StatefulWidget {
+  final Widget child;
+  final Widget sidebarContent;
+
+  const CollapsibleSidebar({
+    Key? key,
+    required this.child,
+    required this.sidebarContent,
+  }) : super(key: key);
+
+  @override
+  _CollapsibleSidebarState createState() => _CollapsibleSidebarState();
+}
+
+class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
+  bool _isExpanded = true;
+  final double _expandedWidth = 200;
+  final double _collapsedWidth = 40;
+
+  void _toggleSidebar() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: _isExpanded ? _expandedWidth : _collapsedWidth,
+              child: _isExpanded
+                  ? widget.sidebarContent
+                  : Container(
+                      color: Colors.white,
+                      child: Column(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.menu),
+                            onPressed: _toggleSidebar,
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+            Expanded(child: widget.child),
+          ],
+        ),
+      ],
+    );
+  }
+}
 
 class SideMenu extends StatelessWidget {
   const SideMenu({Key? key}) : super(key: key);
@@ -33,6 +91,14 @@ class SideMenu extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              final _CollapsibleSidebarState? sidebarState =
+                  context.findAncestorStateOfType<_CollapsibleSidebarState>();
+              sidebarState?._toggleSidebar();
+            },
+          ),
           const SizedBox(
             height: 15,
           ),
@@ -60,72 +126,69 @@ class SideMenu extends StatelessWidget {
           const SizedBox(
             height: 20,
           ),
-          // SizedBox(
-          //   height: 300,
-          //   child: Row(
-          //     children: [
-          //       NavigationRail(destinations: [
-          //         NavigationRailDestination(
-          //             icon: WebsafeSvg.asset(
-          //               ImageAssets.homeIcon,
-          //             ),
-          //             label: Text(
-          //               "Home",
-          //               style: TextStyle(color: Colors.black),
-          //             )),
-          //         NavigationRailDestination(
-          //             icon: WebsafeSvg.asset(
-          //               ImageAssets.homeIcon,
-          //             ),
-          //             label: Text("Home")),
-          //         NavigationRailDestination(
-          //             icon: WebsafeSvg.asset(
-          //               ImageAssets.homeIcon,
-          //             ),
-          //             label: Text("Home")),
-          //         NavigationRailDestination(
-          //             icon: WebsafeSvg.asset(
-          //               ImageAssets.homeIcon,
-          //             ),
-          //             label: Text("Home")),
-          //       ], selectedIndex: 0)
-          //     ],
-          //   ),
-          // ),
-          // RoundButtonWithIcon(
-          //   title: 'Home',
-          //   fct: () {},
-          //   size: size,
-          //   iconPath: ImageAssets.homeIcon,
-          // ),
+          Builder(
+            builder: (context) {
+              debugPrint("🔧 SideMenu: Building UserSwitcher widget");
+              return const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 15.0),
+                child: UserSwitcher(),
+              );
+            },
+          ),
+          const SizedBox(
+            height: 20,
+          ),
           Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.homeIcon,
               title: 'Home',
               onTap: () {
-                debugPrint(" 'Home',${sideBarController.index.value}");
-                sideBarController.index.value = 0;
+                // debugPrint(" Billing, ${sideBarController.index.value}");
+                sideBarController.index.value = 46;
               },
-              selected: sideBarController.index.value == 0,
+              selected: sideBarController.index.value == 46,
             ),
           ),
+          // Obx(
+          //   () => DrawerListTile(
+          //     iconPath: ImageAssets.barcodeIcon,
+          //     title: 'Billing',
+          //     onTap: () {
+          //       // debugPrint(" Billing, ${sideBarController.index.value}");
+          //       sideBarController.index.value = 54;
+          //     },
+          //     selected: sideBarController.index.value == 54,
+          //   ),
+          // ),
           Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.dashBoardIcon,
               title: 'Dashboard',
               onTap: () {
-                debugPrint(" 'Dashboard',${sideBarController.index.value}");
+                // debugPrint(" 'Dashboard',${sideBarController.index.value}");
                 sideBarController.index.value = 1;
               },
               selected: sideBarController.index.value == 1,
             ),
           ),
           Obx(
-            () => DrawerListTile(
+            () => DrawerListTileExpandableColumn(
+              onTapTitle1: () {
+                sideBarController.index.value = 2;
+              },
+              onTapTitle2: () {
+                sideBarController.index.value = 56;
+              },
+              onTapTitle3: () {
+                sideBarController.index.value = 50;
+              },
+              listTitle1: "Sales",
+              listTitle2: "Confirmed Orders",
+              listTitle3: "Sales Return",
               iconPath: ImageAssets.saleIcon,
               title: 'Sales',
               onTap: () {
-                debugPrint(" 'Sales',${sideBarController.index.value}");
+                // debugPrint(" 'Sales',${sideBarController.index.value}");
                 sideBarController.index.value = 2;
                 final salesProvider =
                     Provider.of<SalesProvider>(context, listen: false);
@@ -135,33 +198,30 @@ class SideMenu extends StatelessWidget {
                 salesProvider.fetchOrders(
                   accessToken: accessToken ?? '',
                   storeId: 1,
-                  orderNumberSelect: false,
                 );
               },
               selected: sideBarController.index.value == 2 ||
+                  sideBarController.index.value == 51 ||
+                  sideBarController.index.value == 56 ||
+                  sideBarController.index.value == 50 ||
+                  sideBarController.index.value == 49 ||
                   sideBarController.index.value == 11,
             ),
           ),
           Obx(
-            () => DrawerListTileExpandableColumn(
-                onTapTitle1: () {
-                  sideBarController.index.value = 12;
-                },
-                onTapTitle2: () {
-                  sideBarController.index.value = 13;
-                },
-                listTitle1: "Category",
-                listTitle2: "Category Properties",
-                iconPath: ImageAssets.creditCardIcon,
-                title: 'Category',
-                onTap: () {
-                  sideBarController.index.value = 12;
-                  debugPrint(" 'Category',${sideBarController.index.value}");
-                },
-                selected: sideBarController.index.value == 12 ||
-                    sideBarController.index.value == 13 ||
-                    sideBarController.index.value == 27 ||
-                    sideBarController.index.value == 16),
+            () => DrawerListTile(
+              iconPath: ImageAssets.creditCardIcon,
+              title: 'Category',
+              onTap: () {
+                sideBarController.index.value = 12;
+                // debugPrint(" 'Category',${sideBarController.index.value}");
+              },
+              selected: sideBarController.index.value == 12 ||
+                  sideBarController.index.value == 13 ||
+                  sideBarController.index.value == 27 ||
+                  sideBarController.index.value == 16 ||
+                  sideBarController.index.value == 34,
+            ),
           ),
           Obx(
             () => DrawerListTileExpandableColumn(
@@ -177,87 +237,78 @@ class SideMenu extends StatelessWidget {
                 title: 'Product',
                 onTap: () async {
                   sideBarController.index.value = 14;
-                  debugPrint(" 'Category',${sideBarController.index.value}");
+                  // debugPrint(" 'Category',${sideBarController.index.value}");
                 },
                 selected: sideBarController.index.value == 14 ||
                     sideBarController.index.value == 15 ||
                     sideBarController.index.value == 18 ||
                     sideBarController.index.value == 28 ||
                     sideBarController.index.value == 17 ||
-                    sideBarController.index.value == 33),
-          ),
-          Obx(
-            () => DrawerListTileExpandableColumn(
-                onTapTitle1: () {
-                  sideBarController.index.value = 19;
-                },
-                onTapTitle2: () {
-                  sideBarController.index.value = 26;
-                },
-                listTitle1: "Purchase",
-                listTitle2: "Purchase Voucher",
-                iconPath: ImageAssets.cardIcon,
-                title: 'Purchase',
-                onTap: () async {
-                  sideBarController.index.value = 19;
-                  debugPrint(" 'Purchase',${sideBarController.index.value}");
-                },
-                selected: sideBarController.index.value == 19 ||
-                    sideBarController.index.value == 29 ||
-                    sideBarController.index.value == 20 ||
-                    sideBarController.index.value == 26),
+                    sideBarController.index.value == 33 ||
+                    sideBarController.index.value == 35),
           ),
           Obx(
             () => DrawerListTile(
-              iconPath: ImageAssets.cartIcon,
-              title: 'Cart',
-              items: Provider.of<Cart>(context, listen: true).getCartItems,
+              iconPath: ImageAssets.cardIcon,
+              title: 'Suppliers',
               onTap: () {
-                sideBarController.index.value = 3;
-                debugPrint(" 'Cart',${sideBarController.index.value}");
+                sideBarController.index.value =
+                    52; // New index for supplier screen
+                // Load supplier data when selected
+                final supplierProvider =
+                    Provider.of<SupplierProvider>(context, listen: false);
+                String? accessToken =
+                    Provider.of<AuthModel>(context, listen: false).token;
+                supplierProvider.fetchSuppliers(accessToken: accessToken ?? '');
               },
-              selected: sideBarController.index.value == 3,
+              selected: sideBarController.index.value == 52,
             ),
           ),
           Obx(
             () => DrawerListTileExpandableColumn(
-                onTapTitle1: () {
-                  sideBarController.index.value = 21;
-                },
-                onTapTitle2: () {
-                  sideBarController.index.value = 22;
-                },
-                onTapTitle3: () {
-                  sideBarController.index.value = 23;
-                },
-                listTitle1: "Invoice",
-                listTitle2: "Voucher",
-                listTitle3: "Transaction List",
-                iconPath: ImageAssets.transactionIcon,
-                title: 'Accounts',
-                onTap: () {
-                  sideBarController.index.value = 21;
-                  debugPrint(" 'Category',${sideBarController.index.value}");
-                },
-                selected: sideBarController.index.value == 21 ||
-                    sideBarController.index.value == 22 ||
-                    sideBarController.index.value == 30 ||
-                    sideBarController.index.value == 31 ||
-                    sideBarController.index.value == 32 ||
-                    sideBarController.index.value == 23 ||
-                    sideBarController.index.value == 24 ||
-                    sideBarController.index.value == 25),
-          ),
-          Obx(
-            () => DrawerListTile(
+              onTapTitle1: () {
+                sideBarController.index.value = 21;
+              },
+              onTapTitle2: () {
+                sideBarController.index.value = 47;
+              },
+              onTapTitle3: () {
+                sideBarController.index.value = 23;
+              },
+              listTitle1: "Invoice",
+              listTitle3: "Transactions",
+              listTitle2: "Receipts",
               iconPath: ImageAssets.transactionIcon,
-              title: 'Transaction',
+              title: 'Accounts',
               onTap: () {
-                sideBarController.index.value = 4;
-                debugPrint(" 'Transaction',${sideBarController.index.value}");
+                sideBarController.index.value = 21;
+                // debugPrint(" 'Category',${sideBarController.index.value}");
               },
-              selected: sideBarController.index.value == 4,
+              selected: sideBarController.index.value == 21 ||
+                  sideBarController.index.value == 22 ||
+                  sideBarController.index.value == 30 ||
+                  sideBarController.index.value == 31 ||
+                  sideBarController.index.value == 32 ||
+                  sideBarController.index.value == 23 ||
+                  sideBarController.index.value == 24 ||
+                  sideBarController.index.value == 25 ||
+                  sideBarController.index.value == 48 ||
+                  sideBarController.index.value == 47,
             ),
+          ),
+          Obx(
+            () => DrawerListTileExpandableColumn(
+                onTapTitle1: () {
+                  sideBarController.index.value = 4;
+                },
+                listTitle1: "Supplier Transactions",
+                iconPath: ImageAssets.transactionIcon,
+                title: 'Transactions',
+                onTap: () {
+                  sideBarController.index.value = 4;
+                  // debugPrint(" 'Category',${sideBarController.index.value}");
+                },
+                selected: sideBarController.index.value == 4),
           ),
           Obx(
             () => DrawerListTile(
@@ -265,22 +316,11 @@ class SideMenu extends StatelessWidget {
               title: 'Customers',
               onTap: () {
                 sideBarController.index.value = 5;
-                debugPrint(" 'Customers',${sideBarController.index.value}");
+                // debugPrint(" 'Customers',${sideBarController.index.value}");
               },
               selected: sideBarController.index.value == 5 ||
-                  sideBarController.index.value == 9,
-            ),
-          ),
-
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.cardIcon,
-              title: 'Loyalty Card',
-              onTap: () {
-                sideBarController.index.value = 6;
-                debugPrint(" 'Loyality Card',${sideBarController.index.value}");
-              },
-              selected: sideBarController.index.value == 6,
+                  sideBarController.index.value == 9 ||
+                  sideBarController.index.value == 38,
             ),
           ),
           const SizedBox(
@@ -299,29 +339,14 @@ class SideMenu extends StatelessWidget {
           ),
           Obx(
             () => DrawerListTile(
-              iconPath: ImageAssets.notificationIcon,
-              title: 'Notifications',
-              items: 3,
+              iconPath: ImageAssets.printIcon,
+              title: 'Printer',
               onTap: () {
-                sideBarController.index.value = 7;
-                debugPrint(" 'Notifications',${sideBarController.index.value}");
+                sideBarController.index.value = 55;
               },
-              selected: sideBarController.index.value == 7,
+              selected: sideBarController.index.value == 55,
             ),
           ),
-
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.supportIcon,
-              title: 'Support',
-              onTap: () {
-                sideBarController.index.value = 8;
-                debugPrint(" 'Support',${sideBarController.index.value}");
-              },
-              selected: sideBarController.index.value == 8,
-            ),
-          ),
-
           DrawerListTile(
             iconPath: ImageAssets.logoutIcon,
             title: 'Logout',
@@ -342,29 +367,11 @@ class SideMenu extends StatelessWidget {
                   authModel.logout();
                   SharedPreferenceProvider().removeTokenAndCustomerId();
 
-                  debugPrint(" authmodel logout token ${authModel.token}");
-                  ScaffoldMessenger.of(context)
-                    ..removeCurrentSnackBar()
-                    ..showSnackBar(SnackBar(
-                        showCloseIcon: true,
-                        dismissDirection: DismissDirection.up,
-                        closeIconColor: Colors.white,
-                        duration: const Duration(seconds: 2),
-                        behavior: SnackBarBehavior.floating,
-                        elevation: 0,
-                        margin: EdgeInsets.only(
-                            top: 50,
-                            left: MediaQuery.of(context).size.width / 1.9,
-                            right: 10),
-                        backgroundColor:
-                            ColorManager.kPrimaryColor.withOpacity(0.6),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        content: Text(
-                          '${value["message"]}',
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s12, 0.12, Colors.white),
-                        )));
+                  // debugPrint(" authmodel logout token ${authModel.token}");
+                  showScaffold(
+                    context: context,
+                    message: '${value["message"]}',
+                  );
                   Navigator.pop(context);
                   await Future.delayed(const Duration(seconds: 0)).then(
                       (value) => Navigator.pushReplacement(
@@ -373,31 +380,13 @@ class SideMenu extends StatelessWidget {
                               builder: (context) => const SignInScreen())));
                 } else {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context)
-                    ..removeCurrentSnackBar()
-                    ..showSnackBar(SnackBar(
-                        showCloseIcon: true,
-                        dismissDirection: DismissDirection.up,
-                        closeIconColor: Colors.white,
-                        duration: const Duration(seconds: 2),
-                        behavior: SnackBarBehavior.floating,
-                        elevation: 0,
-                        margin: EdgeInsets.only(
-                            top: 50,
-                            left: MediaQuery.of(context).size.width / 1.9,
-                            right: 10),
-                        backgroundColor:
-                            ColorManager.kPrimaryColor.withOpacity(0.6),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        content: Text(
-                          '${value["message"]}',
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s12, 0.12, Colors.white),
-                        )));
+                  showScaffoldError(
+                    context: context,
+                    message: '${value["message"]}',
+                  );
                 }
               });
-              debugPrint(" 'Logout',${sideBarController.index.value}");
+              // debugPrint(" 'Logout',${sideBarController.index.value}");
             },
             selected: false,
           ),
@@ -405,13 +394,13 @@ class SideMenu extends StatelessWidget {
             height: 10,
           ),
           Container(
-            height: 170,
+            height: 100,
             width: 180,
             margin: ResponsiveWidget.isTablet(context)
                 ? const EdgeInsets.only(
                     left: 20, top: 20, bottom: 10, right: 10)
                 : const EdgeInsets.only(left: 30, top: 20, bottom: 10),
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(17),
                 boxShadow: const [
@@ -422,45 +411,41 @@ class SideMenu extends StatelessWidget {
                   ),
                 ],
                 color: Colors.white),
-            child: Column(
-              children: [
-                const SizedBox(
-                  height: 5,
-                ),
-                const CircleAvatar(
-                  backgroundImage: AssetImage(ImageAssets.profilePhotoIcon),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                Text(
-                  'Ajay Antony',
-                  style: buildCustomStyle(FontWeightManager.semiBold,
-                      FontSize.s14, 0.21, ColorManager.textColor),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                InkWell(
-                  onTap: () {
-                    sideBarController.index.value = 10;
-                  },
-                  child: Container(
-                      height: 30,
-                      width: 130,
-                      alignment: Alignment.center,
-                      margin: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: ColorManager.containerShadowColor1,
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Text(
-                        'Open profile',
-                        style: buildCustomStyle(FontWeightManager.medium,
-                            FontSize.s12, 0.16, ColorManager.textColor),
-                      )),
-                ),
-              ],
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    height: 5,
+                  ),
+                  const CircleAvatar(
+                    backgroundImage: AssetImage(ImageAssets.profilePhotoIcon),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  FutureBuilder<String>(
+                    future: SharedPreferenceProvider().getCustomerName(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done) {
+                        return Text(
+                          snapshot.data ?? 'Default Name',
+                          style: buildCustomStyle(FontWeightManager.semiBold,
+                              FontSize.s14, 0.21, ColorManager.textColor),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        );
+                      } else {
+                        return const CircularProgressIndicator();
+                      }
+                    },
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(
@@ -468,7 +453,7 @@ class SideMenu extends StatelessWidget {
           ),
           Center(
             child: Text(
-              '2022 SmartPOP App',
+              '2025 SmartPOS App',
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
                   0.16, ColorManager.textColor),
             ),
@@ -551,7 +536,7 @@ class DrawerListTile extends StatelessWidget {
         //   // margin: ResponsiveWidget.isTablet(context)
         //   //     ? const EdgeInsets.only(left: 10, bottom: 5)
         //   //     : const EdgeInsets.only(left: 20, bottom: 5),
-        // //  margin: const EdgeInsets.only(left: 20),
+        //  margin: const EdgeInsets.only(left: 20),
         //   decoration: BoxDecoration(
         //     color: selected ? ColorManager.kPrimaryColor : Colors.transparent,
         //     borderRadius: BorderRadius.circular(8),

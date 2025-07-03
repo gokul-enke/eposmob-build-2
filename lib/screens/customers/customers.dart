@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:provider/provider.dart';
+import 'dart:ui';
 
 import '../../controllers/sidebar_controller.dart';
 import '../../models/customer_list.dart';
 import '../../providers/auth_model.dart';
-import '../../resources/asset_manager.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -21,71 +23,119 @@ class CustomersScreen extends StatefulWidget {
 }
 
 class _CustomersScreenState extends State<CustomersScreen> {
-  bool isInitLoading = false;
-  List<CustomerListModelData>? customerList = [];
-  List<CustomerListModelData> filteredCustomers = [];
-  final searchTextController = TextEditingController();
+  final customerNameController = TextEditingController();
+  final customerEmailController = TextEditingController();
+  final customerPhoneController = TextEditingController();
+  bool isInitialized = false;
+
   @override
   void initState() {
     super.initState();
-    getCustomersDetails();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadCustomers();
+    });
   }
 
-  void getCustomersDetails() async {
+  Future<void> loadCustomers() async {
+    if (isInitialized) return;
+    
     try {
+      final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+      
+      if (accessToken == null || accessToken.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Authentication token is missing")),
+        );
+        return;
+      }
+      
+      // Load all customers for local pagination
+      await Provider.of<CustomerProvider>(context, listen: false).loadAllCustomers(accessToken);
       setState(() {
-        isInitLoading = true;
-      });
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint("accessToken From AuthModel $accessToken");
-      CustomerProvider()
-          .listCustomer(accessToken ?? "", context)
-          .then((response) {
-        if (response["status"] == "success") {
-          CustomerListModel customerListModel =
-              CustomerListModel.fromJson(response);
-
-          setState(() {
-            customerList = customerListModel.data;
-            filteredCustomers = customerListModel.data ?? [];
-          });
-        } else {}
+        isInitialized = true;
       });
     } catch (error) {
-      debugPrint(error.toString());
-    } finally {
-      setState(() {
-        isInitLoading = false;
-      });
+      debugPrint("Error loading customers: $error");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error loading customers: $error")),
+      );
     }
   }
 
   void searchCustomers() {
-    String query = searchTextController.text.toLowerCase();
-    // Filter customers based on the search query
+    CustomerProvider provider = Provider.of<CustomerProvider>(context, listen: false);
+    provider.applyFiltersLocally(
+        filterName: customerNameController.text,
+        filterEmail: customerEmailController.text,
+        filterPhone: customerPhoneController.text,
+      page: 1,
+    );
+  }
+
+  void resetSearch() {
     setState(() {
-      filteredCustomers = customerList!
-          .where((customer) =>
-              customer.name!.toLowerCase().contains(query) ||
-              customer.email!.toLowerCase().contains(query))
-          .toList();
+      customerNameController.clear();
+      customerEmailController.clear();
+      customerPhoneController.clear();
     });
+    Provider.of<CustomerProvider>(context, listen: false).resetFilters();
+  }
+
+  Future<void> refreshData() async {
+    final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    if (accessToken == null || accessToken.isEmpty) return;
+    
+    await Provider.of<CustomerProvider>(context, listen: false).loadAllCustomers(accessToken);
+  }
+
+  Widget _buildTableHeader(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s12,
+          0.18,
+          ColorManager.kPrimaryColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTableCell(String text) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s9,
+          0.13,
+          Colors.black,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     SideBarController sideBarController = Get.put(SideBarController());
-
     Size size = MediaQuery.of(context).size;
+
     return SafeArea(
-      child: SingleChildScrollView(
-        child: Container(
-            margin:
-                const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-            padding:
-                const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-            decoration: BoxDecoration(
+      child: RefreshIndicator(
+        onRefresh: refreshData,
+        child: ListView(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(
+                  left: 10, top: 20, bottom: 0, right: 10),
+              padding: const EdgeInsets.only(
+                  left: 10, top: 20, bottom: 0, right: 10),
+              decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
                 boxShadow: const [
                   BoxShadow(
@@ -94,163 +144,345 @@ class _CustomersScreenState extends State<CustomersScreen> {
                     offset: Offset(1, 1),
                   ),
                 ],
-                color: Colors.white),
-            child: Padding(
-              padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Customers',
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s20, 0.30, ColorManager.textColor),
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  SizedBox(
-                    height: size.height * 0.8,
-                    child: BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      margin: const EdgeInsets.only(bottom: 10),
-                      blurRadius: 6,
-                      padding: const EdgeInsets.only(
-                        left: 20.0,
-                        right: 20,
-                        top: 30,
-                      ),
-                      offsetValue: const Offset(1, 1),
-                      child: Column(
-                        // shrinkWrap: true,
+                color: Colors.white,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Customers',
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            FontSize.s20,
+                            0.30,
+                            ColorManager.textColor,
+                          ),
+                        ),
+                        CustomRoundButtonWithIcon(
+                          title: "Add New Customer",
+                          fct: () {
+                            sideBarController.index.value = 9;
+                          },
+                          height: 50,
+                          width: size.width * 0.19,
+                          icon: const Icon(
+                            Icons.add,
+                            color: Colors.white,
+                          ),
+                          fontSize: FontSize.s12,
+                          size: size,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      height: 90,
+                      child: Row(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              SizedBox(
-                                height: size.height * 0.07,
-                                width: size.width * 0.4,
-                                child: TextField(
-                                  onChanged: (query) {
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    "Name",
+                                    style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      FontSize.s14,
+                                      0.27,
+                                      Colors.black.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ),
+                                buildColumnWidgetForTextFields(
+                                  height: 45,
+                                  width: 120,
+                                  onchanged: (value) {
                                     searchCustomers();
                                   },
-                                  controller: searchTextController,
-                                  cursorColor: ColorManager.kPrimaryColor,
-                                  decoration: InputDecoration(
-                                      border: InputBorder.none,
-                                      hintText: "Search Customers.....",
-                                      hintStyle: buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          FontSize.s12,
-                                          0.18,
-                                          ColorManager.textColor),
-                                      prefixIcon: const Icon(
-                                        Icons.search,
-                                        color: Colors.black,
-                                        size: 35,
-                                      ),
-                                      prefixIconColor: Colors.black),
+                                  controller: customerNameController,
+                                  size: size,
+                                  hintText: 'Name',
                                 ),
-                              ),
-                              CustomRoundButtonWithIcon(
-                                title: "Add New Customer",
-                                fct: () {
-                                  sideBarController.index.value = 9;
-                                },
-                                height: 50,
-                                width: size.width * 0.19,
-                                icon: const Icon(
-                                  Icons.add,
-                                  color: Colors.white,
-                                ),
-                                fontSize: FontSize.s12,
-                                size: size,
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 10),
-                          const Divider(thickness: 2),
-                          isInitLoading || customerList == null
-                              ? SizedBox(
-                                  height: size.height * 0.6,
-                                )
-                              : SizedBox(
-                                  height: size.height * 0.6,
-                                  child: ListView.builder(
-                                      padding: const EdgeInsets.all(8),
-                                      itemCount: customerList == null
-                                          ? 0
-                                          : filteredCustomers.length,
-                                      shrinkWrap: true,
-                                      itemBuilder:
-                                          (BuildContext context, int index) {
-                                        return Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(5),
-                                            color: index % 2 == 0
-                                                ? ColorManager
-                                                    .containerShadowColorForList
-                                                : null,
-                                          ),
-                                          child: ListTile(
-                                            minLeadingWidth: 0,
-                                            minVerticalPadding: 0,
-                                            contentPadding: EdgeInsets.zero,
-                                            visualDensity: const VisualDensity(
-                                                horizontal: 0, vertical: 0),
-                                            leading: ClipRRect(
-                                              borderRadius: const BorderRadius
-                                                  .all(
-                                                  Radius.elliptical(21, 21)),
-                                              child: Image.asset(
-                                                ImageAssets.profileAvatarIcon,
-                                              ),
-                                            ),
-                                            title: RichText(
-                                              text: TextSpan(
-                                                text:
-                                                    '${customerList == null ? "" : filteredCustomers[index].name}\n',
-                                                style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s15,
-                                                    0.23,
-                                                    ColorManager.textColor),
-                                                children: <TextSpan>[
-                                                  TextSpan(
-                                                    text:
-                                                        '${customerList == null ? "" : filteredCustomers[index].email}',
-                                                    style: buildCustomStyle(
-                                                        FontWeightManager
-                                                            .medium,
-                                                        FontSize.s12,
-                                                        0.18,
-                                                        Colors.black
-                                                            .withOpacity(0.5)),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            trailing: Text(
-                                              customerList == null
-                                                  ? ""
-                                                  : "${filteredCustomers[index].createdAt!.day}/${filteredCustomers[index].createdAt!.month}/${filteredCustomers[index].createdAt!.year}",
-                                              style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s15,
-                                                  0.21,
-                                                  ColorManager.textColor),
-                                            ),
-                                          ),
-                                        );
-                                      }),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    "Email",
+                                    style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      FontSize.s14,
+                                      0.27,
+                                      Colors.black.withOpacity(0.6),
+                                    ),
+                                  ),
                                 ),
+                                buildColumnWidgetForTextFields(
+                                  height: 45,
+                                  width: 120,
+                                  onchanged: (value) {
+                                    searchCustomers();
+                                  },
+                                  controller: customerEmailController,
+                                  size: size,
+                                  hintText: 'Email',
+                                ),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    "Phone",
+                                    style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      FontSize.s14,
+                                      0.27,
+                                      Colors.black.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ),
+                                buildColumnWidgetForTextFields(
+                                  height: 45,
+                                  width: 120,
+                                  onchanged: (value) {
+                                    searchCustomers();
+                                  },
+                                  controller: customerPhoneController,
+                                  size: size,
+                                  hintText: 'Phone',
+                                ),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10.0, top: 30),
+                            child: CustomRoundButton(
+                              title: "Reset",
+                              boxColor: Colors.white,
+                              textColor: ColorManager.kPrimaryColor,
+                              fct: () {
+                                resetSearch();
+                              },
+                              height: 45,
+                              width: size.width * 0.09,
+                              fontSize: FontSize.s12,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  )
-                ],
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      height: 500, // Set a fixed height or adjust as needed
+                      child: Consumer<CustomerProvider>(
+                        builder: (context, customerProvider, child) {
+                          final isLoading = customerProvider.isLoading;
+                          final customerList = customerProvider.getCustomerList;
+                          
+                          return Column(
+                        children: [
+                              Expanded(
+                                child: isLoading
+                                  ? const Center(child: CircularProgressIndicator.adaptive())
+                                  : BuildBoxShadowContainer(
+                              width: size.width,
+                              margin: const EdgeInsets.only(top: 20),
+                              circleRadius: 7,
+                              offsetValue: const Offset(1, 1),
+                                    blurRadius: 8.0,
+                                    color: Colors.white,
+                                    child: Column(
+                                      children: [
+                                        // Fixed table header
+                                        Container(
+                                          decoration: const BoxDecoration(
+                                            color: ColorManager.tableBGColor,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black12,
+                                                offset: Offset(0, 2),
+                                                blurRadius: 2.0,
+                                              ),
+                                            ],
+                                          ),
+                                child: Table(
+                                  columnWidths: const {
+                                              0: FlexColumnWidth(0.5), // No
+                                              1: FlexColumnWidth(2.0), // Name
+                                              2: FlexColumnWidth(2.0), // Email
+                                              3: FlexColumnWidth(1.5), // Phone
+                                              4: FlexColumnWidth(1.0), // Action
+                                            },
+                                            border: null,
+                                            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                  children: [
+                                    TableRow(
+                                        children: [
+                                                  _buildTableHeader('No'),
+                                                  _buildTableHeader('Name'),
+                                                  _buildTableHeader('Email'),
+                                                  _buildTableHeader('Phone No.'),
+                                                  _buildTableHeader('Action'),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        // Scrollable table body
+                                        Expanded(
+                                          child: MouseRegion(
+                                            cursor: SystemMouseCursors.grab,
+                                            child: ScrollConfiguration(
+                                              behavior: ScrollConfiguration.of(context).copyWith(
+                                                dragDevices: {
+                                                  PointerDeviceKind.mouse,
+                                                  PointerDeviceKind.touch,
+                                                  PointerDeviceKind.stylus,
+                                                  PointerDeviceKind.trackpad,
+                                                },
+                                              ),
+                                              child: SingleChildScrollView(
+                                                physics: const BouncingScrollPhysics(),
+                                                scrollDirection: Axis.vertical,
+                                                child: customerList == null || customerList.isEmpty
+                                                  ? Container(
+                                                      height: 300,
+                                                      width: double.infinity,
+                                                      alignment: Alignment.center,
+                                                      child: Column(
+                                                        mainAxisAlignment: MainAxisAlignment.center,
+                                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                                        children: [
+                                                          Icon(
+                                                            Icons.person_search,
+                                                            size: 60,
+                                                            color: ColorManager.kPrimaryColor.withOpacity(0.7),
+                                                          ),
+                                                          const SizedBox(height: 15),
+                                                          Text(
+                                                            'No customers found',
+                                                            style: buildCustomStyle(
+                                                              FontWeightManager.medium,
+                                                              FontSize.s18,
+                                                              0.27,
+                                                              ColorManager.textColor,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(height: 8),
+                                                          Text(
+                                                            'Try adjusting your search criteria',
+                                                            style: buildCustomStyle(
+                                                              FontWeightManager.regular,
+                                                              FontSize.s14,
+                                                              0.20,
+                                                              Colors.grey,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    )
+                                                  : Table(
+                                                      columnWidths: const {
+                                                        0: FlexColumnWidth(0.5), // No
+                                                        1: FlexColumnWidth(2.0), // Name
+                                                        2: FlexColumnWidth(2.0), // Email
+                                                        3: FlexColumnWidth(1.5), // Phone
+                                                        4: FlexColumnWidth(1.0), // Action
+                                                      },
+                                                      border: null,
+                                                      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                                      children: customerList.asMap().entries.map((entry) {
+                                      final int index = entry.key;
+                                                        final customer = entry.value;
+                                      return TableRow(
+                                                          decoration: BoxDecoration(
+                                                            color: index % 2 == 0
+                                                                ? Colors.white
+                                                                : Colors.grey.withOpacity(0.1),
+                                                          ),
+                                        children: [
+                                                            _buildTableCell('${index + 1 + (customerProvider.currentPage - 1) * customerProvider.itemsPerPage}'),
+                                                            _buildTableCell(customer.name ?? ''),
+                                                            _buildTableCell(customer.email ?? ''),
+                                                            _buildTableCell(customer.phone ?? ''),
+                                                            Center(
+                                              child: Padding(
+                                                                padding: const EdgeInsets.all(8.0),
+                                                                child: BuildBoxShadowContainer(
+                                                                  margin: const EdgeInsets.only(left: 5, right: 5),
+                                                          circleRadius: 5,
+                                                          child: IconButton(
+                                                            icon: Icon(
+                                                              Icons.visibility,
+                                                              size: 18,
+                                                                      color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                                                            ),
+                                                            onPressed: () {
+                                                                      customerProvider.selectCustomer(customerList[index]);
+                                                                      sideBarController.index.value = 38;
+                                                                    },
+                                                                    constraints: const BoxConstraints(
+                                                                      minWidth: 36,
+                                                                      minHeight: 36,
+                                                                    ),
+                                                                    padding: EdgeInsets.zero,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                        ],
+                                      );
+                                    }).toList(),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                  ],
+                                ),
+                                  ),
+                              ),
+                              const SizedBox(height: 10),
+                          PaginationControl(
+                                currentPage: customerProvider.currentPage,
+                                totalPages: customerProvider.totalPages,
+                            onPageChanged: (int page) {
+                                  customerProvider.goToPage(page);
+                            },
+                          ),
+                          const SizedBox(height: 25),
+                        ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            )),
+            ),
+          ],
+        ),
       ),
     );
   }

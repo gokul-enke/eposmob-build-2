@@ -17,80 +17,90 @@ class MainScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     SideBarController sideBarController = Get.find();
 
-    // Size size = MediaQuery.of(context).size;
+    Widget content =
+        Obx(() => sideBarController.screens[sideBarController.index.value]);
+
     return Scaffold(
-        // resizeToAvoidBottomInset: true,
-        backgroundColor: Colors.white,
-        drawer:
-            ResponsiveWidget.isMobile(context) ? const SideMenuMobile() : null,
-        appBar: ResponsiveWidget.isMobile(context)
-            ? AppBar(
-                elevation: 0,
-                backgroundColor: Colors.white,
-                leading: Builder(builder: (context) {
-                  return IconButton(
-                    color: ColorManager.kPrimaryColor,
-                    icon: const Icon(Icons.menu),
-                    onPressed: () {
-                      Scaffold.of(context).openDrawer();
-                    },
-                  );
-                }),
-              )
-            : null,
-        body: SafeArea(
-          child: ResponsiveWidget(
-            mobile: const CategoryList(),
-            desktop: Row(
-              children: [
-                const Expanded(
-                  child: SideMenu(),
-                ),
-                Expanded(
-                  flex: 4,
-                  // child: CategoryList(),
-                  child: Obx(() =>
-                      sideBarController.screens[sideBarController.index.value]),
-                ),
-                // Expanded(
-                //   flex: size.width > 1340 ? 8 : 10,
-                //   child: const OrderList(),
-                // ),
-                // Expanded(
-                //   flex: size.width > 1340 ? 2 : 4,
-                //   child: const SideMenu(),
-                // ),
-                // Expanded(
-                //   flex: size.width > 1340 ? 3 : 5,
-                //   child: const CategoryList(),
-                // ),
-                // Expanded(
-                //   flex: size.width > 1340 ? 8 : 10,
-                //   child: const OrderList(),
-                // ),
-              ],
-            ),
-            tablet: Row(
-              children: [
-                Expanded(
-                  flex:
-                      MediaQuery.of(context).orientation == Orientation.portrait
-                          ? 1600
-                          : 1500,
-                  child: const SideMenu(),
-                ),
-                Expanded(
-                  flex:
-                      MediaQuery.of(context).orientation == Orientation.portrait
-                          ? 5000
-                          : 6000,
-                  // child: const CategoryList(),
-                  child: Obx(() =>
-                      sideBarController.screens[sideBarController.index.value]),
-                ),
-              ],
-            ),
+      backgroundColor: Colors.white,
+      drawer:
+          ResponsiveWidget.isMobile(context) ? const SideMenuMobile() : null,
+      appBar: ResponsiveWidget.isMobile(context)
+          ? AppBar(
+              elevation: 0,
+              backgroundColor: Colors.white,
+              leading: Builder(builder: (context) {
+                return IconButton(
+                  color: ColorManager.kPrimaryColor,
+                  icon: const Icon(Icons.menu),
+                  onPressed: () {
+                    Scaffold.of(context).openDrawer();
+                  },
+                );
+              }),
+            )
+          : null,
+      body: SafeArea(
+        child: ResponsiveWidget(
+          mobile: const CategoryList(),
+          desktop: CollapsibleSidebar(
+            sidebarContent: const SideMenu(),
+            child: content,
           ),
-        ));
+          tablet: CollapsibleSidebar(
+            sidebarContent: const SideMenu(),
+            child: content,
+          ),
+          // desktop: Row(
+          //     children: [
+          //       const Expanded(
+          //         child: SideMenu(),
+          //       ),
+          //       Expanded(
+          //         flex: 4,
+          //         // child: CategoryList(),
+          //         child: Obx(() =>
+          //             sideBarController.screens[sideBarController.index.value]),
+          //       ),
+          //       // Expanded(
+          //       //   flex: size.width > 1340 ? 8 : 10,
+          //       //   child: const OrderList(),
+          //       // ),
+          //       // Expanded(
+          //       //   flex: size.width > 1340 ? 2 : 4,
+          //       //   child: const SideMenu(),
+          //       // ),
+          //       // Expanded(
+          //       //   flex: size.width > 1340 ? 3 : 5,
+          //       //   child: const CategoryList(),
+          //       // ),
+          //       // Expanded(
+          //       //   flex: size.width > 1340 ? 8 : 10,
+          //       //   child: const OrderList(),
+          //       // ),
+          //     ],
+          //   ),
+          //   tablet: Row(
+          //     children: [
+          //       Expanded(
+          //         flex:
+          //             MediaQuery.of(context).orientation == Orientation.portrait
+          //                 ? 1200
+          //                 : 1200,
+          //         child: const SideMenu(),
+          //       ),
+          //       Expanded(
+          //         flex:
+          //             MediaQuery.of(context).orientation == Orientation.portrait
+          //                 ? 5000
+          //                 : 6000,
+          //         // child: const CategoryList(),
+          //         child: Obx(() =>
+          //             sideBarController.screens[sideBarController.index.value]),
+          //       ),
+          //     ],
+          //   ),
+        ),
+      ),
+    );
   }
 }

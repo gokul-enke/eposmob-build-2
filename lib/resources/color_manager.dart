@@ -13,10 +13,14 @@ class ColorManager {
   static const Color kListTileColor = Color(0XFFFCFCFC);
   static const Color kListTiletextColor = Color(0XFFCFCDCD);
   static const Color kTextFieldColor25 = Color(0X4DCDCDCD);
+  static const Color kButtonGreen = Color.fromARGB(255, 8, 202, 47);
+  static const Color kButtonRed = Color.fromARGB(255, 245, 49, 73);
+  static const Color kButtonBlue = Color.fromARGB(255, 91, 142, 233);
+  static const Color kButtonYellow = Color.fromARGB(255, 255, 184, 0);
 
   static const Color kRedBox = Color(0XFFF33030);
   static const Color kGreenBox = Color(0XFF54CA93);
-  static const Color kBoxColorF7 = Color(0XFFF7F7F7);
+  static const Color kBoxColorF7 = Color.fromARGB(255, 162, 142, 142);
   static const Color textColor = Color(0XCC000000);
   static const Color shadowColor = Color(0XFFE7ECEF);
   static const Color boxShadowColor = Color.fromRGBO(0, 0, 0, 0.16);
@@ -25,6 +29,8 @@ class ColorManager {
   static const Color containerShadowColorForList = Color(0x80F8F8F8);
   static const Color grey = Colors.grey;
   static const Color textColor1 = Color(0xFFD4D4D4);
+  static const Color kSuccessColor = Colors.green;
+  static const Color kErrorColor = Colors.red;
 
   static const Color tableBGColor = Color(0xFFF9F9F9);
 

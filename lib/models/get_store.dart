@@ -85,4 +85,13 @@ class GetStoreModelData {
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),
       };
+
+  // Override the equality operator
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || (other is GetStoreModelData && id == other.id);
+
+  // Override the hashCode
+  @override
+  int get hashCode => id.hashCode ^ name.hashCode;
 }

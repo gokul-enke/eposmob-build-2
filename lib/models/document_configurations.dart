@@ -1,0 +1,330 @@
+import 'dart:convert';
+
+DocumentConfigurationsModel documentConfigurationsModelFromJson(String str) =>
+    DocumentConfigurationsModel.fromJson(json.decode(str));
+
+String documentConfigurationsModelToJson(DocumentConfigurationsModel data) =>
+    json.encode(data.toJson());
+
+class DocumentConfigurationsModel {
+  final String? status;
+  final Map<String, DocumentConfig>? documentConfigurations;
+  final DocumentOptions? options;
+
+  DocumentConfigurationsModel({
+    this.status,
+    this.documentConfigurations,
+    this.options,
+  });
+
+  factory DocumentConfigurationsModel.fromJson(Map<String, dynamic> json) =>
+      DocumentConfigurationsModel(
+        status: json["status"],
+        documentConfigurations: json["document_configurations"] == null
+            ? null
+            : Map.from(json["document_configurations"]).map((k, v) =>
+                MapEntry<String, DocumentConfig>(
+                    k, DocumentConfig.fromJson(v))),
+        options: json["options"] == null
+            ? null
+            : DocumentOptions.fromJson(json["options"]),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "status": status,
+        "document_configurations": documentConfigurations == null
+            ? null
+            : Map.from(documentConfigurations!)
+                .map((k, v) => MapEntry<String, dynamic>(k, v.toJson())),
+        "options": options?.toJson(),
+      };
+}
+
+class DocumentConfig {
+  final int? id;
+  final int? companyId;
+  final String? type;
+  final dynamic logo; // Can be null
+  final int? showLogo;
+  final String? numberPrefix;
+  final dynamic discountMethod; // Can be null
+  final String? header;
+  final String? subheader;
+  final String? terms;
+  final String? footer;
+  final String? accentColor;
+  final dynamic font; // Can be null
+  final String? template;
+  final ItemName? itemName; // Nested object
+  final ItemName? taxName; // Nested object, same structure
+  final ItemName? unitName; // Nested object, same structure
+  final ItemName? priceName; // Nested object, same structure
+  final ItemName? amountName; // Nested object, same structure
+  final dynamic createdBy; // Can be null
+  final dynamic updatedBy; // Can be null
+  final dynamic createdAt; // Can be null
+  final String? updatedAt;
+  final DisplayConfiguration? displayConfiguration; // Nested object
+  final ResolvedLabels? resolvedLabels; // Nested object
+
+  DocumentConfig({
+    this.id,
+    this.companyId,
+    this.type,
+    this.logo,
+    this.showLogo,
+    this.numberPrefix,
+    this.discountMethod,
+    this.header,
+    this.subheader,
+    this.terms,
+    this.footer,
+    this.accentColor,
+    this.font,
+    this.template,
+    this.itemName,
+    this.taxName,
+    this.unitName,
+    this.priceName,
+    this.amountName,
+    this.createdBy,
+    this.updatedBy,
+    this.createdAt,
+    this.updatedAt,
+    this.displayConfiguration,
+    this.resolvedLabels,
+  });
+
+  factory DocumentConfig.fromJson(Map<String, dynamic> json) => DocumentConfig(
+        id: json["id"],
+        companyId: json["company_id"],
+        type: json["type"],
+        logo: json["logo"],
+        showLogo: json["show_logo"],
+        numberPrefix: json["number_prefix"],
+        discountMethod: json["discount_method"],
+        header: json["header"],
+        subheader: json["subheader"],
+        terms: json["terms"],
+        footer: json["footer"],
+        accentColor: json["accent_color"],
+        font: json["font"],
+        template: json["template"],
+        itemName: json["item_name"] == null
+            ? null
+            : ItemName.fromJson(json["item_name"]),
+        taxName: json["tax_name"] == null
+            ? null
+            : ItemName.fromJson(json["tax_name"]),
+        unitName: json["unit_name"] == null
+            ? null
+            : ItemName.fromJson(json["unit_name"]),
+        priceName: json["price_name"] == null
+            ? null
+            : ItemName.fromJson(json["price_name"]),
+        amountName: json["amount_name"] == null
+            ? null
+            : ItemName.fromJson(json["amount_name"]),
+        createdBy: json["created_by"],
+        updatedBy: json["updated_by"],
+        createdAt: json["created_at"],
+        updatedAt: json["updated_at"],
+        displayConfiguration: json["display_configuration"] == null
+            ? null
+            : DisplayConfiguration.fromJson(json["display_configuration"]),
+        resolvedLabels: json["resolved_labels"] == null
+            ? null
+            : ResolvedLabels.fromJson(json["resolved_labels"]),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "company_id": companyId,
+        "type": type,
+        "logo": logo,
+        "show_logo": showLogo,
+        "number_prefix": numberPrefix,
+        "discount_method": discountMethod,
+        "header": header,
+        "subheader": subheader,
+        "terms": terms,
+        "footer": footer,
+        "accent_color": accentColor,
+        "font": font,
+        "template": template,
+        "item_name": itemName?.toJson(),
+        "tax_name": taxName?.toJson(),
+        "unit_name": unitName?.toJson(),
+        "price_name": priceName?.toJson(),
+        "amount_name": amountName?.toJson(),
+        "created_by": createdBy,
+        "updated_by": updatedBy,
+        "created_at": createdAt,
+        "updated_at": updatedAt,
+        "display_configuration": displayConfiguration?.toJson(),
+        "resolved_labels": resolvedLabels?.toJson(),
+      };
+}
+
+// This class is used for itemName, taxName, unitName, priceName, and amountName as they share the same structure
+class ItemName {
+  final String? option;
+
+  ItemName({
+    this.option,
+  });
+
+  factory ItemName.fromJson(Map<String, dynamic> json) => ItemName(
+        option: json["option"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "option": option,
+      };
+}
+
+class DisplayConfiguration {
+  final Map<String, DisplayOption>? options;
+
+  DisplayConfiguration({
+    this.options,
+  });
+
+  factory DisplayConfiguration.fromJson(Map<String, dynamic> json) =>
+      DisplayConfiguration(
+        options: json == null
+            ? null
+            : Map.from(json).map((k, v) =>
+                MapEntry<String, DisplayOption>(k, DisplayOption.fromJson(v))),
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (options != null)
+          ...options!.map((k, v) => MapEntry<String, dynamic>(k, v.toJson())),
+      };
+}
+
+class DisplayOption {
+  final bool? visible;
+  final dynamic value; // Can be String or null
+
+  DisplayOption({
+    this.visible,
+    this.value,
+  });
+
+  factory DisplayOption.fromJson(Map<String, dynamic> json) => DisplayOption(
+        visible: json["visible"],
+        value: json["value"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "visible": visible,
+        "value": value,
+      };
+}
+
+class ResolvedLabels {
+  final String? itemName;
+  final String? unitName;
+  final String? priceName;
+  final String? taxName;
+  final String? amountName;
+
+  ResolvedLabels({
+    this.itemName,
+    this.unitName,
+    this.priceName,
+    this.taxName,
+    this.amountName,
+  });
+
+  factory ResolvedLabels.fromJson(Map<String, dynamic> json) => ResolvedLabels(
+        itemName: json["item_name"],
+        unitName: json["unit_name"],
+        priceName: json["price_name"],
+        taxName: json["tax_name"],
+        amountName: json["amount_name"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "item_name": itemName,
+        "unit_name": unitName,
+        "price_name": priceName,
+        "tax_name": taxName,
+        "amount_name": amountName,
+      };
+}
+
+class DocumentOptions {
+  final Map<String, String>? itemNameOptions;
+  final Map<String, String>? unitNameOptions;
+  final Map<String, String>? priceNameOptions;
+  final Map<String, String>? taxNameOptions;
+  final Map<String, String>? amountNameOptions;
+  final Map<String, String>? templateOptions;
+
+  DocumentOptions({
+    this.itemNameOptions,
+    this.unitNameOptions,
+    this.priceNameOptions,
+    this.taxNameOptions,
+    this.amountNameOptions,
+    this.templateOptions,
+  });
+
+  factory DocumentOptions.fromJson(Map<String, dynamic> json) =>
+      DocumentOptions(
+        itemNameOptions: json["item_name_options"] == null
+            ? null
+            : Map.from(json["item_name_options"])
+                .map((k, v) => MapEntry<String, String>(k, v)),
+        unitNameOptions: json["unit_name_options"] == null
+            ? null
+            : Map.from(json["unit_name_options"])
+                .map((k, v) => MapEntry<String, String>(k, v)),
+        priceNameOptions: json["price_name_options"] == null
+            ? null
+            : Map.from(json["price_name_options"])
+                .map((k, v) => MapEntry<String, String>(k, v)),
+        taxNameOptions: json["tax_name_options"] == null
+            ? null
+            : Map.from(json["tax_name_options"])
+                .map((k, v) => MapEntry<String, String>(k, v)),
+        amountNameOptions: json["amount_name_options"] == null
+            ? null
+            : Map.from(json["amount_name_options"])
+                .map((k, v) => MapEntry<String, String>(k, v)),
+        templateOptions: json["template_options"] == null
+            ? null
+            : Map.from(json["template_options"])
+                .map((k, v) => MapEntry<String, String>(k, v)),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "item_name_options": itemNameOptions == null
+            ? null
+            : Map.from(itemNameOptions!)
+                .map((k, v) => MapEntry<String, dynamic>(k, v)),
+        "unit_name_options": unitNameOptions == null
+            ? null
+            : Map.from(unitNameOptions!)
+                .map((k, v) => MapEntry<String, dynamic>(k, v)),
+        "price_name_options": priceNameOptions == null
+            ? null
+            : Map.from(priceNameOptions!)
+                .map((k, v) => MapEntry<String, dynamic>(k, v)),
+        "tax_name_options": taxNameOptions == null
+            ? null
+            : Map.from(taxNameOptions!)
+                .map((k, v) => MapEntry<String, dynamic>(k, v)),
+        "amount_name_options": amountNameOptions == null
+            ? null
+            : Map.from(amountNameOptions!)
+                .map((k, v) => MapEntry<String, dynamic>(k, v)),
+        "template_options": templateOptions == null
+            ? null
+            : Map.from(templateOptions!)
+                .map((k, v) => MapEntry<String, dynamic>(k, v)),
+      };
+}

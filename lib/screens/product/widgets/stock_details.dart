@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/models/list_stock.dart';
+import 'package:pos_machine/components/build_back_button.dart';
+import 'package:pos_machine/components/build_detail_row.dart';
+import 'package:pos_machine/models/list_stock.dart' as stock_models;
 
 import 'package:provider/provider.dart';
 
@@ -8,7 +10,7 @@ import '../../../components/build_container_box.dart';
 import '../../../components/build_round_button.dart';
 import '../../../controllers/sidebar_controller.dart';
 
-import '../../../providers/grid_provider.dart';
+import '../../../providers/stock_provider.dart';
 
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
@@ -21,11 +23,31 @@ class StockDetailsWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     SideBarController sideBarController = Get.put(SideBarController());
-    GridSelectionProvider gridSelectionProvider =
-        Provider.of<GridSelectionProvider>(context);
+    StockProvider stockProvider =
+        Provider.of<StockProvider>(context);
 
-    ListStockModelData? stockDetails =
-        gridSelectionProvider.getViewStockModelData;
+    stock_models.ListStockModelData? stockDetails =
+        stockProvider.viewStockModelData;
+
+    List<Widget> buildProductProperties(productProps) {
+      if (productProps == null || productProps.isEmpty) {
+        return [
+          const Padding(
+            padding: EdgeInsets.only(top: 8.0),
+            child: Text("No properties available"),
+          )
+        ];
+      }
+
+      return productProps.map<Widget>((prop) {
+        return BuildDetailRow(
+          title1: prop['prop_code'] ?? "",
+          content1: prop['prop_value']?.toString() ?? "",
+          title2: "",
+          content2: "",
+        );
+      }).toList();
+    }
 
     return SafeArea(
         child: Container(
@@ -45,6 +67,15 @@ class StockDetailsWidget extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
         child: ListView(
           children: [
+            CustomBackButton(
+              onPressed: () {
+                sideBarController.index.value = 15;
+              },
+              text: 'All Stocks',
+              // Optionally, you can customize the color and size
+              // color: ColorManager.customColor,
+              // size: 20.0,
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -105,279 +136,75 @@ class StockDetailsWidget extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(
-                            bottom: 8.0, left: 8.0, top: 10),
-                        child: Text(
-                          "Product Primary Details",
-                          style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s18, 0.30, ColorManager.textColor),
-                        ),
+                      Text(
+                        "Product Primary Details",
+                        style: buildCustomStyle(FontWeightManager.semiBold,
+                            FontSize.s18, 0.30, ColorManager.textColor),
                       ),
-                      Row(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: 8.0, left: 8.0, top: 10),
-                            child: SizedBox(
-                              width: size.width / 3,
-                              child: Text(
-                                softWrap: true,
-                                maxLines: 2,
-                                "Product Name : ${stockDetails == null ? "" : stockDetails.productName}",
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s15,
-                                    0.30,
-                                    ColorManager.textColor),
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: 8.0, left: 8.0, top: 10),
-                            child: SizedBox(
-                              width: size.width / 3,
-                              child: Text(
-                                softWrap: true,
-                                maxLines: 2,
-                                " Product Slug : ${stockDetails == null ? "" : stockDetails.product!.slug}",
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s15,
-                                    0.30,
-                                    ColorManager.textColor),
-                              ),
-                            ),
-                          ),
-                        ],
+                      // BuildDetailRow(
+                      //   title1: "Product Name",
+                      //   content1: stockDetails?.productName ?? "",
+                      //   title2: "Product Slug",
+                      //   content2: stockDetails?.product?.slug ?? "",
+                      // ),
+                      // BuildDetailRow(
+                      //   title1: "Product Price",
+                      //   content1:
+                      //       stockDetails?.product?.price?.toString() ?? "",
+                      //   title2: "Available Stock",
+                      //   content2: stockDetails?.quantity?.toString() ?? "",
+                      // ),
+                      // BuildDetailRow(
+                      //   title1: "Sell Currency",
+                      //   content1: stockDetails?.product?.currency ?? "",
+                      //   title2: "",
+                      //   content2: "",
+                      // ),
+                      // const SizedBox(height: 20),
+                      // Text(
+                      //   "Product Stock Details",
+                      //   style: buildCustomStyle(FontWeightManager.semiBold,
+                      //       FontSize.s18, 0.30, ColorManager.textColor),
+                      // ),
+                      // BuildDetailRow(
+                      //   title1: "Store Name",
+                      //   content1: stockDetails?.storeName ?? "",
+                      //   title2: "Product Quantity",
+                      //   content2: stockDetails?.quantity?.toString() ?? "",
+                      // ),
+                      BuildDetailRow(
+                        title1: "Product Unit",
+                        content1: stockDetails?.unit ?? "",
+                        title2: "Purchase Rate",
+                        content2: stockDetails?.purchaseRate?.toString() ?? "",
                       ),
-                      Row(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: 8.0, left: 8.0, top: 10),
-                            child: SizedBox(
-                              width: size.width / 3,
-                              child: Text(
-                                softWrap: true,
-                                maxLines: 2,
-                                " Product Price : ${stockDetails == null ? "" : stockDetails.product!.price ?? ""} ",
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s15,
-                                    0.30,
-                                    ColorManager.textColor),
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: 8.0, left: 8.0, top: 10),
-                            child: SizedBox(
-                              width: size.width / 3,
-                              child: Text(
-                                softWrap: true,
-                                maxLines: 2,
-                                " Product Available Stock : ${stockDetails == null ? "" : stockDetails.quantity} ",
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s15,
-                                    0.30,
-                                    ColorManager.textColor),
-                              ),
-                            ),
-                          ),
-                        ],
+                      BuildDetailRow(
+                        title1: "Retail Price",
+                        content1: stockDetails?.retailPrice?.toString() ?? "",
+                        title2: "Wholesale Price",
+                        content2:
+                            stockDetails?.wholesalePrice?.toString() ?? "",
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(
-                            bottom: 8.0, left: 8.0, top: 10),
-                        child: Text(
-                          " Sell Currency : ${stockDetails == null ? "" : stockDetails.product!.currency ?? ""}",
-                          style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s15, 0.30, ColorManager.textColor),
-                        ),
+                      // BuildDetailRow(
+                      //   title1: "Wholesale Min Unit",
+                      //   content1:
+                      //       stockDetails?.wholesaleMinUnit?.toString() ?? "",
+                      //   title2: "Expiry Date",
+                      //   content2: stockDetails?.expiryDate ?? "",
+                      // ),
+                      // BuildDetailRow(
+                      //   title1: "Batch Number",
+                      //   content1: stockDetails?.batchNumber ?? "",
+                      //   title2: "",
+                      //   content2: "",
+                      // ),
+                      const SizedBox(height: 20),
+                      Text(
+                        "Product Properties",
+                        style: buildCustomStyle(FontWeightManager.semiBold,
+                            FontSize.s18, 0.30, ColorManager.textColor),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(
-                            bottom: 8.0, left: 8.0, top: 10),
-                        child: Text(
-                          "Product Stock Details",
-                          style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s18, 0.30, ColorManager.textColor),
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: 8.0, left: 8.0, top: 10),
-                            child: SizedBox(
-                              width: size.width / 3,
-                              child: Text(
-                                softWrap: true,
-                                maxLines: 2,
-                                " Store Name : ${stockDetails == null ? "" : stockDetails.storeName}",
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s15,
-                                    0.30,
-                                    ColorManager.textColor),
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: 8.0, left: 8.0, top: 10),
-                            child: SizedBox(
-                              width: size.width / 3,
-                              child: Text(
-                                softWrap: true,
-                                maxLines: 2,
-                                " Product Quantity : ${stockDetails == null ? "" : stockDetails.quantity}",
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s15,
-                                    0.30,
-                                    ColorManager.textColor),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: 8.0, left: 8.0, top: 10),
-                            child: SizedBox(
-                              width: size.width / 3,
-                              child: Text(
-                                softWrap: true,
-                                maxLines: 2,
-                                " Product Unit : ${stockDetails == null ? "" : stockDetails.unit}",
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s15,
-                                    0.30,
-                                    ColorManager.textColor),
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: 8.0, left: 8.0, top: 10),
-                            child: SizedBox(
-                              width: size.width / 3,
-                              child: Text(
-                                softWrap: true,
-                                maxLines: 2,
-                                " Purchase Rate : ${stockDetails == null ? "" : stockDetails.purchaseRate}",
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s15,
-                                    0.30,
-                                    ColorManager.textColor),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: 8.0, left: 8.0, top: 10),
-                            child: SizedBox(
-                              width: size.width / 3,
-                              child: Text(
-                                softWrap: true,
-                                maxLines: 2,
-                                " Retail Price : ${stockDetails == null ? "" : stockDetails.retailPrice}",
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s15,
-                                    0.30,
-                                    ColorManager.textColor),
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: 8.0, left: 8.0, top: 10),
-                            child: SizedBox(
-                              width: size.width / 3,
-                              child: Text(
-                                softWrap: true,
-                                maxLines: 2,
-                                " Wholesale Price : ${stockDetails == null ? "" : stockDetails.wholesalePrice}",
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s15,
-                                    0.30,
-                                    ColorManager.textColor),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: 8.0, left: 8.0, top: 10),
-                            child: SizedBox(
-                              width: size.width / 3,
-                              child: Text(
-                                softWrap: true,
-                                maxLines: 2,
-                                " Wholesale Min Unit : ${stockDetails == null ? "" : stockDetails.wholesaleMinUnit}",
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s15,
-                                    0.30,
-                                    ColorManager.textColor),
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: 8.0, left: 8.0, top: 10),
-                            child: SizedBox(
-                              width: size.width / 3,
-                              child: Text(
-                                softWrap: true,
-                                maxLines: 2,
-                                " Expiry Date : ${stockDetails == null ? "" : stockDetails.expiryDate}",
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s15,
-                                    0.30,
-                                    ColorManager.textColor),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(
-                            bottom: 8.0, left: 8.0, top: 10),
-                        child: Text(
-                          " Batch Number : ${stockDetails == null ? "" : stockDetails.batchNumber}",
-                          style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s15, 0.30, ColorManager.textColor),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(
-                            bottom: 8.0, left: 8.0, top: 10),
-                        child: Text(
-                          "Product Properties",
-                          style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s18, 0.30, ColorManager.textColor),
-                        ),
-                      ),
+                      // ...buildProductProperties(stockDetails?.stockProperties),
                       const SizedBox(height: 50),
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0),

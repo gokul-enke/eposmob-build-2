@@ -1,32 +1,52 @@
 import 'package:get/get.dart';
+import 'package:pos_machine/screens/billing/billing_page.dart';
+import 'package:pos_machine/screens/billing/billing_page_refactored.dart';
+import 'package:pos_machine/screens/billing_new/billing_new.dart';
 import 'package:pos_machine/screens/category/add_category.dart';
 import 'package:pos_machine/screens/category/add_category_properties.dart';
 import 'package:pos_machine/screens/category/add_category_screen.dart';
+import 'package:pos_machine/screens/category/edit_category_screen.dart';
 import 'package:pos_machine/screens/category/widgets/view_category.dart';
+import 'package:pos_machine/screens/customer_profile/open_customer_profile.dart';
 import 'package:pos_machine/screens/customers/add_customers.dart';
 import 'package:pos_machine/screens/cart/cart_list.dart';
 import 'package:pos_machine/screens/customers/customers.dart';
 import 'package:pos_machine/screens/dashboard/dashboard.dart';
+import 'package:pos_machine/screens/edit_order/edit_order.dart';
+import 'package:pos_machine/screens/homenew/home_new.dart';
 
 import 'package:pos_machine/screens/loyality_card/loyality.dart';
 import 'package:pos_machine/screens/notifications/notifications.dart';
+import 'package:pos_machine/screens/print/printer_settings.dart';
 import 'package:pos_machine/screens/product/add_product.dart';
+import 'package:pos_machine/screens/product/tabbar_for_edit_product.dart';
 import 'package:pos_machine/screens/product/widgets/view_product.dart';
 import 'package:pos_machine/screens/purchase/purchase.dart';
-import 'package:pos_machine/screens/product/tabbar_for_add_new_product.dart.dart';
+import 'package:pos_machine/screens/product/tabbar_for_add_new_product.dart';
 import 'package:pos_machine/screens/product/stock.dart';
 import 'package:pos_machine/screens/purchase/purchase_voucher.dart';
 import 'package:pos_machine/screens/purchase/widgets/add_purchase.dart';
 import 'package:pos_machine/screens/profile/open_profile.dart';
+import 'package:pos_machine/screens/purchase/widgets/view_purchase.dart';
 import 'package:pos_machine/screens/purchase/widgets/view_voucher.dart';
+import 'package:pos_machine/screens/reports/account_book/account_book.dart';
+import 'package:pos_machine/screens/reports/product_sales_report/product_sales_report.dart';
+import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
+import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
 import 'package:pos_machine/screens/sales/sales.dart';
+import 'package:pos_machine/screens/sales_return/sales_return.dart';
+import 'package:pos_machine/screens/sales_return/sales_return_list.dart';
+import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
 import 'package:pos_machine/screens/support/support.dart';
 import 'package:pos_machine/screens/transaction-customer/invoice_list.dart';
+import 'package:pos_machine/screens/transaction-customer/receipt_list.dart';
 import 'package:pos_machine/screens/transaction-customer/receipt_voucher.dart';
 import 'package:pos_machine/screens/transaction-customer/transaction_list.dart';
+import 'package:pos_machine/screens/transaction-customer/widgets/add_voucher_details.dart';
 import 'package:pos_machine/screens/transaction-customer/widgets/create_new_invoice.dart';
 import 'package:pos_machine/screens/transaction-customer/widgets/create_new_voucher.dart';
 import 'package:pos_machine/screens/transaction-customer/widgets/view_invoice.dart';
+import 'package:pos_machine/screens/transaction-customer/widgets/view_receipt_details.dart';
 import 'package:pos_machine/screens/transaction-customer/widgets/view_transaction_details.dart';
 import 'package:pos_machine/screens/transaction-customer/widgets/view_voucher_details.dart';
 import 'package:pos_machine/screens/transaction/transaction.dart';
@@ -35,16 +55,18 @@ import '../screens/product/widgets/add_product_stock.dart';
 import '../screens/product/widgets/stock_details.dart';
 import '../screens/sales/widgets/sales_order_details.dart';
 import '../widgets/category_list.dart';
+import 'package:pos_machine/screens/suppliers/supplier_list.dart';
+import 'package:pos_machine/screens/sales/confirmed_orders.dart';
 
 class SideBarController extends GetxController {
-  RxInt index = 0.obs;
+  RxInt index = 46.obs;
   RxBool isExpanded = false.obs;
   void toggleExpansion() {
     isExpanded.value = !isExpanded.value;
   }
 
   var screens = const [
-    CategoryList(), //0
+    HomeNew(), //0
     DashboardScreen(), //1
     SalesScreen(), //2
     CartScreen(), //3
@@ -65,7 +87,7 @@ class SideBarController extends GetxController {
     AddProductStockScreen(), //18
     PurchaseScreen(), //19
     AddPurchaseScreen(), //20
-    InvoiceListcreen(), //21
+    InvoiceListScreen(), //21
     VoucherListScreen(), //22
     CustomerTransactionListScreen(), //23
     CreateNewInvoiceScreen(), //24
@@ -78,5 +100,29 @@ class SideBarController extends GetxController {
     ViewInvoiceDetailsWidget(), //31
     ViewVoucherDetailsWidget(), //32
     StockDetailsWidget(), //33
+    EditCategoryPageScreen(), //34
+    TabBarForEditProduct(), //35
+    ViewPurchaseWidget(), //36
+    AddVoucherDetailsWidget(), //37
+    OpenCustomerProfileScreen(), //38
+    AccountBookScreen(), //39
+    ProductSalesReportScreen(), //40
+    SalesReportScreen(), //41
+    SupplierSalesReportScreen(), //42
+    LocationManagementScreen(), //43
+    LocationManagementScreen(), //44
+    CategoryList(), //45 Home Old
+    BillingPage(), //46 Billing Page
+    ReceiptListScreen(), //47 Receipt List
+    ViewReceiptDetailsWidget(), //48 Receipt Details
+    SalesReturnScreen(), //49 Sales Return
+    SalesReturnPage(), //50 Sales Return List
+    EditOrder(), // 51 Edit Order
+    SupplierListScreen(), // 52 Suppliers List
+    BillingPageRefactored(), // 53 Billing Page
+    BillingNewPage(), // 54 Billing New Page
+    PrinterSettings(), // 55 Printer Settings
+    ConfirmedOrdersScreen(), // 56 Confirmed Orders
+    // SupplierTransactionListScreen(), // 57 Supplier Transactions
   ];
 }

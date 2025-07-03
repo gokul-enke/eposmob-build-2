@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_back_button.dart';
+import 'package:pos_machine/components/build_detail_row.dart';
 
 import 'package:provider/provider.dart';
 
@@ -23,7 +25,7 @@ class ViewCategoryWidget extends StatelessWidget {
       context,
     );
     ViewCategory? viewCategory = categoryProvider.getViewCategory;
-    debugPrint(viewCategory == null ? "viewCategory" : viewCategory.name);
+    // debugPrint(viewCategory == null ? "viewCategory" : viewCategory.name);
     return SafeArea(
         child: Container(
       margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
@@ -42,6 +44,15 @@ class ViewCategoryWidget extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
         child: ListView(
           children: [
+            CustomBackButton(
+              onPressed: () {
+                sideBarController.index.value = 12;
+              },
+              text: 'All Categories',
+              // Optionally, you can customize the color and size
+              // color: ColorManager.customColor,
+              // size: 20.0,
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -84,80 +95,70 @@ class ViewCategoryWidget extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Name : ${viewCategory == null ? "" : viewCategory.name} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
+                    BuildDetailRow(
+                      title1: "Name",
+                      content1: viewCategory?.name ?? "",
+                      title2: "Slug",
+                      content2: viewCategory?.slug ?? "",
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Slug : ${viewCategory == null ? "" : viewCategory.slug} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
+                    BuildDetailRow(
+                      title1: "Sort",
+                      content1: viewCategory?.sort ?? "",
+                      title2: "Arabic",
+                      content2: viewCategory?.names?.ar ?? "N/A",
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Sort : ${viewCategory == null ? "" : viewCategory.sort} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
+                    BuildDetailRow(
+                      title1: "English",
+                      content1: viewCategory?.names?.en ?? "N/A",
+                      title2: "Hindi",
+                      content2: viewCategory?.names?.hi ?? "N/A",
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Row(
-                        children: [
-                          Text(
-                            " Category Image : ",
-                            style: buildCustomStyle(FontWeightManager.semiBold,
-                                FontSize.s15, 0.30, ColorManager.textColor),
+                    const BuildDetailRow(
+                      title1: "Category Image ",
+                      content1: "",
+                      title2: "Category Icon ",
+                      content2: "",
+                    ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              BuildBoxShadowContainer(
+                                  margin:
+                                      const EdgeInsets.only(left: 5, right: 5),
+                                  circleRadius: 5,
+                                  height: 100,
+                                  width: 150,
+                                  child: viewCategory != null ? Image.network(
+                                    viewCategory.categoryImageFullPath ?? 'https://via.placeholder.com/150',
+                                    fit: BoxFit.cover,
+                                  ) : const Center(child: Text('No image available'))),
+                            ],
                           ),
-                          BuildBoxShadowContainer(
-                              margin: const EdgeInsets.only(left: 5, right: 5),
-                              circleRadius: 5,
-                              height: 100,
-                              width: 150,
-                              child: Image.network(
-                                viewCategory == null
-                                    ? ""
-                                    : viewCategory.categoryImageFullPath ?? "",
-                                fit: BoxFit.cover,
-                              )),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Row(
-                        children: [
-                          Text(
-                            " Category Icon : ",
-                            style: buildCustomStyle(FontWeightManager.semiBold,
-                                FontSize.s15, 0.30, ColorManager.textColor),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              BuildBoxShadowContainer(
+                                  margin:
+                                      const EdgeInsets.only(left: 5, right: 5),
+                                  circleRadius: 5,
+                                  height: 100,
+                                  width: 150,
+                                  child: viewCategory != null ? Image.network(
+                                    viewCategory.categoryIconFullPath ?? 'https://via.placeholder.com/150',
+                                    fit: BoxFit.cover,
+                                  ) : const Center(child: Text('No icon available'))),
+                            ],
                           ),
-                          BuildBoxShadowContainer(
-                              margin: const EdgeInsets.only(left: 5, right: 5),
-                              circleRadius: 5,
-                              height: 100,
-                              width: 150,
-                              child: Image.network(
-                                viewCategory == null
-                                    ? ""
-                                    : viewCategory.categoryIconFullPath ?? "",
-                                fit: BoxFit.cover,
-                              )),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 50),
                     Padding(

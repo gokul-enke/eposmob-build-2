@@ -23,8 +23,9 @@ class ViewPrimaryDetailsScreen extends StatelessWidget {
         Provider.of<GridSelectionProvider>(
       context,
     );
+    
     GetProduct? getProduct = gridSelectionProvider.getProductDetails;
-    debugPrint(getProduct == null ? "getProduct" : getProduct.productName);
+    // debugPrint(getProduct == null ? "getProduct" : getProduct.productName);
 
     return SingleChildScrollView(
       child: Column(
@@ -54,7 +55,7 @@ class ViewPrimaryDetailsScreen extends StatelessWidget {
                               '${getProduct == null ? "" : getProduct.productSlug}',
                           firstTitle: "Category",
                           firstValue:
-                              '${getProduct == null ? "" : getProduct.category![0].name}',
+                              '${getProduct == null ? "" : getProduct.category!.name}',
                           thirdTitle: "Unit",
                           thirdValue:
                               '${getProduct == null ? "" : getProduct.unit}',

@@ -1,6 +1,6 @@
-// // To parse this JSON data, do
-// //
-// //     final listPurchaseItemModel = listPurchaseItemModelFromJson(jsonString);
+// To parse this JSON data, do
+//
+//     final listPurchaseItemModel = listPurchaseItemModelFromJson(jsonString);
 
 // import 'dart:convert';
 

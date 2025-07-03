@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_back_button.dart';
+import 'package:pos_machine/components/build_detail_row.dart';
 
 import 'package:provider/provider.dart';
 
@@ -31,10 +33,13 @@ class ViewVoucherWidget extends StatelessWidget {
     String store = purchaseProvider.storeName(
             voucherDetails == null ? 1 : voucherDetails.storeId ?? 1) ??
         '';
-
     String supplier = purchaseProvider.supplierName(
             voucherDetails == null ? 1 : voucherDetails.supplierId ?? 1) ??
         '';
+    // Filter listPurchaseItems based on purchaseId in voucherDetails
+    List<PurchaseItem>? filteredItems = listPurchaseItems?.where((item) {
+      return item.purchaseId == voucherDetails?.purchaseId;
+    }).toList();
     debugPrint(
         voucherDetails == null ? "viewCategory" : voucherDetails.purchaseDate);
     return SafeArea(
@@ -55,11 +60,20 @@ class ViewVoucherWidget extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
         child: ListView(
           children: [
+            CustomBackButton(
+              onPressed: () {
+                sideBarController.index.value = 26;
+              },
+              text: 'All Vouchers',
+              // Optionally, you can customize the color and size
+              // color: ColorManager.customColor,
+              // size: 20.0,
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  " Voucher Details  ",
+                  "Voucher Details",
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s20, 0.30, ColorManager.textColor),
                 ),
@@ -113,68 +127,29 @@ class ViewVoucherWidget extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        "Purchase Date : ${voucherDetails == null ? "" : voucherDetails.purchaseDate} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
+                    BuildDetailRow(
+                      title1: "Purchase Date",
+                      content1: voucherDetails?.purchaseDate ?? "",
+                      title2: "Store",
+                      content2: store,
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Store : ${voucherDetails == null ? "" : store} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
+                    BuildDetailRow(
+                      title1: "Voucher Number",
+                      content1: voucherDetails?.voucherNumber ?? "",
+                      title2: "Amount",
+                      content2: voucherDetails?.amountTotal?.toString() ?? "",
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Voucher Number : ${voucherDetails == null ? "" : voucherDetails.voucherNumber ?? ""} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
+                    BuildDetailRow(
+                      title1: "Tax",
+                      content1: voucherDetails?.taxAmount ?? "",
+                      title2: "Currency",
+                      content2: voucherDetails?.currency ?? "",
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Amount : ${voucherDetails == null ? "" : voucherDetails.amountTotal} ",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Tax : ${voucherDetails == null ? "" : voucherDetails.taxAmount ?? ""}",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Currency : ${voucherDetails == null ? "" : voucherDetails.currency}",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 8.0, left: 8.0, top: 10),
-                      child: Text(
-                        " Supplier : ${voucherDetails == null ? "" : supplier}",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s15, 0.30, ColorManager.textColor),
-                      ),
+                    BuildDetailRow(
+                      title1: "Supplier",
+                      content1: supplier,
+                      title2: "",
+                      content2: "",
                     ),
                     BuildBoxShadowContainer(
                         height: size.height / 2.5, //120,
@@ -192,11 +167,11 @@ class ViewVoucherWidget extends StatelessWidget {
                               4: FractionColumnWidth(0.06),
                               5: FractionColumnWidth(0.05),
                             },
-                            border: TableBorder.symmetric(
-                                outside: const BorderSide(
+                            border: const TableBorder.symmetric(
+                                outside: BorderSide(
                                     color: ColorManager.tableBOrderColor,
                                     width: 0.3),
-                                inside: const BorderSide(
+                                inside: BorderSide(
                                     color: ColorManager.tableBOrderColor,
                                     width: 0.8)),
                             defaultVerticalAlignment:
@@ -245,7 +220,7 @@ class ViewVoucherWidget extends StatelessWidget {
                                           padding: const EdgeInsets.all(15.0),
                                           child: Center(
                                               child: Text(
-                                            "Unit Price",
+                                            "Unit",
                                             style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               FontSize.s12,
@@ -261,7 +236,7 @@ class ViewVoucherWidget extends StatelessWidget {
                                           padding: const EdgeInsets.all(15.0),
                                           child: Center(
                                               child: Text(
-                                            "Total Price",
+                                            "Unit Price",
                                             style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               FontSize.s12,
@@ -289,7 +264,7 @@ class ViewVoucherWidget extends StatelessWidget {
                                   ]),
 
                               // Map your order data to table rows here
-                              ...listPurchaseItems!.map((products) {
+                              ...filteredItems!.map((products) {
                                 String productName = gridSelectionProvider
                                         .productName(products.productId ?? 0) ??
                                     "";
@@ -405,7 +380,7 @@ class ViewVoucherWidget extends StatelessWidget {
                         boxColor: Colors.white,
                         textColor: ColorManager.kPrimaryColor,
                         fct: () async {
-                          sideBarController.index.value = 19;
+                          sideBarController.index.value = 26;
                         },
                         height: 50,
                         width: size.width * 0.19,

@@ -8,45 +8,64 @@ class BuildPaymentRow extends StatelessWidget {
   final String title;
   final String amount;
   final Color color;
-  final double? padding;
+  final EdgeInsets? padding;
   final TextStyle? firstRowTextStyle;
-  final TextStyle? secondtRowTextStyle;
+  final TextStyle? secondRowTextStyle;
+  final bool? isTextField;
+  final Widget? child;
   const BuildPaymentRow({
     Key? key,
     required this.title,
     required this.amount,
     required this.color,
-    this.secondtRowTextStyle,
     this.padding,
     this.firstRowTextStyle,
+    this.secondRowTextStyle,
+    this.isTextField,
+    this.child,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        BuildTitle(
-          title: title,
-          textStyle: firstRowTextStyle ??
-              buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s12,
-                0.18,
-                color,
-              ),
-        ),
-        BuildTitle(
-          title: amount,
-          textStyle: secondtRowTextStyle ??
-              buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s12,
-                0.18,
-                color,
-              ),
-        ),
-      ],
+    return Padding(
+      padding: padding ?? const EdgeInsets.all(0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          BuildTitle(
+            title: title,
+            textStyle: firstRowTextStyle ??
+                buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.18,
+                  color,
+                ),
+          ),
+          isTextField == false
+              ? BuildTitle(
+                  title: amount,
+                  textStyle: secondRowTextStyle ??
+                      buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s12,
+                        0.18,
+                        color,
+                      ),
+                )
+              : child ??
+                  BuildTitle(
+                    title: amount,
+                    textStyle: secondRowTextStyle ??
+                        buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s12,
+                          0.18,
+                          color,
+                        ),
+                  ),
+        ],
+      ),
     );
   }
 }

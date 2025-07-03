@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:provider/provider.dart';
 
 import '../components/build_round_button.dart';
@@ -11,7 +12,7 @@ import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
 
 class CategoryListItemWidget extends StatelessWidget {
-  final String imageUrlPath;
+  final String? imageUrlPath;
   final String price;
   final String title;
   final String weight;
@@ -26,7 +27,7 @@ class CategoryListItemWidget extends StatelessWidget {
 
   const CategoryListItemWidget(
       {super.key,
-      required this.imageUrlPath,
+      this.imageUrlPath,
       required this.price,
       required this.title,
       required this.weight,
@@ -121,7 +122,7 @@ class CategoryListItemWidget extends StatelessWidget {
             fct: () {
               String? accessToken =
                   Provider.of<AuthModel>(context, listen: false).token;
-              debugPrint("accessToken From AuthModel $accessToken");
+              // debugPrint("accessToken From AuthModel $accessToken");
               Provider.of<CartProvider>(context, listen: false)
                   .addToCartAPI(
                       customerId: customerId,
@@ -131,53 +132,17 @@ class CategoryListItemWidget extends StatelessWidget {
                   .then((value) {
                 AddToCartModel addToCartModel = AddToCartModel.fromJson(value);
                 if (value["status"] == "success") {
-                  ScaffoldMessenger.of(context)
-                    ..removeCurrentSnackBar()
-                    ..showSnackBar(SnackBar(
-                        showCloseIcon: true,
-                        dismissDirection: DismissDirection.up,
-                        closeIconColor: Colors.white,
-                        duration: const Duration(seconds: 2),
-                        behavior: SnackBarBehavior.floating,
-                        elevation: 0,
-                        margin: EdgeInsets.only(
-                            top: 50,
-                            left: MediaQuery.of(context).size.width / 1.9,
-                            right: 10),
-                        backgroundColor:
-                            ColorManager.kPrimaryColor.withOpacity(0.6),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        content: Text(
-                          addToCartModel.message ??
-                              'Added To Cart', //  'Order Placed Successfully',
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s12, 0.12, Colors.white),
-                        )));
+                  showScaffold(
+                    context: context,
+                    message: addToCartModel.message ?? 'Added To Cart',
+                  );
+                  //  'Order Placed Successfully',
                 } else {
-                  ScaffoldMessenger.of(context)
-                    ..removeCurrentSnackBar()
-                    ..showSnackBar(SnackBar(
-                        showCloseIcon: true,
-                        dismissDirection: DismissDirection.up,
-                        closeIconColor: Colors.white,
-                        duration: const Duration(seconds: 2),
-                        behavior: SnackBarBehavior.floating,
-                        elevation: 0,
-                        margin: EdgeInsets.only(
-                            top: 50,
-                            left: MediaQuery.of(context).size.width / 1.9,
-                            right: 10),
-                        backgroundColor:
-                            ColorManager.kPrimaryColor.withOpacity(0.6),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        content: Text(
-                          addToCartModel.message ??
-                              "Error Occured ! Try Again", //  'Added To Cart',
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s12, 0.12, Colors.white),
-                        )));
+                  showScaffoldError(
+                    context: context,
+                    message:
+                        addToCartModel.message ?? "Error Occured ! Try Again",
+                  );
                 }
               });
             },
@@ -307,7 +272,7 @@ class SelectedCategoryListItemWidget extends StatelessWidget {
             fct: () {
               String? accessToken =
                   Provider.of<AuthModel>(context, listen: false).token;
-              debugPrint("accessToken From AuthModel $accessToken");
+              // debugPrint("accessToken From AuthModel $accessToken");
               Provider.of<CartProvider>(context, listen: false)
                   .addToCartAPI(
                       customerId: customerId,
@@ -317,53 +282,18 @@ class SelectedCategoryListItemWidget extends StatelessWidget {
                   .then((value) {
                 AddToCartModel addToCartModel = AddToCartModel.fromJson(value);
                 if (value["status"] == "success") {
-                  ScaffoldMessenger.of(context)
-                    ..removeCurrentSnackBar()
-                    ..showSnackBar(SnackBar(
-                        showCloseIcon: true,
-                        dismissDirection: DismissDirection.up,
-                        closeIconColor: Colors.white,
-                        duration: const Duration(seconds: 2),
-                        behavior: SnackBarBehavior.floating,
-                        elevation: 0,
-                        margin: EdgeInsets.only(
-                            top: 50,
-                            left: MediaQuery.of(context).size.width / 1.9,
-                            right: 10),
-                        backgroundColor:
-                            ColorManager.kPrimaryColor.withOpacity(0.6),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        content: Text(
-                          addToCartModel.message ??
-                              'Added To Cart', //  'Order Placed Successfully',
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s12, 0.12, Colors.white),
-                        )));
+                  showScaffold(
+                    context: context,
+                    message: addToCartModel.message ?? 'Added To Cart',
+                  );
+                  //  'Order Placed Successfully',
                 } else {
-                  ScaffoldMessenger.of(context)
-                    ..removeCurrentSnackBar()
-                    ..showSnackBar(SnackBar(
-                        showCloseIcon: true,
-                        dismissDirection: DismissDirection.up,
-                        closeIconColor: Colors.white,
-                        duration: const Duration(seconds: 2),
-                        behavior: SnackBarBehavior.floating,
-                        elevation: 0,
-                        margin: EdgeInsets.only(
-                            top: 50,
-                            left: MediaQuery.of(context).size.width / 1.9,
-                            right: 10),
-                        backgroundColor:
-                            ColorManager.kPrimaryColor.withOpacity(0.6),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        content: Text(
-                          addToCartModel.message ??
-                              "Error Occured ! Try Again", //  'Added To Cart',
-                          style: buildCustomStyle(FontWeightManager.medium,
-                              FontSize.s12, 0.12, Colors.white),
-                        )));
+                  showScaffoldError(
+                    context: context,
+                    message:
+                        addToCartModel.message ?? "Error Occured ! Try Again",
+                  );
+                  //  'Added To Cart',
                 }
               });
             },

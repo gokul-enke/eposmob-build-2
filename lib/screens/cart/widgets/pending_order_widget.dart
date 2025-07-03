@@ -164,7 +164,7 @@ class PendingOrderWidget extends StatelessWidget {
                         BuildPaymentRow(
                           amount: "\$115.00",
                           title: "Payable",
-                          secondtRowTextStyle: buildCustomStyle(
+                          secondRowTextStyle: buildCustomStyle(
                             FontWeightManager.bold,
                             FontSize.s15,
                             0.23,
@@ -181,7 +181,7 @@ class PendingOrderWidget extends StatelessWidget {
                         BuildPaymentRow(
                           amount: "\$100.00",
                           title: "Balance amount",
-                          secondtRowTextStyle: buildCustomStyle(
+                          secondRowTextStyle: buildCustomStyle(
                             FontWeightManager.medium,
                             FontSize.s12,
                             0.18,

@@ -23,12 +23,14 @@ class AddToCartModel {
   factory AddToCartModel.fromJson(Map<String, dynamic> json) => AddToCartModel(
         status: json["status"],
         message: json["message"],
-        cart: json["cart"] == null ? null : AddToCart.fromJson(json["cart"]),
+        cart: json["data"] is Map<String, dynamic>
+            ? AddToCart.fromJson(json["data"])
+            : null, // Handle case where data is an array
       );
 
   Map<String, dynamic> toJson() => {
         "status": status,
-        "cart": cart?.toJson(),
+        "data": cart?.toJson(),
       };
 }
 
@@ -90,7 +92,7 @@ class AddToCartCartItem {
 
   factory AddToCartCartItem.fromJson(Map<String, dynamic> json) =>
       AddToCartCartItem(
-        cartItemId: json["cart_item_id"],
+        cartItemId: json["cart_item_id"] ?? json["id"],
         cartId: json["cart_id"],
         productId: json["product_id"],
         customerId: json["customer_id"],
@@ -196,11 +198,11 @@ class AddToCartProductName {
 }
 
 class PriceSummary {
-  final int? subTotal;
-  final int? totalTax;
-  final int? netTotal;
-  final int? discount;
-  final int? netPayable;
+  double? subTotal;
+  double? totalTax;
+  double? netTotal;
+  double? discount;
+  double? netPayable;
 
   PriceSummary({
     this.subTotal,
@@ -211,11 +213,11 @@ class PriceSummary {
   });
 
   factory PriceSummary.fromJson(Map<String, dynamic> json) => PriceSummary(
-        subTotal: json["sub_total"],
-        totalTax: json["total_tax"],
-        netTotal: json["net_total"],
-        discount: json["discount"],
-        netPayable: json["net_payable"],
+        subTotal: (json["sub_total"] as num?)?.toDouble(),
+        totalTax: (json["total_tax"] as num?)?.toDouble(),
+        netTotal: (json["net_total"] as num?)?.toDouble(),
+        discount: (json["discount"] as num?)?.toDouble(),
+        netPayable: (json["net_payable"] as num?)?.toDouble(),
       );
 
   Map<String, dynamic> toJson() => {

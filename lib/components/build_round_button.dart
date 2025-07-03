@@ -181,6 +181,7 @@ class CustomRoundButton extends StatelessWidget {
   final Color? borderColor;
   final Color? textColor;
   final double? radius;
+  final bool isLoading;
   const CustomRoundButton({
     Key? key,
     required this.title,
@@ -192,6 +193,7 @@ class CustomRoundButton extends StatelessWidget {
     this.textColor,
     this.radius,
     this.borderColor,
+    this.isLoading = false,
   }) : super(key: key);
 
   @override
@@ -205,17 +207,27 @@ class CustomRoundButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius ?? 5),
       ),
       child: MaterialButton(
-        onPressed: () {
-          fct();
-        },
-        child: Text(
-          title,
-          style: TextStyle(
-              fontFamily: FontConstants.fontFamily,
-              fontSize: fontSize,
-              fontWeight: FontWeightManager.semiBold,
-              color: textColor ?? Colors.white),
-        ),
+        onPressed: isLoading
+            ? null
+            : () {
+                fct();
+              },
+        child: isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Text(
+                title,
+                style: TextStyle(
+                    fontFamily: FontConstants.fontFamily,
+                    fontSize: fontSize,
+                    fontWeight: FontWeightManager.semiBold,
+                    color: textColor ?? Colors.white),
+              ),
       ),
     );
   }
