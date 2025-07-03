@@ -123,5 +123,6 @@ class SideBarController extends GetxController {
     BillingNewPage(), // 54 Billing New Page
     PrinterSettings(), // 55 Printer Settings
     ConfirmedOrdersScreen(), // 56 Confirmed Orders
+    // SupplierTransactionListScreen(), // 57 Supplier Transactions
   ];
 }
