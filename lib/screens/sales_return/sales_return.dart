@@ -492,14 +492,14 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Order ID: $orderId',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
+              // Text(
+              //   'Order ID: $orderId',
+              //   style: const TextStyle(
+              //     fontSize: 16,
+              //     fontWeight: FontWeight.bold,
+              //   ),
+              // ),
+              // const SizedBox(height: 8),
               Text(
                 'Order Number: $orderNumber',
                 style: const TextStyle(fontSize: 14),
@@ -1150,16 +1150,38 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       title: "Create Sales Return",
       fct: () async {
         debugPrint('Return Order ID: $selectedOrderId');
+        
+        // Check if there are any items with return_order_id
+        if (_salesReturnItems.isEmpty) {
+          showScaffoldError(
+            context: context,
+            message: 'No return items available',
+          );
+          return;
+        }
+        
+        // Find the first item with a valid return_order_id
+        final validReturnItem = _salesReturnItems.firstWhere(
+          (item) => item.returnOrderId != 0,
+          orElse: () => _salesReturnItems.first,
+        );
+        
+        if (validReturnItem.returnOrderId == 0) {
+          showScaffoldError(
+            context: context,
+            message: 'No valid return order ID found. Please submit return items first.',
+          );
+          return;
+        }
+        
         try {
           String? accessToken =
               Provider.of<AuthModel>(context, listen: false).token;
 
-          // demo junk code
-
           await Provider.of<SalesProvider>(context, listen: false)
               .completeSalesReturn(
             accessToken: accessToken ?? '',
-            returnOrderId: _salesReturnItems.first.returnOrderId,
+            returnOrderId: validReturnItem.returnOrderId,
           );
 
           showScaffold(
