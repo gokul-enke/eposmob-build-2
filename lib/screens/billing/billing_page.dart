@@ -21,6 +21,7 @@ import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
@@ -628,7 +629,7 @@ class BillingPageState extends State<BillingPage>
                                     ? Colors.white
                                     : Colors.grey.shade600,
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 3),
                               Text(
                                 'Products',
                                 style: TextStyle(
@@ -672,7 +673,7 @@ class BillingPageState extends State<BillingPage>
                                     ? Colors.white
                                     : Colors.grey.shade600,
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 3),
                               Text(
                                 'Orders',
                                 style: TextStyle(
@@ -844,19 +845,49 @@ class BillingPageState extends State<BillingPage>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          isEditingOrder ? 'Edit Order' : 'New Order',
-          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-              0.30, ColorManager.textColor),
-        ),
         Row(
           children: [
             Text(
+              isEditingOrder ? 'Edit Order - ' : 'New Order - ',
+              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
+                  0.30, ColorManager.textColor),
+            ),
+            Text(
               isEditingOrder
-                  ? 'Order No #${localProductProvider.currentOrder!.orderNumber}'
-                  : 'Order No #00000',
-              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s14,
-                  0.18, ColorManager.textColor),
+                  ? '#${localProductProvider.currentOrder!.orderNumber}'
+                  : '#00000',
+              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
+                  0.30, ColorManager.textColor),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            // Keyboard toggle button
+            IconButton(
+              icon: Icon(
+                Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                    ? Icons.keyboard_hide
+                    : Icons.keyboard,
+                color:
+                    Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                        ? ColorManager.kPrimaryColor
+                        : Colors.grey.shade600,
+              ),
+              tooltip:
+                  Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                      ? 'Hide Keyboard'
+                      : 'Show Keyboard',
+              onPressed: () {
+                final keyboardProvider =
+                    Provider.of<KeyboardProvider>(context, listen: false);
+                if (keyboardProvider.showKeyboardFeature) {
+                  keyboardProvider.featureOff();
+                  keyboardProvider.clear();
+                } else {
+                  keyboardProvider.featureOn(); // or set type as needed
+                }
+              },
             ),
             // Show toggle button next to order number when sidebar is hidden
             if (!_isSidebarVisible) ...[
@@ -1073,7 +1104,7 @@ class BillingPageState extends State<BillingPage>
                               controller: selectedProductNameController,
                               onchanged: (query) {},
                               size: size,
-                              hintText: 'Quantity',
+                              hintText: 'Product Name',
                             ),
                           ),
                         )
@@ -1135,6 +1166,14 @@ class BillingPageState extends State<BillingPage>
                         hintText: 'Quantity',
                         focusNode: _quantityFocusNode,
                         keyboardType: TextInputType.number,
+                        onTap: () {
+                          Provider.of<KeyboardProvider>(context, listen: false)
+                              .show(
+                            'number',
+                            quantityController,
+                            replaceOnFirstInput: true,
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -1148,6 +1187,15 @@ class BillingPageState extends State<BillingPage>
                         size: size,
                         focusNode: _unitPriceFocusNode,
                         hintText: 'Unit Price',
+                        keyboardType: TextInputType.number,
+                        onTap: () {
+                          Provider.of<KeyboardProvider>(context, listen: false)
+                              .show(
+                            'number',
+                            unitPriceController,
+                            replaceOnFirstInput: true,
+                          );
+                        },
                       ),
                     ),
                   ),

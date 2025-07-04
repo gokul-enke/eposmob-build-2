@@ -190,8 +190,8 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
 
             debugPrint("===== NEW ORDER (+) BUTTON COMPLETE =====");
           },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -200,7 +200,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                   size: 24,
                   color: ColorManager.kPrimaryColor,
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Text(
                   "Create New Order",
                   style: TextStyle(
@@ -232,7 +232,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
         onTap: () => widget.onOrderSelected(order.id),
         borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(5),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -246,7 +246,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                       order.orderNumber,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 11,
                         color: isSelected
                             ? ColorManager.kPrimaryColor
                             : Colors.black87,
@@ -257,7 +257,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                   Text(
                     time,
                     style: const TextStyle(
-                      fontSize: 10,
+                      fontSize: 9,
                       color: Colors.grey,
                     ),
                   ),

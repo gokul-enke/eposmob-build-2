@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -21,24 +22,40 @@ class _PriceTextFieldState extends State<PriceTextField> {
   late TextEditingController controller;
   late FocusNode focusNode;
 
+  // Listener to sync controller changes (including on-screen keyboard input) with provider
+  void _handleTextChanged() {
+    final parsedPrice = double.tryParse(controller.text);
+    if (parsedPrice != null && parsedPrice >= 0) {
+      widget.localProductProvider.updateItemPrice(
+        widget.item.product.productId!,
+        widget.item.selectedStock,
+        parsedPrice,
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     controller = TextEditingController(text: widget.item.price.toString());
     focusNode = FocusNode();
+
+    // Listen for any text changes from either physical or virtual keyboards
+    controller.addListener(_handleTextChanged);
   }
 
   @override
   void didUpdateWidget(PriceTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Update controller text if price has changed
-    if (oldWidget.item.price != widget.item.price) {
+    // Only refresh controller text if the field is NOT focused
+    if (!focusNode.hasFocus && oldWidget.item.price != widget.item.price) {
       controller.text = widget.item.price.toString();
     }
   }
 
   @override
   void dispose() {
+    controller.removeListener(_handleTextChanged);
     controller.dispose();
     focusNode.dispose();
     super.dispose();
@@ -50,7 +67,16 @@ class _PriceTextFieldState extends State<PriceTextField> {
       builder: (context, localProductProvider, child) {
         // Check if the price has changed and update the controller if needed
         final currentPrice = widget.item.price.toString();
-        if (!focusNode.hasFocus && controller.text != currentPrice) {
+
+        // Consider the field to be in-edit if it has focus OR a virtual keyboard is currently
+        // shown for this controller. In that case we must NOT overwrite the text.
+        final keyboardProvider =
+            Provider.of<KeyboardProvider>(context, listen: false);
+        final bool isEditing = focusNode.hasFocus ||
+            (keyboardProvider.showKeyboard &&
+                identical(keyboardProvider.controller, controller));
+
+        if (!isEditing && controller.text != currentPrice) {
           // Only update if user is not currently editing the field
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
@@ -64,7 +90,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
           controller: controller,
           focusNode: focusNode,
           keyboardType: TextInputType.number,
-          style: const TextStyle(fontSize: 16),
+          style: const TextStyle(fontSize: 11),
           decoration: const InputDecoration(
             isDense: true,
             contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
@@ -85,6 +111,11 @@ class _PriceTextFieldState extends State<PriceTextField> {
                 );
               }
             });
+            Provider.of<KeyboardProvider>(context, listen: false).show(
+              'number',
+              controller,
+              replaceOnFirstInput: true,
+            );
           },
           onChanged: (newPrice) {
             // Validate and update immediately on change
@@ -143,25 +174,41 @@ class _MrpTextFieldState extends State<MrpTextField> {
   late TextEditingController controller;
   late FocusNode focusNode;
 
+  // Listener to sync controller changes (including on-screen keyboard input) with provider
+  void _handleTextChanged() {
+    final parsedMrp = double.tryParse(controller.text);
+    if (parsedMrp != null && parsedMrp >= 0) {
+      widget.localProductProvider.updateItemMrp(
+        widget.item.product.productId!,
+        widget.item.selectedStock,
+        parsedMrp,
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     controller =
         TextEditingController(text: (widget.item.mrp ?? 0.0).toString());
     focusNode = FocusNode();
+
+    // Listen for any text changes from either physical or virtual keyboards
+    controller.addListener(_handleTextChanged);
   }
 
   @override
   void didUpdateWidget(MrpTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Update controller text if MRP has changed
-    if (oldWidget.item.mrp != widget.item.mrp) {
+    // Only refresh controller text if the field is NOT focused
+    if (!focusNode.hasFocus && oldWidget.item.mrp != widget.item.mrp) {
       controller.text = (widget.item.mrp ?? 0.0).toString();
     }
   }
 
   @override
   void dispose() {
+    controller.removeListener(_handleTextChanged);
     controller.dispose();
     focusNode.dispose();
     super.dispose();
@@ -173,7 +220,14 @@ class _MrpTextFieldState extends State<MrpTextField> {
       builder: (context, localProductProvider, child) {
         // Check if the MRP has changed and update the controller if needed
         final currentMrp = (widget.item.mrp ?? 0.0).toString();
-        if (!focusNode.hasFocus && controller.text != currentMrp) {
+
+        final keyboardProvider =
+            Provider.of<KeyboardProvider>(context, listen: false);
+        final bool isEditing = focusNode.hasFocus ||
+            (keyboardProvider.showKeyboard &&
+                identical(keyboardProvider.controller, controller));
+
+        if (!isEditing && controller.text != currentMrp) {
           // Only update if user is not currently editing the field
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
@@ -187,7 +241,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
           controller: controller,
           focusNode: focusNode,
           keyboardType: TextInputType.number,
-          style: const TextStyle(fontSize: 16),
+          style: const TextStyle(fontSize: 11),
           decoration: const InputDecoration(
             isDense: true,
             contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
@@ -208,6 +262,12 @@ class _MrpTextFieldState extends State<MrpTextField> {
                 );
               }
             });
+
+            Provider.of<KeyboardProvider>(context, listen: false).show(
+              'number',
+              controller,
+              replaceOnFirstInput: true,
+            );
           },
           onChanged: (newMrp) {
             // Validate and update immediately on change
@@ -245,4 +305,4 @@ class _MrpTextFieldState extends State<MrpTextField> {
       },
     );
   }
-} 
+}

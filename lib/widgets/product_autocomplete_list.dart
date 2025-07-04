@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
@@ -147,9 +148,30 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
             product.productName ?? '',
         onSelected: (GetProduct selectedProduct) async {
           await _handleProductSelection(selectedProduct);
+          // Hide virtual keyboard after product selection
+          Provider.of<KeyboardProvider>(context, listen: false).hide();
         },
         fieldViewBuilder:
             (context, textEditingController, focusNode, onFieldSubmitted) {
+          final keyboardProvider =
+              Provider.of<KeyboardProvider>(context, listen: false);
+          // Make sure the autocomplete keeps focus while typing via virtual keyboard
+          void _ensureFocus() {
+            if (!focusNode.hasFocus) {
+              focusNode.requestFocus();
+            }
+
+            // After ensuring focus, place caret at end so characters append in correct order
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              textEditingController.selection = TextSelection.fromPosition(
+                TextPosition(offset: textEditingController.text.length),
+              );
+            });
+          }
+
+          // Attach the listener once; remove any existing to avoid duplicates
+          textEditingController.removeListener(_ensureFocus);
+          textEditingController.addListener(_ensureFocus);
           // Replace the provided focusNode with our own
           return KeyboardListener(
             focusNode: _textFieldFocus,
@@ -193,6 +215,10 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
                     textEditingController.clear();
                     // Clear the focus
                     focusNode.unfocus();
+
+                    // Hide virtual keyboard after selection via keyboard
+                    Provider.of<KeyboardProvider>(context, listen: false)
+                        .hide();
                   }
                 }
               }
@@ -204,6 +230,11 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
               size: widget.size,
               hintText: 'Search Product',
               onSubmitted: (_) => onFieldSubmitted(),
+              onTap: () {
+                // Show alphanumeric virtual keyboard connected to this controller
+                keyboardProvider.show('text', textEditingController,
+                    replaceOnFirstInput: true);
+              },
             ),
           );
         },

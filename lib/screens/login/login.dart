@@ -4,6 +4,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/main_screen.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
@@ -129,6 +130,11 @@ class _SignInScreenState extends State<SignInScreen> {
                                 key: const Key("Phone_Number_Sign_in"),
                                 cursorColor: ColorManager.kPrimaryColor,
                                 controller: _emailController,
+                                onTap: () {
+                                  Provider.of<KeyboardProvider>(context,
+                                          listen: false)
+                                      .show('email', _emailController);
+                                },
                                 inputFormatters: <TextInputFormatter>[
                                   FilteringTextInputFormatter.allow(
                                       RegExp("[0-9@a-zA-Z.]")),
@@ -171,6 +177,12 @@ class _SignInScreenState extends State<SignInScreen> {
                                 obscureText: _obscureText,
                                 cursorColor: ColorManager.kPrimaryColor,
                                 controller: _passwordTextController,
+                                onTap: () {
+                                  Provider.of<KeyboardProvider>(context,
+                                          listen: false)
+                                      .show(
+                                          'password', _passwordTextController);
+                                },
                                 // validator:
                                 //     validatePassword, // Add validator here
                                 decoration: decoration.copyWith(
@@ -393,14 +405,20 @@ class _SignInScreenState extends State<SignInScreen> {
 
                                             // Load document configurations during login
                                             try {
-                                              final docConfigProvider =
-                                                  Provider.of<DocumentConfigProvider>(
-                                                      context, listen: false);
-                                              await docConfigProvider.fetchDocumentConfigurations(
-                                                  accessToken: authModel.token ?? "");
-                                              debugPrint("Document configurations loaded successfully during login");
+                                              final docConfigProvider = Provider
+                                                  .of<DocumentConfigProvider>(
+                                                      context,
+                                                      listen: false);
+                                              await docConfigProvider
+                                                  .fetchDocumentConfigurations(
+                                                      accessToken:
+                                                          authModel.token ??
+                                                              "");
+                                              debugPrint(
+                                                  "Document configurations loaded successfully during login");
                                             } catch (e) {
-                                              debugPrint("Warning: Failed to load document configurations during login: $e");
+                                              debugPrint(
+                                                  "Warning: Failed to load document configurations during login: $e");
                                               // Don't block login if document config fails
                                             }
 
