@@ -7,6 +7,8 @@ import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
 class PaymentMethodModal extends StatefulWidget {
@@ -56,10 +58,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     super.initState();
 
     // Always preselect cash as default if no payment methods are currently selected
-    bool hasAnySelection = widget.initialIsCashSelected || 
-                          widget.initialIsCardSelected || 
-                          widget.initialIsUpiSelected;
-    
+    bool hasAnySelection = widget.initialIsCashSelected ||
+        widget.initialIsCardSelected ||
+        widget.initialIsUpiSelected;
+
     if (!hasAnySelection) {
       // No payment method selected, default to cash
       isCashSelected = true;
@@ -74,16 +76,18 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
     // Initialize controllers - don't fill with "0", use existing values or empty
     cashAmountController = TextEditingController(
-        text: widget.initialCashAmount.isEmpty || widget.initialCashAmount == "0" 
-            ? "" 
-            : widget.initialCashAmount);
+        text:
+            widget.initialCashAmount.isEmpty || widget.initialCashAmount == "0"
+                ? ""
+                : widget.initialCashAmount);
     cardAmountController = TextEditingController(
-        text: widget.initialCardAmount.isEmpty || widget.initialCardAmount == "0" 
-            ? "" 
-            : widget.initialCardAmount);
+        text:
+            widget.initialCardAmount.isEmpty || widget.initialCardAmount == "0"
+                ? ""
+                : widget.initialCardAmount);
     upiAmountController = TextEditingController(
-        text: widget.initialUpiAmount.isEmpty || widget.initialUpiAmount == "0" 
-            ? "" 
+        text: widget.initialUpiAmount.isEmpty || widget.initialUpiAmount == "0"
+            ? ""
             : widget.initialUpiAmount);
     transactionNumberController =
         TextEditingController(text: widget.initialTransactionNumber);
@@ -125,10 +129,24 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         );
       }
     });
+
+    // Listen for text changes to capture virtual keyboard input
+    cashAmountController.addListener(
+        () => _handleAmountControllerChange('cash', cashAmountController));
+    cardAmountController.addListener(
+        () => _handleAmountControllerChange('card', cardAmountController));
+    upiAmountController.addListener(
+        () => _handleAmountControllerChange('upi', upiAmountController));
   }
 
   @override
   void dispose() {
+    cashAmountController.removeListener(
+        () => _handleAmountControllerChange('cash', cashAmountController));
+    cardAmountController.removeListener(
+        () => _handleAmountControllerChange('card', cardAmountController));
+    upiAmountController.removeListener(
+        () => _handleAmountControllerChange('upi', upiAmountController));
     cashAmountController.dispose();
     cardAmountController.dispose();
     upiAmountController.dispose();
@@ -163,11 +181,17 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
     if (remaining > 0) {
       // Find the first selected payment method that has no amount and fill it
-      if (isCashSelected && (cashAmountController.text.isEmpty || cashAmountController.text == "0")) {
+      if (isCashSelected &&
+          (cashAmountController.text.isEmpty ||
+              cashAmountController.text == "0")) {
         cashAmountController.text = remaining.toStringAsFixed(2);
-      } else if (isCardSelected && (cardAmountController.text.isEmpty || cardAmountController.text == "0")) {
+      } else if (isCardSelected &&
+          (cardAmountController.text.isEmpty ||
+              cardAmountController.text == "0")) {
         cardAmountController.text = remaining.toStringAsFixed(2);
-      } else if (isUpiSelected && (upiAmountController.text.isEmpty || upiAmountController.text == "0")) {
+      } else if (isUpiSelected &&
+          (upiAmountController.text.isEmpty ||
+              upiAmountController.text == "0")) {
         upiAmountController.text = remaining.toStringAsFixed(2);
       }
     }
@@ -198,6 +222,42 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       }
       _calculateBalance();
     });
+  }
+
+  // ---- Utility to handle text changes from any source (hardware or virtual keyboard) ----
+  void _handleAmountControllerChange(
+      String label, TextEditingController controller) {
+    double amount = double.tryParse(controller.text) ?? 0;
+
+    setState(() {
+      if (amount > 0) {
+        switch (label) {
+          case 'cash':
+            isCashSelected = true;
+            break;
+          case 'card':
+            isCardSelected = true;
+            break;
+          case 'upi':
+            isUpiSelected = true;
+            break;
+        }
+      } else if (amount == 0 && controller.text.isEmpty) {
+        switch (label) {
+          case 'cash':
+            isCashSelected = false;
+            break;
+          case 'card':
+            isCardSelected = false;
+            break;
+          case 'upi':
+            isUpiSelected = false;
+            break;
+        }
+      }
+    });
+
+    _calculateBalance();
   }
 
   @override
@@ -291,6 +351,13 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                 width: 600,
                 height: size.height * .06,
                 hintText: 'Enter transaction reference number',
+                onTap: () {
+                  Provider.of<KeyboardProvider>(context, listen: false).show(
+                    'number',
+                    transactionNumberController,
+                    replaceOnFirstInput: true,
+                  );
+                },
               ),
               const SizedBox(height: 15),
             ],
@@ -428,44 +495,29 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             hintText: 'Enter $label amount',
             keyboardType: TextInputType.number,
             focusNode: focusNode,
-            onchanged: (value) {
-              // Auto-enable/disable based on amount
-              double amount = double.tryParse(value ?? '') ?? 0;
-              if (amount > 0 && !isSelected) {
-                setState(() {
-                  switch (label.toLowerCase()) {
-                    case 'cash':
-                      isCashSelected = true;
-                      break;
-                    case 'card':
-                      isCardSelected = true;
-                      break;
-                    case 'upi':
-                      isUpiSelected = true;
-                      break;
-                  }
-                });
-              } else if (amount == 0 && isSelected && value?.isEmpty == true) {
-                // Only disable if the field is completely empty, not just "0"
-                setState(() {
-                  switch (label.toLowerCase()) {
-                    case 'cash':
-                      isCashSelected = false;
-                      break;
-                    case 'card':
-                      isCardSelected = false;
-                      break;
-                    case 'upi':
-                      isUpiSelected = false;
-                      break;
-                  }
-                });
-              }
-              _calculateBalance();
+            onTap: () {
+              // Ensure full selection when tapping inside the field
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (controller.text.isNotEmpty && focusNode.hasFocus) {
+                  controller.selection = TextSelection(
+                    baseOffset: 0,
+                    extentOffset: controller.text.length,
+                  );
+                }
+              });
+
+              // Show virtual numeric keyboard
+              Provider.of<KeyboardProvider>(context, listen: false).show(
+                'number',
+                controller,
+                replaceOnFirstInput: true,
+              );
             },
+            onchanged: (value) =>
+                _handleAmountControllerChange(label.toLowerCase(), controller),
           ),
         ),
       ],
     );
   }
-} 
+}

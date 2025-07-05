@@ -4,6 +4,8 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:provider/provider.dart';
 
 class CouponModal extends StatefulWidget {
   final String initialCouponCode;
@@ -94,6 +96,23 @@ class _CouponModalState extends State<CouponModal> {
                   0.27,
                   Colors.black.withOpacity(.5),
                 ),
+                onTap: () {
+                  // Select all text for easy replacement
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (couponController.text.isNotEmpty) {
+                      couponController.selection = TextSelection(
+                        baseOffset: 0,
+                        extentOffset: couponController.text.length,
+                      );
+                    }
+                  });
+
+                  Provider.of<KeyboardProvider>(context, listen: false).show(
+                    'text',
+                    couponController,
+                    replaceOnFirstInput: true,
+                  );
+                },
               ),
             ),
             const SizedBox(height: 20),

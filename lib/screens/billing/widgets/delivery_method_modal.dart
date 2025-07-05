@@ -6,6 +6,7 @@ import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:provider/provider.dart';
 
 class DeliveryMethodModal extends StatefulWidget {
@@ -140,6 +141,11 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                     height: size.height * .06,
                     hintText: 'Car Number:',
                     width: 600,
+                    onTap: () {
+                      Provider.of<KeyboardProvider>(context, listen: false)
+                          .show('text', carNumberController,
+                              replaceOnFirstInput: true);
+                    },
                   ),
                   const SizedBox(height: 10),
                 ],
@@ -149,6 +155,11 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                   height: size.height * .06,
                   hintText: 'Comment:',
                   width: 600,
+                  onTap: () {
+                    Provider.of<KeyboardProvider>(context, listen: false).show(
+                        'text', commentController,
+                        replaceOnFirstInput: true);
+                  },
                 ),
                 const SizedBox(height: 20),
                 CustomRoundButton(
@@ -173,4 +184,4 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
       ),
     );
   }
-} 
+}

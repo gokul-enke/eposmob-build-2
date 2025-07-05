@@ -201,6 +201,15 @@ class BillingPageState extends State<BillingPage>
       final authModel = Provider.of<AuthModel>(context, listen: false);
       authModel.addListener(_onUserSwitched);
     });
+
+    // Ensure UI updates when virtual keyboard edits the customer phone field
+    mobileNumberTextController.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+
+    _fetchCustomers();
   }
 
   @override
@@ -2082,6 +2091,26 @@ class BillingPageState extends State<BillingPage>
                               }
                             });
                           }
+
+                          // Ensure the text field retains focus and caret position when using the virtual keyboard
+                          void _ensureFocus() {
+                            if (!focusNode.hasFocus) {
+                              focusNode.requestFocus();
+                            }
+
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              autoCompleteController.selection =
+                                  TextSelection.fromPosition(
+                                TextPosition(
+                                    offset: autoCompleteController.text.length),
+                              );
+                            });
+                          }
+
+                          // Prevent multiple identical listeners
+                          autoCompleteController.removeListener(_ensureFocus);
+                          autoCompleteController.addListener(_ensureFocus);
+
                           return KeyboardListener(
                             focusNode: _customerTextFieldFocus,
                             onKeyEvent: (KeyEvent event) {
@@ -2167,6 +2196,29 @@ class BillingPageState extends State<BillingPage>
                               }
                             },
                             child: TextField(
+                              onTap: () {
+                                // Select all text for quick replacement
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) {
+                                  if (autoCompleteController.text.isNotEmpty &&
+                                      focusNode.hasFocus) {
+                                    autoCompleteController.selection =
+                                        TextSelection(
+                                      baseOffset: 0,
+                                      extentOffset:
+                                          autoCompleteController.text.length,
+                                    );
+                                  }
+                                });
+
+                                Provider.of<KeyboardProvider>(context,
+                                        listen: false)
+                                    .show(
+                                  'text',
+                                  autoCompleteController,
+                                  replaceOnFirstInput: true,
+                                );
+                              },
                               controller: autoCompleteController,
                               focusNode: focusNode,
                               decoration: InputDecoration(
@@ -2572,6 +2624,7 @@ class BillingPageState extends State<BillingPage>
         selectedProductIdController.clear();
         unitPriceController.clear();
         isCouponApplied = false;
+        _isCustomerManuallySelected = false;
       });
       showScaffold(
         context: context,
@@ -2581,6 +2634,7 @@ class BillingPageState extends State<BillingPage>
           shouldFetchCustomers:
               false); // Don't reset customer selection when clearing cart
       _focusTextField();
+      _fetchCustomers();
     } catch (e) {
       debugPrint("Error clearing cart: $e");
       showScaffoldError(
@@ -3915,10 +3969,9 @@ class BillingPageState extends State<BillingPage>
               shouldFetchCustomers:
                   false); // Preserve customer selection after confirming
 
-          // Reset to default sales executive after confirming only if no manual customer was selected
-          if (!_isCustomerManuallySelected) {
-            _fetchCustomers();
-          }
+          _clearCart();
+          _fetchCustomers();
+          _focusTextField();
         } else {
           debugPrint("❌ API ERROR - Create Order and Print failed");
           showScaffoldError(
@@ -3928,8 +3981,6 @@ class BillingPageState extends State<BillingPage>
           );
         }
       });
-      _clearCart();
-      _focusTextField();
     } catch (error) {
       debugPrint("❌ EXCEPTION in _createOrderAndPrint: $error");
     } finally {
@@ -4124,11 +4175,8 @@ class BillingPageState extends State<BillingPage>
               shouldFetchCustomers:
                   false); // Preserve customer selection after confirming
 
-          // Reset to default sales executive after confirming only if no manual customer was selected
-          if (!_isCustomerManuallySelected) {
-            _fetchCustomers();
-            _clearCart();
-          }
+          _fetchCustomers();
+          _clearCart();
         } else {
           debugPrint("❌ API ERROR - Confirm Order failed");
           showScaffoldError(

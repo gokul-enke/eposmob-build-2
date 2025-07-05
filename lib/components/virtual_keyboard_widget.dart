@@ -51,217 +51,241 @@ class _VirtualKeyboardWidgetState extends State<VirtualKeyboardWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: widget.width,
-      height: widget.height,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+    return Material(
+      child: Theme(
+        data: ThemeData(
+          textTheme: const TextTheme(
+            bodyLarge: TextStyle(fontWeight: FontWeight.w600),
+            bodyMedium: TextStyle(fontWeight: FontWeight.w600),
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Draggable header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
+          splashColor: Colors.blue.withAlpha(90),
+          highlightColor: Colors.blue.withAlpha(90),
+          // Set canvas color for containers
+          canvasColor: Colors.white,
+        ),
+        child: Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
-            ),
-            child: Row(
-              children: [
-                // Drag handle
-                Container(
-                  width: 20,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Title
-                Expanded(
-                  child: Text(
-                    widget.keyboardType == VirtualKeyboardType.Numeric
-                        ? 'Numeric Keyboard'
-                        : 'Virtual Keyboard',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                ),
-                // Close button
-                GestureDetector(
-                  onTap: widget.onClose,
-                  child: Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.close,
-                      size: 16,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            ],
           ),
-
-          // Keyboard content
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  // Virtual keyboard - Fixed container to prevent overflow
-                  Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            return Container(
-                              width: constraints.maxWidth,
-                              height: constraints.maxHeight,
-                              child: VirtualKeyboard(
-                                height: constraints.maxHeight,
-                                width: constraints.maxWidth,
-                                textColor: widget.textColor,
-                                type: widget.keyboardType,
-                                textController: widget.controller,
-      onKeyPress: (key) {
-                                  if (key.keyType ==
-                                      VirtualKeyboardKeyType.String) {
-                                    if (_isFirstInput &&
-                                        widget.shouldReplaceOnFirstInput) {
-                                      widget.controller.text = key.text;
-                                      widget.controller.selection =
-                                          TextSelection.fromPosition(
-                                        TextPosition(
-                                            offset:
-                                                widget.controller.text.length),
-                                      );
-                                      _isFirstInput = false;
-                                    }
-                                  } else if (key.keyType ==
-                                      VirtualKeyboardKeyType.Action) {
-                                    if (key.action ==
-                                        VirtualKeyboardKeyAction.Backspace) {
-                                      _isFirstInput = false;
-                                    } else if (key.action ==
-                                        VirtualKeyboardKeyAction.Return) {
-                                      if (widget.onConfirm != null) {
-                                        widget.onConfirm!();
-                                      } else if (widget.onClose != null) {
-                                        widget.onClose!();
-                                      }
-                                    }
-                                  }
-                                },
-                              ),
-                            );
-                          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Draggable header
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // Drag handle
+                    GestureDetector(
+                      onTap: widget.onClose,
+                      child: Container(
+                        width: 20,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[400],
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                     ),
-                  ),
-
-                  // Action buttons (only show for numeric keyboard)
-                  if (widget.keyboardType == VirtualKeyboardType.Numeric)
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      child: Row(
-                        children: [
-                          // Clear button
-                          Expanded(
-                            child: Container(
-                              height: 40,
-                              margin: const EdgeInsets.only(right: 4),
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  widget.controller.clear();
-                                  _isFirstInput = true;
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.grey[200],
-                                  foregroundColor: Colors.grey[700],
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 8),
-                                ),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.clear, size: 16),
-                                    SizedBox(width: 4),
-                                    Text('Clear',
-                                        style: TextStyle(fontSize: 12)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          // Confirm button
-                          Expanded(
-                            flex: 2,
-                            child: Container(
-                              height: 40,
-                              margin: const EdgeInsets.only(left: 4),
-                              child: ElevatedButton(
-                                onPressed: widget.onConfirm ?? widget.onClose,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue[600],
-                                  foregroundColor: Colors.white,
-                                  elevation: 1,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 8),
-                                ),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.check, size: 16),
-                                    SizedBox(width: 4),
-                                    Text('Confirm',
-                                        style: TextStyle(fontSize: 12)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                    const SizedBox(width: 8),
+                    // Title
+                    Expanded(
+                      child: Text(
+                        widget.keyboardType == VirtualKeyboardType.Numeric
+                            ? 'Numeric Keyboard'
+                            : 'Virtual Keyboard',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
                       ),
                     ),
-                ],
+                    // Close button
+                    GestureDetector(
+                      onTap: widget.onClose,
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+
+              // Keyboard content
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    children: [
+                      // Virtual keyboard - Fixed container to prevent overflow
+                      Expanded(
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                return SizedBox(
+                                  width: constraints.maxWidth,
+                                  height: constraints.maxHeight,
+                                  child: VirtualKeyboard(
+                                    borderColor: Colors.grey[100],
+                                    height: constraints.maxHeight,
+                                    width: constraints.maxWidth,
+                                    textColor: widget.textColor,
+                                    fontSize: 18,
+                                    type: widget.keyboardType,
+                                    textController: widget.controller,
+                                    onKeyPress: (key) {
+                                      if (key.keyType ==
+                                          VirtualKeyboardKeyType.String) {
+                                        if (_isFirstInput &&
+                                            widget.shouldReplaceOnFirstInput) {
+                                          widget.controller.text = key.text;
+                                          widget.controller.selection =
+                                              TextSelection.fromPosition(
+                                            TextPosition(
+                                                offset: widget
+                                                    .controller.text.length),
+                                          );
+                                          _isFirstInput = false;
+                                        }
+                                      } else if (key.keyType ==
+                                          VirtualKeyboardKeyType.Action) {
+                                        if (key.action ==
+                                            VirtualKeyboardKeyAction
+                                                .Backspace) {
+                                          _isFirstInput = false;
+                                        } else if (key.action ==
+                                            VirtualKeyboardKeyAction.Return) {
+                                          if (widget.onConfirm != null) {
+                                            widget.onConfirm!();
+                                          } else if (widget.onClose != null) {
+                                            widget.onClose!();
+                                          }
+                                        }
+                                      }
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Action buttons (only show for numeric keyboard)
+                      if (widget.keyboardType == VirtualKeyboardType.Numeric)
+                        Container(
+                          margin: const EdgeInsets.only(top: 8),
+                          child: Row(
+                            children: [
+                              // Clear button
+                              Expanded(
+                                child: Container(
+                                  height: 40,
+                                  margin: const EdgeInsets.only(right: 4),
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      widget.controller.clear();
+                                      _isFirstInput = true;
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.grey[200],
+                                      foregroundColor: Colors.grey[700],
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8),
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.clear, size: 16),
+                                        SizedBox(width: 4),
+                                        Text('Clear',
+                                            style: TextStyle(fontSize: 12)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              // Confirm button
+                              Expanded(
+                                flex: 2,
+                                child: Container(
+                                  height: 40,
+                                  margin: const EdgeInsets.only(left: 4),
+                                  child: ElevatedButton(
+                                    onPressed:
+                                        widget.onConfirm ?? widget.onClose,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue[600],
+                                      foregroundColor: Colors.white,
+                                      elevation: 1,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8),
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.check, size: 16),
+                                        SizedBox(width: 4),
+                                        Text('Confirm',
+                                            style: TextStyle(fontSize: 12)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -311,8 +335,8 @@ class _GlobalVirtualKeyboardState extends State<GlobalVirtualKeyboard> {
 
         // Ensure size is within bounds
         currentSize = Size(
-          currentSize.width.clamp(300, maxWidth),
-          currentSize.height.clamp(250, maxHeight),
+          currentSize.width,
+          currentSize.height,
         );
 
         return Positioned(
@@ -376,17 +400,17 @@ class _GlobalVirtualKeyboardState extends State<GlobalVirtualKeyboard> {
                     ),
                     child: Opacity(
                       opacity: _isDragging ? 0.9 : 1.0,
-            child: VirtualKeyboardWidget(
-              controller: keyboardProvider.controller!,
+                      child: VirtualKeyboardWidget(
+                        controller: keyboardProvider.controller!,
                         keyboardType: keyboardType,
                         height: currentSize.height,
                         width: currentSize.width,
                         textColor: Colors.black87,
                         shouldReplaceOnFirstInput:
                             keyboardProvider.shouldReplaceOnFirstInput,
-              onClose: () {
-                keyboardProvider.hide();
-              },
+                        onClose: () {
+                          keyboardProvider.hide();
+                        },
                         onConfirm: () {
                           keyboardProvider.hide();
                         },
@@ -411,9 +435,9 @@ class _GlobalVirtualKeyboardState extends State<GlobalVirtualKeyboard> {
                       double newWidth = currentSize.width + details.delta.dx;
                       double newHeight = currentSize.height + details.delta.dy;
 
-                      // Clamp to min/max sizes
-                      newWidth = newWidth.clamp(300, maxWidth);
-                      newHeight = newHeight.clamp(250, maxHeight);
+                      // Clamp only to the upper bound so the keyboard can shrink freely
+                      newWidth = newWidth.clamp(0, maxWidth);
+                      newHeight = newHeight.clamp(0, maxHeight);
 
                       Size newSize = Size(newWidth, newHeight);
 
@@ -455,7 +479,7 @@ class _GlobalVirtualKeyboardState extends State<GlobalVirtualKeyboard> {
                       ),
                     ),
                     child: const Icon(
-                      Icons.drag_handle,
+                      Icons.open_in_full_rounded,
                       color: Colors.white,
                       size: 12,
                     ),
