@@ -116,7 +116,14 @@ class _CompactQuantityControlLocalState
     // Update UI immediately
     setState(() {
       _currentQuantity = newQuantity;
-      _controller.text = _currentQuantity.toString();
+
+      // Only update the TextEditingController when the field is *not* being
+      // edited by the user. This prevents the current selection from being
+      // reset on every key-stroke (which caused the previously typed digit to
+      // be replaced). It now behaves the same way as PriceTextField.
+      if (!_focusNode.hasFocus) {
+        _controller.text = _currentQuantity.toString();
+      }
     });
 
     // Cancel existing timer if any
