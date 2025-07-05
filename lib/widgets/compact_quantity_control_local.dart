@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
@@ -46,12 +47,23 @@ class _CompactQuantityControlLocalState
   // Queue to store pending quantity updates
   num? _pendingQuantity;
 
+  // Handle controller text changes (including from virtual keyboard)
+  void _onControllerChanged() {
+    final parsed = num.tryParse(_controller.text);
+    if (parsed != null && parsed != _currentQuantity) {
+      _handleQuantityChange(parsed);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _currentQuantity = widget.quantity;
     _controller = TextEditingController(text: _currentQuantity.toString());
     _focusNode = FocusNode();
+    
+    // Listen to controller changes so virtual-keyboard input is captured
+    _controller.addListener(_onControllerChanged);
     
     // Add listener to focus node to handle quantity changes when focus is lost
     _focusNode.addListener(() {
@@ -70,16 +82,28 @@ class _CompactQuantityControlLocalState
     // Check if the quantity prop has changed
     if (widget.quantity != oldWidget.quantity &&
         widget.quantity != _currentQuantity) {
-      setState(() {
+      final keyboardProvider =
+          Provider.of<KeyboardProvider>(context, listen: false);
+      final bool isEditing = _focusNode.hasFocus ||
+          (keyboardProvider.showKeyboard &&
+              identical(keyboardProvider.controller, _controller));
+
+      if (!isEditing) {
+        setState(() {
+          _currentQuantity = widget.quantity;
+          _controller.text = _currentQuantity.toString();
+        });
+      } else {
+        // Just update the internal current value to stay in sync without touching text
         _currentQuantity = widget.quantity;
-        _controller.text = _currentQuantity.toString();
-      });
+      }
     }
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _controller.removeListener(_onControllerChanged);
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -92,7 +116,14 @@ class _CompactQuantityControlLocalState
     // Update UI immediately
     setState(() {
       _currentQuantity = newQuantity;
-      _controller.text = _currentQuantity.toString();
+
+      // Only update the TextEditingController when the field is *not* being
+      // edited by the user. This prevents the current selection from being
+      // reset on every key-stroke (which caused the previously typed digit to
+      // be replaced). It now behaves the same way as PriceTextField.
+      if (!_focusNode.hasFocus) {
+        _controller.text = _currentQuantity.toString();
+      }
     });
 
     // Cancel existing timer if any
@@ -145,13 +176,12 @@ class _CompactQuantityControlLocalState
           selectedStock: widget.selectedStock,
         );
       } else if (newQuantity < widget.quantity) {
-        // Calculate difference for decrements too
-        final num difference = widget.quantity - newQuantity;
-        // Call decrementCartItem for each item to remove
-        for (int i = 0; i < difference; i++) {
-          localProductProvider.decrementCartItem(
-              widget.productId, widget.selectedStock);
-        }
+        // Directly set the desired quantity (supports fractional values)
+        localProductProvider.setCartItemQuantity(
+          widget.productId,
+          widget.selectedStock,
+          newQuantity,
+        );
       }
     } finally {
       _isUpdating = false;
@@ -177,12 +207,12 @@ class _CompactQuantityControlLocalState
           ),
         ),
         SizedBox(
-          width: 32,
+          width: 50,
           child: TextField(
             controller: _controller,
             keyboardType: TextInputType.number,
             focusNode: _focusNode,
-            style: const TextStyle(fontSize: 12),
+            style: const TextStyle(fontSize: 11),
             inputFormatters: [
               if (widget.productUnit == 'KG' || widget.productUnit == 'KGS' || widget.productUnit == 'LT')
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
@@ -205,6 +235,13 @@ class _CompactQuantityControlLocalState
                   );
                 }
               });
+
+              // Show custom numeric virtual keyboard
+              Provider.of<KeyboardProvider>(context, listen: false).show(
+                'number',
+                _controller,
+                replaceOnFirstInput: true,
+              );
             },
             onSubmitted: (value) {
               num? newQuantity = num.tryParse(value);

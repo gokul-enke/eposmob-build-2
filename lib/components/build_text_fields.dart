@@ -570,6 +570,7 @@ Widget buildColumnWidgetForTextFields({
   String? Function(String?)? validator,
   FocusNode? focusNode,
   bool autofocus = false,
+  VoidCallback? onTap,
 }) =>
     Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -595,6 +596,7 @@ Widget buildColumnWidgetForTextFields({
           height: height ?? size.height * .07,
           width: width ?? size.width / 3, //3.05,
           child: TextFormField(
+            onTap: onTap,
             onChanged: onchanged,
             onFieldSubmitted: onSubmitted,
             autofocus: autofocus,

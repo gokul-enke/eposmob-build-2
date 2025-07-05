@@ -341,7 +341,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                         children: [
                                                   _buildTableHeader('No'),
                                                   _buildTableHeader('Name'),
-                                                  _buildTableHeader('Email'),
+                                                  _buildTableHeader('Balance'),
                                                   _buildTableHeader('Phone No.'),
                                                   _buildTableHeader('Action'),
                                                 ],
@@ -424,7 +424,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                         children: [
                                                             _buildTableCell('${index + 1 + (customerProvider.currentPage - 1) * customerProvider.itemsPerPage}'),
                                                             _buildTableCell(customer.name ?? ''),
-                                                            _buildTableCell(customer.email ?? ''),
+                                                            _buildTableCell(customer.balance.toString()  ?? ''),
                                                             _buildTableCell(customer.phone ?? ''),
                                                             Center(
                                               child: Padding(

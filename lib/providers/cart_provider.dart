@@ -526,6 +526,8 @@ class CartProvider with ChangeNotifier {
     String? paymentMethod,
     String? paidAmount,
     String? balanceAmount,
+    List<String>? paymentMethods,
+    List<Map<String, dynamic>>? paidMethods,
     String? couponId,
     String? comment,
     String? deliveryMethodId,
@@ -538,6 +540,8 @@ class CartProvider with ChangeNotifier {
     debugPrint("👤 Customer ID: $customerId");
     debugPrint("📱 Customer Phone: $customerPhone");
     debugPrint("💰 Payment Method: $paymentMethod");
+    debugPrint("💰 Payment Methods: $paymentMethods");
+    debugPrint("💰 Paid Methods: $paidMethods");
     debugPrint("💵 Total Price: $totalPrice");
     debugPrint("💳 Transaction ID: $transactionId");
     debugPrint("💸 Paid Amount: $paidAmount");
@@ -559,21 +563,41 @@ class CartProvider with ChangeNotifier {
 
     Map<String, dynamic> apiBodyData = {};
 
-    apiBodyData = {
-      "items": items,
-      "phone": customerPhone,
-      "transaction_number": transactionId,
-      "payment_method": paymentMethod,
-      "paid_amount": paidAmount,
-      "source_type": "executive",
-      "balance": balanceAmount,
-      "coupon_id": couponId,
-      if (orderId != null) "order_id": orderId,
-      if (comment != null) "comment": comment,
-      if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
-      if (carNumber != null) "car_number": carNumber,
-      if (status != null) "status": status,
-    };
+    // Use multi-payment format if available, otherwise fall back to single payment
+    if (paymentMethods != null && paidMethods != null && paidMethods.isNotEmpty) {
+      apiBodyData = {
+        "items": items,
+        "phone": customerPhone,
+        "transaction_number": transactionId,
+        "payment_methods": paymentMethods,
+        "paid_methods": paidMethods,
+        "source_type": "executive",
+        "balance": balanceAmount,
+        "coupon_id": couponId,
+        if (orderId != null) "order_id": orderId,
+        if (comment != null) "comment": comment,
+        if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
+        if (carNumber != null) "car_number": carNumber,
+        if (status != null) "status": status,
+      };
+    } else {
+      // Fallback to single payment method format
+      apiBodyData = {
+        "items": items,
+        "phone": customerPhone,
+        "transaction_number": transactionId,
+        "payment_method": paymentMethod,
+        "paid_amount": paidAmount,
+        "source_type": "executive",
+        "balance": balanceAmount,
+        "coupon_id": couponId,
+        if (orderId != null) "order_id": orderId,
+        if (comment != null) "comment": comment,
+        if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
+        if (carNumber != null) "car_number": carNumber,
+        if (status != null) "status": status,
+      };
+    }
 
     debugPrint("📝 API Request Body: ${json.encode(apiBodyData)}");
 
@@ -625,6 +649,8 @@ class CartProvider with ChangeNotifier {
     String? paymentMethod,
     String? paidAmount,
     String? balanceAmount,
+    List<String>? paymentMethods,
+    List<Map<String, dynamic>>? paidMethods,
     String? couponId,
     String? comment,
     String? deliveryMethodId,
@@ -638,20 +664,39 @@ class CartProvider with ChangeNotifier {
 
     Map<String, dynamic> apiBodyData = {};
 
-    apiBodyData = {
-      "phone": customerPhone,
-      "transaction_number": transactionId,
-      "payment_method": paymentMethod,
-      "paid_amount": paidAmount,
-      "source_type": "executive",
-      "balance": balanceAmount,
-      "coupon_id": couponId,
-      if (orderId != null) "order_id": orderId,
-      if (comment != null) "comment": comment,
-      if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
-      if (carNumber != null) "car_number": carNumber,
-      if (status != null) "status": status,
-    };
+    // Use multi-payment format if available, otherwise fall back to single payment
+    if (paymentMethods != null && paidMethods != null && paidMethods.isNotEmpty) {
+      apiBodyData = {
+        "phone": customerPhone,
+        "transaction_number": transactionId,
+        "payment_methods": paymentMethods,
+        "paid_methods": paidMethods,
+        "source_type": "executive",
+        "balance": balanceAmount,
+        "coupon_id": couponId,
+        if (orderId != null) "order_id": orderId,
+        if (comment != null) "comment": comment,
+        if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
+        if (carNumber != null) "car_number": carNumber,
+        if (status != null) "status": status,
+      };
+    } else {
+      // Fallback to single payment method format
+      apiBodyData = {
+        "phone": customerPhone,
+        "transaction_number": transactionId,
+        "payment_method": paymentMethod,
+        "paid_amount": paidAmount,
+        "source_type": "executive",
+        "balance": balanceAmount,
+        "coupon_id": couponId,
+        if (orderId != null) "order_id": orderId,
+        if (comment != null) "comment": comment,
+        if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
+        if (carNumber != null) "car_number": carNumber,
+        if (status != null) "status": status,
+      };
+    }
 
     debugPrint("📝 API Request Body: ${json.encode(apiBodyData)}");
 
@@ -699,6 +744,8 @@ class CartProvider with ChangeNotifier {
     String? paymentMethod,
     String? paidAmount,
     String? balanceAmount,
+    List<String>? paymentMethods,
+    List<Map<String, dynamic>>? paidMethods,
     String? couponId,
     String? comment,
     String? deliveryMethodId,
@@ -711,20 +758,39 @@ class CartProvider with ChangeNotifier {
 
     Map<String, dynamic> apiBodyData = {};
 
-    apiBodyData = {
-      "phone": customerPhone,
-      "transaction_number": transactionId,
-      "payment_method": paymentMethod,
-      "paid_amount": paidAmount,
-      "source_type": "executive",
-      "balance": balanceAmount,
-      "coupon_id": couponId,
-      if (orderId != null) "order_id": orderId,
-      "cart_id": cartIds,
-      if (comment != null) "comment": comment,
-      if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
-      if (carNumber != null) "car_number": carNumber,
-    };
+    // Use multi-payment format if available, otherwise fall back to single payment
+    if (paymentMethods != null && paidMethods != null && paidMethods.isNotEmpty) {
+      apiBodyData = {
+        "phone": customerPhone,
+        "transaction_number": transactionId,
+        "payment_methods": paymentMethods,
+        "paid_methods": paidMethods,
+        "source_type": "executive",
+        "balance": balanceAmount,
+        "coupon_id": couponId,
+        if (orderId != null) "order_id": orderId,
+        "cart_id": cartIds,
+        if (comment != null) "comment": comment,
+        if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
+        if (carNumber != null) "car_number": carNumber,
+      };
+    } else {
+      // Fallback to single payment method format
+      apiBodyData = {
+        "phone": customerPhone,
+        "transaction_number": transactionId,
+        "payment_method": paymentMethod,
+        "paid_amount": paidAmount,
+        "source_type": "executive",
+        "balance": balanceAmount,
+        "coupon_id": couponId,
+        if (orderId != null) "order_id": orderId,
+        "cart_id": cartIds,
+        if (comment != null) "comment": comment,
+        if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
+        if (carNumber != null) "car_number": carNumber,
+      };
+    }
 
     debugPrint("📝 API Request Body: ${json.encode(apiBodyData)}");
 

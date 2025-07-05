@@ -1,7 +1,5 @@
 import 'package:get/get.dart';
 import 'package:pos_machine/screens/billing/billing_page.dart';
-import 'package:pos_machine/screens/billing/billing_page_refactored.dart';
-import 'package:pos_machine/screens/billing_new/billing_new.dart';
 import 'package:pos_machine/screens/category/add_category.dart';
 import 'package:pos_machine/screens/category/add_category_properties.dart';
 import 'package:pos_machine/screens/category/add_category_screen.dart';
@@ -38,18 +36,18 @@ import 'package:pos_machine/screens/sales_return/sales_return.dart';
 import 'package:pos_machine/screens/sales_return/sales_return_list.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
 import 'package:pos_machine/screens/support/support.dart';
-import 'package:pos_machine/screens/transaction-customer/invoice_list.dart';
-import 'package:pos_machine/screens/transaction-customer/receipt_list.dart';
-import 'package:pos_machine/screens/transaction-customer/receipt_voucher.dart';
-import 'package:pos_machine/screens/transaction-customer/transaction_list.dart';
-import 'package:pos_machine/screens/transaction-customer/widgets/add_voucher_details.dart';
-import 'package:pos_machine/screens/transaction-customer/widgets/create_new_invoice.dart';
-import 'package:pos_machine/screens/transaction-customer/widgets/create_new_voucher.dart';
-import 'package:pos_machine/screens/transaction-customer/widgets/view_invoice.dart';
-import 'package:pos_machine/screens/transaction-customer/widgets/view_receipt_details.dart';
-import 'package:pos_machine/screens/transaction-customer/widgets/view_transaction_details.dart';
-import 'package:pos_machine/screens/transaction-customer/widgets/view_voucher_details.dart';
-import 'package:pos_machine/screens/transaction/transaction.dart';
+import 'package:pos_machine/screens/transactions/invoice_list.dart';
+import 'package:pos_machine/screens/transactions/receipt_list.dart';
+import 'package:pos_machine/screens/transactions/receipt_voucher.dart';
+import 'package:pos_machine/screens/transactions/transaction_list.dart';
+import 'package:pos_machine/screens/transactions/widgets/add_voucher_details.dart';
+import 'package:pos_machine/screens/transactions/widgets/create_new_invoice.dart';
+import 'package:pos_machine/screens/transactions/widgets/create_new_voucher.dart';
+import 'package:pos_machine/screens/transactions/widgets/view_invoice.dart';
+import 'package:pos_machine/screens/transactions/widgets/view_receipt_details.dart';
+import 'package:pos_machine/screens/transactions/widgets/view_transaction_details.dart';
+import 'package:pos_machine/screens/transactions/widgets/view_voucher_details.dart';
+import 'package:pos_machine/screens/transactions/supplier_transactions/supplier_transactions.dart';
 
 import '../screens/product/widgets/add_product_stock.dart';
 import '../screens/product/widgets/stock_details.dart';
@@ -119,10 +117,7 @@ class SideBarController extends GetxController {
     SalesReturnPage(), //50 Sales Return List
     EditOrder(), // 51 Edit Order
     SupplierListScreen(), // 52 Suppliers List
-    BillingPageRefactored(), // 53 Billing Page
-    BillingNewPage(), // 54 Billing New Page
-    PrinterSettings(), // 55 Printer Settings
-    ConfirmedOrdersScreen(), // 56 Confirmed Orders
-    // SupplierTransactionListScreen(), // 57 Supplier Transactions
+    PrinterSettings(), // 53 Printer Settings
+    ConfirmedOrdersScreen(), // 54 Confirmed Orders
   ];
 }

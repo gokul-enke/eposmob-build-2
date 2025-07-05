@@ -7,75 +7,181 @@ import '../resources/app_url.dart';
 
 class TransactionProvider extends ChangeNotifier {
   /* ---------- STATE ---------- */
-  final List<TransactionModel> _allTransactions = [];
-  final List<TransactionModel> _filteredTransactions = [];
+  // Transaction data management
+  List<TransactionModel>? _allTransactions =
+      []; // Store all transactions for local filtering
+  List<TransactionModel>? _filteredTransactionsList = [];
+  List<TransactionModel>? _listTransactionModelDataList = [];
 
-  bool _isLoading = false;
-  int _currentPage = 1;
-  int _totalPages = 1;
-  String? _nextPageUrl;
+  // Pagination properties
+  int _transactionCurrentPage = 1;
+  int _transactionTotalPages = 1;
+  final int _transactionItemsPerPage = 20;
 
-  // Filters
-  String _searchQuery = '';
-  String? _statusFilter;
-  String? _paymentModeFilter;
+  // Filter properties
+  String? _transactionFilterName;
+  String? _transactionFilterStatus;
+  String? _transactionFilterPaymentMode;
+
+  // Loading state
+  bool _transactionIsLoading = false;
+
+  // Store access token for batch fetch
+  String? _accessToken;
 
   /* ---------- GETTERS ---------- */
-  List<TransactionModel> get transactions => _filteredTransactions;
-  bool get isLoading => _isLoading;
-  int get currentPage => _currentPage;
-  int get totalPages => _totalPages;
-  bool get hasNextPage => _nextPageUrl != null;
+  List<TransactionModel>? get listTransactionModelDataList =>
+      _filteredTransactionsList ?? _listTransactionModelDataList;
+
+  List<TransactionModel>? get allTransactions => _allTransactions;
+
+  int get transactionCurrentPage => _transactionCurrentPage;
+  int get transactionTotalPages => _transactionTotalPages;
+  int get transactionItemsPerPage => _transactionItemsPerPage;
+  String? get transactionFilterName => _transactionFilterName;
+  String? get transactionFilterStatus => _transactionFilterStatus;
+  String? get transactionFilterPaymentMode => _transactionFilterPaymentMode;
+  bool get transactionIsLoading => _transactionIsLoading;
+
+  // Legacy getters for compatibility
+  List<TransactionModel> get transactions => listTransactionModelDataList ?? [];
+  bool get isLoading => _transactionIsLoading;
+  int get currentPage => _transactionCurrentPage;
+  int get totalPages => _transactionTotalPages;
+
+  /// Search transactions locally by name
+  void searchTransactions(String query) {
+    if (_allTransactions == null || _allTransactions!.isEmpty) {
+      return;
+    }
+
+    applyTransactionFiltersLocally(filterName: query, page: 1);
+  }
+
+  /// Extract unique statuses from loaded transactions
+  List<String> getUniqueStatuses() {
+    if (_allTransactions == null || _allTransactions!.isEmpty) {
+      return ["All Status"];
+    }
+
+    final uniqueStatuses = _allTransactions!
+        .map((transaction) => transaction.status)
+        .where((status) => status.isNotEmpty)
+        .toSet()
+        .toList();
+
+    uniqueStatuses.sort();
+    return ["All Status", ...uniqueStatuses];
+  }
+
+  /// Extract unique payment modes from loaded transactions
+  List<String> getUniquePaymentModes() {
+    if (_allTransactions == null || _allTransactions!.isEmpty) {
+      return ["All Payment Modes"];
+    }
+
+    final uniquePaymentModes = _allTransactions!
+        .map((transaction) => transaction.paymentMode)
+        .where((mode) => mode.isNotEmpty)
+        .toSet()
+        .toList();
+
+    uniquePaymentModes.sort();
+    return ["All Payment Modes", ...uniquePaymentModes];
+  }
+
+  /// Load all transactions for local filtering and pagination
+  Future<void> loadAllTransactions(String accessToken) async {
+    try {
+      await fetchTransactionsAPI(
+        accessToken: accessToken,
+        loadAll: true,
+      );
+    } catch (error) {
+      debugPrint('Error loading all transactions: $error');
+      rethrow;
+    }
+  }
 
   /* ---------- PUBLIC API ---------- */
-  Future<void> fetchTransactions({int page = 1}) async {
-    _setLoading(true);
+  Future<void> fetchTransactionsAPI({
+    required String accessToken,
+    String? filterName,
+    int? page,
+    bool loadAll = false,
+  }) async {
+    _transactionIsLoading = true;
+    notifyListeners();
 
     try {
-      final url = Uri.parse(
-        'https://stagingepos.enke.ae/api/v1/suppliers/list-transactions?page=$page',
-      );
+      // Build URL with query parameters
+      String url = APPUrl.supplierTransactions;
+      final queryParams = <String, String>{
+        'page': (page ?? 1).toString(),
+        if (loadAll) 'per_page': '1000', // Load all transactions
+      };
 
-      final res = await http.get(url);
-
-      if (res.statusCode != 200) {
-        throw Exception('HTTP ${res.statusCode}');
+      if (filterName != null && filterName.isNotEmpty) {
+        queryParams['filter_name'] = filterName;
       }
 
-      final jsonMap = jsonDecode(res.body);
+      final uri = Uri.parse(url).replace(queryParameters: queryParams);
 
-      // Manual parsing to avoid type errors
-      if (jsonMap['status'] == 'success' && jsonMap['data'] != null) {
-        final data = jsonMap['data'];
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 15));
 
-        // Always clear transactions when fetching a specific page
-        _allTransactions.clear();
+      debugPrint('Transaction API Response: ${response.statusCode}');
 
-        if (data['data'] != null && data['data'] is List) {
-          final transactions = data['data'] as List<dynamic>;
+      if (response.statusCode == 200) {
+        final jsonMap = jsonDecode(response.body);
 
-          int startIndex = _allTransactions.length;
-          for (var i = 0; i < transactions.length; i++) {
-            final tx = transactions[i];
-            try {
-              final model = _createTransactionFromJson(tx, startIndex + i);
-              _allTransactions.add(model);
-            } catch (e) {
-              debugPrint('Error parsing transaction: $e');
+        if (jsonMap['status'] == 'success' && jsonMap['data'] != null) {
+          final data = jsonMap['data'];
+
+          if (data['data'] != null && data['data'] is List) {
+            final transactions = data['data'] as List<dynamic>;
+
+            List<TransactionModel> transactionList = [];
+            for (var i = 0; i < transactions.length; i++) {
+              final tx = transactions[i];
+              try {
+                final model = _createTransactionFromJson(tx, i);
+                transactionList.add(model);
+              } catch (e) {
+                debugPrint('Error parsing transaction: $e');
+              }
             }
+
+            if (loadAll) {
+              _allTransactions = transactionList;
+              applyTransactionFiltersLocally(page: 1);
+            } else {
+              _listTransactionModelDataList = transactionList;
+              _filteredTransactionsList =
+                  List<TransactionModel>.from(_listTransactionModelDataList!);
+
+              _transactionCurrentPage = data['current_page'] ?? 1;
+              _transactionTotalPages = data['last_page'] ?? 1;
+            }
+
+            notifyListeners();
           }
-
-          _currentPage = data['current_page'] ?? 1;
-          _totalPages = data['last_page'] ?? 1;
-          _nextPageUrl = data['next_page_url'];
-
-          _applyFilters();
         }
+      } else {
+        debugPrint('Failed to load transactions: ${response.statusCode}');
+        throw Exception('Failed to load transactions');
       }
-    } catch (e) {
-      debugPrint('Transaction fetch error: $e');
+    } catch (error) {
+      debugPrint('Error in fetchTransactionsAPI: $error');
+      rethrow;
     } finally {
-      _setLoading(false);
+      _transactionIsLoading = false;
+      notifyListeners();
     }
   }
 
@@ -153,105 +259,190 @@ class TransactionProvider extends ChangeNotifier {
     return defaultValue;
   }
 
-  // This method is only used for infinite scrolling, not with pagination controls
-  Future<void> loadNextPage() async {
-    if (_nextPageUrl != null && !_isLoading) {
-      _setLoading(true);
-
-      try {
-        // Instead of loading next page and appending, go to the next page directly
-        int nextPage = _currentPage + 1;
-        if (nextPage <= _totalPages) {
-          await goToTransactionPage(nextPage);
+  /// Batch-based fetch for all transactions (like product fetch)
+  Future<void> fetchAllTransactionsBatch({String? filterName, String? filterType}) async {
+    List<TransactionModel> allTransactions = [];
+    int currentPage = 1;
+    _transactionIsLoading = true;
+    notifyListeners();
+    try {
+      while (true) {
+        final queryParams = <String, String>{
+          'page': currentPage.toString(),
+        };
+        if (filterName != null && filterName.isNotEmpty) {
+          queryParams['filter_name'] = filterName;
         }
-      } catch (e) {
-        debugPrint('Next page load error: $e');
-        _setLoading(false);
+        if (filterType != null && filterType.isNotEmpty && filterType != 'All Types') {
+          queryParams['type'] = filterType.toLowerCase();
+        }
+        final url = Uri.parse(APPUrl.supplierTransactions).replace(queryParameters: queryParams);
+        final response = await http.get(url, headers: {
+          'Authorization': 'Bearer ${_accessToken ?? ''}',
+          'Content-Type': 'application/json',
+        });
+        if (response.statusCode == 200) {
+          final jsonMap = jsonDecode(response.body);
+          if (jsonMap['status'] == 'success' && jsonMap['data'] != null) {
+            final data = jsonMap['data'];
+            if (data['data'] != null && data['data'] is List) {
+              final transactions = data['data'] as List<dynamic>;
+              if (transactions.isEmpty) break;
+              for (var i = 0; i < transactions.length; i++) {
+                final tx = transactions[i];
+                try {
+                  final model = _createTransactionFromJson(tx, allTransactions.length + i);
+                  allTransactions.add(model);
+                } catch (e) {
+                  debugPrint('Error parsing transaction: $e');
+                }
+              }
+              currentPage++;
+              if (currentPage > (data['last_page'] ?? currentPage)) break;
+            } else {
+              break;
+            }
+          } else {
+            break;
+          }
+        } else {
+          break;
+        }
       }
+      _allTransactions = allTransactions;
+      applyTransactionFiltersLocally(page: 1);
+    } catch (e) {
+      debugPrint('Error fetching all transactions: $e');
+    } finally {
+      _transactionIsLoading = false;
+      notifyListeners();
     }
   }
 
-  // Go to a specific page (similar to stock.dart)
-  Future<void> goToTransactionPage(int page) async {
-    if (page < 1 || page > _totalPages || page == _currentPage) return;
+  /// For pull-to-refresh
+  Future<void> refreshAllTransactions() async {
+    await fetchAllTransactionsBatch();
+  }
 
-    _setLoading(true);
-    _currentPage = page;
+  /// Apply local pagination and filtering for transactions
+  void applyTransactionFiltersLocally({
+    String? filterName,
+    String? filterType,
+    int page = 1,
+  }) {
+    if (_allTransactions == null || _allTransactions!.isEmpty) {
+      _listTransactionModelDataList = [];
+      _filteredTransactionsList = [];
+      _transactionCurrentPage = 1;
+      _transactionTotalPages = 1;
+      notifyListeners();
+      return;
+    }
 
-    // Clear transactions before fetching new page
-    _allTransactions.clear();
-    _filteredTransactions.clear();
+    _transactionFilterName = filterName;
+    _transactionFilterStatus = null; // Remove status filter
+    _transactionFilterPaymentMode = null; // Remove payment mode filter
+    _transactionCurrentPage = page;
+    String? typeFilter = filterType;
+
+    List<TransactionModel> filteredList = [..._allTransactions!];
+    if (filterName != null && filterName.isNotEmpty) {
+      filteredList = filteredList.where((transaction) {
+        String supplierName = '';
+        try {
+          supplierName = transaction.supplier.user.name.toLowerCase();
+        } catch (_) {}
+        return supplierName.contains(filterName.toLowerCase()) ||
+            transaction.reference.toLowerCase().contains(filterName.toLowerCase()) ||
+            transaction.transactionType.toLowerCase().contains(filterName.toLowerCase());
+      }).toList();
+    }
+    if (typeFilter != null && typeFilter.isNotEmpty && typeFilter != 'All Types') {
+      filteredList = filteredList.where((transaction) =>
+        transaction.type.toLowerCase() == typeFilter.toLowerCase()
+      ).toList();
+    }
+    _transactionTotalPages = (filteredList.length / _transactionItemsPerPage).ceil();
+    _transactionTotalPages = _transactionTotalPages == 0 ? 1 : _transactionTotalPages;
+    if (_transactionCurrentPage > _transactionTotalPages) {
+      _transactionCurrentPage = _transactionTotalPages;
+    }
+    int startIndex = (_transactionCurrentPage - 1) * _transactionItemsPerPage;
+    int endIndex = startIndex + _transactionItemsPerPage;
+    if (startIndex >= filteredList.length) {
+      _listTransactionModelDataList = [];
+      _filteredTransactionsList = [];
+    } else {
+      endIndex = endIndex > filteredList.length ? filteredList.length : endIndex;
+      _listTransactionModelDataList = filteredList.sublist(startIndex, endIndex);
+      _filteredTransactionsList = List<TransactionModel>.from(_listTransactionModelDataList!);
+    }
     notifyListeners();
-
-    await fetchTransactions(page: page);
   }
 
-  void searchTransactions(String query) {
-    _searchQuery = query.toLowerCase();
-    _applyFilters();
+  /// For UI filter dropdown
+  List<String> getTypeOptions() {
+    return ['All Types', 'Credit', 'Debit'];
   }
 
+  /// Reset transaction filters and pagination
+  void resetTransactionFilters() {
+    _transactionFilterName = null;
+    _transactionFilterStatus = null;
+    _transactionFilterPaymentMode = null;
+    _transactionCurrentPage = 1;
+
+    if (_allTransactions != null && _allTransactions!.isNotEmpty) {
+      applyTransactionFiltersLocally(page: 1);
+    }
+  }
+
+  /// Change transaction page
+  void goToTransactionPage(int page) {
+    if (page < 1 || page > _transactionTotalPages) return;
+
+    applyTransactionFiltersLocally(
+        filterName: _transactionFilterName,
+        filterType: _transactionFilterStatus,
+        page: page);
+  }
+
+  // Legacy methods for compatibility
   void filterByStatus(String status) {
-    _statusFilter = status.toLowerCase();
-    _applyFilters();
+    applyTransactionFiltersLocally(
+        filterName: _transactionFilterName,
+        filterType: status,
+        page: 1);
   }
 
   void filterByPaymentMode(String paymentMode) {
-    _paymentModeFilter = paymentMode.toLowerCase();
-    _applyFilters();
+    applyTransactionFiltersLocally(
+        filterName: _transactionFilterName,
+        filterType: _transactionFilterStatus,
+        page: 1);
   }
 
   void resetFilters() {
-    _searchQuery = '';
-    _statusFilter = null;
-    _paymentModeFilter = null;
-    _applyFilters();
+    resetTransactionFilters();
   }
 
-  // Apply all active filters to the transaction list
-  void _applyFilters() {
-    _filteredTransactions.clear();
-
-    // Start with all transactions
-    List<TransactionModel> filtered = List.from(_allTransactions);
-
-    // Apply search query if present
-    if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((tx) {
-        String supplierName = '';
-        try {
-          supplierName = tx.supplier.user.name.toLowerCase();
-        } catch (_) {}
-
-        return supplierName.contains(_searchQuery) ||
-            tx.reference.toLowerCase().contains(_searchQuery) ||
-            tx.transactionType.toLowerCase().contains(_searchQuery) ||
-            tx.paymentMode.toLowerCase().contains(_searchQuery) ||
-            tx.status.toLowerCase().contains(_searchQuery);
-      }).toList();
-    }
-
-    // Apply status filter if present
-    if (_statusFilter != null && _statusFilter!.isNotEmpty) {
-      filtered = filtered
-          .where((tx) => tx.status.toLowerCase() == _statusFilter)
-          .toList();
-    }
-
-    // Apply payment mode filter if present
-    if (_paymentModeFilter != null && _paymentModeFilter!.isNotEmpty) {
-      filtered = filtered
-          .where((tx) => tx.paymentMode.toLowerCase() == _paymentModeFilter)
-          .toList();
-    }
-
-    _filteredTransactions.addAll(filtered);
+  /// Clear all transaction data
+  void clearTransactionData() {
+    _allTransactions = [];
+    _filteredTransactionsList = [];
+    _listTransactionModelDataList = [];
+    _transactionCurrentPage = 1;
+    _transactionTotalPages = 1;
+    _transactionFilterName = null;
+    _transactionFilterStatus = null;
+    _transactionFilterPaymentMode = null;
+    _transactionIsLoading = false;
     notifyListeners();
   }
 
-  void _setLoading(bool value) {
-    _isLoading = value;
-    notifyListeners();
+  // Store access token for batch fetch
+  void setAccessToken(String? token) {
+    _accessToken = token;
   }
 }
 
