@@ -10,13 +10,24 @@ import '../widgets/category_list.dart';
 
 import '../widgets/side_menu.dart';
 
-class MainScreen extends StatelessWidget {
+class MainScreen extends StatefulWidget {
   const MainScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    SideBarController sideBarController = Get.find();
+  State<MainScreen> createState() => _MainScreenState();
+}
 
+class _MainScreenState extends State<MainScreen> {
+  late SideBarController sideBarController;
+  
+  @override
+  void initState() {
+    super.initState();
+    sideBarController = Get.find();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     Widget content =
         Obx(() => sideBarController.screens[sideBarController.index.value]);
 

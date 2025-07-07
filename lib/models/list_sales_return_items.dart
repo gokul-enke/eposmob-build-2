@@ -42,7 +42,7 @@ class SalesReturnCart {
     required this.unitPrice,
     required this.totalPrice,
     required this.returnedQuantity,
-    required this.returnedTotal,
+    required this.returnedTotal,  
     required this.isReturned,
   });
 
@@ -52,12 +52,14 @@ class SalesReturnCart {
       returnOrderId: json['return_order_id'] ?? 0,
       productName: json['product_name'],
       quantity: json['quantity'],
-      unitPrice: json['unit_price'],
-      totalPrice: json['total_price'],
-      returnedQuantity: (json['returned_quantity'] is int)
-          ? json['returned_quantity']
-          : int.tryParse(json['returned_quantity'].toString()) ?? 0,
-      returnedTotal: json['returned_total'].toString(),
+      unitPrice: json['unit_price'].toString(),
+      totalPrice: json['total_price'].toString(),
+      returnedQuantity: json['returned_quantity'] != null 
+          ? (json['returned_quantity'] is int)
+              ? json['returned_quantity']
+              : int.tryParse(json['returned_quantity'].toString()) ?? 0
+          : 0,
+      returnedTotal: json['returned_total']?.toString() ?? '0',
       isReturned: json['is_returned'],
     );
   }

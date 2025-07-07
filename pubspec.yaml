@@ -88,6 +88,7 @@ dependencies:
   hive_flutter: ^1.1.0
   # printing: ^5.9.3  # Commented out due to Windows build issues
   internet_connection_checker_plus: ^1.0.1
+  virtual_keyboard_custom_layout: ^1.0.1
 
 dev_dependencies:
   flutter_test:

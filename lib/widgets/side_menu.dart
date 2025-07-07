@@ -69,11 +69,41 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
                       ),
                     ),
             ),
-            Expanded(child: widget.child),
+            // Wrap child in a stateful widget to preserve its state
+            Expanded(
+              child: _PreservedChild(
+                child: widget.child,
+              ),
+            ),
           ],
         ),
       ],
     );
+  }
+}
+
+// Helper widget to preserve child state during parent rebuilds
+class _PreservedChild extends StatefulWidget {
+  final Widget child;
+  
+  const _PreservedChild({
+    Key? key,
+    required this.child,
+  }) : super(key: key);
+
+  @override
+  _PreservedChildState createState() => _PreservedChildState();
+}
+
+class _PreservedChildState extends State<_PreservedChild> 
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
 
@@ -177,7 +207,7 @@ class SideMenu extends StatelessWidget {
                 sideBarController.index.value = 2;
               },
               onTapTitle2: () {
-                sideBarController.index.value = 56;
+                sideBarController.index.value = 54;
               },
               onTapTitle3: () {
                 sideBarController.index.value = 50;
@@ -202,7 +232,7 @@ class SideMenu extends StatelessWidget {
               },
               selected: sideBarController.index.value == 2 ||
                   sideBarController.index.value == 51 ||
-                  sideBarController.index.value == 56 ||
+                  sideBarController.index.value == 54 ||
                   sideBarController.index.value == 50 ||
                   sideBarController.index.value == 49 ||
                   sideBarController.index.value == 11,
@@ -297,6 +327,20 @@ class SideMenu extends StatelessWidget {
             ),
           ),
           Obx(
+            () => DrawerListTileExpandableColumn(
+                onTapTitle1: () {
+                  sideBarController.index.value = 4;
+                },
+                listTitle1: "Supplier Transactions",
+                iconPath: ImageAssets.transactionIcon,
+                title: 'Transactions',
+                onTap: () {
+                  sideBarController.index.value = 4;
+                  // debugPrint(" 'Category',${sideBarController.index.value}");
+                },
+                selected: sideBarController.index.value == 4),
+          ),
+          Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.customerIcon,
               title: 'Customers',
@@ -328,9 +372,9 @@ class SideMenu extends StatelessWidget {
               iconPath: ImageAssets.printIcon,
               title: 'Printer',
               onTap: () {
-                sideBarController.index.value = 55;
+                sideBarController.index.value = 53; 
               },
-              selected: sideBarController.index.value == 55,
+              selected: sideBarController.index.value == 53,
             ),
           ),
           DrawerListTile(

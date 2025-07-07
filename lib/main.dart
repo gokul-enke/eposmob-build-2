@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:pos_machine/components/virtual_keyboard_widget.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -15,6 +16,7 @@ import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -24,6 +26,7 @@ import 'package:pos_machine/providers/report_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:provider/provider.dart';
 import 'controllers/sidebar_controller.dart';
 import 'providers/carousel_provider.dart';
@@ -106,11 +109,23 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SalesExecutiveProvider()),
         ChangeNotifierProvider(create: (_) => DocumentConfigProvider()),
         ChangeNotifierProvider(create: (_) => StockProvider()),
+        ChangeNotifierProvider(
+          create: (_) => TransactionProvider(),
+        ),
+        ChangeNotifierProvider(create: (_) => KeyboardProvider()),
       ],
       child: GetMaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Flutter POS Machine',
         theme: ThemeData(),
+        builder: (context, child) {
+          return Stack(
+            children: [
+              child ?? const SizedBox.shrink(),
+              const GlobalVirtualKeyboard(),
+            ],
+          );
+        },
         home: const BaseUrlWrapper(),
         routes: {
           '/login': (context) => const SignInScreen(),

@@ -87,10 +87,10 @@ class SalesReturnItem {
       id: json['id'],
       orderReturnId: json['order_return_id'],
       cartItemId: json['cart_item_id'],
-      price: json['price'] ?? '0.00', // Provide a default value if null
+      price: json['price']?.toString() ?? '0.00', // Convert to string and provide default
       reason: json['reason'] ?? '', // Provide an empty string if null
       quantity: (json['quantity'] is String)
-          ? num.tryParse(json['quantity'])
+          ? num.tryParse(json['quantity']) ?? 0
           : json['quantity'],
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
@@ -135,12 +135,12 @@ class CartItem {
       categoryId: json['category_id'],
       productId: json['product_id'],
       quantity: (json['quantity'] is String)
-          ? num.tryParse(json['quantity'])
+          ? num.tryParse(json['quantity']) ?? 0
           : json['quantity'],
-      unitPrice: json['unit_price'],
-      totalPrice: json['total_price'],
-      taxRate: json['tax_rate'],
-      taxAmount: json['tax_amount'],
+      unitPrice: json['unit_price'].toString(),
+      totalPrice: json['total_price'].toString(),
+      taxRate: json['tax_rate'].toString(),
+      taxAmount: json['tax_amount'].toString(),
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
       product: Product.fromJson(json['product']),
@@ -188,9 +188,8 @@ class Product {
       description: json['description'] ?? '', // Provide an empty string if null
       slug: json['slug'],
       active: json['active'],
-      price: json['price'],
-      purchasePrice:
-          json['purchase_price'] ?? '0.00', // Provide a default value if null
+      price: json['price'].toString(), // Convert to string
+      purchasePrice: json['purchase_price']?.toString() ?? '0.00', // Convert to string and provide default
       unit: json['unit'],
       userId: json['user_id'],
       createdAt: DateTime.parse(json['created_at']),

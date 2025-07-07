@@ -402,10 +402,19 @@ class OrderDetailsModelDataOrderProp {
       OrderDetailsModelDataOrderProp(
         propsId: json["props_id"],
         propsCode: json["props_code"],
-        propsValue: json["props_value"] is String
-            ? json["props_value"]
-            : null, // Ensure it's a String
+        propsValue: _parsePropsValue(json["props_value"]), // Handle different types
       );
+
+  // Helper method to handle props_value which can be String, Map, or other types
+  static String? _parsePropsValue(dynamic propsValue) {
+    if (propsValue == null) return null;
+    if (propsValue is String) return propsValue;
+    if (propsValue is Map || propsValue is List) {
+      // Convert complex objects to JSON string for storage
+      return propsValue.toString();
+    }
+    return propsValue.toString();
+  }
 
   Map<String, dynamic> toJson() => {
         "props_id": propsId,
@@ -435,8 +444,18 @@ class OrderDetailsModelDataPaymentDetails {
         transactionId: json["transaction_id"] is int
             ? json["transaction_id"]
             : null, // Ensure it's an int or null
-        paymentMethod: json["payment_method"], // This is a String
+        paymentMethod: _parsePaymentMethod(json["payment_method"]), // Handle both String and List
       );
+
+  // Helper method to handle payment_method which can be String or List<String>
+  static String? _parsePaymentMethod(dynamic paymentMethod) {
+    if (paymentMethod == null) return null;
+    if (paymentMethod is String) return paymentMethod;
+    if (paymentMethod is List && paymentMethod.isNotEmpty) {
+      return paymentMethod.first.toString();
+    }
+    return null;
+  }
 
   Map<String, dynamic> toJson() => {
         "payment_id": paymentId,

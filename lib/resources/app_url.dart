@@ -146,4 +146,6 @@ class APPUrl {
   static String getRacksDataValues =
       '$baseURL/api/v1/master-data-values?code=RACKS';
   static String documentConfigs = '$baseURL/api/v1/document/document-configs';
+  static String supplierTransactions =
+      '$baseURL/api/v1/suppliers/list-transactions';
 }
