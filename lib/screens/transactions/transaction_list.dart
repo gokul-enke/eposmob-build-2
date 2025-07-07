@@ -11,6 +11,7 @@ import '../../components/build_container_box.dart';
 import '../../components/build_dialog_box.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
+import '../../helpers/date_helper.dart';
 import '../../models/list_transaction.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/invoice_provider.dart';
@@ -152,6 +153,131 @@ class _CustomerTransactionListScreenState
     loadInitData();
   }
 
+  void _showTransactionDetails(ListTransaction transaction) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        elevation: 8,
+        backgroundColor: Colors.white,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width / 2,
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Transaction Details',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.black),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    _buildDetailRow(
+                        'Customer Name', transaction.customerName ?? 'N/A'),
+                    _buildDetailRow('Date', transaction.date ?? 'N/A'),
+                    _buildDetailRow('Type', transaction.type ?? 'N/A'),
+                    _buildDetailRow('Transaction Type',
+                        transaction.transactionType ?? 'N/A'),
+                    _buildDetailRow(
+                        'Payment Method', transaction.paymentMethod ?? 'N/A'),
+                    _buildDetailRow('Amount',
+                        '${transaction.currency ?? ''} ${transaction.amount ?? ''}'),
+                    _buildDetailRow(
+                        'Reference ID', transaction.referenceId ?? 'N/A'),
+                    _buildDetailRow(
+                        'Reference', transaction.reference ?? 'N/A'),
+                    _buildDetailRow('Status', transaction.status ?? 'N/A'),
+                    _buildDetailRow(
+                        'Comment', transaction.transactionComment ?? 'N/A'),
+                    _buildDetailRow(
+                        'Created At',
+                        transaction.createdAt != null
+                            ? DateHelper.formatDate(transaction.createdAt!)
+                            : 'N/A'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  CustomRoundButton(
+                    title: "Close",
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    borderColor: ColorManager.kPrimaryColor,
+                    fct: () => Navigator.pop(context),
+                    height: 45,
+                    width: 120,
+                    fontSize: FontSize.s12,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(
+              '$label: ',
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s14,
+                0.20,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.20,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTableHeader(String text) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
@@ -179,6 +305,68 @@ class _CustomerTransactionListScreenState
           FontSize.s9,
           0.13,
           Colors.black,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
+    Color backgroundColor;
+    Color textColor;
+
+    switch (status.toUpperCase()) {
+      case 'SUCC':
+      case 'SUCCESS':
+        backgroundColor = Colors.green.withOpacity(0.1);
+        textColor = Colors.green;
+        break;
+      case 'INIT':
+      case 'INITIATED':
+        backgroundColor = Colors.orange.withOpacity(0.1);
+        textColor = Colors.orange;
+        break;
+      case 'FAIL':
+      case 'FAILED':
+        backgroundColor = Colors.red.withOpacity(0.1);
+        textColor = Colors.red;
+        break;
+      default:
+        backgroundColor = Colors.grey.withOpacity(0.1);
+        textColor = Colors.grey;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          color: textColor,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypeCell(String type) {
+    final isCredit = type.toLowerCase() == 'credit';
+    final color = isCredit ? Colors.green : Colors.red;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        type,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
         ),
       ),
     );
@@ -363,10 +551,11 @@ class _CustomerTransactionListScreenState
                                         columnWidths: const {
                                           0: FlexColumnWidth(0.5), // No
                                           1: FlexColumnWidth(2.0), // Name
-                                          2: FlexColumnWidth(1.0), // Type
+                                          2: FlexColumnWidth(1.2), // Date
                                           3: FlexColumnWidth(1.5), // Amount
                                           4: FlexColumnWidth(1.0), // Status
-                                          5: FlexColumnWidth(1.0), // Action
+                                          5: FlexColumnWidth(1.0), // Type
+                                          6: FlexColumnWidth(1.0), // Action
                                         },
                                         border: null,
                                         defaultVerticalAlignment:
@@ -376,9 +565,10 @@ class _CustomerTransactionListScreenState
                                             children: [
                                               _buildTableHeader('No'),
                                               _buildTableHeader('Name'),
-                                              _buildTableHeader('Type'),
+                                              _buildTableHeader('Date'),
                                               _buildTableHeader('Amount'),
                                               _buildTableHeader('Status'),
+                                              _buildTableHeader('Type'),
                                               _buildTableHeader('Action'),
                                             ],
                                           ),
@@ -462,12 +652,14 @@ class _CustomerTransactionListScreenState
                                                       1: FlexColumnWidth(
                                                           2.0), // Name
                                                       2: FlexColumnWidth(
-                                                          1.0), // Type
+                                                          1.2), // Date
                                                       3: FlexColumnWidth(
                                                           1.5), // Amount
                                                       4: FlexColumnWidth(
                                                           1.0), // Status
                                                       5: FlexColumnWidth(
+                                                          1.0), // Type
+                                                      6: FlexColumnWidth(
                                                           1.0), // Action
                                                     },
                                                     border: null,
@@ -498,13 +690,19 @@ class _CustomerTransactionListScreenState
                                                             _buildTableCell(
                                                                 '${index + 1 + (currentPage - 1) * itemsPerPage}'),
                                                             _buildTableCell(
-                                                                "Name"),
+                                                                "${transaction.customerName}"),
                                                             _buildTableCell(
-                                                                "${transaction.type}"),
+                                                                "${transaction.date ?? 'N/A'}"),
                                                             _buildTableCell(
                                                                 "${transaction.currency} ${transaction.amount}"),
-                                                            _buildTableCell(
-                                                                "${transaction.status}"),
+                                                            Center(
+                                                              child: _buildStatusChip(
+                                                                  "${transaction.status}"),
+                                                            ),
+                                                            Center(
+                                                              child: _buildTypeCell(
+                                                                  "${transaction.type}"),
+                                                            ),
                                                             Center(
                                                               child: Padding(
                                                                 padding:
@@ -535,17 +733,8 @@ class _CustomerTransactionListScreenState
                                                                     ),
                                                                     onPressed:
                                                                         () {
-                                                                      invoiceProvider
-                                                                          .callDetailsOfTransaction(
-                                                                        id: transaction.id ??
-                                                                            0,
-                                                                        accessToken:
-                                                                            token ??
-                                                                                "",
-                                                                      );
-                                                                      sideBarController
-                                                                          .index
-                                                                          .value = 30;
+                                                                      _showTransactionDetails(
+                                                                          transaction);
                                                                     },
                                                                     constraints:
                                                                         const BoxConstraints(
