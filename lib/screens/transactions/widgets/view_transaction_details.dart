@@ -106,7 +106,7 @@ class ViewTransactionDetailsWidget extends StatelessWidget {
                     ),
                     BuildDetailRow(
                       title1: "Customer Name",
-                      content1: listTransaction?.userName ?? "",
+                      content1: listTransaction?.customerName ?? "",
                       title2: "Amount",
                       content2: listTransaction?.amount ?? "",
                     ),

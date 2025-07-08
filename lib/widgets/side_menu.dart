@@ -85,7 +85,7 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
 // Helper widget to preserve child state during parent rebuilds
 class _PreservedChild extends StatefulWidget {
   final Widget child;
-  
+
   const _PreservedChild({
     Key? key,
     required this.child,
@@ -95,7 +95,7 @@ class _PreservedChild extends StatefulWidget {
   _PreservedChildState createState() => _PreservedChildState();
 }
 
-class _PreservedChildState extends State<_PreservedChild> 
+class _PreservedChildState extends State<_PreservedChild>
     with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
@@ -302,11 +302,7 @@ class SideMenu extends StatelessWidget {
               onTapTitle2: () {
                 sideBarController.index.value = 47;
               },
-              onTapTitle3: () {
-                sideBarController.index.value = 23;
-              },
               listTitle1: "Invoice",
-              listTitle3: "Transactions",
               listTitle2: "Receipts",
               iconPath: ImageAssets.transactionIcon,
               title: 'Accounts',
@@ -319,7 +315,6 @@ class SideMenu extends StatelessWidget {
                   sideBarController.index.value == 30 ||
                   sideBarController.index.value == 31 ||
                   sideBarController.index.value == 32 ||
-                  sideBarController.index.value == 23 ||
                   sideBarController.index.value == 24 ||
                   sideBarController.index.value == 25 ||
                   sideBarController.index.value == 48 ||
@@ -331,14 +326,19 @@ class SideMenu extends StatelessWidget {
                 onTapTitle1: () {
                   sideBarController.index.value = 4;
                 },
+                onTapTitle2: () {
+                  sideBarController.index.value = 23;
+                },
                 listTitle1: "Supplier Transactions",
+                listTitle2: "Customer Transactions",
                 iconPath: ImageAssets.transactionIcon,
                 title: 'Transactions',
                 onTap: () {
                   sideBarController.index.value = 4;
                   // debugPrint(" 'Category',${sideBarController.index.value}");
                 },
-                selected: sideBarController.index.value == 4),
+                selected: sideBarController.index.value == 4 ||
+                    sideBarController.index.value == 23),
           ),
           Obx(
             () => DrawerListTile(
@@ -372,7 +372,7 @@ class SideMenu extends StatelessWidget {
               iconPath: ImageAssets.printIcon,
               title: 'Printer',
               onTap: () {
-                sideBarController.index.value = 53; 
+                sideBarController.index.value = 53;
               },
               selected: sideBarController.index.value == 53,
             ),
