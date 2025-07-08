@@ -331,6 +331,34 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               onToggle: () => _togglePaymentMethod('upi'),
             ),
 
+            const SizedBox(height: 10),
+
+            // Credit payment (cash = 0)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: CustomRoundButton(
+                title: "Credit",
+                fct: () {
+                  setState(() {
+                    // Credit implies cash selected with zero amount
+                    isCashSelected = true;
+                    isCardSelected = false;
+                    isUpiSelected = false;
+                    cashAmountController.text = "0";
+                    cardAmountController.clear();
+                    upiAmountController.clear();
+                    _calculateBalance();
+                  });
+                },
+                fontSize: FontSize.s13,
+                height: 38,
+                width: 120,
+                boxColor: ColorManager.kPrimaryColor,
+                borderColor: ColorManager.kPrimaryColor,
+                textColor: Colors.white,
+              ),
+            ),
+
             const SizedBox(height: 15),
 
             // Transaction Reference Field - Show only if Card or UPI is selected

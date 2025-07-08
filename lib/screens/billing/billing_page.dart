@@ -4229,8 +4229,7 @@ class BillingPageState extends State<BillingPage>
 
   List<String> _getSelectedPaymentMethods() {
     List<String> methods = [];
-    if (_isCashSelected &&
-        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
+    if (_isCashSelected) {
       methods.add("CASH");
     }
     if (_isCardSelected &&
@@ -4247,8 +4246,7 @@ class BillingPageState extends State<BillingPage>
   List<Map<String, dynamic>> _getPaidMethods() {
     List<Map<String, dynamic>> paidMethods = [];
 
-    if (_isCashSelected &&
-        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
+    if (_isCashSelected) {
       paidMethods.add({
         "method": "CASH",
         "amount": double.tryParse(_cashAmountController.text) ?? 0,
@@ -4389,8 +4387,7 @@ class BillingPageState extends State<BillingPage>
 
   IconData _getPaymentIcon() {
     List<String> activeMethods = [];
-    if (_isCashSelected &&
-        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
+    if (_isCashSelected) {
       activeMethods.add('Cash');
     }
     if (_isCardSelected &&
@@ -4416,8 +4413,7 @@ class BillingPageState extends State<BillingPage>
 
   String _getPaymentLabel() {
     List<String> activeMethods = [];
-    if (_isCashSelected &&
-        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
+    if (_isCashSelected) {
       activeMethods.add('Cash');
     }
     if (_isCardSelected &&
