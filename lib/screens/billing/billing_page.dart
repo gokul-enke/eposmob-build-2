@@ -17,6 +17,7 @@ import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
@@ -126,6 +127,7 @@ class BillingPageState extends State<BillingPage>
   bool isLoadingConfirmOrder = false;
   bool isLoadingSaveOrderAndPrint = false;
   bool isLoadingAddItem = false;
+  bool _isProcessingBarcode = false;
 
   // Add these variables for the new sidebar
   bool _isSidebarVisible = true;
@@ -148,6 +150,8 @@ class BillingPageState extends State<BillingPage>
 
   // Add flag to track if customer was manually selected
   bool _isCustomerManuallySelected = false;
+
+  StreamSubscription<String>? _barcodeSubscription;
 
   @override
   void initState() {
@@ -191,6 +195,15 @@ class BillingPageState extends State<BillingPage>
     // Initialize internet connectivity listener
     _initConnectivityListener();
 
+    // Listen to the barcode stream
+    final barcodeProvider =
+        Provider.of<BarcodeProvider>(context, listen: false);
+    _barcodeSubscription = barcodeProvider.barcodeStream.listen((barcode) {
+      if (mounted) {
+        processBarcode(barcode);
+      }
+    });
+
     // Listen for sales executive changes to update default customer
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final salesExecutiveProvider =
@@ -214,6 +227,7 @@ class BillingPageState extends State<BillingPage>
 
   @override
   void dispose() {
+    _barcodeSubscription?.cancel();
     barcodeController.dispose();
     mobileNumberTextController.dispose();
     coupenCodeTextController.dispose();
@@ -443,6 +457,121 @@ class BillingPageState extends State<BillingPage>
       } catch (e) {
         // debugPrint("Error handling key press: $e");
       }
+    }
+  }
+
+  Future<void> processBarcode(String barcode) async {
+    // If a barcode is already being processed, or if the input is empty, do nothing.
+    if (_isProcessingBarcode || barcode.isEmpty) {
+      return;
+    }
+
+    // Set the flag to true to prevent duplicate processing.
+    setState(() {
+      _isProcessingBarcode = true;
+    });
+    String query = barcode;
+
+    List<GetProduct> filteredProducts = [];
+    try {
+      String? prefix;
+      String? productCode;
+      String? lastFive;
+
+      if (query.length > 2) {
+        prefix = query.substring(0, 3); // First 3 digits;
+      }
+
+      if (prefix != '000' || query.length != 14) {
+        filteredProducts =
+            Provider.of<LocalProductProvider>(context, listen: false)
+                .filterProductByBarcode(
+          barCode: query,
+        );
+      } else {
+        productCode = query.substring(3, 9); // Next 6 digits
+        lastFive = query.substring(9, 14); // Last 5 digits
+        filteredProducts =
+            Provider.of<LocalProductProvider>(context, listen: false)
+                .filterProductByBarcode(
+          barCode: productCode,
+        );
+      }
+
+      if (filteredProducts.isNotEmpty) {
+        // Get the first product
+        GetProduct product = filteredProducts.first;
+
+        num? quantity;
+        if ((product.unit == 'KGS' || product.unit == 'KG') &&
+            prefix == '000' &&
+            query.length == 14) {
+          // Weight-based product
+          String weightKg = lastFive!.substring(0, 2); // First 2 digits = KG
+          String weightGrams =
+              lastFive.substring(2, 5); // Last 3 digits = Grams
+          quantity =
+              double.parse(weightKg) + (double.parse(weightGrams) / 1000);
+        } else if ((product.unit == 'PCS' || product.unit == 'PC') &&
+            prefix == '000' &&
+            query.length == 14) {
+          // Count-based product
+          quantity = int.parse(lastFive!); // Last 5 digits represent quantity
+        }
+
+        // Use centralized helper for stock handling
+        debugPrint("🛒 BARCODE SCAN - Calling ProductCartHelper with:");
+        debugPrint("  - Product: ${product.productName}");
+        debugPrint("  - Quantity: $quantity");
+        debugPrint("  - Customer ID: $selectedCustomerID");
+        debugPrint("  - Customer Name: ${selectedCustomer?.name}");
+
+        await ProductCartHelper.handleProductSelection(
+          context: context,
+          product: product,
+          quantity: quantity,
+          addToCartDirectly: true,
+          customerId: selectedCustomerID,
+          customerName: selectedCustomer?.name,
+        );
+
+        // Clear input fields
+        setState(() {
+          _autocompleteProductKey = GlobalKey();
+          quantityController.clear();
+          barcodeController.clear();
+          selectedProductIdController.clear();
+          unitPriceController.clear();
+        });
+        _focusTextField();
+      } else {
+        // Set dialog state to open
+        await showDialog(
+          context: context,
+          builder: (context) => AddProductWithBarcodeModal(barcode: query),
+        );
+        // Reset dialog state
+
+        barcodeController.clear();
+        _focusTextField();
+
+        debugPrint("No products found for barcode: $query");
+      }
+    } catch (e) {
+      debugPrint("Error adding item: $e");
+      showScaffoldError(
+        context: context,
+        message: "Invalid Barcode. Please try again.",
+      );
+    } finally {
+      // Reset the flag after a short delay to allow the UI to settle.
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          setState(() {
+            _isProcessingBarcode = false;
+          });
+        }
+      });
     }
   }
 
@@ -958,139 +1087,15 @@ class BillingPageState extends State<BillingPage>
                               focusNode: _barcodeNode,
                               readOnly:
                                   selectedProductNameController.text.isNotEmpty,
-                              onchanged: (query) async {
+                              onchanged: (query) {
                                 if (_debounce?.isActive ?? false) {
                                   _debounce!.cancel();
                                 }
                                 _debounce = Timer(
                                   const Duration(milliseconds: 500),
-                                  () async {
-                                    if (query != null) {
-                                      debugPrint("QUERY: ${query.length}");
-                                      final localProductProvider =
-                                          Provider.of<LocalProductProvider>(
-                                              context,
-                                              listen: false);
-
-                                      List<GetProduct> filteredProducts = [];
-                                      try {
-                                        String? prefix;
-                                        String? productCode;
-                                        String? lastFive;
-
-                                        if (query.length > 2) {
-                                          prefix = query.substring(
-                                              0, 3); // First 3 digits;
-                                        }
-
-                                        if (prefix != '000' ||
-                                            query.length != 14) {
-                                          filteredProducts =
-                                              Provider.of<LocalProductProvider>(
-                                                      context,
-                                                      listen: false)
-                                                  .filterProductByBarcode(
-                                            barCode: query,
-                                          );
-                                        } else {
-                                          productCode = query.substring(
-                                              3, 9); // Next 6 digits
-                                          lastFive = query.substring(
-                                              9, 14); // Last 5 digits
-                                          filteredProducts =
-                                              Provider.of<LocalProductProvider>(
-                                                      context,
-                                                      listen: false)
-                                                  .filterProductByBarcode(
-                                            barCode: productCode,
-                                          );
-                                        }
-
-                                        if (filteredProducts.isNotEmpty) {
-                                          // Get the first product
-                                          GetProduct product =
-                                              filteredProducts.first;
-
-                                          num? quantity;
-                                          if ((product.unit == 'KGS' ||
-                                                  product.unit == 'KG') &&
-                                              prefix == '000' &&
-                                              query.length == 14) {
-                                            // Weight-based product
-                                            String weightKg = lastFive!
-                                                .substring(0,
-                                                    2); // First 2 digits = KG
-                                            String weightGrams =
-                                                lastFive.substring(2,
-                                                    5); // Last 3 digits = Grams
-                                            quantity = double.parse(weightKg) +
-                                                (double.parse(weightGrams) /
-                                                    1000);
-                                          } else if ((product.unit == 'PCS' ||
-                                                  product.unit == 'PC') &&
-                                              prefix == '000' &&
-                                              query.length == 14) {
-                                            // Count-based product
-                                            quantity = int.parse(
-                                                lastFive!); // Last 5 digits represent quantity
-                                          }
-
-                                          // Use centralized helper for stock handling
-                                          debugPrint(
-                                              "🛒 BARCODE SCAN - Calling ProductCartHelper with:");
-                                          debugPrint(
-                                              "  - Product: ${product.productName}");
-                                          debugPrint("  - Quantity: $quantity");
-                                          debugPrint(
-                                              "  - Customer ID: $selectedCustomerID");
-                                          debugPrint(
-                                              "  - Customer Name: ${selectedCustomer?.name}");
-
-                                          await ProductCartHelper
-                                              .handleProductSelection(
-                                            context: context,
-                                            product: product,
-                                            quantity: quantity,
-                                            addToCartDirectly: true,
-                                            customerId: selectedCustomerID,
-                                            customerName:
-                                                selectedCustomer?.name,
-                                          );
-
-                                          // Clear input fields
-                                          setState(() {
-                                            _autocompleteProductKey =
-                                                GlobalKey();
-                                            quantityController.clear();
-                                            barcodeController.clear();
-                                            selectedProductIdController.clear();
-                                            unitPriceController.clear();
-                                          });
-                                          _focusTextField();
-                                        } else {
-                                          // Set dialog state to open
-                                          await showDialog(
-                                            context: context,
-                                            builder: (context) =>
-                                                AddProductWithBarcodeModal(
-                                                    barcode: query),
-                                          );
-                                          // Reset dialog state
-
-                                          barcodeController.clear();
-                                          _focusTextField();
-
-                                          debugPrint(
-                                              "No products found for barcode: $query");
-                                        }
-                                      } catch (e) {
-                                        debugPrint("Error adding item: $e");
-                                        showScaffoldError(
-                                          context: context,
-                                          message:
-                                              "Invalid Barcode. Please try again.",
-                                        );
-                                      }
+                                  () {
+                                    if (query != null && query.isNotEmpty) {
+                                      processBarcode(query);
                                     }
                                   },
                                 );
