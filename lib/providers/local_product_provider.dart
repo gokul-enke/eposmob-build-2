@@ -46,6 +46,8 @@ class SavedOrder {
   final String? deliveryMethodId;
   final String? carNumber;
   final String? status;
+  final String? deliveryDate; // Added for local persistence
+  final String? deliveryTime; // Added for local persistence
 
   SavedOrder({
     required this.id,
@@ -67,6 +69,8 @@ class SavedOrder {
     this.deliveryMethodId,
     this.carNumber,
     this.status,
+    this.deliveryDate, // Added to constructor
+    this.deliveryTime, // Added to constructor
   });
 }
 
@@ -237,6 +241,8 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryMethodId: hiveSavedOrder.deliveryMethodId,
           carNumber: hiveSavedOrder.carNumber,
           status: hiveSavedOrder.status,
+          deliveryDate: hiveSavedOrder.deliveryDate, // Restore delivery date
+          deliveryTime: hiveSavedOrder.deliveryTime, // Restore delivery time
         ));
       }
       notifyListeners();
@@ -296,6 +302,8 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryMethodId: order.deliveryMethodId,
           carNumber: order.carNumber,
           status: order.status,
+          deliveryDate: order.deliveryDate,
+          deliveryTime: order.deliveryTime,
         );
 
         _confirmedOrdersBox.add(hiveSavedOrder);
@@ -386,6 +394,8 @@ class LocalProductProvider extends ChangeNotifier {
         deliveryMethodId: hiveSavedOrder.deliveryMethodId,
         carNumber: hiveSavedOrder.carNumber,
         status: hiveSavedOrder.status,
+        deliveryDate: hiveSavedOrder.deliveryDate, // Restore delivery date
+        deliveryTime: hiveSavedOrder.deliveryTime, // Restore delivery time
       ));
     }
     notifyListeners();
@@ -473,6 +483,8 @@ class LocalProductProvider extends ChangeNotifier {
         deliveryMethodId: order.deliveryMethodId,
         carNumber: order.carNumber,
         status: order.status,
+        deliveryDate: order.deliveryDate,
+        deliveryTime: order.deliveryTime,
       );
 
       _savedOrdersBox.add(hiveSavedOrder);
@@ -1333,6 +1345,8 @@ class LocalProductProvider extends ChangeNotifier {
     String? deliveryMethodId,
     String? carNumber,
     String? status,
+    String? deliveryDate, // Add deliveryDate
+    String? deliveryTime, // Add deliveryTime
   }) {
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as confirmed order");
@@ -1379,6 +1393,8 @@ class LocalProductProvider extends ChangeNotifier {
       deliveryMethodId: deliveryMethodId,
       carNumber: carNumber,
       status: status ?? "confirmed", // Default to "confirmed" if not provided
+      deliveryDate: deliveryDate, // Pass deliveryDate
+      deliveryTime: deliveryTime, // Pass deliveryTime
     );
 
     // Add to confirmed orders list
@@ -1420,6 +1436,8 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryMethodId: order.deliveryMethodId,
           carNumber: order.carNumber,
           status: order.status ?? "confirmed",
+          deliveryDate: order.deliveryDate, // Store deliveryDate in Hive
+          deliveryTime: order.deliveryTime, // Store deliveryTime in Hive
         );
 
         // Add to confirmed orders
@@ -1494,6 +1512,8 @@ class LocalProductProvider extends ChangeNotifier {
     String? deliveryMethodId,
     String? carNumber,
     String? status,
+    String? deliveryDate, // Add deliveryDate
+    String? deliveryTime, // Add deliveryTime
   }) {
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder called");
     debugPrint("  - Customer Phone parameter: '$customerPhone'");
@@ -1545,6 +1565,8 @@ class LocalProductProvider extends ChangeNotifier {
       deliveryMethodId: deliveryMethodId,
       carNumber: carNumber,
       status: status ?? "saved", // Default to "saved" for regular orders
+      deliveryDate: deliveryDate, // Pass deliveryDate
+      deliveryTime: deliveryTime, // Pass deliveryTime
     );
 
     // Add to saved orders list
@@ -1636,6 +1658,8 @@ class LocalProductProvider extends ChangeNotifier {
     String? deliveryMethodId,
     String? carNumber,
     String? status,
+    String? deliveryDate, // Add deliveryDate
+    String? deliveryTime, // Add deliveryTime
   }) {
     debugPrint("💾 LOCAL PROVIDER - updateSavedOrder called");
     debugPrint("  - Order ID: $orderId");
@@ -1684,6 +1708,8 @@ class LocalProductProvider extends ChangeNotifier {
         deliveryMethodId: deliveryMethodId ?? _savedOrders[index].deliveryMethodId,
         carNumber: carNumber ?? _savedOrders[index].carNumber,
         status: status ?? _savedOrders[index].status,
+        deliveryDate: deliveryDate ?? _savedOrders[index].deliveryDate, // Update deliveryDate
+        deliveryTime: deliveryTime ?? _savedOrders[index].deliveryTime, // Update deliveryTime
       );
 
       // Update in list

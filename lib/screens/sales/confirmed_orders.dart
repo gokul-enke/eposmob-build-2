@@ -7,6 +7,7 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -116,17 +117,24 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                                 icon: const Icon(Icons.print,
                                                     size: 18),
                                                 padding: EdgeInsets.zero,
-                                                constraints: const BoxConstraints(),
-                                                onPressed: () => _printOrder(order),
-                                                color: ColorManager.kPrimaryColor,
+                                                constraints:
+                                                    const BoxConstraints(),
+                                                onPressed: () =>
+                                                    _printOrder(order),
+                                                color:
+                                                    ColorManager.kPrimaryColor,
                                               ),
                                               const SizedBox(width: 8),
                                               IconButton(
-                                                icon: const Icon(Icons.delete_outline,
+                                                icon: const Icon(
+                                                    Icons.delete_outline,
                                                     size: 18),
                                                 padding: EdgeInsets.zero,
-                                                constraints: const BoxConstraints(),
-                                                onPressed: () => _showDeleteConfirmationDialog(context, order),
+                                                constraints:
+                                                    const BoxConstraints(),
+                                                onPressed: () =>
+                                                    _showDeleteConfirmationDialog(
+                                                        context, order),
                                                 color: ColorManager.kButtonRed,
                                               ),
                                             ],
@@ -157,6 +165,34 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                           ),
                                         ],
                                       ),
+                                      // Display Delivery Date (optional)
+                                      if (order.deliveryDate != null &&
+                                          order.deliveryDate!.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Delivery Date: ${DateHelper.formatISODate(order.deliveryDate!)}',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s10,
+                                            0.21,
+                                            Colors.grey.shade700,
+                                          ),
+                                        ),
+                                      ],
+                                      // Display Delivery Time (optional)
+                                      if (order.deliveryTime != null &&
+                                          order.deliveryTime!.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Delivery Time: ${order.deliveryTime!}',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s10,
+                                            0.21,
+                                            Colors.grey.shade700,
+                                          ),
+                                        ),
+                                      ],
                                       const Spacer(),
                                       Row(
                                         mainAxisAlignment:
@@ -224,11 +260,11 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
         double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
         double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
         double itemTotalPrice = itemPrice * item.quantity;
-        
+
         // Add to totals for "You Saved" calculation
         totalMRP += itemMrp * item.quantity;
         netTotal += itemTotalPrice;
-        
+
         cartItems.add({
           'productName': item.product.productName ?? 'Unknown',
           'mrp': itemMrp.toString(),
@@ -254,7 +290,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             storeName: "SOUQ POINT",
             cartItems: cartItems,
             formattedTotal: netTotal.toString(), // Use calculated net total
-            savedTotal: youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
+            savedTotal:
+                youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
             orderDate: order.createdAt,
             orderNumber: order.orderNumber,
             isFromLocalStorage: true,
@@ -283,13 +320,15 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       context: context,
       title: "Delete Confirmed Order",
       itemName: order.orderNumber,
-      message: "This confirmed order will be permanently removed from your local storage. This action cannot be undone.",
+      message:
+          "This confirmed order will be permanently removed from your local storage. This action cannot be undone.",
       warningIcon: Icons.receipt_long_outlined,
       warningIconColor: ColorManager.kButtonRed,
       deleteButtonText: "Delete",
       onDelete: () {
         // Delete the confirmed order from local storage
-        final provider = Provider.of<LocalProductProvider>(context, listen: false);
+        final provider =
+            Provider.of<LocalProductProvider>(context, listen: false);
         provider.deleteConfirmedOrder(order.id);
 
         // Show success message
@@ -509,15 +548,17 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
         String? paidAmount = order.paidAmount;
         List<String>? paymentMethods;
         List<Map<String, dynamic>>? paidMethods;
-        
+
         if (paymentMethod != null && paymentMethod.startsWith('{')) {
           try {
             Map<String, dynamic> multiPaymentData = json.decode(paymentMethod);
             if (multiPaymentData['isMultiPayment'] == true) {
               // Extract multi-payment data
-              paymentMethods = List<String>.from(multiPaymentData['methods'] ?? []);
-              Map<String, dynamic> amounts = Map<String, dynamic>.from(multiPaymentData['amounts'] ?? {});
-              
+              paymentMethods =
+                  List<String>.from(multiPaymentData['methods'] ?? []);
+              Map<String, dynamic> amounts =
+                  Map<String, dynamic>.from(multiPaymentData['amounts'] ?? {});
+
               paidMethods = [];
               if (amounts['CASH'] != null && amounts['CASH'] != "0") {
                 paidMethods.add({
@@ -537,7 +578,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                   "amount": double.tryParse(amounts['UPI']) ?? 0,
                 });
               }
-              
+
               // For multi-payment, set single payment fields to null
               paymentMethod = null;
               paidAmount = null;
@@ -553,7 +594,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           paymentMethod = order.paymentMethod ?? "CASH";
           paidAmount = order.paidAmount ?? order.total.toString();
         }
-        
+
         // Call API to add order and WAIT for completion
         final cartProvider = Provider.of<CartProvider>(context, listen: false);
         final response = await cartProvider.addToOrderAPI(
@@ -572,7 +613,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           balanceAmount: order.balanceAmount ?? "0.0",
           couponId: order.couponId,
           comment: order.comment,
-          deliveryMethodId: order.deliveryMethodId ?? "1", // Use stored delivery method or default
+          deliveryMethodId: order.deliveryMethodId ??
+              "1", // Use stored delivery method or default
           carNumber: order.carNumber,
           status: order.status ?? "confirmed",
         );

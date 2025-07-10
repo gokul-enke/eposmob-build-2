@@ -153,6 +153,9 @@ class BillingPageState extends State<BillingPage>
 
   StreamSubscription<String>? _barcodeSubscription;
 
+  String? deliveryDate;
+  String? deliveryTime;
+
   @override
   void initState() {
     super.initState();
@@ -916,6 +919,8 @@ class BillingPageState extends State<BillingPage>
                       customerPhone: selectedCustomerPhone ?? mobileNumberText,
                       comment: _commentController.text,
                       deliveryMethod: deliveryMethod,
+                      deliveryDate: deliveryDate, // Pass deliveryDate
+                      deliveryTime: deliveryTime, // Pass deliveryTime
                     );
 
                     // Show quick feedback
@@ -929,7 +934,10 @@ class BillingPageState extends State<BillingPage>
                 } // If cart has items, save as new order
                 else if (localProductProvider.cartItems.isNotEmpty) {
                   try {
-                    localProductProvider.saveCurrentCartAsOrder();
+                    localProductProvider.saveCurrentCartAsOrder(
+                      deliveryDate: deliveryDate, // Pass deliveryDate
+                      deliveryTime: deliveryTime, // Pass deliveryTime
+                    );
                     showScaffold(
                       context: context,
                       message: "Order Saved Successfully",
@@ -2615,7 +2623,6 @@ class BillingPageState extends State<BillingPage>
         _transactionNumberController.clear();
         _paidAmountController.clear();
         _balanceAmount = 0;
-
         // Reset multi-payment fields
         _isCashSelected = true;
         _isCardSelected = false;
@@ -2630,6 +2637,9 @@ class BillingPageState extends State<BillingPage>
         unitPriceController.clear();
         isCouponApplied = false;
         _isCustomerManuallySelected = false;
+        // Clear delivery date and time
+        deliveryDate = null;
+        deliveryTime = null;
       });
       showScaffold(
         context: context,
@@ -2789,6 +2799,8 @@ class BillingPageState extends State<BillingPage>
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
           status: "saved",
+          deliveryDate: deliveryDate, // Pass deliveryDate
+          deliveryTime: deliveryTime, // Pass deliveryTime
         );
 
         showScaffold(
@@ -2887,6 +2899,8 @@ class BillingPageState extends State<BillingPage>
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
           status: "saved",
+          deliveryDate: deliveryDate, // Pass deliveryDate
+          deliveryTime: deliveryTime, // Pass deliveryTime
         );
 
         showScaffold(
@@ -2927,6 +2941,8 @@ class BillingPageState extends State<BillingPage>
         _cashAmountController.clear();
         _cardAmountController.clear();
         _upiAmountController.clear();
+        deliveryDate = null;
+        deliveryTime = null;
       });
 
       resetAutocomplete(
@@ -3092,6 +3108,8 @@ class BillingPageState extends State<BillingPage>
             deliveryMethodId: deliveryMethodId,
             carNumber: _carNumberController.text,
             status: "confirmed",
+            deliveryDate: deliveryDate, // Pass deliveryDate
+            deliveryTime: deliveryTime, // Pass deliveryTime
           );
 
           showScaffold(
@@ -3181,6 +3199,8 @@ class BillingPageState extends State<BillingPage>
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
           status: "confirmed",
+          deliveryDate: deliveryDate, // Pass deliveryDate
+          deliveryTime: deliveryTime, // Pass deliveryTime
         );
 
         showScaffold(
@@ -3221,6 +3241,8 @@ class BillingPageState extends State<BillingPage>
         _commentController.clear();
         _isCustomerManuallySelected =
             false; // Reset manual selection after save
+        deliveryDate = null;
+        deliveryTime = null;
       });
 
       resetAutocomplete(
@@ -3575,7 +3597,7 @@ class BillingPageState extends State<BillingPage>
             if (currentOrder.paymentMethod!.startsWith('{')) {
               try {
                 Map<String, dynamic> multiPaymentData =
-                    json.decode(currentOrder.paymentMethod!);
+                    json.decode(currentOrder.paymentMethod!); // Use json.decode here
                 if (multiPaymentData['isMultiPayment'] == true) {
                   List<String> methods =
                       List<String>.from(multiPaymentData['methods'] ?? []);
@@ -3603,13 +3625,15 @@ class BillingPageState extends State<BillingPage>
                     _isUpiSelected = true;
                     _upiAmountController.text = amounts['UPI'] ?? "0";
                   }
-
-                  // Clear iconColor for multi-payment
-                  // iconColor = 0; // DELETE THIS LINE
+                } else {
+                  // If it's a JSON string but not marked as multiPayment, treat as single
+                  _isCashSelected = true;
+                  _isCardSelected = false;
+                  _isUpiSelected = false;
                 }
               } catch (e) {
                 debugPrint("Error parsing multi-payment data: $e");
-                // Fall back to single payment method
+                // Fall back to single payment method if parsing fails
                 switch (currentOrder.paymentMethod?.toUpperCase()) {
                   case "CASH":
                     _isCashSelected = true;
@@ -3658,14 +3682,15 @@ class BillingPageState extends State<BillingPage>
             }
           } else {
             // Default to cash if no payment method
-            // iconColor = 1; // DELETE THIS LINE
+            _isCashSelected = true;
+            _isCardSelected = false;
+            _isUpiSelected = false;
           }
 
-          // Restore payment amounts
+          // Restore payment amounts (for single payment, this will set the primary controller)
           _paidAmountController.text = currentOrder.paidAmount ?? "0.0";
           _balanceAmount =
               double.tryParse(currentOrder.balanceAmount ?? "0.0") ?? 0.0;
-// Mark as user-set to prevent auto-update
 
           // For single payment methods, also populate the individual payment controllers
           if (!currentOrder.paymentMethod!.startsWith('{')) {
@@ -3694,6 +3719,10 @@ class BillingPageState extends State<BillingPage>
           // Restore comments and car number
           _commentController.text = currentOrder.comment ?? "";
           _carNumberController.text = currentOrder.carNumber ?? "";
+
+          // Restore delivery date and time
+          deliveryDate = currentOrder.deliveryDate;
+          deliveryTime = currentOrder.deliveryTime;
 
           // Restore coupon if any
           if (currentOrder.couponId != null &&
@@ -3889,6 +3918,8 @@ class BillingPageState extends State<BillingPage>
         deliveryMethodId: deliveryMethodId,
         carNumber: _carNumberController.text,
         status: "confirmed",
+        deliveryDate: deliveryDate,
+        deliveryTime: deliveryTime,
       )
           .then((response) async {
         debugPrint(
@@ -3969,6 +4000,8 @@ class BillingPageState extends State<BillingPage>
             _balanceAmount = 0;
             _carNumberController.clear();
             _commentController.clear();
+            deliveryDate = null;
+            deliveryTime = null;
           });
           resetAutocomplete(
               shouldFetchCustomers:
@@ -4137,6 +4170,8 @@ class BillingPageState extends State<BillingPage>
         deliveryMethodId: deliveryMethodId,
         carNumber: _carNumberController.text,
         status: "confirmed",
+        deliveryDate: deliveryDate,
+        deliveryTime: deliveryTime,
       )
           .then((response) {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
@@ -4175,6 +4210,8 @@ class BillingPageState extends State<BillingPage>
             _balanceAmount = 0;
             _carNumberController.clear();
             _commentController.clear();
+            deliveryDate = null;
+            deliveryTime = null;
           });
           resetAutocomplete(
               shouldFetchCustomers:
@@ -4509,12 +4546,17 @@ class BillingPageState extends State<BillingPage>
         initialDeliveryMethodId: deliveryMethodId,
         initialCarNumber: _carNumberController.text,
         initialComment: _commentController.text,
-        onDeliveryMethodSelected: (method, methodId, carNumber, comment) {
+        initialDeliveryDate: deliveryDate,
+        initialDeliveryTime: deliveryTime,
+        onDeliveryMethodSelected:
+            (method, methodId, carNumber, comment, selectedDate, selectedTime) {
           setState(() {
             deliveryMethod = method;
             deliveryMethodId = methodId;
             _carNumberController.text = carNumber;
             _commentController.text = comment;
+            deliveryDate = selectedDate;
+            deliveryTime = selectedTime;
           });
         },
       ),
@@ -4802,6 +4844,9 @@ class BillingPageState extends State<BillingPage>
       _paidAmountController.clear();
       _carNumberController.clear();
       _commentController.clear();
+
+      deliveryDate = null;
+      deliveryTime = null;
 
       // Reset other flags
       isCouponApplied = false;

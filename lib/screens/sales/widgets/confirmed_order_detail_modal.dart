@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -9,6 +10,7 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'dart:convert'; // Added for json.decode
 
 class ConfirmedOrderDetailModal extends StatelessWidget {
   final SavedOrder order;
@@ -54,7 +56,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header with close button
+            // Header with close button (Fixed at top)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -74,21 +76,90 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Order Information Card
-            Card(
-              elevation: 2,
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: Colors.grey[300]!),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+            // Scrollable content
+            Expanded(
+              child: SingleChildScrollView(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Order Information Card
+                    Card(
+                      elevation: 2,
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Order Information",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildInfoRow(
+                                "Order Number", "#${order.orderNumber}"),
+                            const SizedBox(height: 8),
+                            _buildInfoRow(
+                                "Customer Phone", order.customerPhone ?? "N/A"),
+                            const SizedBox(height: 8),
+                            _buildInfoRow(
+                                "Date", _formatDateTime(order.createdAt)),
+                            const SizedBox(height: 8),
+                            _buildInfoRow("Time", _formatTime(order.createdAt)),
+                            const SizedBox(height: 8),
+                            _buildInfoRow("Total Amount",
+                                "₹${order.total.toStringAsFixed(2)}"),
+                            const SizedBox(height: 8),
+                            _buildInfoRow("Total MRP",
+                                "₹${_calculateTotalMRP().toStringAsFixed(2)}"),
+                            const SizedBox(height: 8),
+                            _buildInfoRow("You Saved",
+                                "₹${_calculateYouSaved().toStringAsFixed(2)}",
+                                valueStyle: const TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600,
+                                )),
+                            // Display Payment Method(s)
+                            if (order.paymentMethod != null) ...[
+                              const SizedBox(height: 8),
+                              ConfirmedOrderDetailModal._buildPaymentMethodInfo(order.paymentMethod!),
+                            ],
+                            if (order.deliveryDate != null &&
+                                order.deliveryDate!.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              _buildInfoRow(
+                                  "Delivery Date",
+                                  DateHelper.formatISODate(
+                                      order.deliveryDate!)),
+                            ],
+                            if (order.deliveryTime != null &&
+                                order.deliveryTime!.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              _buildInfoRow(
+                                  "Delivery Time", order.deliveryTime!),
+                            ],
+                            if (order.comment != null &&
+                                order.comment!.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              _buildInfoRow("Comment", order.comment!),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Order Items Section
                     const Text(
-                      "Order Information",
+                      "Order Items",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -96,108 +167,73 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildInfoRow("Order Number", "#${order.orderNumber}"),
-                    const SizedBox(height: 8),
-                    _buildInfoRow("Customer Phone", order.customerPhone ?? "N/A"),
-                    const SizedBox(height: 8),
-                    _buildInfoRow("Date", _formatDateTime(order.createdAt)),
-                    const SizedBox(height: 8),
-                    _buildInfoRow("Time", _formatTime(order.createdAt)),
-                    const SizedBox(height: 8),
-                    _buildInfoRow("Total Amount", "₹${order.total.toStringAsFixed(2)}"),
-                    const SizedBox(height: 8),
-                    _buildInfoRow("Total MRP", "₹${_calculateTotalMRP().toStringAsFixed(2)}"),
-                    const SizedBox(height: 8),
-                    _buildInfoRow("You Saved", "₹${_calculateYouSaved().toStringAsFixed(2)}", 
-                        valueStyle: const TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.w600,
-                        )),
-                    if (order.comment != null && order.comment!.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      _buildInfoRow("Comment", order.comment!),
-                    ],
+
+                    // Table with order items (now scrolls with everything else)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: DataTable(
+                          headingTextStyle: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                          dataTextStyle: const TextStyle(
+                            color: Colors.black,
+                          ),
+                          horizontalMargin: 16,
+                          columnSpacing: 24,
+                          columns: const [
+                            DataColumn(label: Text('Product')),
+                            DataColumn(label: Text('Qty'), numeric: true),
+                            DataColumn(
+                                label: Text('Unit Price'), numeric: true),
+                            DataColumn(label: Text('Total'), numeric: true),
+                          ],
+                          rows: order.items.map((item) {
+                            double unitPrice =
+                                item.price ?? item.product.price?.price ?? 0.0;
+                            double totalPrice = unitPrice * item.quantity;
+
+                            return DataRow(cells: [
+                              DataCell(Text(
+                                item.product.productName ?? 'Unknown Product',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black,
+                                ),
+                              )),
+                              DataCell(Text(
+                                item.quantity.toString(),
+                                style: const TextStyle(color: Colors.black),
+                              )),
+                              DataCell(Text(
+                                "₹${unitPrice.toStringAsFixed(2)}",
+                                style: const TextStyle(color: Colors.black),
+                              )),
+                              DataCell(Text(
+                                "₹${totalPrice.toStringAsFixed(2)}",
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              )),
+                            ]);
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 24),
 
-            // Order Items Section
-            const Text(
-              "Order Items",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Table with order items
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      headingTextStyle: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                      dataTextStyle: const TextStyle(
-                        color: Colors.black,
-                      ),
-                      horizontalMargin: 16,
-                      columnSpacing: 24,
-                      columns: const [
-                        DataColumn(label: Text('Product')),
-                        DataColumn(label: Text('Qty'), numeric: true),
-                        DataColumn(label: Text('Unit Price'), numeric: true),
-                        DataColumn(label: Text('Total'), numeric: true),
-                      ],
-                      rows: order.items.map((item) {
-                        double unitPrice = item.price ?? item.product.price?.price ?? 0.0;
-                        double totalPrice = unitPrice * item.quantity;
-                        
-                        return DataRow(cells: [
-                          DataCell(Text(
-                            item.product.productName ?? 'Unknown Product',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black,
-                            ),
-                          )),
-                          DataCell(Text(
-                            item.quantity.toString(),
-                            style: const TextStyle(color: Colors.black),
-                          )),
-                          DataCell(Text(
-                            "₹${unitPrice.toStringAsFixed(2)}",
-                            style: const TextStyle(color: Colors.black),
-                          )),
-                          DataCell(Text(
-                            "₹${totalPrice.toStringAsFixed(2)}",
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          )),
-                        ]);
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Action Buttons
+            // Action Buttons (Fixed at bottom)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -242,7 +278,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, {TextStyle? valueStyle}) {
+  static Widget _buildInfoRow(String label, String value, {TextStyle? valueStyle}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -259,23 +295,24 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
         Expanded(
           child: Text(
             value,
-            style: valueStyle ?? const TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.w600,
-            ),
+            style: valueStyle ??
+                const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
         ),
       ],
     );
   }
 
-  String _formatDateTime(String isoDateString) {
+  static String _formatDateTime(String isoDateString) {
     final DateTime dateTime = DateTime.parse(isoDateString);
     final DateFormat formatter = DateFormat('MMM dd, yyyy');
     return formatter.format(dateTime);
   }
 
-  String _formatTime(String isoDateString) {
+  static String _formatTime(String isoDateString) {
     final DateTime dateTime = DateTime.parse(isoDateString);
     final DateFormat formatter = DateFormat('hh:mm a');
     return formatter.format(dateTime);
@@ -293,11 +330,11 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
         double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
         double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
         double itemTotalPrice = itemPrice * item.quantity;
-        
+
         // Add to totals for "You Saved" calculation
         totalMRP += itemMrp * item.quantity;
         netTotal += itemTotalPrice;
-        
+
         cartItems.add({
           'productName': item.product.productName ?? 'Unknown',
           'mrp': itemMrp.toString(),
@@ -323,7 +360,8 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
             storeName: "SOUQ POINT",
             cartItems: cartItems,
             formattedTotal: netTotal.toString(), // Use calculated net total
-            savedTotal: youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
+            savedTotal:
+                youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
             orderDate: order.createdAt,
             orderNumber: order.orderNumber,
             isFromLocalStorage: true,
@@ -346,13 +384,15 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
       context: context,
       title: "Delete Confirmed Order",
       itemName: order.orderNumber,
-      message: "This confirmed order will be permanently removed from your local storage. This action cannot be undone.",
+      message:
+          "This confirmed order will be permanently removed from your local storage. This action cannot be undone.",
       warningIcon: Icons.receipt_long_outlined,
       warningIconColor: ColorManager.kButtonRed,
       deleteButtonText: "Delete",
       onDelete: () {
         // Delete the confirmed order from local storage
-        final provider = Provider.of<LocalProductProvider>(context, listen: false);
+        final provider =
+            Provider.of<LocalProductProvider>(context, listen: false);
         provider.deleteConfirmedOrder(order.id);
 
         // Close the modal first
@@ -366,4 +406,39 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
       },
     );
   }
-} 
+
+  static Widget _buildPaymentMethodInfo(String paymentMethodJsonOrString) {
+    try {
+      if (paymentMethodJsonOrString.startsWith('{') &&
+          paymentMethodJsonOrString.endsWith('}')) {
+        final Map<String, dynamic> multiPaymentData =
+            json.decode(paymentMethodJsonOrString);
+        if (multiPaymentData['isMultiPayment'] == true) {
+          final Map<String, dynamic> amounts =
+              Map<String, dynamic>.from(multiPaymentData['amounts'] ?? {});
+          
+          List<Widget> methodWidgets = [];
+          amounts.forEach((method, amount) {
+            methodWidgets.add(
+              _buildInfoRow(
+                "$method",
+                "₹${double.tryParse(amount.toString())?.toStringAsFixed(2) ?? "0.00"}",
+              ),
+            );
+          });
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildInfoRow("Payment Method(s)", ""), // Main label for multi-payment
+              ...methodWidgets,
+            ],
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error parsing payment method JSON: $e");
+    }
+    // Fallback for single payment method or parsing error
+    return _buildInfoRow("Payment Method", paymentMethodJsonOrString);
+  }
+}

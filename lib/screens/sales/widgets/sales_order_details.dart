@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/print/print.dart';
@@ -128,6 +129,66 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                                 FontSize.s20, 0.30, ColorManager.textColor),
                         overflow: TextOverflow.ellipsis, // Handle overflow
                       ),
+                      // Delivery Date/Time if present
+                      if (orderDetailsModelData?.orderProps != null) ...[
+                        Builder(
+                          builder: (context) {
+                            final dateProp =
+                                orderDetailsModelData!.orderProps!.firstWhere(
+                              (prop) =>
+                                  prop.propsCode?.toUpperCase() ==
+                                  'DELIVERY_DATE',
+                              orElse: () => OrderDetailsModelDataOrderProp(
+                                  propsId: null,
+                                  propsCode: null,
+                                  propsValue: null),
+                            );
+                            final timeProp =
+                                orderDetailsModelData!.orderProps!.firstWhere(
+                              (prop) =>
+                                  prop.propsCode?.toUpperCase() ==
+                                  'DELIVERY_TIME',
+                              orElse: () => OrderDetailsModelDataOrderProp(
+                                  propsId: null,
+                                  propsCode: null,
+                                  propsValue: null),
+                            );
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (dateProp.propsCode != null &&
+                                    dateProp.propsValue != null &&
+                                    dateProp.propsValue!.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4.0),
+                                    child: Text(
+                                      'Delivery Date: 	${DateHelper.formatISODate(dateProp.propsValue!)}',
+                                      style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s14,
+                                          0.21,
+                                          ColorManager.textColor),
+                                    ),
+                                  ),
+                                if (timeProp.propsCode != null &&
+                                    timeProp.propsValue != null &&
+                                    timeProp.propsValue!.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2.0),
+                                    child: Text(
+                                      'Delivery Time: 	${timeProp.propsValue}',
+                                      style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s14,
+                                          0.21,
+                                          ColorManager.textColor),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 10),
                       _buildOrderDetails(),
                       const SizedBox(height: 10),

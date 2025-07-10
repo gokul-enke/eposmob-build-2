@@ -2,19 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/components/build_calendar_selection.dart';
 
 class DeliveryMethodModal extends StatefulWidget {
   final String initialDeliveryMethod;
   final String initialDeliveryMethodId;
   final String initialCarNumber;
   final String initialComment;
-  final Function(String, String, String, String) onDeliveryMethodSelected;
+  final String? initialDeliveryDate;
+  final String? initialDeliveryTime;
+  final Function(String, String, String, String, String?, String?)
+      onDeliveryMethodSelected;
 
   const DeliveryMethodModal({
     Key? key,
@@ -22,6 +27,8 @@ class DeliveryMethodModal extends StatefulWidget {
     required this.initialDeliveryMethodId,
     required this.initialCarNumber,
     required this.initialComment,
+    this.initialDeliveryDate,
+    this.initialDeliveryTime,
     required this.onDeliveryMethodSelected,
   }) : super(key: key);
 
@@ -34,6 +41,8 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
   late String deliveryMethodId;
   late TextEditingController carNumberController;
   late TextEditingController commentController;
+  DateTime? selectedDeliveryDate;
+  TimeOfDay? selectedDeliveryTime;
 
   @override
   void initState() {
@@ -42,6 +51,18 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
     deliveryMethodId = widget.initialDeliveryMethodId;
     carNumberController = TextEditingController(text: widget.initialCarNumber);
     commentController = TextEditingController(text: widget.initialComment);
+    if (widget.initialDeliveryDate != null &&
+        widget.initialDeliveryDate!.isNotEmpty) {
+      selectedDeliveryDate = DateTime.tryParse(widget.initialDeliveryDate!);
+    }
+    if (widget.initialDeliveryTime != null &&
+        widget.initialDeliveryTime!.isNotEmpty) {
+      final parts = widget.initialDeliveryTime!.split(":");
+      if (parts.length >= 2) {
+        selectedDeliveryTime =
+            TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+      }
+    }
   }
 
   @override
@@ -133,6 +154,36 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                     );
                   }).toList(),
                 ),
+                if (Provider.of<AppSettingsProvider>(context, listen: false)
+                    .appSettings!
+                    .askDeliveryDate) ...[
+                  const SizedBox(height: 20),
+                  // Delivery Date (optional)
+                  Text('Delivery Date (optional)',
+                      style: buildCustomStyle(FontWeightManager.medium,
+                          FontSize.s12, 0.12, Colors.black)),
+                  CalendarPickerTableCell(
+                    initialDate: selectedDeliveryDate,
+                    onDateSelected: (date) {
+                      setState(() {
+                        selectedDeliveryDate = date;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  // Delivery Time (optional)
+                  Text('Delivery Time (optional)',
+                      style: buildCustomStyle(FontWeightManager.medium,
+                          FontSize.s12, 0.12, Colors.black)),
+                  TimePickerTableCell(
+                    initialTime: selectedDeliveryTime,
+                    onTimeSelected: (time) {
+                      setState(() {
+                        selectedDeliveryTime = time;
+                      });
+                    },
+                  ),
+                ],
                 const SizedBox(height: 20),
                 if (deliveryMethod == "Car Delivery") ...[
                   buildColumnWidgetForTextFields(
@@ -170,6 +221,12 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                       deliveryMethodId,
                       carNumberController.text,
                       commentController.text,
+                      selectedDeliveryDate != null
+                          ? selectedDeliveryDate!.toIso8601String()
+                          : '',
+                      selectedDeliveryTime != null
+                          ? selectedDeliveryTime!.format(context)
+                          : '',
                     );
                     Navigator.of(context).pop();
                   },

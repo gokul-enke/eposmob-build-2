@@ -101,6 +101,12 @@ class HiveSavedOrder extends HiveObject {
   @HiveField(17)
   final String? status;
 
+  @HiveField(18)
+  final String? deliveryDate;
+
+  @HiveField(19)
+  final String? deliveryTime;
+
   HiveSavedOrder({
     required this.id,
     required this.orderNumber,
@@ -121,6 +127,8 @@ class HiveSavedOrder extends HiveObject {
     this.deliveryMethodId,
     this.carNumber,
     this.status,
+    this.deliveryDate,
+    this.deliveryTime,
   });
 }
 
