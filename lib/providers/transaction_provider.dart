@@ -248,144 +248,108 @@ class TransactionProvider extends ChangeNotifier {
   // Safe integer parsing with default value
   int _safeParseInt(dynamic value, {int defaultValue = 0}) {
     if (value == null) return defaultValue;
-    if (value is int) return value;
-    if (value is String) {
-      try {
-        return int.parse(value);
-      } catch (e) {
-        return defaultValue;
-      }
-    }
-    return defaultValue;
-  }
-
-  /// Batch-based fetch for all transactions (like product fetch)
-  Future<void> fetchAllTransactionsBatch({String? filterName, String? filterType}) async {
-    List<TransactionModel> allTransactions = [];
-    int currentPage = 1;
-    _transactionIsLoading = true;
-    notifyListeners();
     try {
-      while (true) {
-        final queryParams = <String, String>{
-          'page': currentPage.toString(),
-        };
-        if (filterName != null && filterName.isNotEmpty) {
-          queryParams['filter_name'] = filterName;
-        }
-        if (filterType != null && filterType.isNotEmpty && filterType != 'All Types') {
-          queryParams['type'] = filterType.toLowerCase();
-        }
-        final url = Uri.parse(APPUrl.supplierTransactions).replace(queryParameters: queryParams);
-        final response = await http.get(url, headers: {
-          'Authorization': 'Bearer ${_accessToken ?? ''}',
-          'Content-Type': 'application/json',
-        });
-        if (response.statusCode == 200) {
-          final jsonMap = jsonDecode(response.body);
-          if (jsonMap['status'] == 'success' && jsonMap['data'] != null) {
-            final data = jsonMap['data'];
-            if (data['data'] != null && data['data'] is List) {
-              final transactions = data['data'] as List<dynamic>;
-              if (transactions.isEmpty) break;
-              for (var i = 0; i < transactions.length; i++) {
-                final tx = transactions[i];
-                try {
-                  final model = _createTransactionFromJson(tx, allTransactions.length + i);
-                  allTransactions.add(model);
-                } catch (e) {
-                  debugPrint('Error parsing transaction: $e');
-                }
-              }
-              currentPage++;
-              if (currentPage > (data['last_page'] ?? currentPage)) break;
-            } else {
-              break;
-            }
-          } else {
-            break;
-          }
-        } else {
-          break;
-        }
-      }
-      _allTransactions = allTransactions;
-      applyTransactionFiltersLocally(page: 1);
+      if (value is int) return value;
+      if (value is String) return int.parse(value);
+      return defaultValue;
     } catch (e) {
-      debugPrint('Error fetching all transactions: $e');
-    } finally {
-      _transactionIsLoading = false;
-      notifyListeners();
+      return defaultValue;
     }
   }
 
-  /// For pull-to-refresh
-  Future<void> refreshAllTransactions() async {
-    await fetchAllTransactionsBatch();
+  // Set access token for batch operations
+  void setAccessToken(String token) {
+    _accessToken = token;
   }
 
-  /// Apply local pagination and filtering for transactions
+  // Get all transactions for local filtering
+  List<TransactionModel> getAllTransactions() {
+    return _allTransactions ?? [];
+  }
+
+  // Get unique transaction types
+  List<String> getTypeOptions() {
+    if (_allTransactions == null || _allTransactions!.isEmpty) {
+      return ["All Types"];
+    }
+
+    final uniqueTypes = _allTransactions!
+        .map((transaction) => transaction.type)
+        .where((type) => type.isNotEmpty)
+        .toSet()
+        .toList();
+
+    uniqueTypes.sort();
+    return ["All Types", ...uniqueTypes];
+  }
+
+  // Apply filters locally to the transactions list
   void applyTransactionFiltersLocally({
     String? filterName,
     String? filterType,
-    int page = 1,
+    String? filterStatus,
+    String? filterPaymentMode,
+    int? page,
   }) {
     if (_allTransactions == null || _allTransactions!.isEmpty) {
-      _listTransactionModelDataList = [];
-      _filteredTransactionsList = [];
-      _transactionCurrentPage = 1;
-      _transactionTotalPages = 1;
-      notifyListeners();
       return;
     }
 
+    // Store filter values
     _transactionFilterName = filterName;
-    _transactionFilterStatus = null; // Remove status filter
-    _transactionFilterPaymentMode = null; // Remove payment mode filter
-    _transactionCurrentPage = page;
-    String? typeFilter = filterType;
+    _transactionFilterStatus = filterStatus;
+    _transactionFilterPaymentMode = filterPaymentMode;
 
-    List<TransactionModel> filteredList = [..._allTransactions!];
+    // Filter transactions
+    List<TransactionModel> filtered = List.from(_allTransactions!);
+
     if (filterName != null && filterName.isNotEmpty) {
-      filteredList = filteredList.where((transaction) {
-        String supplierName = '';
-        try {
-          supplierName = transaction.supplier.user.name.toLowerCase();
-        } catch (_) {}
-        return supplierName.contains(filterName.toLowerCase()) ||
-            transaction.reference.toLowerCase().contains(filterName.toLowerCase()) ||
-            transaction.transactionType.toLowerCase().contains(filterName.toLowerCase());
-      }).toList();
+      filtered = filtered
+          .where((tx) =>
+              tx.reference.toLowerCase().contains(filterName.toLowerCase()))
+          .toList();
     }
-    if (typeFilter != null && typeFilter.isNotEmpty && typeFilter != 'All Types') {
-      filteredList = filteredList.where((transaction) =>
-        transaction.type.toLowerCase() == typeFilter.toLowerCase()
-      ).toList();
+
+    if (filterType != null && filterType.isNotEmpty) {
+      filtered = filtered.where((tx) => tx.type == filterType).toList();
     }
-    _transactionTotalPages = (filteredList.length / _transactionItemsPerPage).ceil();
-    _transactionTotalPages = _transactionTotalPages == 0 ? 1 : _transactionTotalPages;
-    if (_transactionCurrentPage > _transactionTotalPages) {
+
+    if (filterStatus != null && filterStatus.isNotEmpty) {
+      filtered = filtered.where((tx) => tx.status == filterStatus).toList();
+    }
+
+    if (filterPaymentMode != null && filterPaymentMode.isNotEmpty) {
+      filtered =
+          filtered.where((tx) => tx.paymentMode == filterPaymentMode).toList();
+    }
+
+    // Update pagination
+    _transactionTotalPages =
+        (filtered.length / _transactionItemsPerPage).ceil();
+    _transactionCurrentPage = page ?? 1;
+
+    if (_transactionCurrentPage < 1) _transactionCurrentPage = 1;
+    if (_transactionCurrentPage > _transactionTotalPages &&
+        _transactionTotalPages > 0) {
       _transactionCurrentPage = _transactionTotalPages;
     }
-    int startIndex = (_transactionCurrentPage - 1) * _transactionItemsPerPage;
-    int endIndex = startIndex + _transactionItemsPerPage;
-    if (startIndex >= filteredList.length) {
-      _listTransactionModelDataList = [];
+
+    // Paginate results
+    final startIndex = (_transactionCurrentPage - 1) * _transactionItemsPerPage;
+    final endIndex = startIndex + _transactionItemsPerPage;
+
+    if (filtered.isEmpty) {
       _filteredTransactionsList = [];
+    } else if (endIndex >= filtered.length) {
+      _filteredTransactionsList = filtered.sublist(startIndex, filtered.length);
     } else {
-      endIndex = endIndex > filteredList.length ? filteredList.length : endIndex;
-      _listTransactionModelDataList = filteredList.sublist(startIndex, endIndex);
-      _filteredTransactionsList = List<TransactionModel>.from(_listTransactionModelDataList!);
+      _filteredTransactionsList = filtered.sublist(startIndex, endIndex);
     }
+
     notifyListeners();
   }
 
-  /// For UI filter dropdown
-  List<String> getTypeOptions() {
-    return ['All Types', 'Credit', 'Debit'];
-  }
-
-  /// Reset transaction filters and pagination
+  // Reset filters and show all transactions
   void resetTransactionFilters() {
     _transactionFilterName = null;
     _transactionFilterStatus = null;
@@ -394,6 +358,43 @@ class TransactionProvider extends ChangeNotifier {
 
     if (_allTransactions != null && _allTransactions!.isNotEmpty) {
       applyTransactionFiltersLocally(page: 1);
+    }
+  }
+
+  // Fetch all transactions in batches for local filtering
+  Future<void> fetchAllTransactionsBatch() async {
+    if (_accessToken == null) {
+      throw Exception('Access token not set');
+    }
+
+    _transactionIsLoading = true;
+    notifyListeners();
+
+    try {
+      await fetchTransactionsAPI(
+        accessToken: _accessToken!,
+        loadAll: true,
+      );
+    } catch (error) {
+      debugPrint('Error in fetchAllTransactionsBatch: $error');
+      rethrow;
+    } finally {
+      _transactionIsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Refresh all transactions
+  Future<void> refreshAllTransactions() async {
+    if (_accessToken == null) {
+      throw Exception('Access token not set');
+    }
+
+    try {
+      await fetchAllTransactionsBatch();
+    } catch (error) {
+      debugPrint('Error in refreshAllTransactions: $error');
+      rethrow;
     }
   }
 
@@ -410,9 +411,7 @@ class TransactionProvider extends ChangeNotifier {
   // Legacy methods for compatibility
   void filterByStatus(String status) {
     applyTransactionFiltersLocally(
-        filterName: _transactionFilterName,
-        filterType: status,
-        page: 1);
+        filterName: _transactionFilterName, filterType: status, page: 1);
   }
 
   void filterByPaymentMode(String paymentMode) {
@@ -438,11 +437,6 @@ class TransactionProvider extends ChangeNotifier {
     _transactionFilterPaymentMode = null;
     _transactionIsLoading = false;
     notifyListeners();
-  }
-
-  // Store access token for batch fetch
-  void setAccessToken(String? token) {
-    _accessToken = token;
   }
 }
 

@@ -5,8 +5,12 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/screens/customer_profile/widgets/customer_chat_widget.dart';
 import 'package:pos_machine/screens/customer_profile/widgets/customer_information_edit_widget.dart';
 import 'package:pos_machine/screens/customer_profile/widgets/customer_information_view_widget.dart';
+import 'package:pos_machine/screens/customer_profile/widgets/customer_loyalty_widget.dart';
+import 'package:pos_machine/screens/customer_profile/widgets/customer_orders_widget.dart';
+import 'package:pos_machine/screens/customer_profile/widgets/customer_transactions_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 import '../../components/build_container_box.dart';
@@ -25,8 +29,10 @@ class OpenCustomerProfileScreen extends StatefulWidget {
 }
 
 class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
-// Use selectedCustomer to display the customer's details
   bool isChanged = false;
+  bool isTransactions = false;
+  int selectedIndex = 0; // Added to track which button is selected
+
   @override
   Widget build(BuildContext context) {
     CustomerProvider customerProvider = Provider.of<CustomerProvider>(context);
@@ -36,10 +42,16 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
     Size size = MediaQuery.of(context).size;
     SideBarController sideBarController = Get.put(SideBarController());
 
+    // Calculate responsive widths
+    final bool isSmallScreen = size.width < 1200;
+    final double sidebarWidth =
+        isSmallScreen ? size.width / 3.5 : size.width / 4;
+    final double contentWidth =
+        isSmallScreen ? size.width / 1.8 : size.width / 2;
+
     return SafeArea(
       child: SingleChildScrollView(
         child: Container(
-          //height: size.height,
           margin:
               const EdgeInsets.only(left: 10, top: 20, bottom: 10, right: 10),
           padding:
@@ -69,16 +81,14 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s20, 0.30, ColorManager.textColor),
               ),
-              // const SizedBox(
-              //   height: 10,
-              // ),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   BuildBoxShadowContainer(
                     margin: const EdgeInsets.all(15),
                     padding: const EdgeInsets.all(15),
-                    height: size.height * 0.75, //180,
-                    width: size.width / 3.5,
+                    height: size.height * 0.75,
+                    width: sidebarWidth,
                     circleRadius: 7,
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,141 +138,385 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 60),
-                          BuildBoxShadowContainer(
-                              circleRadius: 10,
-                              margin:
-                                  const EdgeInsets.only(top: 10, bottom: 15),
-                              color: isChanged
-                                  ? ColorManager.kListTileColor
-                                  : ColorManager.kPrimaryColor,
-                              offsetValue: const Offset(1, 1),
-                              blurRadius: 6,
-                              child: ListTile(
-                                onTap: () {
-                                  setState(() {
-                                    isChanged = !isChanged;
-                                  });
-                                },
-                                horizontalTitleGap: 0,
-                                minVerticalPadding: 0,
-                                minLeadingWidth: 30,
-                                leading: WebsafeSvg.asset(
-                                  ImageAssets.userProfile,
-                                  color: !isChanged
-                                      ? Colors.white
-                                      : ColorManager.kListTiletextColor,
-                                  fit: BoxFit.none,
-                                ),
-                                title: Text(
-                                  'Customer Information',
-                                  style: !isChanged
-                                      ? buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          FontSize.s12,
-                                          0.12,
-                                          Colors.white)
-                                      : buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          FontSize.s12,
-                                          0.12,
-                                          ColorManager.kListTiletextColor),
-                                ),
-                                trailing: Icon(
-                                  Icons.keyboard_arrow_right,
-                                  color: !isChanged
-                                      ? Colors.white
-                                      : ColorManager.kListTiletextColor,
-                                ),
-                              )),
-                          BuildBoxShadowContainer(
-                              margin: const EdgeInsets.only(top: 0, bottom: 15),
-                              circleRadius: 10,
-                              color: isChanged
-                                  ? ColorManager.kPrimaryColor
-                                  : ColorManager.kListTileColor,
-                              offsetValue: const Offset(1, 1),
-                              blurRadius: 6,
-                              child: ListTile(
-                                onTap: () {
-                                  setState(() {
-                                    isChanged = !isChanged;
-                                  });
-                                },
-                                horizontalTitleGap: 0,
-                                minVerticalPadding: 4,
-                                minLeadingWidth: 30,
-                                leading: WebsafeSvg.asset(ImageAssets.lock,
-                                    color: isChanged
-                                        ? Colors.white
-                                        : ColorManager.kListTiletextColor),
-                                title: Text(
-                                  "Edit Details",
-                                  style: isChanged
-                                      ? buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          FontSize.s12,
-                                          0.12,
-                                          Colors.white)
-                                      : buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          FontSize.s12,
-                                          0.12,
-                                          ColorManager.kListTiletextColor),
-                                ),
-                                trailing: Icon(
-                                  Icons.keyboard_arrow_right,
-                                  color: isChanged
-                                      ? Colors.white
-                                      : ColorManager.kListTiletextColor,
-                                ),
-                              )),
-                          // BuildBoxShadowContainer(
-                          //     circleRadius: 10,
-                          //     margin: const EdgeInsets.only(top: 0, bottom: 15),
-                          //     color: ColorManager.kListTileColor,
-                          //     offsetValue: const Offset(1, 1),
-                          //     blurRadius: 6,
-                          //     child: ListTile(
-                          //       hoverColor: ColorManager.blackWithOpacity50,
-                          //       horizontalTitleGap: 0,
-                          //       minVerticalPadding: 0,
-                          //       minLeadingWidth: 30,
-                          //       leading: WebsafeSvg.asset(
-                          //         ImageAssets.deleteIcon,
-                          //         color: ColorManager.kRed,
-                          //         fit: BoxFit.none,
-                          //       ),
-                          //       title: Text(
-                          //         'Delete Account',
-                          //         style: buildCustomStyle(
-                          //             FontWeightManager.medium,
-                          //             FontSize.s12,
-                          //             0.12,
-                          //             ColorManager.kRed),
-                          //       ),
-                          //       trailing: const Icon(
-                          //         Icons.keyboard_arrow_right,
-                          //         color: ColorManager.kListTiletextColor,
-                          //       ),
-                          //     )),
+                          const SizedBox(height: 13),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                children: [
+                                  BuildBoxShadowContainer(
+                                    circleRadius: 10,
+                                    margin: const EdgeInsets.only(
+                                        top: 10, bottom: 15),
+                                    color: (!isChanged &&
+                                            !isTransactions &&
+                                            selectedIndex == 0)
+                                        ? ColorManager.kPrimaryColor
+                                        : ColorManager.kListTileColor,
+                                    offsetValue: const Offset(1, 1),
+                                    blurRadius: 6,
+                                    child: ListTile(
+                                      onTap: () {
+                                        setState(() {
+                                          isChanged = false;
+                                          isTransactions = false;
+                                          selectedIndex = 0;
+                                        });
+                                      },
+                                      horizontalTitleGap: 0,
+                                      minVerticalPadding: 0,
+                                      minLeadingWidth: 30,
+                                      leading: WebsafeSvg.asset(
+                                        ImageAssets.userProfile,
+                                        color: (!isChanged &&
+                                                !isTransactions &&
+                                                selectedIndex == 0)
+                                            ? Colors.white
+                                            : ColorManager.kListTiletextColor,
+                                        fit: BoxFit.none,
+                                      ),
+                                      title: Text(
+                                        'Customer Information',
+                                        style: (!isChanged &&
+                                                !isTransactions &&
+                                                selectedIndex == 0)
+                                            ? buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.12,
+                                                Colors.white)
+                                            : buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.12,
+                                                ColorManager
+                                                    .kListTiletextColor),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      trailing: Icon(
+                                        Icons.keyboard_arrow_right,
+                                        color: (!isChanged &&
+                                                !isTransactions &&
+                                                selectedIndex == 0)
+                                            ? Colors.white
+                                            : ColorManager.kListTiletextColor,
+                                      ),
+                                    ),
+                                  ),
+                                  BuildBoxShadowContainer(
+                                    margin: const EdgeInsets.only(
+                                        top: 0, bottom: 15),
+                                    circleRadius: 10,
+                                    color: (isChanged && !isTransactions)
+                                        ? ColorManager.kPrimaryColor
+                                        : ColorManager.kListTileColor,
+                                    offsetValue: const Offset(1, 1),
+                                    blurRadius: 6,
+                                    child: ListTile(
+                                      onTap: () {
+                                        setState(() {
+                                          isChanged = true;
+                                          isTransactions = false;
+                                        });
+                                      },
+                                      horizontalTitleGap: 0,
+                                      minVerticalPadding: 4,
+                                      minLeadingWidth: 30,
+                                      leading: WebsafeSvg.asset(
+                                          ImageAssets.lock,
+                                          color: (isChanged && !isTransactions)
+                                              ? Colors.white
+                                              : ColorManager
+                                                  .kListTiletextColor),
+                                      title: Text(
+                                        "Edit Details",
+                                        style: (isChanged && !isTransactions)
+                                            ? buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.12,
+                                                Colors.white)
+                                            : buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.12,
+                                                ColorManager
+                                                    .kListTiletextColor),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      trailing: Icon(
+                                        Icons.keyboard_arrow_right,
+                                        color: (isChanged && !isTransactions)
+                                            ? Colors.white
+                                            : ColorManager.kListTiletextColor,
+                                      ),
+                                    ),
+                                  ),
+                                  BuildBoxShadowContainer(
+                                    margin: const EdgeInsets.only(
+                                        top: 0, bottom: 15),
+                                    circleRadius: 10,
+                                    color: (!isChanged && isTransactions)
+                                        ? ColorManager.kPrimaryColor
+                                        : ColorManager.kListTileColor,
+                                    offsetValue: const Offset(1, 1),
+                                    blurRadius: 6,
+                                    child: ListTile(
+                                      onTap: () {
+                                        setState(() {
+                                          isChanged = false;
+                                          isTransactions = true;
+                                        });
+                                      },
+                                      horizontalTitleGap: 0,
+                                      minVerticalPadding: 4,
+                                      minLeadingWidth: 30,
+                                      leading: WebsafeSvg.asset(
+                                          ImageAssets.transactionIcon,
+                                          color: (!isChanged && isTransactions)
+                                              ? Colors.white
+                                              : ColorManager
+                                                  .kListTiletextColor),
+                                      title: Text(
+                                        "Transactions",
+                                        style: (!isChanged && isTransactions)
+                                            ? buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.12,
+                                                Colors.white)
+                                            : buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.12,
+                                                ColorManager
+                                                    .kListTiletextColor),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      trailing: Icon(
+                                        Icons.keyboard_arrow_right,
+                                        color: (!isChanged && isTransactions)
+                                            ? Colors.white
+                                            : ColorManager.kListTiletextColor,
+                                      ),
+                                    ),
+                                  ),
+                                  BuildBoxShadowContainer(
+                                    margin: const EdgeInsets.only(
+                                        top: 0, bottom: 15),
+                                    circleRadius: 10,
+                                    color: (!isChanged &&
+                                            !isTransactions &&
+                                            selectedIndex == 1)
+                                        ? ColorManager.kPrimaryColor
+                                        : ColorManager.kListTileColor,
+                                    offsetValue: const Offset(1, 1),
+                                    blurRadius: 6,
+                                    child: ListTile(
+                                      onTap: () {
+                                        setState(() {
+                                          isChanged = false;
+                                          isTransactions = false;
+                                          selectedIndex = 1;
+                                        });
+                                      },
+                                      horizontalTitleGap: 0,
+                                      minVerticalPadding: 4,
+                                      minLeadingWidth: 30,
+                                      leading: WebsafeSvg.asset(
+                                          ImageAssets.saleIcon,
+                                          color: (!isChanged &&
+                                                  !isTransactions &&
+                                                  selectedIndex == 1)
+                                              ? Colors.white
+                                              : ColorManager
+                                                  .kListTiletextColor),
+                                      title: Text(
+                                        "All Orders",
+                                        style: (!isChanged &&
+                                                !isTransactions &&
+                                                selectedIndex == 1)
+                                            ? buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.12,
+                                                Colors.white)
+                                            : buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.12,
+                                                ColorManager
+                                                    .kListTiletextColor),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      trailing: Icon(
+                                        Icons.keyboard_arrow_right,
+                                        color: (!isChanged &&
+                                                !isTransactions &&
+                                                selectedIndex == 1)
+                                            ? Colors.white
+                                            : ColorManager.kListTiletextColor,
+                                      ),
+                                    ),
+                                  ),
+                                  BuildBoxShadowContainer(
+                                    margin: const EdgeInsets.only(
+                                        top: 0, bottom: 15),
+                                    circleRadius: 10,
+                                    color: (!isChanged &&
+                                            !isTransactions &&
+                                            selectedIndex == 2)
+                                        ? ColorManager.kPrimaryColor
+                                        : ColorManager.kListTileColor,
+                                    offsetValue: const Offset(1, 1),
+                                    blurRadius: 6,
+                                    child: ListTile(
+                                      onTap: () {
+                                        setState(() {
+                                          isChanged = false;
+                                          isTransactions = false;
+                                          selectedIndex = 2;
+                                        });
+                                      },
+                                      horizontalTitleGap: 0,
+                                      minVerticalPadding: 4,
+                                      minLeadingWidth: 30,
+                                      leading: WebsafeSvg.asset(
+                                          ImageAssets.cardIcon,
+                                          color: (!isChanged &&
+                                                  !isTransactions &&
+                                                  selectedIndex == 2)
+                                              ? Colors.white
+                                              : ColorManager
+                                                  .kListTiletextColor),
+                                      title: Text(
+                                        "Loyalty Card",
+                                        style: (!isChanged &&
+                                                !isTransactions &&
+                                                selectedIndex == 2)
+                                            ? buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.12,
+                                                Colors.white)
+                                            : buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.12,
+                                                ColorManager
+                                                    .kListTiletextColor),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      trailing: Icon(
+                                        Icons.keyboard_arrow_right,
+                                        color: (!isChanged &&
+                                                !isTransactions &&
+                                                selectedIndex == 2)
+                                            ? Colors.white
+                                            : ColorManager.kListTiletextColor,
+                                      ),
+                                    ),
+                                  ),
+                                  BuildBoxShadowContainer(
+                                    margin: const EdgeInsets.only(
+                                        top: 0, bottom: 15),
+                                    circleRadius: 10,
+                                    color: (!isChanged &&
+                                            !isTransactions &&
+                                            selectedIndex == 3)
+                                        ? ColorManager.kPrimaryColor
+                                        : ColorManager.kListTileColor,
+                                    offsetValue: const Offset(1, 1),
+                                    blurRadius: 6,
+                                    child: ListTile(
+                                      onTap: () {
+                                        setState(() {
+                                          isChanged = false;
+                                          isTransactions = false;
+                                          selectedIndex = 3;
+                                        });
+                                      },
+                                      horizontalTitleGap: 0,
+                                      minVerticalPadding: 4,
+                                      minLeadingWidth: 30,
+                                      leading: WebsafeSvg.asset(
+                                          ImageAssets.supportIcon,
+                                          color: (!isChanged &&
+                                                  !isTransactions &&
+                                                  selectedIndex == 3)
+                                              ? Colors.white
+                                              : ColorManager
+                                                  .kListTiletextColor),
+                                      title: Text(
+                                        "Chat",
+                                        style: (!isChanged &&
+                                                !isTransactions &&
+                                                selectedIndex == 3)
+                                            ? buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.12,
+                                                Colors.white)
+                                            : buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.12,
+                                                ColorManager
+                                                    .kListTiletextColor),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      trailing: Icon(
+                                        Icons.keyboard_arrow_right,
+                                        color: (!isChanged &&
+                                                !isTransactions &&
+                                                selectedIndex == 3)
+                                            ? Colors.white
+                                            : ColorManager.kListTiletextColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ]),
                   ),
-                  !isChanged
+                  !isChanged && !isTransactions && selectedIndex == 0
                       ? CustomerInformationViewWidget(
                           size: size,
                           customer: selectedCustomer,
                         )
-                      : CustomerInformationEditWidget(
-                          size: size,
-                          customer: selectedCustomer,
-                        ),
+                      : isChanged && !isTransactions
+                          ? CustomerInformationEditWidget(
+                              size: size,
+                              customer: selectedCustomer,
+                            )
+                          : !isChanged && isTransactions
+                              ? CustomerTransactionsWidget(
+                                  size: size,
+                                  customer: selectedCustomer,
+                                )
+                              : !isChanged &&
+                                      !isTransactions &&
+                                      selectedIndex == 1
+                                  ? CustomerOrdersWidget(
+                                      size: size,
+                                      customer: selectedCustomer, accessToken: '',
+                                    )
+                                  : !isChanged &&
+                                          !isTransactions &&
+                                          selectedIndex == 2
+                                      ? CustomerLoyaltyWidget(
+                                          size: size,
+                                          customer: selectedCustomer,
+                                        )
+                                      : CustomerChatWidget(
+                                          size: size,
+                                          customer: selectedCustomer,
+                                        ),
                 ],
               ),
             ]),
           ),
-          //   ],
-          // ),
         ),
       ),
     );

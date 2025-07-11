@@ -20,15 +20,17 @@ class ListSalesOrderModel {
     debugPrint('Status: ${json["status"]}');
     debugPrint('Message: ${json["message"]}');
     debugPrint('Data type: ${json["data"]?.runtimeType}');
-    
+
     if (json["data"] != null) {
-      debugPrint('Data keys: ${json["data"] is Map ? json["data"].keys.toList() : "Not a Map"}');
+      debugPrint(
+          'Data keys: ${json["data"] is Map ? json["data"].keys.toList() : "Not a Map"}');
       if (json["data"] is Map && json["data"]["data"] != null) {
         debugPrint('Orders data type: ${json["data"]["data"].runtimeType}');
-        debugPrint('Orders length: ${json["data"]["data"] is List ? json["data"]["data"].length : "Not a List"}');
+        debugPrint(
+            'Orders length: ${json["data"]["data"] is List ? json["data"]["data"].length : "Not a List"}');
       }
     }
-    
+
     try {
       return ListSalesOrderModel(
         status: json["status"],
@@ -92,19 +94,25 @@ class ListOrderModelData {
       debugPrint('=== ListOrderModelData.fromJson DEBUG ===');
       debugPrint('Order ID: ${json["id"]}');
       debugPrint('Order Number: ${json["order_number"]}');
-      debugPrint('Grant Total: ${json["grant_total"]} (${json["grant_total"]?.runtimeType})');
-      debugPrint('Order Date: ${json["order_date"]} (${json["order_date"]?.runtimeType})');
+      debugPrint(
+          'Grant Total: ${json["grant_total"]} (${json["grant_total"]?.runtimeType})');
+      debugPrint(
+          'Order Date: ${json["order_date"]} (${json["order_date"]?.runtimeType})');
       debugPrint('Customer Name: ${json["customer_name"]}');
       debugPrint('Cart Items Type: ${json["cart_items"]?.runtimeType}');
-      
+
       if (json["cart_items"] != null) {
-        debugPrint('Cart Items Keys: ${json["cart_items"] is Map ? json["cart_items"].keys.toList() : "Not a Map"}');
-        if (json["cart_items"] is Map && json["cart_items"]["cart_items"] != null) {
-          debugPrint('Cart Items Array Type: ${json["cart_items"]["cart_items"].runtimeType}');
-          debugPrint('Cart Items Length: ${json["cart_items"]["cart_items"] is List ? json["cart_items"]["cart_items"].length : "Not a List"}');
+        debugPrint(
+            'Cart Items Keys: ${json["cart_items"] is Map ? json["cart_items"].keys.toList() : "Not a Map"}');
+        if (json["cart_items"] is Map &&
+            json["cart_items"]["cart_items"] != null) {
+          debugPrint(
+              'Cart Items Array Type: ${json["cart_items"]["cart_items"].runtimeType}');
+          debugPrint(
+              'Cart Items Length: ${json["cart_items"]["cart_items"] is List ? json["cart_items"]["cart_items"].length : "Not a List"}');
         }
       }
-      
+
       return ListOrderModelData(
         id: json["id"],
         cartId: json["cart_id"],
@@ -187,9 +195,11 @@ class CartItem {
       debugPrint('=== CartItem.fromJson DEBUG ===');
       debugPrint('Cart Item ID: ${json["id"]}');
       debugPrint('Product Name: ${json["product_name"]}');
-      debugPrint('Quantity: ${json["quantity"]} (${json["quantity"]?.runtimeType})');
-      debugPrint('Total Price: ${json["total_price"]} (${json["total_price"]?.runtimeType})');
-      
+      debugPrint(
+          'Quantity: ${json["quantity"]} (${json["quantity"]?.runtimeType})');
+      debugPrint(
+          'Total Price: ${json["total_price"]} (${json["total_price"]?.runtimeType})');
+
       return CartItem(
         id: json["id"],
         cartId: json["cart_id"],
@@ -197,7 +207,9 @@ class CartItem {
         storeId: json["store_id"],
         productId: json["product_id"],
         productName: json["product_name"],
-        quantity: json["quantity"] is String ? num.tryParse(json["quantity"]) : json["quantity"],
+        quantity: json["quantity"] is String
+            ? num.tryParse(json["quantity"])
+            : json["quantity"],
         totalPrice: json["total_price"].toString(),
       );
     } catch (e, stackTrace) {
@@ -296,9 +308,11 @@ class PriceSummary {
   factory PriceSummary.fromJson(Map<String, dynamic> json) {
     try {
       debugPrint('=== PriceSummary.fromJson DEBUG ===');
-      debugPrint('Grand Total: ${json["grand_total"]} (${json["grand_total"]?.runtimeType})');
-      debugPrint('Tax Total: ${json["tax_total"]} (${json["tax_total"]?.runtimeType})');
-      
+      debugPrint(
+          'Grand Total: ${json["grand_total"]} (${json["grand_total"]?.runtimeType})');
+      debugPrint(
+          'Tax Total: ${json["tax_total"]} (${json["tax_total"]?.runtimeType})');
+
       return PriceSummary(
         grandTotal: json["grand_total"]?.toString(),
         taxTotal: json["tax_total"]?.toString(),
@@ -340,13 +354,15 @@ class PaginationInfo {
   factory PaginationInfo.fromJson(Map<String, dynamic> json) {
     debugPrint('=== PaginationInfo.fromJson DEBUG ===');
     debugPrint('Input JSON keys: ${json.keys.toList()}');
-    debugPrint('Current Page: ${json["current_page"]} (${json["current_page"]?.runtimeType})');
-    debugPrint('Last Page: ${json["last_page"]} (${json["last_page"]?.runtimeType})');
+    debugPrint(
+        'Current Page: ${json["current_page"]} (${json["current_page"]?.runtimeType})');
+    debugPrint(
+        'Last Page: ${json["last_page"]} (${json["last_page"]?.runtimeType})');
     debugPrint('From: ${json["from"]}');
     debugPrint('To: ${json["to"]}');
     debugPrint('Next Page URL: ${json["next_page_url"]}');
     debugPrint('Prev Page URL: ${json["prev_page_url"]}');
-    
+
     return PaginationInfo(
       currentPage: json["current_page"],
       from: json["from"],

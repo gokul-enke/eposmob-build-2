@@ -10,9 +10,10 @@ import '../resources/app_url.dart';
 
 class CustomerProvider extends ChangeNotifier {
   List<CustomerListModelData>? customerList = [];
-  List<CustomerListModelData>? _allCustomers = []; // Store all customers for local filtering
+  List<CustomerListModelData>? _allCustomers =
+      []; // Store all customers for local filtering
   CustomerListModelData? selectedCustomer;
-  
+
   // Pagination properties
   int _currentPage = 1;
   int _totalPages = 1;
@@ -59,48 +60,51 @@ class CustomerProvider extends ChangeNotifier {
 
     // Apply filters
     List<CustomerListModelData> filteredList = [..._allCustomers!];
-    
+
     if (filterName != null && filterName.isNotEmpty) {
-      filteredList = filteredList.where((customer) => 
-        customer.name != null && 
-        customer.name!.toLowerCase().contains(filterName.toLowerCase())
-      ).toList();
+      filteredList = filteredList
+          .where((customer) =>
+              customer.name != null &&
+              customer.name!.toLowerCase().contains(filterName.toLowerCase()))
+          .toList();
     }
-    
+
     if (filterEmail != null && filterEmail.isNotEmpty) {
-      filteredList = filteredList.where((customer) => 
-        customer.email != null && 
-        customer.email!.toLowerCase().contains(filterEmail.toLowerCase())
-      ).toList();
+      filteredList = filteredList
+          .where((customer) =>
+              customer.email != null &&
+              customer.email!.toLowerCase().contains(filterEmail.toLowerCase()))
+          .toList();
     }
-    
+
     if (filterPhone != null && filterPhone.isNotEmpty) {
-      filteredList = filteredList.where((customer) => 
-        customer.phone != null && 
-        customer.phone!.contains(filterPhone)
-      ).toList();
+      filteredList = filteredList
+          .where((customer) =>
+              customer.phone != null && customer.phone!.contains(filterPhone))
+          .toList();
     }
 
     // Calculate pagination
     _totalPages = (filteredList.length / _itemsPerPage).ceil();
     _totalPages = _totalPages == 0 ? 1 : _totalPages;
-    
+
     // Ensure current page is valid
     if (_currentPage > _totalPages) {
       _currentPage = _totalPages;
     }
-    
+
     // Apply pagination
     int startIndex = (_currentPage - 1) * _itemsPerPage;
     int endIndex = startIndex + _itemsPerPage;
-    
+
     if (startIndex >= filteredList.length) {
       customerList = [];
     } else {
-      endIndex = endIndex > filteredList.length ? filteredList.length : endIndex;
+      endIndex =
+          endIndex > filteredList.length ? filteredList.length : endIndex;
       customerList = filteredList.sublist(startIndex, endIndex);
     }
-    
+
     notifyListeners();
   }
 
@@ -110,7 +114,7 @@ class CustomerProvider extends ChangeNotifier {
     _filterEmail = null;
     _filterPhone = null;
     _currentPage = 1;
-    
+
     if (_allCustomers != null && _allCustomers!.isNotEmpty) {
       applyFiltersLocally(page: 1);
     }
@@ -119,13 +123,12 @@ class CustomerProvider extends ChangeNotifier {
   // Change page
   void goToPage(int page) {
     if (page < 1 || page > _totalPages) return;
-    
+
     applyFiltersLocally(
-      filterName: _filterName,
-      filterEmail: _filterEmail,
-      filterPhone: _filterPhone,
-      page: page
-    );
+        filterName: _filterName,
+        filterEmail: _filterEmail,
+        filterPhone: _filterPhone,
+        page: page);
   }
 
   //                 *********************** LIST CUSTOMER API ***************************************************
@@ -142,7 +145,7 @@ class CustomerProvider extends ChangeNotifier {
   }) async {
     _isLoading = true;
     notifyListeners();
-    
+
     debugPrint("listCustomer API called");
 
     final queryParameters = <String, String>{
@@ -184,7 +187,7 @@ class CustomerProvider extends ChangeNotifier {
         final jsonData = json.decode(response.body);
         CustomerListModel customerListModel =
             CustomerListModel.fromJson(jsonData);
-            
+
         if (loadAll) {
           // Store all customers for local filtering and pagination
           _allCustomers = customerListModel.data;
@@ -193,7 +196,7 @@ class CustomerProvider extends ChangeNotifier {
           customerList = customerListModel.data;
           notifyListeners();
         }
-        
+
         _isLoading = false;
         notifyListeners();
         return jsonData;
@@ -216,7 +219,7 @@ class CustomerProvider extends ChangeNotifier {
       };
     }
   }
-  
+
   // Load all customers for local filtering
   Future<void> loadAllCustomers(String accessToken) async {
     await listCustomer(

@@ -170,7 +170,7 @@ class _CustomerInformationEditWidgetState
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 BuildTitle(
                   title: "Email Address",
                   textStyle: buildCustomStyle(
@@ -204,7 +204,7 @@ class _CustomerInformationEditWidgetState
                     ),
                   ),
                 ),
-                const SizedBox(height: 15),
+                SizedBox(height: 15),
                 Row(
                   children: [
                     Column(
@@ -285,121 +285,146 @@ class _CustomerInformationEditWidgetState
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                CustomRoundButton(
-                    radius: 14,
-                    title: "Edit Profile",
-                    fct: () async {
-                      debugPrint("Edit Profile button pressed");
-                      
-                      // Get the access token
-                      String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-                      if (accessToken == null) {
-                        debugPrint("No access token found");
-                        showScaffoldError(
-                          context: context,
-                          message: "Please login again"
-                        );
-                        return;
-                      }
+                SizedBox(height: 10),
+                Row(
+                  children: [
+                    CustomRoundButton(
+                      radius: 14,
+                      title: "Edit Profile",
+                      fct: () async {
+                        debugPrint("Edit Profile button pressed");
 
-                      // Show loading indicator
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (context) => const Center(child: CircularProgressIndicator.adaptive()),
-                      );
-
-                      try {
-                        // Get the customer provider
-                        final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
-                        
-                        // Get the customer ID
-                        int customerId = widget.customer?.id ?? 0;
-                        if (customerId == 0) {
-                          throw Exception("Invalid customer ID");
-                        }
-
-                        // Extract state and district from address if available
-                        String state = ""; // You'll need to implement state selection
-                        String city = ""; // You'll need to implement district selection
-                        String country = ""; // You'll need to implement country input
-                        String pincode = ""; // You'll need to implement pincode input
-                        String address = addressTextController.text;
-
-                        debugPrint("Preparing to update customer with ID: $customerId");
-                        debugPrint("Name: ${firstNameTextController.text} ${lastNameTextController.text}");
-                        debugPrint("Email: ${emailTextController.text}");
-                        debugPrint("Phone: ${phoneNumberController.text}");
-                        debugPrint("Address: $address");
-
-                        final response = await customerProvider.updateCustomer(
-                          accessToken,
-                          phoneNumberController.text,
-                          "${firstNameTextController.text} ${lastNameTextController.text}",
-                          emailTextController.text,
-                          address,
-                          pincode,
-                          city,
-                          state,
-                          country,
-                          customerId,
-                          context,
-                        );
-
-                        // Close loading dialog
-                        Navigator.pop(context);
-
-                        if (response["status"] == "success") {
-                          debugPrint("Customer updated successfully");
-                          showScaffold(
-                            context: context,
-                            message: response["message"] ?? "Customer updated successfully"
-                          );
-                          
-                          // Refresh customer data
-                          await customerProvider.fetchUserById(accessToken, customerId, context);
-                        } else {
-                          String errorMessage = "";
-                          
-                          if (response.containsKey("errors")) {
-                            Map<String, dynamic> errors = response["errors"];
-                            List<String> errorMessages = [];
-                            
-                            errors.forEach((field, messages) {
-                              if (messages is List) {
-                                for (var message in messages) {
-                                  errorMessages.add("$field: $message");
-                                }
-                              } else {
-                                errorMessages.add("$field: $messages");
-                              }
-                            });
-                            
-                            errorMessage = errorMessages.join("\n");
-                            debugPrint("Validation errors: $errorMessage");
-                          } else {
-                            errorMessage = response["message"] ?? "Failed to update customer";
-                            debugPrint("Error message: $errorMessage");
-                          }
-                          
+                        // Get the access token
+                        String? accessToken =
+                            Provider.of<AuthModel>(context, listen: false)
+                                .token;
+                        if (accessToken == null) {
+                          debugPrint("No access token found");
                           showScaffoldError(
-                            context: context,
-                            message: errorMessage
-                          );
+                              context: context, message: "Please login again");
+                          return;
                         }
-                      } catch (error) {
-                        debugPrint("Exception occurred during update: $error");
-                        Navigator.pop(context); // Close loading dialog
-                        showScaffoldError(
+
+                        // Show loading indicator
+                        showDialog(
                           context: context,
-                          message: 'Error: $error'
+                          barrierDismissible: false,
+                          builder: (context) => const Center(
+                              child: CircularProgressIndicator.adaptive()),
                         );
-                      }
-                    },
-                    height: 50,
-                    width: size.width * 0.19,
-                    fontSize: FontSize.s12,
+
+                        try {
+                          // Get the customer provider
+                          final customerProvider =
+                              Provider.of<CustomerProvider>(context,
+                                  listen: false);
+
+                          // Get the customer ID
+                          int customerId = widget.customer?.id ?? 0;
+                          if (customerId == 0) {
+                            throw Exception("Invalid customer ID");
+                          }
+
+                          // Extract state and district from address if available
+                          String state =
+                              ""; // You'll need to implement state selection
+                          String city =
+                              ""; // You'll need to implement district selection
+                          String country =
+                              ""; // You'll need to implement country input
+                          String pincode =
+                              ""; // You'll need to implement pincode input
+                          String address = addressTextController.text;
+
+                          debugPrint(
+                              "Preparing to update customer with ID: $customerId");
+                          debugPrint(
+                              "Name: ${firstNameTextController.text} ${lastNameTextController.text}");
+                          debugPrint("Email: ${emailTextController.text}");
+                          debugPrint("Phone: ${phoneNumberController.text}");
+                          debugPrint("Address: $address");
+
+                          final response =
+                              await customerProvider.updateCustomer(
+                            accessToken,
+                            phoneNumberController.text,
+                            "${firstNameTextController.text} ${lastNameTextController.text}",
+                            emailTextController.text,
+                            address,
+                            pincode,
+                            city,
+                            state,
+                            country,
+                            customerId,
+                            context,
+                          );
+
+                          // Close loading dialog
+                          Navigator.pop(context);
+
+                          if (response["status"] == "success") {
+                            debugPrint("Customer updated successfully");
+                            showScaffold(
+                                context: context,
+                                message: response["message"] ??
+                                    "Customer updated successfully");
+
+                            // Refresh customer data
+                            await customerProvider.fetchUserById(
+                                accessToken, customerId, context);
+                          } else {
+                            String errorMessage = "";
+
+                            if (response.containsKey("errors")) {
+                              Map<String, dynamic> errors = response["errors"];
+                              List<String> errorMessages = [];
+
+                              errors.forEach((field, messages) {
+                                if (messages is List) {
+                                  for (var message in messages) {
+                                    errorMessages.add("$field: $message");
+                                  }
+                                } else {
+                                  errorMessages.add("$field: $messages");
+                                }
+                              });
+
+                              errorMessage = errorMessages.join("\n");
+                              debugPrint("Validation errors: $errorMessage");
+                            } else {
+                              errorMessage = response["message"] ??
+                                  "Failed to update customer";
+                              debugPrint("Error message: $errorMessage");
+                            }
+
+                            showScaffoldError(
+                                context: context, message: errorMessage);
+                          }
+                        } catch (error) {
+                          debugPrint(
+                              "Exception occurred during update: $error");               
+                          Navigator.pop(context); // Close loading dialog
+                          showScaffoldError(
+                              context: context, message: 'Error: $error');
+                        }
+                      },
+                      height: 50,
+                      width: size.width * 0.175,
+                      fontSize: FontSize.s12,
+                    ),
+                    SizedBox(width: 16),
+                    CustomRoundButton(
+                      radius: 14,
+                      title: "Change Password",
+                      fct: () => _showPasswordChangeConfirmation(context),
+                      height: 50,
+                      width: size.width * 0.175,
+                      fontSize: FontSize.s12,
+                      boxColor: Colors.white,
+                      textColor: ColorManager.kPrimaryColor,
+                      borderColor: ColorManager.kPrimaryColor,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
               ],
@@ -407,4 +432,87 @@ class _CustomerInformationEditWidgetState
           )),
     );
   }
+}
+// Add this button in your widget tree (after the Edit Profile button)
+
+// Add this method to your state class
+void _showPasswordChangeConfirmation(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(
+        "Change Password Request",
+        style: buildCustomStyle(
+          FontWeightManager.bold,
+          FontSize.s16,
+          0.24,
+          ColorManager.textColor,
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.email_outlined, size: 48, color: Colors.blue),
+          SizedBox(height: 16),
+          Text(
+            "A password change link will be sent to the customer's registered email address.",
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s12,
+              0.18,
+              Colors.grey,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 16),
+          Text(
+            "Do you want to proceed?",
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s14,
+              0.21,
+              ColorManager.textColor,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            "Cancel",
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s12,
+              0.18,
+              Colors.grey,
+            ),
+          ),
+        ),
+        CustomRoundButton(
+          title: "Send Link",
+          fct: () {
+            Navigator.pop(context); // Close the dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  "Password change link sent (demo)",
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s12,
+                    0.18,
+                    Colors.white,
+                  ),
+                ),
+                backgroundColor: Colors.green,
+              ),
+            );
+          },
+          height: 40,
+          width: 100,
+          fontSize: FontSize.s12,
+        ),
+      ],
+    ),
+  );
 }

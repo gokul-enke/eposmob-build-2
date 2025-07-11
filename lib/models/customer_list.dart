@@ -50,7 +50,7 @@ class CustomerListModelData {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final DateTime? deletedAt;
-  
+
   // Loyalty card fields
   final String? cardNumber;
   final int? loyaltyPoints;
@@ -61,10 +61,10 @@ class CustomerListModelData {
   final String? membershipCode;
   final int? minRedeemablePoints;
   final double? pricePerPoint;
-  
+
   // Financial fields
   final double? balance;
-  
+
   // Related data
   final List<CustomerTransaction>? transactions;
   final List<CustomerOrder>? orders;
@@ -118,20 +118,20 @@ class CustomerListModelData {
         deletedAt: json["deleted_at"] == null
             ? null
             : DateTime.parse(json["deleted_at"]),
-        cardNumber: json["card_number"],
+        cardNumber: json["card_number"]?.toString(),
         loyaltyPoints: json["loyalty_points"],
-        validFrom: json["valid_from"],
-        validUntil: json["valid_until"],
-        cardStatus: json["card_status"],
-        membershipName: json["membership_name"],
-        membershipCode: json["membership_code"],
+        validFrom: json["valid_from"]?.toString(),
+        validUntil: json["valid_until"]?.toString(),
+        cardStatus: json["card_status"]?.toString(),
+        membershipName: json["membership_name"]?.toString(),
+        membershipCode: json["membership_code"]?.toString(),
         minRedeemablePoints: json["min_redeemable_points"],
         pricePerPoint: json["price_per_point"]?.toDouble(),
         balance: json["balance"]?.toDouble(),
         transactions: json["transactions"] == null
             ? []
-            : List<CustomerTransaction>.from(
-                json["transactions"].map((x) => CustomerTransaction.fromJson(x))),
+            : List<CustomerTransaction>.from(json["transactions"]
+                .map((x) => CustomerTransaction.fromJson(x))),
         orders: json["orders"] == null
             ? []
             : List<CustomerOrder>.from(

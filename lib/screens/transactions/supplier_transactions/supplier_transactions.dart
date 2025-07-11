@@ -22,7 +22,7 @@ class TransactionScreen extends StatefulWidget {
 class _TransactionScreenState extends State<TransactionScreen> {
   final TextEditingController searchController = TextEditingController();
   final TextEditingController typeController = TextEditingController();
-  
+
   TransactionModel? selectedTransaction;
   bool initLoading = false;
   bool isInitialized = false;
@@ -31,8 +31,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
   @override
   void initState() {
     super.initState();
-    final accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    Provider.of<TransactionProvider>(context, listen: false).setAccessToken(accessToken);
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    Provider.of<TransactionProvider>(context, listen: false)
+        .setAccessToken(accessToken);
     loadInitData();
     typeController.text = "All Types";
   }
@@ -72,9 +74,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
         Provider.of<TransactionProvider>(context, listen: false);
     provider.applyTransactionFiltersLocally(
       filterName: searchController.text,
-      filterType: typeController.text == "All Types"
-          ? null
-          : typeController.text,
+      filterType:
+          typeController.text == "All Types" ? null : typeController.text,
       page: 1,
     );
   }
@@ -141,16 +142,22 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   shrinkWrap: true,
                   physics: const BouncingScrollPhysics(),
                   children: [
-                    _buildDetailRow('Supplier Name', transaction.supplier.user.name),
-                    _buildDetailRow('Date', DateHelper.formatISODate(transaction.date)),
+                    _buildDetailRow(
+                        'Supplier Name', transaction.supplier.user.name),
+                    _buildDetailRow(
+                        'Date', DateHelper.formatISODate(transaction.date)),
                     _buildDetailRow('Type', transaction.type),
-                    _buildDetailRow('Transaction Type', transaction.transactionType),
+                    _buildDetailRow(
+                        'Transaction Type', transaction.transactionType),
                     _buildDetailRow('Payment Mode', transaction.paymentMode),
-                    _buildDetailRow('Amount', '${transaction.currency} ${transaction.amount}'),
-                    _buildDetailRow('Tax Amount', transaction.taxAmount ?? 'N/A'),
+                    _buildDetailRow('Amount',
+                        '${transaction.currency} ${transaction.amount}'),
+                    _buildDetailRow(
+                        'Tax Amount', transaction.taxAmount ?? 'N/A'),
                     _buildDetailRow('Reference', transaction.reference),
                     _buildDetailRow('Status', transaction.status),
-                    _buildDetailRow('Comment', transaction.transactionComment ?? 'N/A'),
+                    _buildDetailRow(
+                        'Comment', transaction.transactionComment ?? 'N/A'),
                   ],
                 ),
               ),
@@ -246,7 +253,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
   Widget _buildStatusChip(String status) {
     Color backgroundColor;
     Color textColor;
-    
+
     switch (status.toUpperCase()) {
       case 'SUCC':
       case 'SUCCESS':
@@ -309,12 +316,13 @@ class _TransactionScreenState extends State<TransactionScreen> {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
-    
+
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: _onRefresh,
         child: Container(
-          margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
+          margin:
+              const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
@@ -328,7 +336,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
             color: Colors.white,
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            padding:
+                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -449,26 +458,25 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                    items: types
-                                        .map<DropdownMenuItem<String>>(
-                                            (String value) {
-                                          return DropdownMenuItem<String>(
-                                            value: value,
-                                            child: Text(
-                                              value == "All Types"
-                                                  ? 'Please Select'
-                                                  : value,
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.27,
-                                                ColorManager.textColor
-                                                    .withOpacity(.5),
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          );
-                                        }).toList(),
+                                    items: types.map<DropdownMenuItem<String>>(
+                                        (String value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(
+                                          value == "All Types"
+                                              ? 'Please Select'
+                                              : value,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.27,
+                                            ColorManager.textColor
+                                                .withOpacity(.5),
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      );
+                                    }).toList(),
                                     onChanged: (String? newValue) {
                                       setState(() {
                                         typeController.text = newValue!;
@@ -523,7 +531,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                   if (listTransactionModelDataList == null ||
                                       listTransactionModelDataList.isEmpty) {
                                     return const Center(
-                                        child: Text("No transaction data available"));
+                                        child: Text(
+                                            "No transaction data available"));
                                   }
 
                                   return BuildBoxShadowContainer(
@@ -549,19 +558,24 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                           child: Table(
                                             columnWidths: const {
                                               0: FlexColumnWidth(0.6), // SI No
-                                              1: FlexColumnWidth(1.8), // Supplier
+                                              1: FlexColumnWidth(
+                                                  1.8), // Supplier
                                               2: FlexColumnWidth(1.2), // Date
                                               3: FlexColumnWidth(1.0), // Type
-                                              4: FlexColumnWidth(1.5), // Transaction Type
-                                              5: FlexColumnWidth(1.2), // Payment Mode
+                                              4: FlexColumnWidth(
+                                                  1.5), // Transaction Type
+                                              5: FlexColumnWidth(
+                                                  1.2), // Payment Mode
                                               6: FlexColumnWidth(1.2), // Amount
-                                              7: FlexColumnWidth(1.5), // Reference
+                                              7: FlexColumnWidth(
+                                                  1.5), // Reference
                                               8: FlexColumnWidth(1.0), // Status
                                               9: FlexColumnWidth(1.0), // Action
                                             },
                                             border: null,
                                             defaultVerticalAlignment:
-                                                TableCellVerticalAlignment.middle,
+                                                TableCellVerticalAlignment
+                                                    .middle,
                                             children: [
                                               TableRow(
                                                 children: [
@@ -569,10 +583,13 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                                   _buildTableHeader('Supplier'),
                                                   _buildTableHeader('Date'),
                                                   _buildTableHeader('Type'),
-                                                  _buildTableHeader('Transaction Type'),
-                                                  _buildTableHeader('Payment Mode'),
+                                                  _buildTableHeader(
+                                                      'Transaction Type'),
+                                                  _buildTableHeader(
+                                                      'Payment Mode'),
                                                   _buildTableHeader('Amount'),
-                                                  _buildTableHeader('Reference'),
+                                                  _buildTableHeader(
+                                                      'Reference'),
                                                   _buildTableHeader('Status'),
                                                   _buildTableHeader('Action'),
                                                 ],
@@ -585,9 +602,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                           child: MouseRegion(
                                             cursor: SystemMouseCursors.grab,
                                             child: ScrollConfiguration(
-                                              behavior:
-                                                  ScrollConfiguration.of(context)
-                                                      .copyWith(
+                                              behavior: ScrollConfiguration.of(
+                                                      context)
+                                                  .copyWith(
                                                 dragDevices: {
                                                   PointerDeviceKind.mouse,
                                                   PointerDeviceKind.touch,
@@ -601,16 +618,26 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                                 scrollDirection: Axis.vertical,
                                                 child: Table(
                                                   columnWidths: const {
-                                                    0: FlexColumnWidth(0.6), // SI No
-                                                    1: FlexColumnWidth(1.8), // Supplier
-                                                    2: FlexColumnWidth(1.2), // Date
-                                                    3: FlexColumnWidth(1.0), // Type
-                                                    4: FlexColumnWidth(1.5), // Transaction Type
-                                                    5: FlexColumnWidth(1.2), // Payment Mode
-                                                    6: FlexColumnWidth(1.2), // Amount
-                                                    7: FlexColumnWidth(1.5), // Reference
-                                                    8: FlexColumnWidth(1.0), // Status
-                                                    9: FlexColumnWidth(1.0), // Action
+                                                    0: FlexColumnWidth(
+                                                        0.6), // SI No
+                                                    1: FlexColumnWidth(
+                                                        1.8), // Supplier
+                                                    2: FlexColumnWidth(
+                                                        1.2), // Date
+                                                    3: FlexColumnWidth(
+                                                        1.0), // Type
+                                                    4: FlexColumnWidth(
+                                                        1.5), // Transaction Type
+                                                    5: FlexColumnWidth(
+                                                        1.2), // Payment Mode
+                                                    6: FlexColumnWidth(
+                                                        1.2), // Amount
+                                                    7: FlexColumnWidth(
+                                                        1.5), // Reference
+                                                    8: FlexColumnWidth(
+                                                        1.0), // Status
+                                                    9: FlexColumnWidth(
+                                                        1.0), // Action
                                                   },
                                                   border: null,
                                                   defaultVerticalAlignment:
@@ -622,38 +649,54 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                                         .asMap()
                                                         .entries
                                                         .map((entry) {
-                                                      final int index = entry.key;
-                                                      final transaction = entry.value;
+                                                      final int index =
+                                                          entry.key;
+                                                      final transaction =
+                                                          entry.value;
                                                       return TableRow(
-                                                        decoration: BoxDecoration(
+                                                        decoration:
+                                                            BoxDecoration(
                                                           color: index % 2 == 0
                                                               ? Colors.white
                                                               : Colors.grey
-                                                                  .withOpacity(0.1),
+                                                                  .withOpacity(
+                                                                      0.1),
                                                         ),
                                                         children: [
                                                           _buildTableCell(
-                                                              transaction.siNo.toString()),
+                                                              transaction.siNo
+                                                                  .toString()),
                                                           _buildTableCell(
-                                                              transaction.supplier.user.name),
-                                                          _buildTableCell(
-                                                              DateHelper.formatISODate(
-                                                                  transaction.date)),
+                                                              transaction
+                                                                  .supplier
+                                                                  .user
+                                                                  .name),
+                                                          _buildTableCell(DateHelper
+                                                              .formatISODate(
+                                                                  transaction
+                                                                      .date)),
                                                           Center(
-                                                            child: _buildTypeCell(
-                                                                transaction.type),
+                                                            child:
+                                                                _buildTypeCell(
+                                                                    transaction
+                                                                        .type),
                                                           ),
                                                           _buildTableCell(
-                                                              transaction.transactionType),
+                                                              transaction
+                                                                  .transactionType),
                                                           _buildTableCell(
-                                                              transaction.paymentMode),
+                                                              transaction
+                                                                  .paymentMode),
                                                           _buildTableCell(
                                                               '${transaction.currency} ${transaction.amount}'),
                                                           _buildTableCell(
-                                                              transaction.reference),
+                                                              transaction
+                                                                  .reference),
                                                           Center(
-                                                            child: _buildStatusChip(
-                                                                transaction.status),
+                                                            child:
+                                                                _buildStatusChip(
+                                                                    transaction
+                                                                        .status),
                                                           ),
                                                           Center(
                                                             child: Padding(
@@ -666,9 +709,11 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                                                     const EdgeInsets
                                                                         .only(
                                                                         left: 5,
-                                                                        right: 5),
+                                                                        right:
+                                                                            5),
                                                                 circleRadius: 5,
-                                                                child: IconButton(
+                                                                child:
+                                                                    IconButton(
                                                                   icon: Icon(
                                                                     Icons
                                                                         .visibility,
@@ -683,8 +728,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                                                           transaction),
                                                                   constraints:
                                                                       const BoxConstraints(
-                                                                    minWidth: 36,
-                                                                    minHeight: 36,
+                                                                    minWidth:
+                                                                        36,
+                                                                    minHeight:
+                                                                        36,
                                                                   ),
                                                                   padding:
                                                                       EdgeInsets
