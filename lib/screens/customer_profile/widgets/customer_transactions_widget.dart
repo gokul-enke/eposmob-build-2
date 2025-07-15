@@ -90,12 +90,10 @@ class CustomerTransactionsWidget extends StatelessWidget {
     BuildContext context,
     CustomerTransaction transaction,
   ) {
-    return Card(
+    return BuildBoxShadowContainer(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      color: Colors.white,
+      circleRadius: 7,
       child: ExpansionTile(
         title: Row(
           children: [

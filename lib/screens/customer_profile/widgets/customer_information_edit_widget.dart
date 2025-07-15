@@ -420,9 +420,9 @@ class _CustomerInformationEditWidgetState
                       height: 50,
                       width: size.width * 0.175,
                       fontSize: FontSize.s12,
-                      boxColor: Colors.white,
-                      textColor: ColorManager.kPrimaryColor,
-                      borderColor: ColorManager.kPrimaryColor,
+                      boxColor: ColorManager.kBgDarkColor,
+                      textColor: ColorManager.kTextColor,
+                       borderColor: ColorManager.kBgLightColor,
                     ),
                   ],
                 ),
@@ -452,7 +452,7 @@ void _showPasswordChangeConfirmation(BuildContext context) {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.email_outlined, size: 48, color: Colors.blue),
+          const Icon(Icons.email_outlined, size: 48, color: Colors.grey),
           SizedBox(height: 16),
           Text(
             "A password change link will be sent to the customer's registered email address.",
@@ -491,6 +491,8 @@ void _showPasswordChangeConfirmation(BuildContext context) {
         ),
         CustomRoundButton(
           title: "Send Link",
+          // boxColor: Colors.grey,
+          // borderColor: Colors.white,
           fct: () {
             Navigator.pop(context); // Close the dialog
             ScaffoldMessenger.of(context).showSnackBar(

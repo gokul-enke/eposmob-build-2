@@ -701,7 +701,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                   GetSuppliersModelData>(
                                               value: supplier,
                                               child: Text(
-                                                supplier.name ?? '',
+                                                supplier.user?.name ?? 'No Name',
                                                 style: buildCustomStyle(
                                                   FontWeightManager.medium,
                                                   FontSize.s12,
