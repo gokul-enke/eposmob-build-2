@@ -533,6 +533,8 @@ class CartProvider with ChangeNotifier {
     String? deliveryMethodId,
     String? carNumber,
     String? status,
+    String? deliveryDate, // <-- add this
+    String? deliveryTime, // <-- add this
   }) async {
     debugPrint("📤 ADD TO ORDER API - Starting request");
     debugPrint("📦 Order items count: ${items?.length ?? 0}");
@@ -579,6 +581,8 @@ class CartProvider with ChangeNotifier {
         if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
         if (carNumber != null) "car_number": carNumber,
         if (status != null) "status": status,
+        if (deliveryDate != null) "delivery_date": deliveryDate,
+        if (deliveryTime != null) "delivery_time": deliveryTime,
       };
     } else {
       // Fallback to single payment method format
@@ -596,6 +600,8 @@ class CartProvider with ChangeNotifier {
         if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
         if (carNumber != null) "car_number": carNumber,
         if (status != null) "status": status,
+        if (deliveryDate != null) "delivery_date": deliveryDate,
+        if (deliveryTime != null) "delivery_time": deliveryTime,
       };
     }
 

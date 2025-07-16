@@ -139,11 +139,11 @@ class ListCartModelDataCartItem {
         categoryId: json["category_id"],
         quantity: num.tryParse(json["quantity"]),
         productUnit: json["product_unit"],
-        unitPrice: (json["unit_price"]),
-        mrp: json["mrp"],
-        totalPrice: json["total_price"],
-        taxRate: json["tax_rate"], // Now a String
-        taxAmount: json["tax_amount"], // Now a String
+        unitPrice: (json["unit_price"]).toString(),
+        mrp: (json["mrp"]).toString(),
+        totalPrice: (json["total_price"]).toString(),
+        taxRate: json["tax_rate"].toString(), // Now a String
+        taxAmount: json["tax_amount"].toString(), // Now a String
         currency: json["currency"],
         createdAt: json["created_at"] == null
             ? null

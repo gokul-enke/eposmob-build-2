@@ -27,12 +27,14 @@ import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
+import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:provider/provider.dart';
 import 'controllers/sidebar_controller.dart';
 import 'providers/carousel_provider.dart';
 import 'providers/purchase_provider.dart';
 import 'screens/login/login.dart';
 import 'screens/base_url_wrapper.dart';
+import 'helpers/keyboard_dispatcher.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -113,8 +115,10 @@ class MyApp extends StatelessWidget {
           create: (_) => TransactionProvider(),
         ),
         ChangeNotifierProvider(create: (_) => KeyboardProvider()),
+        ChangeNotifierProvider(create: (_) => BarcodeProvider()),
       ],
-      child: GetMaterialApp(
+      child: KeyboardDispatcher(
+        child: GetMaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Flutter POS Machine',
         theme: ThemeData(),
@@ -131,6 +135,6 @@ class MyApp extends StatelessWidget {
           '/login': (context) => const SignInScreen(),
         },
       ),
-    );
+),    );
   }
 }

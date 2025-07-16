@@ -17,6 +17,7 @@ import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
@@ -126,6 +127,7 @@ class BillingPageState extends State<BillingPage>
   bool isLoadingConfirmOrder = false;
   bool isLoadingSaveOrderAndPrint = false;
   bool isLoadingAddItem = false;
+  bool _isProcessingBarcode = false;
 
   // Add these variables for the new sidebar
   bool _isSidebarVisible = true;
@@ -148,6 +150,11 @@ class BillingPageState extends State<BillingPage>
 
   // Add flag to track if customer was manually selected
   bool _isCustomerManuallySelected = false;
+
+  StreamSubscription<String>? _barcodeSubscription;
+
+  String? deliveryDate;
+  String? deliveryTime;
 
   @override
   void initState() {
@@ -191,6 +198,15 @@ class BillingPageState extends State<BillingPage>
     // Initialize internet connectivity listener
     _initConnectivityListener();
 
+    // Listen to the barcode stream
+    final barcodeProvider =
+        Provider.of<BarcodeProvider>(context, listen: false);
+    _barcodeSubscription = barcodeProvider.barcodeStream.listen((barcode) {
+      if (mounted) {
+        processBarcode(barcode);
+      }
+    });
+
     // Listen for sales executive changes to update default customer
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final salesExecutiveProvider =
@@ -214,6 +230,7 @@ class BillingPageState extends State<BillingPage>
 
   @override
   void dispose() {
+    _barcodeSubscription?.cancel();
     barcodeController.dispose();
     mobileNumberTextController.dispose();
     coupenCodeTextController.dispose();
@@ -443,6 +460,121 @@ class BillingPageState extends State<BillingPage>
       } catch (e) {
         // debugPrint("Error handling key press: $e");
       }
+    }
+  }
+
+  Future<void> processBarcode(String barcode) async {
+    // If a barcode is already being processed, or if the input is empty, do nothing.
+    if (_isProcessingBarcode || barcode.isEmpty) {
+      return;
+    }
+
+    // Set the flag to true to prevent duplicate processing.
+    setState(() {
+      _isProcessingBarcode = true;
+    });
+    String query = barcode;
+
+    List<GetProduct> filteredProducts = [];
+    try {
+      String? prefix;
+      String? productCode;
+      String? lastFive;
+
+      if (query.length > 2) {
+        prefix = query.substring(0, 3); // First 3 digits;
+      }
+
+      if (prefix != '000' || query.length != 14) {
+        filteredProducts =
+            Provider.of<LocalProductProvider>(context, listen: false)
+                .filterProductByBarcode(
+          barCode: query,
+        );
+      } else {
+        productCode = query.substring(3, 9); // Next 6 digits
+        lastFive = query.substring(9, 14); // Last 5 digits
+        filteredProducts =
+            Provider.of<LocalProductProvider>(context, listen: false)
+                .filterProductByBarcode(
+          barCode: productCode,
+        );
+      }
+
+      if (filteredProducts.isNotEmpty) {
+        // Get the first product
+        GetProduct product = filteredProducts.first;
+
+        num? quantity;
+        if ((product.unit == 'KGS' || product.unit == 'KG') &&
+            prefix == '000' &&
+            query.length == 14) {
+          // Weight-based product
+          String weightKg = lastFive!.substring(0, 2); // First 2 digits = KG
+          String weightGrams =
+              lastFive.substring(2, 5); // Last 3 digits = Grams
+          quantity =
+              double.parse(weightKg) + (double.parse(weightGrams) / 1000);
+        } else if ((product.unit == 'PCS' || product.unit == 'PC') &&
+            prefix == '000' &&
+            query.length == 14) {
+          // Count-based product
+          quantity = int.parse(lastFive!); // Last 5 digits represent quantity
+        }
+
+        // Use centralized helper for stock handling
+        debugPrint("🛒 BARCODE SCAN - Calling ProductCartHelper with:");
+        debugPrint("  - Product: ${product.productName}");
+        debugPrint("  - Quantity: $quantity");
+        debugPrint("  - Customer ID: $selectedCustomerID");
+        debugPrint("  - Customer Name: ${selectedCustomer?.name}");
+
+        await ProductCartHelper.handleProductSelection(
+          context: context,
+          product: product,
+          quantity: quantity,
+          addToCartDirectly: true,
+          customerId: selectedCustomerID,
+          customerName: selectedCustomer?.name,
+        );
+
+        // Clear input fields
+        setState(() {
+          _autocompleteProductKey = GlobalKey();
+          quantityController.clear();
+          barcodeController.clear();
+          selectedProductIdController.clear();
+          unitPriceController.clear();
+        });
+        _focusTextField();
+      } else {
+        // Set dialog state to open
+        await showDialog(
+          context: context,
+          builder: (context) => AddProductWithBarcodeModal(barcode: query),
+        );
+        // Reset dialog state
+
+        barcodeController.clear();
+        _focusTextField();
+
+        debugPrint("No products found for barcode: $query");
+      }
+    } catch (e) {
+      debugPrint("Error adding item: $e");
+      showScaffoldError(
+        context: context,
+        message: "Invalid Barcode. Please try again.",
+      );
+    } finally {
+      // Reset the flag after a short delay to allow the UI to settle.
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          setState(() {
+            _isProcessingBarcode = false;
+          });
+        }
+      });
     }
   }
 
@@ -787,6 +919,8 @@ class BillingPageState extends State<BillingPage>
                       customerPhone: selectedCustomerPhone ?? mobileNumberText,
                       comment: _commentController.text,
                       deliveryMethod: deliveryMethod,
+                      deliveryDate: deliveryDate, // Pass deliveryDate
+                      deliveryTime: deliveryTime, // Pass deliveryTime
                     );
 
                     // Show quick feedback
@@ -800,7 +934,10 @@ class BillingPageState extends State<BillingPage>
                 } // If cart has items, save as new order
                 else if (localProductProvider.cartItems.isNotEmpty) {
                   try {
-                    localProductProvider.saveCurrentCartAsOrder();
+                    localProductProvider.saveCurrentCartAsOrder(
+                      deliveryDate: deliveryDate, // Pass deliveryDate
+                      deliveryTime: deliveryTime, // Pass deliveryTime
+                    );
                     showScaffold(
                       context: context,
                       message: "Order Saved Successfully",
@@ -958,139 +1095,15 @@ class BillingPageState extends State<BillingPage>
                               focusNode: _barcodeNode,
                               readOnly:
                                   selectedProductNameController.text.isNotEmpty,
-                              onchanged: (query) async {
+                              onchanged: (query) {
                                 if (_debounce?.isActive ?? false) {
                                   _debounce!.cancel();
                                 }
                                 _debounce = Timer(
                                   const Duration(milliseconds: 500),
-                                  () async {
-                                    if (query != null) {
-                                      debugPrint("QUERY: ${query.length}");
-                                      final localProductProvider =
-                                          Provider.of<LocalProductProvider>(
-                                              context,
-                                              listen: false);
-
-                                      List<GetProduct> filteredProducts = [];
-                                      try {
-                                        String? prefix;
-                                        String? productCode;
-                                        String? lastFive;
-
-                                        if (query.length > 2) {
-                                          prefix = query.substring(
-                                              0, 3); // First 3 digits;
-                                        }
-
-                                        if (prefix != '000' ||
-                                            query.length != 14) {
-                                          filteredProducts =
-                                              Provider.of<LocalProductProvider>(
-                                                      context,
-                                                      listen: false)
-                                                  .filterProductByBarcode(
-                                            barCode: query,
-                                          );
-                                        } else {
-                                          productCode = query.substring(
-                                              3, 9); // Next 6 digits
-                                          lastFive = query.substring(
-                                              9, 14); // Last 5 digits
-                                          filteredProducts =
-                                              Provider.of<LocalProductProvider>(
-                                                      context,
-                                                      listen: false)
-                                                  .filterProductByBarcode(
-                                            barCode: productCode,
-                                          );
-                                        }
-
-                                        if (filteredProducts.isNotEmpty) {
-                                          // Get the first product
-                                          GetProduct product =
-                                              filteredProducts.first;
-
-                                          num? quantity;
-                                          if ((product.unit == 'KGS' ||
-                                                  product.unit == 'KG') &&
-                                              prefix == '000' &&
-                                              query.length == 14) {
-                                            // Weight-based product
-                                            String weightKg = lastFive!
-                                                .substring(0,
-                                                    2); // First 2 digits = KG
-                                            String weightGrams =
-                                                lastFive.substring(2,
-                                                    5); // Last 3 digits = Grams
-                                            quantity = double.parse(weightKg) +
-                                                (double.parse(weightGrams) /
-                                                    1000);
-                                          } else if ((product.unit == 'PCS' ||
-                                                  product.unit == 'PC') &&
-                                              prefix == '000' &&
-                                              query.length == 14) {
-                                            // Count-based product
-                                            quantity = int.parse(
-                                                lastFive!); // Last 5 digits represent quantity
-                                          }
-
-                                          // Use centralized helper for stock handling
-                                          debugPrint(
-                                              "🛒 BARCODE SCAN - Calling ProductCartHelper with:");
-                                          debugPrint(
-                                              "  - Product: ${product.productName}");
-                                          debugPrint("  - Quantity: $quantity");
-                                          debugPrint(
-                                              "  - Customer ID: $selectedCustomerID");
-                                          debugPrint(
-                                              "  - Customer Name: ${selectedCustomer?.name}");
-
-                                          await ProductCartHelper
-                                              .handleProductSelection(
-                                            context: context,
-                                            product: product,
-                                            quantity: quantity,
-                                            addToCartDirectly: true,
-                                            customerId: selectedCustomerID,
-                                            customerName:
-                                                selectedCustomer?.name,
-                                          );
-
-                                          // Clear input fields
-                                          setState(() {
-                                            _autocompleteProductKey =
-                                                GlobalKey();
-                                            quantityController.clear();
-                                            barcodeController.clear();
-                                            selectedProductIdController.clear();
-                                            unitPriceController.clear();
-                                          });
-                                          _focusTextField();
-                                        } else {
-                                          // Set dialog state to open
-                                          await showDialog(
-                                            context: context,
-                                            builder: (context) =>
-                                                AddProductWithBarcodeModal(
-                                                    barcode: query),
-                                          );
-                                          // Reset dialog state
-
-                                          barcodeController.clear();
-                                          _focusTextField();
-
-                                          debugPrint(
-                                              "No products found for barcode: $query");
-                                        }
-                                      } catch (e) {
-                                        debugPrint("Error adding item: $e");
-                                        showScaffoldError(
-                                          context: context,
-                                          message:
-                                              "Invalid Barcode. Please try again.",
-                                        );
-                                      }
+                                  () {
+                                    if (query != null && query.isNotEmpty) {
+                                      processBarcode(query);
                                     }
                                   },
                                 );
@@ -2610,7 +2623,6 @@ class BillingPageState extends State<BillingPage>
         _transactionNumberController.clear();
         _paidAmountController.clear();
         _balanceAmount = 0;
-
         // Reset multi-payment fields
         _isCashSelected = true;
         _isCardSelected = false;
@@ -2625,6 +2637,9 @@ class BillingPageState extends State<BillingPage>
         unitPriceController.clear();
         isCouponApplied = false;
         _isCustomerManuallySelected = false;
+        // Clear delivery date and time
+        deliveryDate = null;
+        deliveryTime = null;
       });
       showScaffold(
         context: context,
@@ -2784,6 +2799,8 @@ class BillingPageState extends State<BillingPage>
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
           status: "saved",
+          deliveryDate: deliveryDate, // Pass deliveryDate
+          deliveryTime: deliveryTime, // Pass deliveryTime
         );
 
         showScaffold(
@@ -2882,6 +2899,8 @@ class BillingPageState extends State<BillingPage>
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
           status: "saved",
+          deliveryDate: deliveryDate, // Pass deliveryDate
+          deliveryTime: deliveryTime, // Pass deliveryTime
         );
 
         showScaffold(
@@ -2922,6 +2941,8 @@ class BillingPageState extends State<BillingPage>
         _cashAmountController.clear();
         _cardAmountController.clear();
         _upiAmountController.clear();
+        deliveryDate = null;
+        deliveryTime = null;
       });
 
       resetAutocomplete(
@@ -3087,6 +3108,8 @@ class BillingPageState extends State<BillingPage>
             deliveryMethodId: deliveryMethodId,
             carNumber: _carNumberController.text,
             status: "confirmed",
+            deliveryDate: deliveryDate, // Pass deliveryDate
+            deliveryTime: deliveryTime, // Pass deliveryTime
           );
 
           showScaffold(
@@ -3176,6 +3199,8 @@ class BillingPageState extends State<BillingPage>
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
           status: "confirmed",
+          deliveryDate: deliveryDate, // Pass deliveryDate
+          deliveryTime: deliveryTime, // Pass deliveryTime
         );
 
         showScaffold(
@@ -3216,6 +3241,8 @@ class BillingPageState extends State<BillingPage>
         _commentController.clear();
         _isCustomerManuallySelected =
             false; // Reset manual selection after save
+        deliveryDate = null;
+        deliveryTime = null;
       });
 
       resetAutocomplete(
@@ -3570,7 +3597,7 @@ class BillingPageState extends State<BillingPage>
             if (currentOrder.paymentMethod!.startsWith('{')) {
               try {
                 Map<String, dynamic> multiPaymentData =
-                    json.decode(currentOrder.paymentMethod!);
+                    json.decode(currentOrder.paymentMethod!); // Use json.decode here
                 if (multiPaymentData['isMultiPayment'] == true) {
                   List<String> methods =
                       List<String>.from(multiPaymentData['methods'] ?? []);
@@ -3598,13 +3625,15 @@ class BillingPageState extends State<BillingPage>
                     _isUpiSelected = true;
                     _upiAmountController.text = amounts['UPI'] ?? "0";
                   }
-
-                  // Clear iconColor for multi-payment
-                  // iconColor = 0; // DELETE THIS LINE
+                } else {
+                  // If it's a JSON string but not marked as multiPayment, treat as single
+                  _isCashSelected = true;
+                  _isCardSelected = false;
+                  _isUpiSelected = false;
                 }
               } catch (e) {
                 debugPrint("Error parsing multi-payment data: $e");
-                // Fall back to single payment method
+                // Fall back to single payment method if parsing fails
                 switch (currentOrder.paymentMethod?.toUpperCase()) {
                   case "CASH":
                     _isCashSelected = true;
@@ -3653,14 +3682,15 @@ class BillingPageState extends State<BillingPage>
             }
           } else {
             // Default to cash if no payment method
-            // iconColor = 1; // DELETE THIS LINE
+            _isCashSelected = true;
+            _isCardSelected = false;
+            _isUpiSelected = false;
           }
 
-          // Restore payment amounts
+          // Restore payment amounts (for single payment, this will set the primary controller)
           _paidAmountController.text = currentOrder.paidAmount ?? "0.0";
           _balanceAmount =
               double.tryParse(currentOrder.balanceAmount ?? "0.0") ?? 0.0;
-// Mark as user-set to prevent auto-update
 
           // For single payment methods, also populate the individual payment controllers
           if (!currentOrder.paymentMethod!.startsWith('{')) {
@@ -3689,6 +3719,10 @@ class BillingPageState extends State<BillingPage>
           // Restore comments and car number
           _commentController.text = currentOrder.comment ?? "";
           _carNumberController.text = currentOrder.carNumber ?? "";
+
+          // Restore delivery date and time
+          deliveryDate = currentOrder.deliveryDate;
+          deliveryTime = currentOrder.deliveryTime;
 
           // Restore coupon if any
           if (currentOrder.couponId != null &&
@@ -3884,6 +3918,8 @@ class BillingPageState extends State<BillingPage>
         deliveryMethodId: deliveryMethodId,
         carNumber: _carNumberController.text,
         status: "confirmed",
+        deliveryDate: deliveryDate,
+        deliveryTime: deliveryTime,
       )
           .then((response) async {
         debugPrint(
@@ -3964,6 +4000,8 @@ class BillingPageState extends State<BillingPage>
             _balanceAmount = 0;
             _carNumberController.clear();
             _commentController.clear();
+            deliveryDate = null;
+            deliveryTime = null;
           });
           resetAutocomplete(
               shouldFetchCustomers:
@@ -4132,6 +4170,8 @@ class BillingPageState extends State<BillingPage>
         deliveryMethodId: deliveryMethodId,
         carNumber: _carNumberController.text,
         status: "confirmed",
+        deliveryDate: deliveryDate,
+        deliveryTime: deliveryTime,
       )
           .then((response) {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
@@ -4170,6 +4210,8 @@ class BillingPageState extends State<BillingPage>
             _balanceAmount = 0;
             _carNumberController.clear();
             _commentController.clear();
+            deliveryDate = null;
+            deliveryTime = null;
           });
           resetAutocomplete(
               shouldFetchCustomers:
@@ -4224,8 +4266,7 @@ class BillingPageState extends State<BillingPage>
 
   List<String> _getSelectedPaymentMethods() {
     List<String> methods = [];
-    if (_isCashSelected &&
-        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
+    if (_isCashSelected) {
       methods.add("CASH");
     }
     if (_isCardSelected &&
@@ -4242,8 +4283,7 @@ class BillingPageState extends State<BillingPage>
   List<Map<String, dynamic>> _getPaidMethods() {
     List<Map<String, dynamic>> paidMethods = [];
 
-    if (_isCashSelected &&
-        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
+    if (_isCashSelected) {
       paidMethods.add({
         "method": "CASH",
         "amount": double.tryParse(_cashAmountController.text) ?? 0,
@@ -4384,8 +4424,7 @@ class BillingPageState extends State<BillingPage>
 
   IconData _getPaymentIcon() {
     List<String> activeMethods = [];
-    if (_isCashSelected &&
-        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
+    if (_isCashSelected) {
       activeMethods.add('Cash');
     }
     if (_isCardSelected &&
@@ -4411,8 +4450,7 @@ class BillingPageState extends State<BillingPage>
 
   String _getPaymentLabel() {
     List<String> activeMethods = [];
-    if (_isCashSelected &&
-        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
+    if (_isCashSelected) {
       activeMethods.add('Cash');
     }
     if (_isCardSelected &&
@@ -4508,12 +4546,17 @@ class BillingPageState extends State<BillingPage>
         initialDeliveryMethodId: deliveryMethodId,
         initialCarNumber: _carNumberController.text,
         initialComment: _commentController.text,
-        onDeliveryMethodSelected: (method, methodId, carNumber, comment) {
+        initialDeliveryDate: deliveryDate,
+        initialDeliveryTime: deliveryTime,
+        onDeliveryMethodSelected:
+            (method, methodId, carNumber, comment, selectedDate, selectedTime) {
           setState(() {
             deliveryMethod = method;
             deliveryMethodId = methodId;
             _carNumberController.text = carNumber;
             _commentController.text = comment;
+            deliveryDate = selectedDate;
+            deliveryTime = selectedTime;
           });
         },
       ),
@@ -4801,6 +4844,9 @@ class BillingPageState extends State<BillingPage>
       _paidAmountController.clear();
       _carNumberController.clear();
       _commentController.clear();
+
+      deliveryDate = null;
+      deliveryTime = null;
 
       // Reset other flags
       isCouponApplied = false;
