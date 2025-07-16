@@ -22,29 +22,34 @@ class TransactionScreen extends StatefulWidget {
 class _TransactionScreenState extends State<TransactionScreen> {
   final TextEditingController searchController = TextEditingController();
   final TextEditingController typeController = TextEditingController();
-  
+  final TextEditingController statusController = TextEditingController();
+  final TextEditingController paymentModeController = TextEditingController();
+  final TextEditingController supplierController = TextEditingController();
+
   TransactionModel? selectedTransaction;
   bool initLoading = false;
   bool isInitialized = false;
-  List<String> types = ["All Types"];
 
   @override
   void initState() {
     super.initState();
-    final accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    Provider.of<TransactionProvider>(context, listen: false).setAccessToken(accessToken);
+    final accessToken = Provider.of<AuthModel>(context, listen: false).token ?? '';
+    Provider.of<TransactionProvider>(context, listen: false)
+        .setAccessToken(accessToken);
     loadInitData();
+    
+    // Initialize controllers with default values
     typeController.text = "All Types";
+    statusController.text = "All Status";
+    paymentModeController.text = "All Payment Modes";
+    supplierController.text = "All Suppliers";
   }
 
   void loadInitData() async {
     try {
-      setState(() {
-        initLoading = true;
-      });
+      setState(() => initLoading = true);
       await Provider.of<TransactionProvider>(context, listen: false)
           .fetchAllTransactionsBatch();
-      _extractFilters();
       setState(() {
         isInitialized = true;
         initLoading = false;
@@ -54,27 +59,22 @@ class _TransactionScreenState extends State<TransactionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error loading transactions: $error")),
       );
-      setState(() {
-        initLoading = false;
-      });
+      setState(() => initLoading = false);
     }
   }
 
-  void _extractFilters() {
-    final provider = Provider.of<TransactionProvider>(context, listen: false);
-    setState(() {
-      types = provider.getTypeOptions();
-    });
-  }
-
   void searchTransactions() {
-    TransactionProvider provider =
-        Provider.of<TransactionProvider>(context, listen: false);
-    provider.applyTransactionFiltersLocally(
+    Provider.of<TransactionProvider>(context, listen: false)
+        .applyTransactionFiltersLocally(
       filterName: searchController.text,
-      filterType: typeController.text == "All Types"
-          ? null
-          : typeController.text,
+      filterType: typeController.text == "All Types" ? null : typeController.text,
+      filterStatus: statusController.text == "All Status" ? null : statusController.text,
+      filterPaymentMode: paymentModeController.text == "All Payment Modes" 
+          ? null 
+          : paymentModeController.text,
+      filterSupplier: supplierController.text == "All Suppliers" 
+          ? null 
+          : supplierController.text,
       page: 1,
     );
   }
@@ -83,6 +83,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
     setState(() {
       searchController.clear();
       typeController.text = "All Types";
+      statusController.text = "All Status";
+      paymentModeController.text = "All Payment Modes";
+      supplierController.text = "All Suppliers";
     });
     Provider.of<TransactionProvider>(context, listen: false)
         .resetTransactionFilters();
@@ -91,93 +94,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
   Future<void> _onRefresh() async {
     await Provider.of<TransactionProvider>(context, listen: false)
         .refreshAllTransactions();
-    _extractFilters();
   }
 
-  void _showTransactionDetails(TransactionModel transaction) {
-    setState(() {
-      selectedTransaction = transaction;
-    });
-
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        elevation: 8,
-        backgroundColor: Colors.white,
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width / 2,
-            maxHeight: MediaQuery.of(context).size.height * 0.7,
-          ),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Transaction Details',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.black),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView(
-                  shrinkWrap: true,
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    _buildDetailRow('Supplier Name', transaction.supplier.user.name),
-                    _buildDetailRow('Date', DateHelper.formatISODate(transaction.date)),
-                    _buildDetailRow('Type', transaction.type),
-                    _buildDetailRow('Transaction Type', transaction.transactionType),
-                    _buildDetailRow('Payment Mode', transaction.paymentMode),
-                    _buildDetailRow('Amount', '${transaction.currency} ${transaction.amount}'),
-                    _buildDetailRow('Tax Amount', transaction.taxAmount ?? 'N/A'),
-                    _buildDetailRow('Reference', transaction.reference),
-                    _buildDetailRow('Status', transaction.status),
-                    _buildDetailRow('Comment', transaction.transactionComment ?? 'N/A'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  CustomRoundButton(
-                    title: "Close",
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    borderColor: ColorManager.kPrimaryColor,
-                    fct: () => Navigator.pop(context),
-                    height: 45,
-                    width: 120,
-                    fontSize: FontSize.s12,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
+ Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -246,7 +165,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
   Widget _buildStatusChip(String status) {
     Color backgroundColor;
     Color textColor;
-    
+
     switch (status.toUpperCase()) {
       case 'SUCC':
       case 'SUCCESS':
@@ -304,12 +223,175 @@ class _TransactionScreenState extends State<TransactionScreen> {
       ),
     );
   }
+  void _showTransactionDetails(TransactionModel transaction) {
+    setState(() {
+      selectedTransaction = transaction;
+    });
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        elevation: 8,
+        backgroundColor: Colors.white,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width / 2,
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Transaction Details',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.black),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    _buildDetailRow(
+                        'Supplier Name', transaction.supplier.user.name),
+                    _buildDetailRow(
+                        'Date', DateHelper.formatISODate(transaction.date)),
+                    _buildDetailRow('Type', transaction.type),
+                    _buildDetailRow(
+                        'Transaction Type', transaction.transactionType),
+                    _buildDetailRow('Payment Mode', transaction.paymentMode),
+                    _buildDetailRow('Amount',
+                        '${transaction.currency} ${transaction.amount}'),
+                    _buildDetailRow(
+                        'Tax Amount', transaction.taxAmount ?? 'N/A'),
+                    _buildDetailRow('Reference', transaction.reference),
+                    _buildDetailRow('Status', transaction.status),
+                    _buildDetailRow(
+                        'Comment', transaction.transactionComment ?? 'N/A'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  CustomRoundButton(
+                    title: "Close",
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    borderColor: ColorManager.kPrimaryColor,
+                    fct: () => Navigator.pop(context),
+                    height: 45,
+                    width: 120,
+                    fontSize: FontSize.s12,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
+  Widget _buildFilterDropdown({
+    required String title,
+    required TextEditingController controller,
+    required List<String> options,
+    required double width,
+    bool isSmallScreen = false,
+  }) {
+    return SizedBox(
+      width: isSmallScreen ? width * 0.3 : width * 0.15,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              title,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.27,
+                Colors.black.withOpacity(0.6),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          BuildBoxShadowContainer(
+            circleRadius: 7,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.only(left: 15),
+            height: 45,
+            child: DropdownButtonFormField<String>(
+              isExpanded: true,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+              value: controller.text,
+              hint: Text(
+                'Select $title',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.27,
+                  ColorManager.textColor.withOpacity(.5),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              items: options.map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(
+                    value,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s12,
+                      0.27,
+                      ColorManager.textColor.withOpacity(.5),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() => controller.text = newValue!);
+                searchTransactions();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final transactionProvider = Provider.of<TransactionProvider>(context);
     Size size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
-    
+
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: _onRefresh,
@@ -323,7 +405,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 color: ColorManager.boxShadowColor,
                 blurRadius: 6,
                 offset: Offset(1, 1),
-              ),
+              )
             ],
             color: Colors.white,
           ),
@@ -357,9 +439,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                         crossAxisAlignment: WrapCrossAlignment.end,
                         children: [
                           SizedBox(
-                            width: isSmallScreen
-                                ? size.width * 0.3
-                                : size.width * 0.15,
+                            width: isSmallScreen ? size.width * 0.3 : size.width * 0.15,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -383,9 +463,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                   height: 45,
                                   child: TextField(
                                     controller: searchController,
-                                    onChanged: (value) {
-                                      searchTransactions();
-                                    },
+                                    onChanged: (value) => searchTransactions(),
                                     decoration: InputDecoration(
                                       hintText: 'Search by name, reference',
                                       hintStyle: buildCustomStyle(
@@ -408,77 +486,33 @@ class _TransactionScreenState extends State<TransactionScreen> {
                               ],
                             ),
                           ),
-                          SizedBox(
-                            width: isSmallScreen
-                                ? size.width * 0.3
-                                : size.width * 0.15,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Type",
-                                    style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      FontSize.s14,
-                                      0.27,
-                                      Colors.black.withOpacity(0.6),
-                                    ),
-                                  ),
-                                ),
-                                BuildBoxShadowContainer(
-                                  circleRadius: 7,
-                                  alignment: Alignment.centerLeft,
-                                  padding: const EdgeInsets.only(left: 15),
-                                  height: 45,
-                                  child: DropdownButtonFormField<String>(
-                                    isExpanded: true,
-                                    decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.zero,
-                                    ),
-                                    value: typeController.text,
-                                    hint: Text(
-                                      'Please Select',
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.27,
-                                        ColorManager.textColor.withOpacity(.5),
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    items: types
-                                        .map<DropdownMenuItem<String>>(
-                                            (String value) {
-                                          return DropdownMenuItem<String>(
-                                            value: value,
-                                            child: Text(
-                                              value == "All Types"
-                                                  ? 'Please Select'
-                                                  : value,
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.27,
-                                                ColorManager.textColor
-                                                    .withOpacity(.5),
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          );
-                                        }).toList(),
-                                    onChanged: (String? newValue) {
-                                      setState(() {
-                                        typeController.text = newValue!;
-                                      });
-                                      searchTransactions();
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
+                          _buildFilterDropdown(
+                            title: "Type",
+                            controller: typeController,
+                            options: transactionProvider.getTypeOptions(),
+                            width: size.width,
+                            isSmallScreen: isSmallScreen,
+                          ),
+                          _buildFilterDropdown(
+                            title: "Status",
+                            controller: statusController,
+                            options: transactionProvider.getStatusOptions(),
+                            width: size.width,
+                            isSmallScreen: isSmallScreen,
+                          ),
+                          // _buildFilterDropdown(
+                          //   title: "Payment Mode",
+                          //   controller: paymentModeController,
+                          //   options: transactionProvider.getPaymentModeOptions(),
+                          //   width: size.width,
+                          //   isSmallScreen: isSmallScreen,
+                          // ),
+                          _buildFilterDropdown(
+                            title: "Supplier",
+                            controller: supplierController,
+                            options: transactionProvider.getSupplierOptions(),
+                            width: size.width,
+                            isSmallScreen: isSmallScreen,
                           ),
                           Row(
                             mainAxisSize: MainAxisSize.min,
@@ -507,219 +541,19 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   child: Column(
                     children: [
                       Expanded(
-                        child: initLoading ||
-                                Provider.of<TransactionProvider>(context,
-                                        listen: true)
-                                    .transactionIsLoading
-                            ? const Center(
-                                child: CircularProgressIndicator.adaptive())
-                            : Consumer<TransactionProvider>(
-                                builder: (context, transactionProvider, child) {
-                                  List<TransactionModel>?
-                                      listTransactionModelDataList =
-                                      transactionProvider
-                                          .listTransactionModelDataList;
-
-                                  if (listTransactionModelDataList == null ||
-                                      listTransactionModelDataList.isEmpty) {
-                                    return const Center(
-                                        child: Text("No transaction data available"));
-                                  }
-
-                                  return BuildBoxShadowContainer(
-                                    margin: const EdgeInsets.only(top: 5),
-                                    circleRadius: 7,
-                                    offsetValue: const Offset(2, 2),
-                                    blurRadius: 8.0,
-                                    color: Colors.white,
-                                    child: Column(
-                                      children: [
-                                        // Fixed table header
-                                        Container(
-                                          decoration: const BoxDecoration(
-                                            color: ColorManager.tableBGColor,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black12,
-                                                offset: Offset(0, 2),
-                                                blurRadius: 2.0,
-                                              ),
-                                            ],
-                                          ),
-                                          child: Table(
-                                            columnWidths: const {
-                                              0: FlexColumnWidth(0.6), // SI No
-                                              1: FlexColumnWidth(1.8), // Supplier
-                                              2: FlexColumnWidth(1.2), // Date
-                                              3: FlexColumnWidth(1.0), // Type
-                                              4: FlexColumnWidth(1.5), // Transaction Type
-                                              5: FlexColumnWidth(1.2), // Payment Mode
-                                              6: FlexColumnWidth(1.2), // Amount
-                                              7: FlexColumnWidth(1.5), // Reference
-                                              8: FlexColumnWidth(1.0), // Status
-                                              9: FlexColumnWidth(1.0), // Action
-                                            },
-                                            border: null,
-                                            defaultVerticalAlignment:
-                                                TableCellVerticalAlignment.middle,
-                                            children: [
-                                              TableRow(
-                                                children: [
-                                                  _buildTableHeader('SI No'),
-                                                  _buildTableHeader('Supplier'),
-                                                  _buildTableHeader('Date'),
-                                                  _buildTableHeader('Type'),
-                                                  _buildTableHeader('Transaction Type'),
-                                                  _buildTableHeader('Payment Mode'),
-                                                  _buildTableHeader('Amount'),
-                                                  _buildTableHeader('Reference'),
-                                                  _buildTableHeader('Status'),
-                                                  _buildTableHeader('Action'),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        // Scrollable table body
-                                        Expanded(
-                                          child: MouseRegion(
-                                            cursor: SystemMouseCursors.grab,
-                                            child: ScrollConfiguration(
-                                              behavior:
-                                                  ScrollConfiguration.of(context)
-                                                      .copyWith(
-                                                dragDevices: {
-                                                  PointerDeviceKind.mouse,
-                                                  PointerDeviceKind.touch,
-                                                  PointerDeviceKind.stylus,
-                                                  PointerDeviceKind.trackpad,
-                                                },
-                                              ),
-                                              child: SingleChildScrollView(
-                                                physics:
-                                                    const BouncingScrollPhysics(),
-                                                scrollDirection: Axis.vertical,
-                                                child: Table(
-                                                  columnWidths: const {
-                                                    0: FlexColumnWidth(0.6), // SI No
-                                                    1: FlexColumnWidth(1.8), // Supplier
-                                                    2: FlexColumnWidth(1.2), // Date
-                                                    3: FlexColumnWidth(1.0), // Type
-                                                    4: FlexColumnWidth(1.5), // Transaction Type
-                                                    5: FlexColumnWidth(1.2), // Payment Mode
-                                                    6: FlexColumnWidth(1.2), // Amount
-                                                    7: FlexColumnWidth(1.5), // Reference
-                                                    8: FlexColumnWidth(1.0), // Status
-                                                    9: FlexColumnWidth(1.0), // Action
-                                                  },
-                                                  border: null,
-                                                  defaultVerticalAlignment:
-                                                      TableCellVerticalAlignment
-                                                          .middle,
-                                                  children: [
-                                                    // Table Rows
-                                                    ...listTransactionModelDataList
-                                                        .asMap()
-                                                        .entries
-                                                        .map((entry) {
-                                                      final int index = entry.key;
-                                                      final transaction = entry.value;
-                                                      return TableRow(
-                                                        decoration: BoxDecoration(
-                                                          color: index % 2 == 0
-                                                              ? Colors.white
-                                                              : Colors.grey
-                                                                  .withOpacity(0.1),
-                                                        ),
-                                                        children: [
-                                                          _buildTableCell(
-                                                              transaction.siNo.toString()),
-                                                          _buildTableCell(
-                                                              transaction.supplier.user.name),
-                                                          _buildTableCell(
-                                                              DateHelper.formatISODate(
-                                                                  transaction.date)),
-                                                          Center(
-                                                            child: _buildTypeCell(
-                                                                transaction.type),
-                                                          ),
-                                                          _buildTableCell(
-                                                              transaction.transactionType),
-                                                          _buildTableCell(
-                                                              transaction.paymentMode),
-                                                          _buildTableCell(
-                                                              '${transaction.currency} ${transaction.amount}'),
-                                                          _buildTableCell(
-                                                              transaction.reference),
-                                                          Center(
-                                                            child: _buildStatusChip(
-                                                                transaction.status),
-                                                          ),
-                                                          Center(
-                                                            child: Padding(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .all(8.0),
-                                                              child:
-                                                                  BuildBoxShadowContainer(
-                                                                margin:
-                                                                    const EdgeInsets
-                                                                        .only(
-                                                                        left: 5,
-                                                                        right: 5),
-                                                                circleRadius: 5,
-                                                                child: IconButton(
-                                                                  icon: Icon(
-                                                                    Icons
-                                                                        .visibility,
-                                                                    size: 18,
-                                                                    color: ColorManager
-                                                                        .kPrimaryColor
-                                                                        .withOpacity(
-                                                                            0.9),
-                                                                  ),
-                                                                  onPressed: () =>
-                                                                      _showTransactionDetails(
-                                                                          transaction),
-                                                                  constraints:
-                                                                      const BoxConstraints(
-                                                                    minWidth: 36,
-                                                                    minHeight: 36,
-                                                                  ),
-                                                                  padding:
-                                                                      EdgeInsets
-                                                                          .zero,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      );
-                                                    }).toList(),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
+                        child: initLoading || transactionProvider.transactionIsLoading
+                            ? const Center(child: CircularProgressIndicator.adaptive())
+                            : transactionProvider.listTransactionModelDataList == null ||
+                                    transactionProvider.listTransactionModelDataList!.isEmpty
+                                ? _buildEmptyState(transactionProvider)
+                                : _buildTransactionTable(transactionProvider),
                       ),
                       const SizedBox(height: 10),
                       PaginationControl(
-                        currentPage: Provider.of<TransactionProvider>(context,
-                                listen: true)
-                            .transactionCurrentPage,
-                        totalPages: Provider.of<TransactionProvider>(context,
-                                listen: true)
-                            .transactionTotalPages,
+                        currentPage: transactionProvider.transactionCurrentPage,
+                        totalPages: transactionProvider.transactionTotalPages,
                         onPageChanged: (int page) {
-                          Provider.of<TransactionProvider>(context,
-                                  listen: false)
-                              .goToTransactionPage(page);
+                          transactionProvider.goToTransactionPage(page);
                         },
                       ),
                     ],
@@ -732,4 +566,178 @@ class _TransactionScreenState extends State<TransactionScreen> {
       ),
     );
   }
+
+  Widget _buildEmptyState(TransactionProvider provider) {
+    final hasFilters = 
+        searchController.text.isNotEmpty ||
+        typeController.text != "All Types" ||
+        statusController.text != "All Status" ||
+        paymentModeController.text != "All Payment Modes" ||
+        supplierController.text != "All Suppliers";
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.search_off, size: 48, color: Colors.grey),
+          const SizedBox(height: 16),
+          Text(
+            provider.allTransactions?.isEmpty ?? true
+                ? "No transactions available"
+                : "No transactions match your filters",
+            style: const TextStyle(color: Colors.grey),
+          ),
+          if (hasFilters)
+            TextButton(
+              onPressed: resetSearch,
+              child: const Text("Reset filters"),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionTable(TransactionProvider provider) {
+    return BuildBoxShadowContainer(
+      margin: const EdgeInsets.only(top: 5),
+      circleRadius: 7,
+      offsetValue: const Offset(2, 2),
+      blurRadius: 8.0,
+      color: Colors.white,
+      child: Column(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              color: ColorManager.tableBGColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  offset: Offset(0, 2),
+                  blurRadius: 2.0,
+                ),
+              ],
+            ),
+            child: Table(
+              columnWidths: const {
+                0: FlexColumnWidth(0.6), // SI No
+                1: FlexColumnWidth(1.8), // Supplier
+                2: FlexColumnWidth(1.2), // Date
+                3: FlexColumnWidth(1.0), // Type
+                4: FlexColumnWidth(1.5), // Transaction Type
+                5: FlexColumnWidth(1.2), // Payment Mode
+                6: FlexColumnWidth(1.2), // Amount
+                7: FlexColumnWidth(1.5), // Reference
+                8: FlexColumnWidth(1.0), // Status
+                9: FlexColumnWidth(1.0), // Action
+              },
+              border: null,
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              children: [
+                TableRow(
+                  children: [
+                    _buildTableHeader('SI No'),
+                    _buildTableHeader('Supplier'),
+                    _buildTableHeader('Date'),
+                    _buildTableHeader('Type'),
+                    _buildTableHeader('Transaction Type'),
+                    _buildTableHeader('Payment Mode'),
+                    _buildTableHeader('Amount'),
+                    _buildTableHeader('Reference'),
+                    _buildTableHeader('Status'),
+                    _buildTableHeader('Action'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: MouseRegion(
+              cursor: SystemMouseCursors.grab,
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: {
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.stylus,
+                    PointerDeviceKind.trackpad,
+                  },
+                ),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  scrollDirection: Axis.vertical,
+                  child: Table(
+                    columnWidths: const {
+                      0: FlexColumnWidth(0.6), // SI No
+                      1: FlexColumnWidth(1.8), // Supplier
+                      2: FlexColumnWidth(1.2), // Date
+                      3: FlexColumnWidth(1.0), // Type
+                      4: FlexColumnWidth(1.5), // Transaction Type
+                      5: FlexColumnWidth(1.2), // Payment Mode
+                      6: FlexColumnWidth(1.2), // Amount
+                      7: FlexColumnWidth(1.5), // Reference
+                      8: FlexColumnWidth(1.0), // Status
+                      9: FlexColumnWidth(1.0), // Action
+                    },
+                    border: null,
+                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                    children: [
+                      ...provider.listTransactionModelDataList!
+                          .asMap()
+                          .entries
+                          .map((entry) => _buildTransactionRow(entry.key, entry.value))
+                          .toList(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  TableRow _buildTransactionRow(int index, TransactionModel transaction) {
+    return TableRow(
+      decoration: BoxDecoration(
+        color: index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.1),
+      ),
+      children: [
+        _buildTableCell(transaction.siNo.toString()),
+        _buildTableCell(transaction.supplier.user.name),
+        _buildTableCell(DateHelper.formatISODate(transaction.date)),
+        Center(child: _buildTypeCell(transaction.type)),
+        _buildTableCell(transaction.transactionType),
+        _buildTableCell(transaction.paymentMode),
+        _buildTableCell('${transaction.currency} ${transaction.amount}'),
+        _buildTableCell(transaction.reference),
+        Center(child: _buildStatusChip(transaction.status)),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: BuildBoxShadowContainer(
+              margin: const EdgeInsets.only(left: 5, right: 5),
+              circleRadius: 5,
+              child: IconButton(
+                icon: Icon(
+                  Icons.visibility,
+                  size: 18,
+                  color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                ),
+                onPressed: () => _showTransactionDetails(transaction),
+                constraints: const BoxConstraints(
+                  minWidth: 36,
+                  minHeight: 36,
+                ),
+                padding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
+
+///////////////////////////////////////////////////////////////////////////////------------------------///////////////////////////////////////
+ 

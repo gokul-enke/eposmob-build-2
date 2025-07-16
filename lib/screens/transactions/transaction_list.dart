@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
@@ -31,6 +32,13 @@ class _CustomerTransactionListScreenState
     extends State<CustomerTransactionListScreen> {
   final TextEditingController amountRefController = TextEditingController();
   final SideBarController sideBarController = Get.put(SideBarController());
+  final TextEditingController referenceSearchController =
+      TextEditingController();
+  String searchReference = '';
+  // Add this with your other controllers
+  final TextEditingController customerSearchController =
+      TextEditingController();
+  String searchCustomer = '';
   bool initLoading = false;
   List<ListTransaction>? listTransaction = [];
   List<ListTransaction>? allTransactions =
@@ -92,6 +100,7 @@ class _CustomerTransactionListScreenState
     // Apply filters
     List<ListTransaction> filteredList = [...allTransactions!];
 
+    // Filter by amount
     if (searchAmount.isNotEmpty) {
       filteredList = filteredList
           .where((transaction) =>
@@ -99,18 +108,42 @@ class _CustomerTransactionListScreenState
               transaction.amount!.contains(searchAmount))
           .toList();
     }
+// Filter by reference ID
+    if (searchReference.isNotEmpty) {
+      filteredList = filteredList
+          .where((transaction) =>
+              transaction.referenceId != null &&
+              transaction.referenceId!
+                  .toLowerCase()
+                  .contains(searchReference.toLowerCase()))
+          .toList();
+    }
+    // Filter by customer name
+    if (searchCustomer.isNotEmpty) {
+      filteredList = filteredList
+          .where((transaction) =>
+              transaction.customerName != null &&
+              transaction.customerName!
+                  .toLowerCase()
+                  .contains(searchCustomer.toLowerCase()))
+          .toList();
+    }
 
+    // Filter by date
     if (selectedDate != null) {
-      // Assuming transactions have a date field that can be compared
-      // If you have a createdAt or date field, replace this with the actual field
       filteredList = filteredList.where((transaction) {
-        // Implement date filtering logic here
-        // Example (assuming transaction.date exists):
-        // DateTime transactionDate = DateTime.parse(transaction.date!);
-        // return transactionDate.year == selectedDate!.year &&
-        //     transactionDate.month == selectedDate!.month &&
-        //     transactionDate.day == selectedDate!.day;
-        return true; // Replace with actual implementation
+        if (transaction.date == null) return false;
+
+        try {
+          // Parse the transaction date - adjust this based on your date format
+          DateTime transactionDate =
+              DateFormat('yyyy-MM-dd').parse(transaction.date!);
+          return transactionDate.year == selectedDate!.year &&
+              transactionDate.month == selectedDate!.month &&
+              transactionDate.day == selectedDate!.day;
+        } catch (e) {
+          return false;
+        }
       }).toList();
     }
 
@@ -139,12 +172,21 @@ class _CustomerTransactionListScreenState
   }
 
   void resetSearch() {
+    // Clear the text controllers
+    amountRefController.clear();
+    customerSearchController.clear();
+    referenceSearchController.clear();
+
+    // Reset the search variables
     setState(() {
-      amountRefController.clear();
       searchAmount = '';
+      searchCustomer = '';
+      searchReference = '';
       selectedDate = null;
       currentPage = 1;
     });
+
+    // Force a refresh of the filters
     applyFilters();
   }
 
@@ -197,7 +239,7 @@ class _CustomerTransactionListScreenState
                   physics: const BouncingScrollPhysics(),
                   children: [
                     _buildDetailRow(
-                        'Customer Name', transaction.customerName ?? 'N/A'),
+                        'Customer Name', transaction.customerName ?? 'No Name'),
                     _buildDetailRow('Date', transaction.date ?? 'N/A'),
                     _buildDetailRow('Type', transaction.type ?? 'N/A'),
                     _buildDetailRow('Transaction Type',
@@ -407,7 +449,7 @@ class _CustomerTransactionListScreenState
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Transaction Management",
+                      "Customer Transaction",
                       style: buildCustomStyle(FontWeightManager.semiBold,
                           FontSize.s20, 0.30, ColorManager.textColor),
                     ),
@@ -423,6 +465,7 @@ class _CustomerTransactionListScreenState
                         alignment: WrapAlignment.start,
                         crossAxisAlignment: WrapCrossAlignment.end,
                         children: [
+                          // Existing Amount Search Field
                           SizedBox(
                             width: isSmallScreen
                                 ? size.width * 0.8
@@ -450,8 +493,7 @@ class _CustomerTransactionListScreenState
                                   onchanged: (value) {
                                     setState(() {
                                       searchAmount = value!;
-                                      currentPage =
-                                          1; // Reset to first page on search
+                                      currentPage = 1;
                                     });
                                     applyFilters();
                                   },
@@ -462,6 +504,86 @@ class _CustomerTransactionListScreenState
                               ],
                             ),
                           ),
+
+                          // NEW: Customer Name Search Field (Add this before the Reset button)
+                          SizedBox(
+                            width: isSmallScreen
+                                ? size.width * 0.8
+                                : size.width * 0.15,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    "Customer Name",
+                                    style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      FontSize.s14,
+                                      0.27,
+                                      Colors.black.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ),
+                                buildColumnWidgetForTextFields(
+                                  height: 45,
+                                  width: isSmallScreen
+                                      ? size.width * 0.8
+                                      : size.width * 0.15,
+                                  onchanged: (value) {
+                                    setState(() {
+                                      searchCustomer = value!;
+                                      currentPage = 1;
+                                    });
+                                    applyFilters();
+                                  },
+                                  controller: customerSearchController,
+                                  size: size,
+                                  hintText: 'Customer Name',
+                                ),
+                              ],
+                            ),
+                          ),
+                              // NEW: Reference ID Search Field
+                          SizedBox(
+                            width: isSmallScreen
+                                ? size.width * 0.8
+                                : size.width * 0.15,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    "Reference ID",
+                                    style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      FontSize.s14,
+                                      0.27,
+                                      Colors.black.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ),
+                                buildColumnWidgetForTextFields(
+                                  height: 45,
+                                  width: isSmallScreen
+                                      ? size.width * 0.8
+                                      : size.width * 0.15,
+                                  onchanged: (value) {
+                                    setState(() {
+                                      searchReference = value!;
+                                      currentPage = 1;
+                                    });
+                                    applyFilters();
+                                  },
+                                  controller: referenceSearchController,
+                                  size: size,
+                                  hintText: 'Reference ID',
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Existing Date Picker
                           SizedBox(
                             width: isSmallScreen
                                 ? size.width * 0.8
@@ -492,8 +614,7 @@ class _CustomerTransactionListScreenState
                                       onDateSelected: (DateTime date) {
                                         setState(() {
                                           selectedDate = date;
-                                          currentPage =
-                                              1; // Reset to first page on date change
+                                          currentPage = 1;
                                         });
                                         applyFilters();
                                       },
@@ -503,6 +624,8 @@ class _CustomerTransactionListScreenState
                               ],
                             ),
                           ),
+
+                          // Existing Reset Button
                           CustomRoundButton(
                             title: "Reset",
                             boxColor: Colors.white,
@@ -690,7 +813,7 @@ class _CustomerTransactionListScreenState
                                                             _buildTableCell(
                                                                 '${index + 1 + (currentPage - 1) * itemsPerPage}'),
                                                             _buildTableCell(
-                                                                "${transaction.customerName}"),
+                                                                "${transaction.customerName ?? 'No Name'}"),
                                                             _buildTableCell(
                                                                 "${transaction.date ?? 'N/A'}"),
                                                             _buildTableCell(
