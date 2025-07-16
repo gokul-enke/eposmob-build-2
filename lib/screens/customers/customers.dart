@@ -38,19 +38,21 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
   Future<void> loadCustomers() async {
     if (isInitialized) return;
-    
+
     try {
-      final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-      
+      final String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+
       if (accessToken == null || accessToken.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Authentication token is missing")),
         );
         return;
       }
-      
+
       // Load all customers for local pagination
-      await Provider.of<CustomerProvider>(context, listen: false).loadAllCustomers(accessToken);
+      await Provider.of<CustomerProvider>(context, listen: false)
+          .loadAllCustomers(accessToken);
       setState(() {
         isInitialized = true;
       });
@@ -63,11 +65,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 
   void searchCustomers() {
-    CustomerProvider provider = Provider.of<CustomerProvider>(context, listen: false);
+    CustomerProvider provider =
+        Provider.of<CustomerProvider>(context, listen: false);
     provider.applyFiltersLocally(
-        filterName: customerNameController.text,
-        filterEmail: customerEmailController.text,
-        filterPhone: customerPhoneController.text,
+      filterName: customerNameController.text,
+      filterEmail: customerEmailController.text,
+      filterPhone: customerPhoneController.text,
       page: 1,
     );
   }
@@ -82,10 +85,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 
   Future<void> refreshData() async {
-    final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    final String? accessToken =
+        Provider.of<AuthModel>(context, listen: false).token;
     if (accessToken == null || accessToken.isEmpty) return;
-    
-    await Provider.of<CustomerProvider>(context, listen: false).loadAllCustomers(accessToken);
+
+    await Provider.of<CustomerProvider>(context, listen: false)
+        .loadAllCustomers(accessToken);
   }
 
   Widget _buildTableHeader(String text) {
@@ -299,180 +304,260 @@ class _CustomersScreenState extends State<CustomersScreen> {
                         builder: (context, customerProvider, child) {
                           final isLoading = customerProvider.isLoading;
                           final customerList = customerProvider.getCustomerList;
-                          
+
                           return Column(
-                        children: [
+                            children: [
                               Expanded(
                                 child: isLoading
-                                  ? const Center(child: CircularProgressIndicator.adaptive())
-                                  : BuildBoxShadowContainer(
-                              width: size.width,
-                              margin: const EdgeInsets.only(top: 20),
-                              circleRadius: 7,
-                              offsetValue: const Offset(1, 1),
-                                    blurRadius: 8.0,
-                                    color: Colors.white,
-                                    child: Column(
-                                      children: [
-                                        // Fixed table header
-                                        Container(
-                                          decoration: const BoxDecoration(
-                                            color: ColorManager.tableBGColor,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black12,
-                                                offset: Offset(0, 2),
-                                                blurRadius: 2.0,
-                                              ),
-                                            ],
-                                          ),
-                                child: Table(
-                                  columnWidths: const {
-                                              0: FlexColumnWidth(0.5), // No
-                                              1: FlexColumnWidth(2.0), // Name
-                                              2: FlexColumnWidth(2.0), // Email
-                                              3: FlexColumnWidth(1.5), // Phone
-                                              4: FlexColumnWidth(1.0), // Action
-                                            },
-                                            border: null,
-                                            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                                  children: [
-                                    TableRow(
-                                        children: [
-                                                  _buildTableHeader('No'),
-                                                  _buildTableHeader('Name'),
-                                                  _buildTableHeader('Balance'),
-                                                  _buildTableHeader('Phone No.'),
-                                                  _buildTableHeader('Action'),
+                                    ? const Center(
+                                        child: CircularProgressIndicator
+                                            .adaptive())
+                                    : BuildBoxShadowContainer(
+                                        width: size.width,
+                                        margin: const EdgeInsets.only(top: 20),
+                                        circleRadius: 7,
+                                        offsetValue: const Offset(1, 1),
+                                        blurRadius: 8.0,
+                                        color: Colors.white,
+                                        child: Column(
+                                          children: [
+                                            // Fixed table header
+                                            Container(
+                                              decoration: const BoxDecoration(
+                                                color:
+                                                    ColorManager.tableBGColor,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black12,
+                                                    offset: Offset(0, 2),
+                                                    blurRadius: 2.0,
+                                                  ),
                                                 ],
                                               ),
-                                            ],
-                                          ),
-                                        ),
-                                        // Scrollable table body
-                                        Expanded(
-                                          child: MouseRegion(
-                                            cursor: SystemMouseCursors.grab,
-                                            child: ScrollConfiguration(
-                                              behavior: ScrollConfiguration.of(context).copyWith(
-                                                dragDevices: {
-                                                  PointerDeviceKind.mouse,
-                                                  PointerDeviceKind.touch,
-                                                  PointerDeviceKind.stylus,
-                                                  PointerDeviceKind.trackpad,
+                                              child: Table(
+                                                columnWidths: const {
+                                                  0: FlexColumnWidth(0.5), // No
+                                                  1: FlexColumnWidth(
+                                                      2.0), // Name
+                                                  2: FlexColumnWidth(
+                                                      2.0), // Email
+                                                  3: FlexColumnWidth(
+                                                      1.5), // Phone
+                                                  4: FlexColumnWidth(
+                                                      1.0), // Action
                                                 },
+                                                border: null,
+                                                defaultVerticalAlignment:
+                                                    TableCellVerticalAlignment
+                                                        .middle,
+                                                children: [
+                                                  TableRow(
+                                                    children: [
+                                                      _buildTableHeader('No'),
+                                                      _buildTableHeader('Name'),
+                                                      _buildTableHeader(
+                                                          'Balance'),
+                                                      _buildTableHeader(
+                                                          'Phone No.'),
+                                                      _buildTableHeader(
+                                                          'Action'),
+                                                    ],
+                                                  ),
+                                                ],
                                               ),
-                                              child: SingleChildScrollView(
-                                                physics: const BouncingScrollPhysics(),
-                                                scrollDirection: Axis.vertical,
-                                                child: customerList == null || customerList.isEmpty
-                                                  ? Container(
-                                                      height: 300,
-                                                      width: double.infinity,
-                                                      alignment: Alignment.center,
-                                                      child: Column(
-                                                        mainAxisAlignment: MainAxisAlignment.center,
-                                                        crossAxisAlignment: CrossAxisAlignment.center,
-                                                        children: [
-                                                          Icon(
-                                                            Icons.person_search,
-                                                            size: 60,
-                                                            color: ColorManager.kPrimaryColor.withOpacity(0.7),
-                                                          ),
-                                                          const SizedBox(height: 15),
-                                                          Text(
-                                                            'No customers found',
-                                                            style: buildCustomStyle(
-                                                              FontWeightManager.medium,
-                                                              FontSize.s18,
-                                                              0.27,
-                                                              ColorManager.textColor,
-                                                            ),
-                                                          ),
-                                                          const SizedBox(height: 8),
-                                                          Text(
-                                                            'Try adjusting your search criteria',
-                                                            style: buildCustomStyle(
-                                                              FontWeightManager.regular,
-                                                              FontSize.s14,
-                                                              0.20,
-                                                              Colors.grey,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    )
-                                                  : Table(
-                                                      columnWidths: const {
-                                                        0: FlexColumnWidth(0.5), // No
-                                                        1: FlexColumnWidth(2.0), // Name
-                                                        2: FlexColumnWidth(2.0), // Email
-                                                        3: FlexColumnWidth(1.5), // Phone
-                                                        4: FlexColumnWidth(1.0), // Action
-                                                      },
-                                                      border: null,
-                                                      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                                                      children: customerList.asMap().entries.map((entry) {
-                                      final int index = entry.key;
-                                                        final customer = entry.value;
-                                      return TableRow(
-                                                          decoration: BoxDecoration(
-                                                            color: index % 2 == 0
-                                                                ? Colors.white
-                                                                : Colors.grey.withOpacity(0.1),
-                                                          ),
-                                        children: [
-                                                            _buildTableCell('${index + 1 + (customerProvider.currentPage - 1) * customerProvider.itemsPerPage}'),
-                                                            _buildTableCell(customer.name ?? ''),
-                                                            _buildTableCell(customer.balance.toString()  ?? ''),
-                                                            _buildTableCell(customer.phone ?? ''),
-                                                            Center(
-                                              child: Padding(
-                                                                padding: const EdgeInsets.all(8.0),
-                                                                child: BuildBoxShadowContainer(
-                                                                  margin: const EdgeInsets.only(left: 5, right: 5),
-                                                          circleRadius: 5,
-                                                          child: IconButton(
-                                                            icon: Icon(
-                                                              Icons.visibility,
-                                                              size: 18,
-                                                                      color: ColorManager.kPrimaryColor.withOpacity(0.9),
-                                                            ),
-                                                            onPressed: () {
-                                                                      customerProvider.selectCustomer(customerList[index]);
-                                                                      sideBarController.index.value = 38;
-                                                                    },
-                                                                    constraints: const BoxConstraints(
-                                                                      minWidth: 36,
-                                                                      minHeight: 36,
+                                            ),
+                                            // Scrollable table body
+                                            Expanded(
+                                              child: MouseRegion(
+                                                cursor: SystemMouseCursors.grab,
+                                                child: ScrollConfiguration(
+                                                  behavior:
+                                                      ScrollConfiguration.of(
+                                                              context)
+                                                          .copyWith(
+                                                    dragDevices: {
+                                                      PointerDeviceKind.mouse,
+                                                      PointerDeviceKind.touch,
+                                                      PointerDeviceKind.stylus,
+                                                      PointerDeviceKind
+                                                          .trackpad,
+                                                    },
+                                                  ),
+                                                  child: SingleChildScrollView(
+                                                    physics:
+                                                        const BouncingScrollPhysics(),
+                                                    scrollDirection:
+                                                        Axis.vertical,
+                                                    child:
+                                                        customerList == null ||
+                                                                customerList
+                                                                    .isEmpty
+                                                            ? Container(
+                                                                height: 300,
+                                                                width: double
+                                                                    .infinity,
+                                                                alignment:
+                                                                    Alignment
+                                                                        .center,
+                                                                child: Column(
+                                                                  mainAxisAlignment:
+                                                                      MainAxisAlignment
+                                                                          .center,
+                                                                  crossAxisAlignment:
+                                                                      CrossAxisAlignment
+                                                                          .center,
+                                                                  children: [
+                                                                    Icon(
+                                                                      Icons
+                                                                          .person_search,
+                                                                      size: 60,
+                                                                      color: ColorManager
+                                                                          .kPrimaryColor
+                                                                          .withOpacity(
+                                                                              0.7),
                                                                     ),
-                                                                    padding: EdgeInsets.zero,
-                                                                  ),
+                                                                    const SizedBox(
+                                                                        height:
+                                                                            15),
+                                                                    Text(
+                                                                      'No customers found',
+                                                                      style:
+                                                                          buildCustomStyle(
+                                                                        FontWeightManager
+                                                                            .medium,
+                                                                        FontSize
+                                                                            .s18,
+                                                                        0.27,
+                                                                        ColorManager
+                                                                            .textColor,
+                                                                      ),
+                                                                    ),
+                                                                    const SizedBox(
+                                                                        height:
+                                                                            8),
+                                                                    Text(
+                                                                      'Try adjusting your search criteria',
+                                                                      style:
+                                                                          buildCustomStyle(
+                                                                        FontWeightManager
+                                                                            .regular,
+                                                                        FontSize
+                                                                            .s14,
+                                                                        0.20,
+                                                                        Colors
+                                                                            .grey,
+                                                                      ),
+                                                                    ),
+                                                                  ],
                                                                 ),
+                                                              )
+                                                            : Table(
+                                                                columnWidths: const {
+                                                                  0: FlexColumnWidth(
+                                                                      0.5), // No
+                                                                  1: FlexColumnWidth(
+                                                                      2.0), // Name
+                                                                  2: FlexColumnWidth(
+                                                                      2.0), // Email
+                                                                  3: FlexColumnWidth(
+                                                                      1.5), // Phone
+                                                                  4: FlexColumnWidth(
+                                                                      1.0), // Action
+                                                                },
+                                                                border: null,
+                                                                defaultVerticalAlignment:
+                                                                    TableCellVerticalAlignment
+                                                                        .middle,
+                                                                children:
+                                                                    customerList
+                                                                        .asMap()
+                                                                        .entries
+                                                                        .map(
+                                                                            (entry) {
+                                                                  final int
+                                                                      index =
+                                                                      entry.key;
+                                                                  final customer =
+                                                                      entry
+                                                                          .value;
+                                                                  return TableRow(
+                                                                    decoration:
+                                                                        BoxDecoration(
+                                                                      color: index %
+                                                                                  2 ==
+                                                                              0
+                                                                          ? Colors
+                                                                              .white
+                                                                          : Colors
+                                                                              .grey
+                                                                              .withOpacity(0.1),
+                                                                    ),
+                                                                    children: [
+                                                                      _buildTableCell(
+                                                                          '${index + 1 + (customerProvider.currentPage - 1) * customerProvider.itemsPerPage}'),
+                                                                      _buildTableCell(
+                                                                          customer.name ??
+                                                                              ''),
+                                                                      _buildTableCell(
+                                                                          customer.balance.toString() ??
+                                                                              ''),
+                                                                      _buildTableCell(
+                                                                          customer.phone ??
+                                                                              ''),
+                                                                      Center(
+                                                                        child:
+                                                                            Padding(
+                                                                          padding: const EdgeInsets
+                                                                              .all(
+                                                                              8.0),
+                                                                          child:
+                                                                              BuildBoxShadowContainer(
+                                                                            margin:
+                                                                                const EdgeInsets.only(left: 5, right: 5),
+                                                                            circleRadius:
+                                                                                5,
+                                                                            child:
+                                                                                IconButton(
+                                                                              icon: Icon(
+                                                                                Icons.visibility,
+                                                                                size: 18,
+                                                                                color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                                                                              ),
+                                                                              onPressed: () {
+                                                                                customerProvider.selectCustomer(customerList[index]);
+                                                                                sideBarController.index.value = 38;
+                                                                              },
+                                                                              constraints: const BoxConstraints(
+                                                                                minWidth: 36,
+                                                                                minHeight: 36,
+                                                                              ),
+                                                                              padding: EdgeInsets.zero,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  );
+                                                                }).toList(),
                                                               ),
-                                                            ),
-                                        ],
-                                      );
-                                    }).toList(),
+                                                  ),
                                                 ),
                                               ),
                                             ),
-                                          ),
+                                          ],
                                         ),
-                                  ],
-                                ),
-                                  ),
+                                      ),
                               ),
                               const SizedBox(height: 10),
-                          PaginationControl(
+                              PaginationControl(
                                 currentPage: customerProvider.currentPage,
                                 totalPages: customerProvider.totalPages,
-                            onPageChanged: (int page) {
+                                onPageChanged: (int page) {
                                   customerProvider.goToPage(page);
-                            },
-                          ),
-                          const SizedBox(height: 25),
-                        ],
+                                },
+                              ),
+                              const SizedBox(height: 25),
+                            ],
                           );
                         },
                       ),

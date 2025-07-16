@@ -125,8 +125,11 @@ class PurchaseProvider extends ChangeNotifier {
 
   String? supplierName(int value) {
     var supplier = supplierList.firstWhere((e) => e.id == value,
-        orElse: () => GetSuppliersModelData(id: 0, name: "Unknown"));
-    return supplier.name;
+        orElse: () => GetSuppliersModelData(
+    id: 0, 
+    user: User(name: "Unknown") // Now correctly nested
+    ));
+    return supplier.user?.name ;
   }
 
   PurchaseProvider() {
@@ -146,7 +149,11 @@ class PurchaseProvider extends ChangeNotifier {
         "Initial purchaseItemListAllPurchase length: ${purchaseItemListAllPurchase.length}");
   }
   GetSuppliersModelData supplierDemo = GetSuppliersModelData(
-      id: 0, name: "Select Supplier", phone: "", email: "");
+  id: 0,
+  user: User(name: "Select Supplier"), // Name now properly nested
+  phone: "",
+  email: "",
+);
 
   //          *********************** LIST ALL STORES  API ***************************************************
 
