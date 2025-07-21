@@ -25,6 +25,12 @@ class ReceiptListScreen extends StatefulWidget {
 class _ReceiptListScreenState extends State<ReceiptListScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
   final TextEditingController searchTextController = TextEditingController();
+  final TextEditingController receiptNumberController = TextEditingController();
+  final TextEditingController paymentReferenceController = TextEditingController();
+  String? selectedStatus; 
+  String? paymentMethod; 
+  
+
   bool isInitialized = false;
 
   @override
@@ -64,12 +70,23 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     debugPrint("Searching for receipts with name: '$searchText'");
     
     InvoiceProvider provider = Provider.of<InvoiceProvider>(context, listen: false);
-    provider.applyReceiptFilters(name: searchText, page: 1);
+    provider.applyReceiptFilters(
+      name: searchText,
+      receiptNumber: receiptNumberController.text,
+      paymentReference: paymentReferenceController.text,
+      receiptStatus: selectedStatus,
+      paymentMethod: paymentMethod,
+      page: 1
+      );
   }
 
   void resetSearch() {
     setState(() {
       searchTextController.clear();
+      receiptNumberController.clear();
+      paymentReferenceController.clear();
+      selectedStatus = null;
+      paymentMethod = null;
     });
     Provider.of<InvoiceProvider>(context, listen: false).resetReceiptFilters();
   }
@@ -154,8 +171,13 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       child: Row(
         children: [
           _buildSearchTextField(),
+          _buildReceiptNumberSearch(),
+          _buildPaymentReferenceSearch(),
+          _buildStatusFilter(),
+          _buildPaymentMethodSearch(),
+        
           Padding(
-            padding: const EdgeInsets.only(left: 10.0, top: 30),
+             padding: const EdgeInsets.only(left: 10.0, top: 25),
             child: CustomRoundButton(
               title: "Reset",
               boxColor: Colors.white,
@@ -170,6 +192,211 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       ),
     );
   }
+  Widget _buildReceiptNumberSearch() {
+  return Padding(
+    padding: const EdgeInsets.only(left: 10.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "Receipt Number",
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                0.27, Colors.black.withOpacity(0.6)),
+          ),
+        ),
+        SizedBox(
+          height: 45,
+          width: 180,
+          child: TextFormField(
+            controller: receiptNumberController, // You'll need to define this controller
+            onChanged: (value) {
+              searchReceipts(); // Or a specific method for receipt number search
+            },
+            cursorColor: ColorManager.kPrimaryColor,
+            cursorHeight: 13,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                0.18, ColorManager.textColor),
+            decoration: decoration.copyWith(
+              hintText: "Receipt No.",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+              prefixIconColor: Colors.black,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildPaymentReferenceSearch() {
+  return Padding(
+    padding: const EdgeInsets.only(left: 10.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "Payment Reference",
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                0.27, Colors.black.withOpacity(0.6)),
+          ),
+        ),
+        SizedBox(
+          height: 45,
+          width: 180,
+          child: TextFormField(
+            controller: paymentReferenceController, // You'll need to define this controller
+            onChanged: (value) {
+              searchReceipts(); // Or a specific method for payment reference search
+            },
+            cursorColor: ColorManager.kPrimaryColor,
+            cursorHeight: 13,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                0.18, ColorManager.textColor),
+            decoration: decoration.copyWith(
+              hintText: "Reference No.",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+              prefixIconColor: Colors.black,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+  Widget _buildStatusFilter() {
+  return Padding(
+    padding: const EdgeInsets.only(left: 10.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "Status",
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                0.27, Colors.black.withOpacity(0.6)),
+          ),
+        ),
+        SizedBox(
+          height: 45,
+          width: 120,
+          child: DropdownButtonFormField<String>(
+            value: selectedStatus,
+            decoration: decoration.copyWith(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+              hintText: "All Status",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+            ),
+            items: [
+              DropdownMenuItem(
+                value: null,
+                child: Text(
+                  "All Status",
+                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                      0.18, ColorManager.textColor),
+                ),
+              ),
+              DropdownMenuItem(
+                value: "paid",
+                child: Text(
+                  "Paid",
+                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                      0.18, ColorManager.textColor),
+                ),
+              ),
+              DropdownMenuItem(
+                value: "pending",
+                child: Text(
+                  "Pending",
+                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                      0.18, ColorManager.textColor),
+                ),
+              ),
+              
+            ],
+            onChanged: (value) {
+              setState(() {
+                selectedStatus = value;
+              });
+              searchReceipts();
+            },
+          ),
+        ),
+      ],
+    ),
+  );
+}
+  Widget _buildPaymentMethodSearch() {
+  return Padding(
+    padding: const EdgeInsets.only(left: 10.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "Payment Method",
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                0.27, Colors.black.withOpacity(0.6)),
+          ),
+        ),
+        SizedBox(
+          height: 45,
+          width: 135,
+          child: DropdownButtonFormField<String>(
+            value: paymentMethod,
+            decoration: decoration.copyWith(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+              hintText: "All Payment",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+            ),
+            items: [
+              DropdownMenuItem(
+                value: null,
+                child: Text(
+                  "All Payment",
+                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                      0.18, ColorManager.textColor),
+                ),
+              ),
+              DropdownMenuItem(
+                value: "CASH",
+                child: Text(
+                  "Cash",
+                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                      0.18, ColorManager.textColor),
+                ),
+              ),
+              DropdownMenuItem(
+                value: "UPI",
+                child: Text(
+                  "UPI",
+                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                      0.18, ColorManager.textColor),
+                ),
+              ),
+              
+            ],
+            onChanged: (value) {
+              setState(() {
+                paymentMethod = value;
+              });
+              searchReceipts();
+            },
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildSearchTextField() {
     return Padding(
@@ -187,7 +414,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
           ),
           SizedBox(
             height: 45,
-            width: 120,
+            width: 180,
             child: TextFormField(
               controller: searchTextController,
               onChanged: (value) {

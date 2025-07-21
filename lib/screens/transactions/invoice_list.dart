@@ -26,6 +26,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
   bool isInitialized = false;
   final TextEditingController searchTextController = TextEditingController();
+  final TextEditingController invoiceNumberController = TextEditingController();
+  final TextEditingController dateFromController = TextEditingController();
+  final TextEditingController dateToController = TextEditingController();
+  String? selectedStatus; // For the status dropdown
 
   @override
   void initState() {
@@ -59,21 +63,30 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     }
   }
 
-  void searchInvoices() {
-    debugPrint("Searching for: ${searchTextController.text}");
-    InvoiceProvider provider = Provider.of<InvoiceProvider>(context, listen: false);
-    provider.applyFilters(name: searchTextController.text);
-  }
+void searchInvoices() {
+  debugPrint("Searching with filters");
+  InvoiceProvider provider = Provider.of<InvoiceProvider>(context, listen: false);
+  provider.applyFilters(
+    name: searchTextController.text,
+    invoiceNumber: invoiceNumberController.text,
+    fromDate: dateFromController.text,
+    toDate: dateToController.text,
+    status: selectedStatus,
+  );
+}
 
   void resetSearch() {
-    debugPrint("Resetting search");
-    setState(() {
-      searchTextController.clear();
-    });
-    
-    Provider.of<InvoiceProvider>(context, listen: false).resetFilters();
-  }
-
+  debugPrint("Resetting all filters");
+  setState(() {
+    searchTextController.clear();
+    invoiceNumberController.clear();
+    dateFromController.clear();
+    dateToController.clear();
+    selectedStatus = null;
+  });
+  
+  Provider.of<InvoiceProvider>(context, listen: false).resetFilters();
+}
   Future<void> refreshData() async {
     debugPrint("Refreshing data");
     final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
@@ -95,7 +108,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       child: RefreshIndicator(
         onRefresh: refreshData,
         child: Container(
-          margin: const EdgeInsets.all(10),
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
@@ -150,29 +163,208 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       ],
     );
   }
+Widget _buildSearchBar(Size size) {
+  return SizedBox(
+    height: 90,
+    child: Row(
+      children: [
+        _buildSearchTextField(),
+        _buildInvoiceNumberSearch(),
+        // _buildDateRangeSearch(),
+        _buildStatusFilter(),
+        Padding(
+          padding: const EdgeInsets.only(left: 10.0, top: 25),
+          child: CustomRoundButton(
+            title: "Reset",
+            boxColor: Colors.white,
+            textColor: ColorManager.kPrimaryColor,
+            fct: resetSearch,
+            height: 45,
+            width: size.width * 0.09,
+            fontSize: FontSize.s12,
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
-  Widget _buildSearchBar(Size size) {
-    return SizedBox(
-      height: 90,
-      child: Row(
-        children: [
-          _buildSearchTextField(),
-          Padding(
-            padding: const EdgeInsets.only(left: 10.0, top: 30),
-            child: CustomRoundButton(
-              title: "Reset",
-              boxColor: Colors.white,
-              textColor: ColorManager.kPrimaryColor,
-              fct: resetSearch,
-              height: 45,
-              width: size.width * 0.09,
-              fontSize: FontSize.s12,
+Widget _buildInvoiceNumberSearch() {
+  return Padding(
+    padding: const EdgeInsets.only(left: 10.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "Invoice No",
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                0.27, Colors.black.withOpacity(0.6)),
+          ),
+        ),
+        SizedBox(
+          height: 45,
+          width: 200,
+          child: TextFormField(
+            controller: invoiceNumberController,
+            onChanged: (value) => searchInvoices(),
+            cursorColor: ColorManager.kPrimaryColor,
+            cursorHeight: 13,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                0.18, ColorManager.textColor),
+            decoration: decoration.copyWith(
+              hintText: "Invoice No",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+              prefixIconColor: Colors.black,
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
+
+// Widget _buildDateRangeSearch() {    // date function if need
+//   return Padding(
+//     padding: const EdgeInsets.only(left: 10.0),
+//     child: Row(
+//       children: [
+//         Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Padding(
+//               padding: const EdgeInsets.all(8.0),
+//               child: Text(
+//                 "From Date",
+//                 style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+//                     0.27, Colors.black.withOpacity(0.6)),
+//               ),
+//             ),
+//             SizedBox(
+//               height: 45,
+//               width: 120,
+//               child: TextFormField(
+//                 controller: dateFromController,
+//                 onTap: () => _selectDate(context, isFromDate: true),
+//                 readOnly: true,
+//                 cursorColor: ColorManager.kPrimaryColor,
+//                 style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+//                     0.18, ColorManager.textColor),
+//                 decoration: decoration.copyWith(
+//                   hintText: "DD/MM/YYYY",
+//                   hintStyle: buildCustomStyle(FontWeightManager.medium,
+//                       FontSize.s10, 0.18, ColorManager.textColor),
+//                   prefixIcon: Icon(Icons.calendar_today, size: 16),
+//                 ),
+//               ),
+//             ),
+//           ],
+//         ),
+//         const SizedBox(width: 10),
+//         Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Padding(
+//               padding: const EdgeInsets.all(8.0),
+//               child: Text(
+//                 "To Date",
+//                 style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+//                     0.27, Colors.black.withOpacity(0.6)),
+//               ),
+//             ),
+//             SizedBox(
+//               height: 45,
+//               width: 120,
+//               child: TextFormField(
+//                 controller: dateToController,
+//                 onTap: () => _selectDate(context, isFromDate: false),
+//                 readOnly: true,
+//                 cursorColor: ColorManager.kPrimaryColor,
+//                 style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+//                     0.18, ColorManager.textColor),
+//                 decoration: decoration.copyWith(
+//                   hintText: "DD/MM/YYYY",
+//                   hintStyle: buildCustomStyle(FontWeightManager.medium,
+//                       FontSize.s10, 0.18, ColorManager.textColor),
+//                   prefixIcon: Icon(Icons.calendar_today, size: 16),
+//                 ),
+//               ),
+//             ),
+//           ],
+//         ),
+//       ],
+//     ),
+//   );
+// }
+
+Widget _buildStatusFilter() {
+  return Padding(
+    padding: const EdgeInsets.only(left: 10.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "Status",
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                0.27, Colors.black.withOpacity(0.6)),
+          ),
+        ),
+        SizedBox(
+          height: 45,
+          width: 120,
+          child: DropdownButtonFormField<String>(
+            value: selectedStatus,
+            decoration: decoration.copyWith(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+              hintText: "All Status",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+            ),
+            items: [
+              DropdownMenuItem(
+                value: null,
+                child: Text(
+                  "All Status",
+                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                      0.18, ColorManager.textColor),
+                ),
+              ),
+              DropdownMenuItem(
+                value: "paid",
+                child: Text(
+                  "Paid",
+                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                      0.18, ColorManager.textColor),
+                ),
+              ),
+              DropdownMenuItem(
+                value: "pending",
+                child: Text(
+                  "Pending",
+                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                      0.18, ColorManager.textColor),
+                ),
+              ),
+              
+            ],
+            onChanged: (value) {
+              setState(() {
+                selectedStatus = value;
+              });
+              searchInvoices();
+            },
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
 
   Widget _buildSearchTextField() {
     return Padding(
@@ -190,7 +382,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           ),
           SizedBox(
             height: 45,
-            width: 120,
+            width: 180,
             child: TextFormField(
               controller: searchTextController,
               onChanged: (value) {

@@ -160,7 +160,8 @@ class _SalesScreenState extends State<SalesScreen> {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
 
-      debugPrint('Access Token Available: ${accessToken != null ? "Yes" : "No"}');
+      debugPrint(
+          'Access Token Available: ${accessToken != null ? "Yes" : "No"}');
       debugPrint('Access Token Length: ${accessToken?.length ?? 0}');
 
       SalesProvider orderProvider =
@@ -187,49 +188,59 @@ class _SalesScreenState extends State<SalesScreen> {
 
   void searchOrders(page) async {
     debugPrint('=== SEARCH ORDERS START ===');
-    debugPrint('Search Page: $page');
-    debugPrint('Order Number: ${orderNumberController.text}');
-    debugPrint('Customer Name: ${customerNameController.text}');
-    debugPrint('Amount: ${amountController.text}');
-    debugPrint('Email: ${emailController.text}');
-    debugPrint('Phone: ${phoneController.text}');
-    debugPrint('Selected Date: $selectedDate');
-    debugPrint('Store: ${storeController.text}');
-    
     try {
       setState(() {
         initLoading = true;
       });
+
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       SalesProvider orderProvider =
           Provider.of<SalesProvider>(context, listen: false);
 
-      debugPrint('Calling fetchOrders with search filters');
+      // Prepare filters
+      final filters = {
+        if (orderNumberController.text.isNotEmpty)
+          'orderNumber': orderNumberController.text.trim(),
+        if (customerNameController.text.isNotEmpty)
+          'filterName': customerNameController.text.trim(),
+        if (amountController.text.isNotEmpty)
+          'filterPrice': amountController.text.trim(),
+        if (emailController.text.isNotEmpty)
+          'filterEmail': emailController.text.trim(),
+        if (phoneController.text.isNotEmpty)
+          'filterPhone': phoneController.text.trim(),
+        if (selectedDate != null)
+          'date': DateFormat('yyyy-MM-dd').format(selectedDate!),
+        if (storeController.text.isNotEmpty)
+          'filterStore': storeController.text.trim(),
+        'page': page.toString(),
+      };
+
+      debugPrint('Search filters: $filters');
+
       await orderProvider.fetchOrders(
         accessToken: accessToken ?? '',
-        // storeId: 1,
-        orderNumber: orderNumberController.text,
-        filterName: customerNameController.text,
-        filterPrice: amountController.text,
-        filterEmail: emailController.text,
-        filterPhone: phoneController.text,
-        date: selectedDate != null
-            ? DateFormat('yyyy-MM-dd').format(selectedDate!)
-            : '',
-        filterStore: storeController.text,
-        page: page,
+        orderNumber: filters['orderNumber'],
+        filterName: filters['filterName'],
+        filterPrice: filters['filterPrice'],
+        filterEmail: filters['filterEmail'],
+        filterPhone: filters['filterPhone'],
+        date: filters['date'],
+        filterStore: filters['filterStore'],
+        page: int.tryParse(filters['page'] ?? '1') ?? 1,
       );
-      debugPrint('fetchOrders completed for page: $page');
     } catch (error, stackTrace) {
-      debugPrint('=== SEARCH ORDERS ERROR ===');
-      debugPrint('Error: $error');
+      debugPrint('Search error: $error');
       debugPrint('Stack trace: $stackTrace');
+      showScaffoldError(
+        context: context,
+        message: 'Failed to search orders: ${error.toString()}',
+      );
     } finally {
       setState(() {
         initLoading = false;
       });
-      debugPrint('=== SEARCH ORDERS END ===');
     }
   }
 
@@ -241,10 +252,10 @@ class _SalesScreenState extends State<SalesScreen> {
       emailController.clear();
       phoneController.clear();
       storeController.clear();
+      storeSelected = null;
       selectedDate = null;
-      dateController.clear();
     });
-    loadInitData();
+    searchOrders(1); // Trigger fresh search after reset
   }
 
   Future<void> refreshData() async {
@@ -292,319 +303,303 @@ class _SalesScreenState extends State<SalesScreen> {
                   const SizedBox(
                     height: 15,
                   ),
-                  SizedBox(
-                    height: 90,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Number",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              buildColumnWidgetForTextFields(
-                                height: 45,
-                                width: 120,
-                                onchanged: (value) {},
-                                controller: orderNumberController,
-                                size: size,
-                                hintText: 'Number',
-                              ),
-                            ],
-                          ),
+                  // Replace only the search and filter section in your build method (keep everything else the same)
+                 Row(
+  children: [
+    Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start, // Align everything to the left
+        children: [
+          // First Row - Search Fields
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.start, // Left-align items
+            children: [
+              // Order Number
+              SizedBox(
+                width: 350,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        "Order #",
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s14,
+                          0.27,
+                          Colors.black.withOpacity(0.6),
                         ),
-
-                        // Name
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Customer ",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              buildColumnWidgetForTextFields(
-                                height: 45,
-                                width: 120,
-                                onchanged: (value) {},
-                                controller: customerNameController,
-                                size: size,
-                                hintText: 'Customer Name',
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Date
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Date",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                height: 45,
-                                width: 150,
-                                child: Center(
-                                  child: CalendarPickerTableCell(
-                                    onDateSelected: (DateTime date) {
-                                      selectedDate = date;
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Price
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Price",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              buildColumnWidgetForTextFields(
-                                height: 45,
-                                width: 120,
-                                onchanged: (value) {},
-                                controller: amountController,
-                                size: size,
-                                hintText: 'Price',
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                  SizedBox(
-                    height: 90,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      children: [
-                        // Email
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Email",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              buildColumnWidgetForTextFields(
-                                height: 45,
-                                width: 120,
-                                onchanged: (value) {},
-                                controller: emailController,
-                                size: size,
-                                hintText: 'Email',
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Phone
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Phone",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              buildColumnWidgetForTextFields(
-                                height: 45,
-                                width: 120,
-                                onchanged: (value) {},
-                                controller: phoneController,
-                                size: size,
-                                hintText: 'Phone',
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Store
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Store",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                height: 45,
-                                width: 150,
-                                child: BuildBoxShadowContainer(
-                                  circleRadius: 7,
-                                  alignment: Alignment.centerLeft,
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 5, vertical: 0),
-                                  padding: const EdgeInsets.only(left: 15),
-                                  height: size.height * .07,
-                                  width: size.width / 4.5,
-                                  child: DropdownButtonFormField<
-                                      GetStoreModelData>(
-                                    decoration: const InputDecoration(
-                                      border: InputBorder
-                                          .none, // Remove the underline
-                                    ),
-                                    value: storeSelected,
-                                    hint: Text(
-                                      'Select Store',
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.27,
-                                        ColorManager.textColor.withOpacity(.5),
-                                      ),
-                                    ),
-                                    items: storeList!
-                                        .map((GetStoreModelData store) {
-                                      return DropdownMenuItem<
-                                              GetStoreModelData>(
-                                          value: store,
-                                          child: Text(
-                                            store.name ?? '',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.27,
-                                              ColorManager.textColor
-                                                  .withOpacity(.5),
-                                            ),
-                                          ));
-                                    }).toList(),
-                                    onChanged:
-                                        (GetStoreModelData? storeModelData) {
-                                      if (storeModelData != null) {
-                                        // Update the selected category in the provider
-                                        setState(() {
-                                          storeSelected = storeModelData;
-                                          storeController.text =
-                                              "${storeModelData.id ?? 1}";
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10.0, top: 35),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              CustomRoundButton(
-                                title: "Search",
-                                fct: () {
-                                  searchOrders(1);
-                                },
-                                height: 45,
-                                width: size.width * 0.09,
-                                fontSize: FontSize.s12,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10.0, top: 35),
-                          child: Column(
-                            children: [
-                              CustomRoundButton(
-                                title: "Reset",
-                                boxColor: Colors.white,
-                                textColor: ColorManager.kPrimaryColor,
-                                fct: resetSearch,
-                                height: 45,
-                                width: size.width * 0.09,
-                                fontSize: FontSize.s12,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    buildColumnWidgetForTextFields(
+                      height: 45,
+                      width: 350,
+                      onchanged: (value) {
+                        if (value!.isEmpty || value.length > 2) {
+                          searchOrders(1);
+                        }
+                      },
+                      controller: orderNumberController,
+                      size: size,
+                      hintText: 'Order Number',
                     ),
-                  ),
+                  ],
+                ),
+              ),
+
+              // Customer Name
+              SizedBox(
+                width: 350,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        "Customer",
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s14,
+                          0.27,
+                          Colors.black.withOpacity(0.6),
+                        ),
+                      ),
+                    ),
+                    buildColumnWidgetForTextFields(
+                      height: 45,
+                      width: 350,
+                      onchanged: (value) {
+                        if (value!.isEmpty || value.length > 2) {
+                          searchOrders(1);
+                        }
+                      },
+                      controller: customerNameController,
+                      size: size,
+                      hintText: 'Customer Name',
+                    ),
+                  ],
+                ),
+              ),
+            
+
+              // Phone
+               SizedBox(
+                width: 350,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        "Phone",
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s14,
+                          0.27,
+                          Colors.black.withOpacity(0.6),
+                        ),
+                      ),
+                    ),
+                    buildColumnWidgetForTextFields(
+                      height: 45,
+                      width: 350,
+                      onchanged: (value) {
+                        if (value!.isEmpty || value.length > 2) {
+                          searchOrders(1);
+                        }
+                      },
+                      controller: phoneController,
+                      size: size,
+                      hintText: 'Phone',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 10),
+          
+          // Second Row - Filters and Buttons
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.start, // Left-align items
+            children: [
+                SizedBox(
+                width: 200,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        "Date",
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s14,
+                          0.27,
+                          Colors.black.withOpacity(0.6),
+                        ),
+                      ),
+                    ),
+                    BuildBoxShadowContainer(
+                      circleRadius: 7,
+                      height: 45,
+                      width: 200,
+                      child: Center(
+                        child: CalendarPickerTableCell(
+                          onDateSelected: (DateTime date) {
+                            setState(() {
+                              selectedDate = date;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Price
+              SizedBox(
+                width: 225,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        "Price",
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s14,
+                          0.27,
+                          Colors.black.withOpacity(0.6),
+                        ),
+                      ),
+                    ),
+                    buildColumnWidgetForTextFields(
+                      height: 45,
+                      width: 250,
+                      onchanged: (value) {
+                        if (value!.isEmpty || value.length > 2) {
+                          searchOrders(1);
+                        }
+                      },
+                      controller: amountController,
+                      size: size,
+                      hintText: 'Price',
+                    ),
+                  ],
+                ),
+              ),
+              
+       
+
+              // Store
+              SizedBox(
+                width: 200,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        "Store",
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s14,
+                          0.27,
+                          Colors.black.withOpacity(0.6),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 45,
+                      width: 200,
+                      child: BuildBoxShadowContainer(
+                        circleRadius: 7,
+                        alignment: Alignment.centerLeft,
+                        margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+                        padding: const EdgeInsets.only(left: 15),
+                        child: DropdownButtonFormField<GetStoreModelData>(
+                          decoration: const InputDecoration(border: InputBorder.none),
+                          value: storeSelected,
+                          hint: Text(
+                            'Select Store',
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s12,
+                              0.27,
+                              ColorManager.textColor.withOpacity(.5),
+                            ),
+                          ),
+                          items: storeList!.map((GetStoreModelData store) {
+                            return DropdownMenuItem<GetStoreModelData>(
+                              value: store,
+                              child: Text(
+                                store.name ?? '',
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.27,
+                                  ColorManager.textColor.withOpacity(.5),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (GetStoreModelData? storeModelData) {
+                            if (storeModelData != null) {
+                              setState(() {
+                                storeSelected = storeModelData;
+                                storeController.text = storeModelData.id.toString();
+                              });
+                              searchOrders(1);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Search Button
+              Padding(
+                padding: const EdgeInsets.only(top: 35.0),
+                child: CustomRoundButton(
+                  title: "Search",
+                  fct: () { searchOrders(1); },
+                  height: 45,
+                  width: 200,
+                  fontSize: FontSize.s12,
+                ),
+              ),
+
+              // Reset Button
+              Padding(
+                padding: const EdgeInsets.only(top: 35.0),
+                child: CustomRoundButton(
+                  title: "Reset",
+                  boxColor: Colors.white,
+                  textColor: ColorManager.kPrimaryColor,
+                  fct: resetSearch,
+                  height: 45,
+                  width: 200,
+                  fontSize: FontSize.s12,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  ],
+),
                   const SizedBox(
                     height: 20,
                   ),
@@ -615,25 +610,30 @@ class _SalesScreenState extends State<SalesScreen> {
                         builder: (context, orderProvider, child) {
                           List<ListOrderModelData> orders =
                               orderProvider.orders;
-                          
+
                           // DEBUG: Print UI rendering details
                           debugPrint('=== SALES UI RENDER DEBUG ===');
                           debugPrint('Orders List Length: ${orders.length}');
-                          debugPrint('Orders Provider State: ${orderProvider.runtimeType}');
-                          debugPrint('Current Page: ${orderProvider.currentPage}');
-                          debugPrint('Total Pages: ${orderProvider.totalPages}');
-                          
+                          debugPrint(
+                              'Orders Provider State: ${orderProvider.runtimeType}');
+                          debugPrint(
+                              'Current Page: ${orderProvider.currentPage}');
+                          debugPrint(
+                              'Total Pages: ${orderProvider.totalPages}');
+
                           if (orders.isEmpty) {
                             debugPrint('=== NO ORDERS TO DISPLAY ===');
-                            debugPrint('Orders list is empty - no data to render');
+                            debugPrint(
+                                'Orders list is empty - no data to render');
                           } else {
                             debugPrint('=== ORDERS TO RENDER ===');
                             for (int i = 0; i < orders.length && i < 5; i++) {
                               var order = orders[i];
-                              debugPrint('UI Order $i: ${order.orderNumber} - ${order.grantTotal}');
+                              debugPrint(
+                                  'UI Order $i: ${order.orderNumber} - ${order.grantTotal}');
                             }
                           }
-                          
+
                           return SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: SizedBox(

@@ -641,7 +641,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
     final bool isSmallScreen = size.width < 600;
     return SafeArea(
       child: Container(
-        margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
