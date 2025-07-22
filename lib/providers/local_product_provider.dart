@@ -675,16 +675,21 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     if (filterBarcode != null && filterBarcode.isNotEmpty) {
-      result = result.where((p) => p.barcode == filterBarcode).toList();
-    }
+  result = result.where((p) => 
+    p.barcode != null && 
+    p.barcode!.toLowerCase().contains(filterBarcode.toLowerCase())
+  ).toList();
+}
 
-    if (filterPrice != null && filterPrice.isNotEmpty) {
-      result = result.where((p) {
-        final price = double.tryParse(p.price?.price ?? '0') ?? 0;
-        final filterPriceValue = double.tryParse(filterPrice) ?? 0;
-        return price == filterPriceValue;
-      }).toList();
-    }
+   if (filterPrice != null && filterPrice.isNotEmpty) {
+  result = result.where((p) {
+    // Convert product price to string for partial matching
+    final priceString = p.price?.price?.toString() ?? '';
+    
+    // Check if the price string contains the filter text
+    return priceString.contains(filterPrice);
+  }).toList();
+}
 
     // Note: createdBy, properties, store, and supplier filters are not available in the GetProduct model
     // These filters are kept for API compatibility but won't affect the results

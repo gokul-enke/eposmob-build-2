@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:pos_machine/screens/transactions/widgets/supplier_auto_complete_search.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -15,6 +16,7 @@ import '../../../resources/style_manager.dart';
 class TransactionScreen extends StatefulWidget {
   const TransactionScreen({super.key});
 
+
   @override
   State<TransactionScreen> createState() => _TransactionScreenState();
 }
@@ -25,6 +27,12 @@ class _TransactionScreenState extends State<TransactionScreen> {
   final TextEditingController statusController = TextEditingController();
   final TextEditingController paymentModeController = TextEditingController();
   final TextEditingController supplierController = TextEditingController();
+  final TextEditingController supplierSearchController = TextEditingController();
+
+  
+
+  
+
 
   TransactionModel? selectedTransaction;
   bool initLoading = false;
@@ -63,33 +71,35 @@ class _TransactionScreenState extends State<TransactionScreen> {
     }
   }
 
-  void searchTransactions() {
-    Provider.of<TransactionProvider>(context, listen: false)
-        .applyTransactionFiltersLocally(
-      filterName: searchController.text,
-      filterType: typeController.text == "All Types" ? null : typeController.text,
-      filterStatus: statusController.text == "All Status" ? null : statusController.text,
-      filterPaymentMode: paymentModeController.text == "All Payment Modes" 
-          ? null 
-          : paymentModeController.text,
-      filterSupplier: supplierController.text == "All Suppliers" 
-          ? null 
-          : supplierController.text,
-      page: 1,
-    );
-  }
+void searchTransactions() {
+  final supplierFilter = supplierSearchController.text.isEmpty 
+      ? null 
+      : supplierSearchController.text;
+  
+  Provider.of<TransactionProvider>(context, listen: false)
+      .applyTransactionFiltersLocally(
+    filterName: searchController.text,
+    filterType: typeController.text == "All Types" ? null : typeController.text,
+    filterStatus: statusController.text == "All Status" ? null : statusController.text,
+    filterPaymentMode: paymentModeController.text == "All Payment Modes" 
+        ? null 
+        : paymentModeController.text,
+    filterSupplier: supplierFilter,
+    page: 1,
+  );
+}
 
   void resetSearch() {
-    setState(() {
-      searchController.clear();
-      typeController.text = "All Types";
-      statusController.text = "All Status";
-      paymentModeController.text = "All Payment Modes";
-      supplierController.text = "All Suppliers";
-    });
-    Provider.of<TransactionProvider>(context, listen: false)
-        .resetTransactionFilters();
-  }
+  setState(() {
+    searchController.clear();
+    typeController.text = "All Types";
+    statusController.text = "All Status";
+    paymentModeController.text = "All Payment Modes";
+    supplierSearchController.clear();  // Clear the supplier search
+  });
+  Provider.of<TransactionProvider>(context, listen: false)
+      .resetTransactionFilters();
+}
 
   Future<void> _onRefresh() async {
     await Provider.of<TransactionProvider>(context, listen: false)
@@ -388,184 +398,210 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final transactionProvider = Provider.of<TransactionProvider>(context);
-    Size size = MediaQuery.of(context).size;
-    final bool isSmallScreen = size.width < 600;
+  final transactionProvider = Provider.of<TransactionProvider>(context);
+  Size size = MediaQuery.of(context).size;
+  final bool isSmallScreen = size.width < 600;
 
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: _onRefresh,
-        child: Container(
-          margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
-              )
-            ],
-            color: Colors.white,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Supplier Transactions",
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s20,
-                        0.30,
-                        ColorManager.textColor,
-                      ),
+  return SafeArea(
+    child: RefreshIndicator(
+      onRefresh: _onRefresh,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: const [
+            BoxShadow(
+              color: ColorManager.boxShadowColor,
+              blurRadius: 6,
+              offset: Offset(1, 1),
+            )
+          ],
+          color: Colors.white,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Supplier Transactions",
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s20,
+                      0.30,
+                      ColorManager.textColor,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 15),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        alignment: WrapAlignment.start,
-                        crossAxisAlignment: WrapCrossAlignment.end,
-                        children: [
-                          SizedBox(
-                            width: isSmallScreen ? size.width * 0.3 : size.width * 0.15,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Search",
-                                    style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      FontSize.s14,
-                                      0.27,
-                                      Colors.black.withOpacity(0.6),
-                                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+              Row(
+                children: [
+                  Expanded(
+                    child: Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      alignment: WrapAlignment.start,
+                      crossAxisAlignment: WrapCrossAlignment.end,
+                      children: [
+                        SizedBox(
+                          width: isSmallScreen ? size.width * 0.3 : size.width * 0.15,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  "Search",
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s14,
+                                    0.27,
+                                    Colors.black.withOpacity(0.6),
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                BuildBoxShadowContainer(
-                                  circleRadius: 7,
-                                  alignment: Alignment.centerLeft,
-                                  padding: const EdgeInsets.only(left: 15),
-                                  height: 45,
-                                  child: TextField(
-                                    controller: searchController,
-                                    onChanged: (value) => searchTransactions(),
-                                    decoration: InputDecoration(
-                                      hintText: 'Search by name, reference',
-                                      hintStyle: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.27,
-                                        ColorManager.textColor.withOpacity(.5),
-                                      ),
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.zero,
-                                    ),
-                                    style: buildCustomStyle(
+                              ),
+                              const SizedBox(height: 8),
+                              BuildBoxShadowContainer(
+                                circleRadius: 7,
+                                alignment: Alignment.centerLeft,
+                                padding: const EdgeInsets.only(left: 15),
+                                height: 45,
+                                child: TextField(
+                                  controller: searchController,
+                                  onChanged: (value) => searchTransactions(),
+                                  decoration: InputDecoration(
+                                    hintText: 'Search by name, reference',
+                                    hintStyle: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
                                       0.27,
                                       ColorManager.textColor.withOpacity(.5),
                                     ),
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s12,
+                                    0.27,
+                                    ColorManager.textColor.withOpacity(.5),
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                          _buildFilterDropdown(
-                            title: "Type",
-                            controller: typeController,
-                            options: transactionProvider.getTypeOptions(),
-                            width: size.width,
-                            isSmallScreen: isSmallScreen,
-                          ),
-                          _buildFilterDropdown(
-                            title: "Status",
-                            controller: statusController,
-                            options: transactionProvider.getStatusOptions(),
-                            width: size.width,
-                            isSmallScreen: isSmallScreen,
-                          ),
-                          // _buildFilterDropdown(
-                          //   title: "Payment Mode",
-                          //   controller: paymentModeController,
-                          //   options: transactionProvider.getPaymentModeOptions(),
-                          //   width: size.width,
-                          //   isSmallScreen: isSmallScreen,
-                          // ),
-                          _buildFilterDropdown(
-                            title: "Supplier",
-                            controller: supplierController,
-                            options: transactionProvider.getSupplierOptions(),
-                            width: size.width,
-                            isSmallScreen: isSmallScreen,
-                          ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CustomRoundButton(
-                                title: "Reset",
-                                boxColor: Colors.white,
-                                textColor: ColorManager.kPrimaryColor,
-                                borderColor: ColorManager.kPrimaryColor,
-                                fct: resetSearch,
-                                height: 45,
-                                width: isSmallScreen
-                                    ? size.width * 0.2
-                                    : size.width * 0.08,
-                                fontSize: FontSize.s12,
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                         SizedBox(
+                          width: isSmallScreen ? size.width * 0.3 : size.width * 0.15,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  "Supplier",
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s14,
+                                    0.27,
+                                    Colors.black.withOpacity(0.6),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              BuildBoxShadowContainer(
+                                circleRadius: 7,
+                                alignment: Alignment.centerLeft,
+                                padding: const EdgeInsets.only(left: 15),
+                                height: 45,
+                                child: SupplierAutocomplete(
+                                  size: size,
+                                  onSelected: (selectedSupplier) {
+                                    searchTransactions();
+                                  },
+                                  supplierList: transactionProvider.getSupplierOptions(),
+                                  controller: supplierSearchController,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        _buildFilterDropdown(
+                          title: "Type",
+                          controller: typeController,
+                          options: transactionProvider.getTypeOptions(),
+                          width: size.width,
+                          isSmallScreen: isSmallScreen,
+                        ),
+                        _buildFilterDropdown(
+                          title: "Status",
+                          controller: statusController,
+                          options: transactionProvider.getStatusOptions(),
+                          width: size.width,
+                          isSmallScreen: isSmallScreen,
+                        ),
+                        
+                        // Supplier Autocomplete Search
+                       
+
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CustomRoundButton(
+                              title: "Reset",
+                              boxColor: Colors.white,
+                              textColor: ColorManager.kPrimaryColor,
+                              borderColor: ColorManager.kPrimaryColor,
+                              fct: resetSearch,
+                              height: 45,
+                              width: isSmallScreen
+                                  ? size.width * 0.2
+                                  : size.width * 0.08,
+                              fontSize: FontSize.s12,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: initLoading || transactionProvider.transactionIsLoading
+                          ? const Center(child: CircularProgressIndicator.adaptive())
+                          : transactionProvider.listTransactionModelDataList == null ||
+                                transactionProvider.listTransactionModelDataList!.isEmpty
+                              ? _buildEmptyState(transactionProvider)
+                              : _buildTransactionTable(transactionProvider),
+                    ),
+                    const SizedBox(height: 10),
+                    PaginationControl(
+                      currentPage: transactionProvider.transactionCurrentPage,
+                      totalPages: transactionProvider.transactionTotalPages,
+                      onPageChanged: (int page) {
+                        transactionProvider.goToTransactionPage(page);
+                      },
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: initLoading || transactionProvider.transactionIsLoading
-                            ? const Center(child: CircularProgressIndicator.adaptive())
-                            : transactionProvider.listTransactionModelDataList == null ||
-                                    transactionProvider.listTransactionModelDataList!.isEmpty
-                                ? _buildEmptyState(transactionProvider)
-                                : _buildTransactionTable(transactionProvider),
-                      ),
-                      const SizedBox(height: 10),
-                      PaginationControl(
-                        currentPage: transactionProvider.transactionCurrentPage,
-                        totalPages: transactionProvider.transactionTotalPages,
-                        onPageChanged: (int page) {
-                          transactionProvider.goToTransactionPage(page);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildEmptyState(TransactionProvider provider) {
     final hasFilters = 

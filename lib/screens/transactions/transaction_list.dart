@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/screens/transactions/widgets/customer_auto_complete.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
@@ -39,6 +40,8 @@ class _CustomerTransactionListScreenState
   final TextEditingController customerSearchController =
       TextEditingController();
   String searchCustomer = '';
+  List<String> customerSuggestions = []; // This should be populated with your customer names
+  List<String> filteredSuggestions = [];
   bool initLoading = false;
   List<ListTransaction>? listTransaction = [];
   List<ListTransaction>? allTransactions =
@@ -47,7 +50,18 @@ class _CustomerTransactionListScreenState
   DateTime? selectedDate;
   int currentPage = 1;
   int totalPages = 1;
+  int _calendarKey = 0;
   final int itemsPerPage = 20;
+  final GlobalKey _customerAutocompleteKey = GlobalKey();
+
+  List<String> getCustomerSuggestions() {
+  if (allTransactions == null) return [];
+  return allTransactions!
+      .map((t) => t.customerName ?? '')
+      .where((name) => name.isNotEmpty)
+      .toSet()
+      .toList();
+}
 
   @override
   void initState() {
@@ -176,6 +190,7 @@ class _CustomerTransactionListScreenState
     amountRefController.clear();
     customerSearchController.clear();
     referenceSearchController.clear();
+    
 
     // Reset the search variables
     setState(() {
@@ -184,6 +199,8 @@ class _CustomerTransactionListScreenState
       searchReference = '';
       selectedDate = null;
       currentPage = 1;
+      _calendarKey++; 
+      
     });
 
     // Force a refresh of the filters
@@ -507,43 +524,36 @@ class _CustomerTransactionListScreenState
 
                           // NEW: Customer Name Search Field (Add this before the Reset button)
                           SizedBox(
-                            width: isSmallScreen
-                                ? size.width * 0.8
-                                : size.width * 0.15,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Customer Name",
-                                    style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      FontSize.s14,
-                                      0.27,
-                                      Colors.black.withOpacity(0.6),
-                                    ),
-                                  ),
-                                ),
-                                buildColumnWidgetForTextFields(
-                                  height: 45,
-                                  width: isSmallScreen
-                                      ? size.width * 0.8
-                                      : size.width * 0.15,
-                                  onchanged: (value) {
-                                    setState(() {
-                                      searchCustomer = value!;
-                                      currentPage = 1;
-                                    });
-                                    applyFilters();
-                                  },
-                                  controller: customerSearchController,
-                                  size: size,
-                                  hintText: 'Customer Name',
-                                ),
-                              ],
-                            ),
-                          ),
+  width: isSmallScreen ? size.width * 0.8 : size.width * 0.15,
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          "Customer Name",
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s14,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+      ),
+      CustomerAutocomplete(
+        size: size,
+        customerList: getCustomerSuggestions(),
+        onSelected: (String selectedCustomer) {
+          setState(() {
+            searchCustomer = selectedCustomer;
+            currentPage = 1;
+          });
+          applyFilters();
+        },
+      ),
+    ],
+  ),
+),
                               // NEW: Reference ID Search Field
                           SizedBox(
                             width: isSmallScreen
@@ -604,6 +614,7 @@ class _CustomerTransactionListScreenState
                                   ),
                                 ),
                                 BuildBoxShadowContainer(
+                   
                                   circleRadius: 7,
                                   height: 45,
                                   width: isSmallScreen
@@ -611,6 +622,7 @@ class _CustomerTransactionListScreenState
                                       : size.width * 0.15,
                                   child: Center(
                                     child: CalendarPickerTableCell(
+                                      key: ValueKey(_calendarKey),
                                       onDateSelected: (DateTime date) {
                                         setState(() {
                                           selectedDate = date;

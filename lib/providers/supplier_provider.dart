@@ -15,6 +15,8 @@ class SupplierProvider with ChangeNotifier {
   int _totalPages = 1;
   int _itemsPerPage = 20;
   String? _filterName;
+  String? _filterEmail;
+  String? _filterPhone;
   
   List<Supplier>? get supplierList => _supplierList;
   bool get isLoading => _isLoading;
@@ -44,6 +46,8 @@ class SupplierProvider with ChangeNotifier {
   // Apply local pagination and filtering
   void applyFiltersLocally({
     String? supplierName,
+    String? supplierEmail,
+    String? supplierPhone,
     int page = 1,
   }) {
     if (_allSuppliers == null || _allSuppliers!.isEmpty) {
@@ -56,6 +60,8 @@ class SupplierProvider with ChangeNotifier {
 
     // Save filter values
     _filterName = supplierName;
+    _filterEmail = supplierEmail;
+    _filterPhone = supplierPhone;
     _currentPage = page;
 
     // Apply filters
@@ -66,6 +72,19 @@ class SupplierProvider with ChangeNotifier {
         supplier.name.toLowerCase().contains(supplierName.toLowerCase())
       ).toList();
     }
+    //Email filter
+    if (supplierEmail != null && supplierEmail.isNotEmpty) {
+    filteredList = filteredList.where((supplier) => 
+      supplier.email.toLowerCase().contains(supplierEmail.toLowerCase())
+    ).toList();
+  }
+
+  //phone filter
+  if (supplierPhone != null && supplierPhone.isNotEmpty) {
+    filteredList = filteredList.where((supplier) => 
+      supplier.phone.toLowerCase().contains(supplierPhone.toLowerCase())
+    ).toList();
+  }
 
     // Calculate pagination
     _totalPages = (filteredList.length / _itemsPerPage).ceil();
@@ -93,6 +112,8 @@ class SupplierProvider with ChangeNotifier {
   // Reset filters and pagination
   void resetFilters() {
     _filterName = null;
+    _filterEmail = null;
+    _filterPhone = null;  
     _currentPage = 1;
     
     if (_allSuppliers != null && _allSuppliers!.isNotEmpty) {
@@ -120,12 +141,15 @@ class SupplierProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Change page
+  // Change pagei
+  
   void goToPage(int page) {
     if (page < 1 || page > _totalPages) return;
     
     applyFiltersLocally(
       supplierName: _filterName,
+      supplierEmail: _filterEmail,
+      supplierPhone: _filterPhone,
       page: page
     );
   }
