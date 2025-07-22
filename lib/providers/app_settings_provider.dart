@@ -5,7 +5,7 @@ import 'dart:convert';
 
 import 'package:pos_machine/resources/app_url.dart';
 
-class AppSettingsProvider with ChangeNotifier {
+class AppSettingsProvider extends ChangeNotifier {
   AppSettings? _appSettings;
   bool _loading = false;
 

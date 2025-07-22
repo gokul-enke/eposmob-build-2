@@ -2,9 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
+import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:provider/provider.dart';
 import '../models/get_product.dart';
 import '../models/local_models.dart';
 import '../resources/app_url.dart';
+import '../providers/app_settings_provider.dart';
 
 /// A model representing a local cart item.
 /// It holds a product and its associated quantity in the offline cart.
@@ -1352,6 +1355,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? status,
     String? deliveryDate, // Add deliveryDate
     String? deliveryTime, // Add deliveryTime
+    BuildContext? context, // Add context parameter
   }) {
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as confirmed order");
@@ -1360,8 +1364,8 @@ class LocalProductProvider extends ChangeNotifier {
     // Generate a unique ID for the order (timestamp-based)
     final String orderId = DateTime.now().millisecondsSinceEpoch.toString();
 
-    // Calculate total
-    double total = cartTotal;
+    // Calculate total with rounding if enabled
+    double total = context != null ? getRoundedTotal(context) : cartTotal;
 
     // Create a deep copy of cart items to prevent modification
     List<LocalCartItem> orderItems = _cartItems
@@ -1519,6 +1523,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? status,
     String? deliveryDate, // Add deliveryDate
     String? deliveryTime, // Add deliveryTime
+    BuildContext? context, // Add context parameter
   }) {
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder called");
     debugPrint("  - Customer Phone parameter: '$customerPhone'");
@@ -1532,8 +1537,8 @@ class LocalProductProvider extends ChangeNotifier {
     // Generate a unique ID for the order (timestamp-based)
     final String orderId = DateTime.now().millisecondsSinceEpoch.toString();
 
-    // Calculate total
-    double total = cartTotal;
+    // Calculate total with rounding if enabled
+    double total = context != null ? getRoundedTotal(context) : cartTotal;
 
     // Create a deep copy of cart items to prevent modification
     List<LocalCartItem> orderItems = _cartItems
@@ -1883,6 +1888,19 @@ class LocalProductProvider extends ChangeNotifier {
     _saveCartToHive();
     notifyListeners();
     debugPrint("🔄 SET CART ITEM QUANTITY COMPLETED");
+  }
+
+  // Add method to get rounded total
+  double getRoundedTotal(BuildContext context) {
+    double originalTotal = cartTotal;
+    
+    // Check if rounding is enabled
+    final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+    if (appSettingsProvider.appSettings?.priceRoundOff == true) {
+      return AmountHelper.roundOffAmount(originalTotal);
+    }
+    
+    return originalTotal;
   }
 
   // End of LocalProductProvider

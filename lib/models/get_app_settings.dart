@@ -5,6 +5,7 @@ class AppSettings {
   final String printTitle;
   final bool showCustomerLastBuyedPriceList;
   final bool askDeliveryDate;
+  final bool priceRoundOff;
 
   AppSettings({
     required this.barcodeSales,
@@ -13,6 +14,7 @@ class AppSettings {
     required this.printTitle,
     required this.showCustomerLastBuyedPriceList,
     required this.askDeliveryDate,
+    required this.priceRoundOff,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class AppSettings {
           settingsMap['SHOW_CUSTOMER_LAST_BUYED_PRICE_LIST']?['status'] ??
               false,
       askDeliveryDate: settingsMap['ASK_DELIVERY_DATE']?['status'] ?? false,
+      priceRoundOff: settingsMap['PRICE_ROUND_OFF']?['status'] ?? false,
     );
   }
 
@@ -79,7 +82,13 @@ class AppSettings {
           "code": "ASK_DELIVERY_DATE",
           "value": "",
           "status": askDeliveryDate.toString(),
-        }
+        },
+        {
+          "name": "Price Round Off",
+          "code": "PRICE_ROUND_OFF",
+          "value": "",
+          "status": priceRoundOff.toString(),
+        },
       ],
     };
   }
