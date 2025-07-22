@@ -90,6 +90,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   void searchProducts(page) async {
+    
     try {
       setState(() {
         initLoading = true;
@@ -107,7 +108,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
         filterCreatedBy: createdByController.text,
         filterProperties: selectedProperty,
         filterStore: storeController.text,
-        filterSupplier: supplierIdController.text,
+        filterSupplier: supplierIdController.text.isNotEmpty 
+          ? supplierIdController.text 
+          : null,
         page: page,
       );
     } catch (error) {
@@ -117,6 +120,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         initLoading = false;
       });
     }
+    
   }
 
   void resetSearch() {
@@ -263,6 +267,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         Provider.of<CategoryProvider>(context, listen: false);
 
     Size size = MediaQuery.of(context).size;
+    
 
     PurchaseProvider purchaseProvider =
         Provider.of<PurchaseProvider>(context, listen: false);
@@ -277,7 +282,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         onRefresh: refreshData,
         child: Container(
           margin:
-              const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),

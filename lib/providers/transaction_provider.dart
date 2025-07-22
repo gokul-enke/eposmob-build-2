@@ -118,63 +118,61 @@ class TransactionProvider extends ChangeNotifier {
   }
 
   void applyTransactionFiltersLocally({
-    String? filterName,
-    String? filterType,
-    String? filterStatus,
-    String? filterPaymentMode,
-    String? filterSupplier,
-    int? page,
-  }) {
-    if (_allTransactions == null || _allTransactions!.isEmpty) return;
+  String? filterName,
+  String? filterType,
+  String? filterStatus,
+  String? filterPaymentMode,
+  String? filterSupplier,
+  int? page,
+}) {
+  if (_allTransactions == null || _allTransactions!.isEmpty) return;
 
-    // Store filter values
-    _transactionFilterName = filterName;
-    _transactionFilterType = filterType;
-    _transactionFilterStatus = filterStatus;
-    _transactionFilterPaymentMode = filterPaymentMode;
-    _transactionFilterSupplier = filterSupplier;
+  // Store filter values
+  _transactionFilterName = filterName;
+  _transactionFilterType = filterType;
+  _transactionFilterStatus = filterStatus;
+  _transactionFilterPaymentMode = filterPaymentMode;
+  _transactionFilterSupplier = filterSupplier;
 
-    // Apply filters
-    List<TransactionModel> filtered = List.from(_allTransactions!);
+  // Apply filters
+  List<TransactionModel> filtered = List.from(_allTransactions!);
 
-    // Name filter (searches both reference and supplier name)
-    if (filterName != null && filterName.isNotEmpty) {
-      filtered = filtered.where((tx) =>
-          tx.reference.toLowerCase().contains(filterName.toLowerCase()) ||
-          tx.supplier.user.name.toLowerCase().contains(filterName.toLowerCase())
-      ).toList();
-    }
-
-    // Type filter
-    if (filterType != null && filterType.isNotEmpty && filterType != "All Types") {
-      filtered = filtered.where((tx) => tx.type == filterType).toList();
-    }
-
-    // Status filter
-    if (filterStatus != null && filterStatus.isNotEmpty && filterStatus != "All Status") {
-      filtered = filtered.where((tx) => tx.status == filterStatus).toList();
-    }
-
-    // Payment mode filter
-    if (filterPaymentMode != null && 
-        filterPaymentMode.isNotEmpty && 
-        filterPaymentMode != "All Payment Modes") {
-      filtered = filtered.where((tx) => tx.paymentMode == filterPaymentMode).toList();
-    }
-
-    // Supplier filter
-    if (filterSupplier != null && 
-        filterSupplier.isNotEmpty && 
-        filterSupplier != "All Suppliers") {
-      filtered = filtered.where((tx) => 
-        tx.supplier.user.name == filterSupplier
-      ).toList();
-    }
-
-    // Update pagination
-    _updatePagination(filtered, page);
-    notifyListeners();
+  // Name filter (searches both reference and supplier name)
+  if (filterName != null && filterName.isNotEmpty) {
+    filtered = filtered.where((tx) =>
+        tx.reference.toLowerCase().contains(filterName.toLowerCase()) ||
+        tx.supplier.user.name.toLowerCase().contains(filterName.toLowerCase())
+    ).toList();
   }
+
+  // Type filter
+  if (filterType != null && filterType.isNotEmpty && filterType != "All Types") {
+    filtered = filtered.where((tx) => tx.type.toLowerCase() == filterType.toLowerCase()).toList();
+  }
+
+  // Status filter
+  if (filterStatus != null && filterStatus.isNotEmpty && filterStatus != "All Status") {
+    filtered = filtered.where((tx) => tx.status.toLowerCase() == filterStatus.toLowerCase()).toList();
+  }
+
+  // Payment mode filter
+  if (filterPaymentMode != null && 
+      filterPaymentMode.isNotEmpty && 
+      filterPaymentMode != "All Payment Modes") {
+    filtered = filtered.where((tx) => tx.paymentMode.toLowerCase() == filterPaymentMode.toLowerCase()).toList();
+  }
+
+  // Supplier filter - Changed to use contains instead of exact match
+  if (filterSupplier != null && filterSupplier.isNotEmpty) {
+    filtered = filtered.where((tx) => 
+      tx.supplier.user.name.toLowerCase().contains(filterSupplier.toLowerCase())
+    ).toList();
+  }
+
+  // Update pagination
+  _updatePagination(filtered, page);
+  notifyListeners();
+}
 
   void _updatePagination(List<TransactionModel> filtered, int? page) {
     _transactionTotalPages = (filtered.length / _transactionItemsPerPage).ceil();
@@ -256,7 +254,7 @@ class TransactionProvider extends ChangeNotifier {
         .toList();
 
     uniqueSuppliers.sort();
-    return ["All Suppliers", ...uniqueSuppliers];
+    return ["", ...uniqueSuppliers];
   }
 
   /* ---------- UTILITY METHODS ---------- */
@@ -300,6 +298,8 @@ class TransactionProvider extends ChangeNotifier {
     if (_allTransactions != null && _allTransactions!.isNotEmpty) {
       applyTransactionFiltersLocally(page: 1);
     }
+
+    
   }
 
   void goToTransactionPage(int page) {

@@ -26,6 +26,8 @@ class SupplierListScreen extends StatefulWidget {
 class _SupplierListScreenState extends State<SupplierListScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
   final TextEditingController searchTextController = TextEditingController();
+  final TextEditingController searchEmailController = TextEditingController();
+  final TextEditingController searchPhoneController = TextEditingController();
   bool initLoading = false;
 
   @override
@@ -82,7 +84,26 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
     );
   }
 
-  void searchSuppliers(String value) {
+  // void searchSuppliers(String value) {
+  //   try {
+  //     String? accessToken =
+  //         Provider.of<AuthModel>(context, listen: false).token;
+  //     if (accessToken == null || accessToken.isEmpty) return;
+
+  //     SupplierProvider supplierProvider =
+  //         Provider.of<SupplierProvider>(context, listen: false);
+  //     supplierProvider.applyFiltersLocally(supplierName: value);
+  //   } catch (error) {
+  //     debugPrint("❌ Supplier search error: ${error.toString()}");
+  //     showScaffold(context: context, message: "Error searching suppliers");
+  //   }
+  // }
+
+  void searchSuppliers({
+    String name = '',
+    String email = '',
+    String phone = '',
+  }) {
     try {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
@@ -90,7 +111,13 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
 
       SupplierProvider supplierProvider =
           Provider.of<SupplierProvider>(context, listen: false);
-      supplierProvider.applyFiltersLocally(supplierName: value);
+
+      // Apply all filters locally
+      supplierProvider.applyFiltersLocally(
+        supplierName: name,
+        supplierEmail: email,
+        supplierPhone: phone,
+      );
     } catch (error) {
       debugPrint("❌ Supplier search error: ${error.toString()}");
       showScaffold(context: context, message: "Error searching suppliers");
@@ -136,408 +163,375 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: refreshData,
-        child: ListView(
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: const [
-                  BoxShadow(
-                    color: ColorManager.boxShadowColor,
-                    blurRadius: 6,
-                    offset: Offset(1, 1),
-                  ),
-                ],
-                color: Colors.white,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: const [
+              BoxShadow(
+                color: ColorManager.boxShadowColor,
+                blurRadius: 6,
+                offset: Offset(1, 1),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 15),
-                  _buildSearchBar(size),
-                  const SizedBox(height: 15),
-                  SizedBox(
-                    height: 500, // Set a fixed height or adjust as needed
-                    child: Consumer<SupplierProvider>(
-                      builder: (context, supplierProvider, child) {
-                        final isLoading = supplierProvider.isLoading;
-                        final suppliers = supplierProvider.supplierList ?? [];
+            ],
+            color: Colors.white,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 15),
+              _buildSearchBar(size),
+              const SizedBox(height: 15),
+              SizedBox(
+                height: 560, // Set a fixed height or adjust as needed
+                child: Consumer<SupplierProvider>(
+                  builder: (context, supplierProvider, child) {
+                    final isLoading = supplierProvider.isLoading;
+                    final suppliers = supplierProvider.supplierList ?? [];
 
-                        return Column(
-                          children: [
-                            Expanded(
-                              child: isLoading
-                                  ? const Center(
-                                      child:
-                                          CircularProgressIndicator.adaptive())
-                                  : BuildBoxShadowContainer(
-                                      width: size.width,
-                                      margin: const EdgeInsets.only(top: 20),
-                                      circleRadius: 7,
-                                      offsetValue: const Offset(1, 1),
-                                      blurRadius: 8.0,
-                                      color: Colors.white,
-                                      child: Column(
-                                        children: [
-                                          // Fixed table header
-                                          Container(
-                                            decoration: const BoxDecoration(
-                                              color: ColorManager.tableBGColor,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black12,
-                                                  offset: Offset(0, 2),
-                                                  blurRadius: 2.0,
-                                                ),
-                                              ],
+                    return Column(
+                      children: [
+                        Expanded(
+                          child: isLoading
+                              ? const Center(
+                                  child: CircularProgressIndicator.adaptive())
+                              : BuildBoxShadowContainer(
+                                  width: size.width,
+                                  margin: const EdgeInsets.only(top: 20),
+                                  circleRadius: 7,
+                                  offsetValue: const Offset(1, 1),
+                                  blurRadius: 8.0,
+                                  color: Colors.white,
+                                  child: Column(
+                                    children: [
+                                      // Fixed table header
+                                      Container(
+                                        decoration: const BoxDecoration(
+                                          color: ColorManager.tableBGColor,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black12,
+                                              offset: Offset(0, 2),
+                                              blurRadius: 2.0,
                                             ),
-                                            child: Table(
-                                              columnWidths: const {
-                                                0: FlexColumnWidth(0.5), // No
-                                                1: FlexColumnWidth(2.0), // Name
-                                                2: FlexColumnWidth(
-                                                    2.0), // Email
-                                                3: FlexColumnWidth(
-                                                    1.5), // Phone
-                                                4: FlexColumnWidth(
-                                                    2.0), // Address
-                                                5: FlexColumnWidth(
-                                                    1.0), // Action
-                                              },
-                                              border: null,
-                                              defaultVerticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
+                                          ],
+                                        ),
+                                        child: Table(
+                                          columnWidths: const {
+                                            0: FlexColumnWidth(0.5), // No
+                                            1: FlexColumnWidth(2.0), // Name
+                                            2: FlexColumnWidth(2.0), // Email
+                                            3: FlexColumnWidth(1.5), // Phone
+                                            4: FlexColumnWidth(2.0), // Address
+                                            5: FlexColumnWidth(1.0), // Action
+                                          },
+                                          border: null,
+                                          defaultVerticalAlignment:
+                                              TableCellVerticalAlignment.middle,
+                                          children: [
+                                            TableRow(
                                               children: [
-                                                TableRow(
-                                                  children: [
-                                                    _buildTableHeader('No'),
-                                                    _buildTableHeader('Name'),
-                                                    _buildTableHeader('Email'),
-                                                    _buildTableHeader('Phone'),
-                                                    _buildTableHeader(
-                                                        'Address'),
-                                                    _buildTableHeader('Action'),
-                                                  ],
-                                                ),
+                                                _buildTableHeader('No'),
+                                                _buildTableHeader('Name'),
+                                                _buildTableHeader('Email'),
+                                                _buildTableHeader('Phone'),
+                                                _buildTableHeader('Address'),
+                                                _buildTableHeader('Action'),
                                               ],
                                             ),
-                                          ),
-                                          // Scrollable table body
-                                          Expanded(
-                                            child: MouseRegion(
-                                              cursor: SystemMouseCursors.grab,
-                                              child: ScrollConfiguration(
-                                                behavior:
-                                                    ScrollConfiguration.of(
-                                                            context)
-                                                        .copyWith(
-                                                  dragDevices: {
-                                                    PointerDeviceKind.mouse,
-                                                    PointerDeviceKind.touch,
-                                                    PointerDeviceKind.stylus,
-                                                    PointerDeviceKind.trackpad,
-                                                  },
-                                                ),
-                                                child: SingleChildScrollView(
-                                                  physics:
-                                                      const BouncingScrollPhysics(),
-                                                  scrollDirection:
-                                                      Axis.vertical,
-                                                  child: suppliers.isEmpty
-                                                      ? Container(
-                                                          height: 300,
-                                                          width:
-                                                              double.infinity,
-                                                          alignment:
-                                                              Alignment.center,
-                                                          child: Column(
-                                                            mainAxisAlignment:
-                                                                MainAxisAlignment
-                                                                    .center,
-                                                            crossAxisAlignment:
-                                                                CrossAxisAlignment
-                                                                    .center,
-                                                            children: [
-                                                              Icon(
-                                                                Icons.business,
-                                                                size: 60,
-                                                                color: ColorManager
-                                                                    .kPrimaryColor
+                                          ],
+                                        ),
+                                      ),
+                                      // Scrollable table body
+                                      Expanded(
+                                        child: MouseRegion(
+                                          cursor: SystemMouseCursors.grab,
+                                          child: ScrollConfiguration(
+                                            behavior:
+                                                ScrollConfiguration.of(context)
+                                                    .copyWith(
+                                              dragDevices: {
+                                                PointerDeviceKind.mouse,
+                                                PointerDeviceKind.touch,
+                                                PointerDeviceKind.stylus,
+                                                PointerDeviceKind.trackpad,
+                                              },
+                                            ),
+                                            child: SingleChildScrollView(
+                                              physics:
+                                                  const BouncingScrollPhysics(),
+                                              scrollDirection: Axis.vertical,
+                                              child: suppliers.isEmpty
+                                                  ? Container(
+                                                      height: 300,
+                                                      width: double.infinity,
+                                                      alignment:
+                                                          Alignment.center,
+                                                      child: Column(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .center,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .center,
+                                                        children: [
+                                                          Icon(
+                                                            Icons.business,
+                                                            size: 60,
+                                                            color: ColorManager
+                                                                .kPrimaryColor
+                                                                .withOpacity(
+                                                                    0.7),
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 15),
+                                                          Text(
+                                                            'No suppliers found',
+                                                            style:
+                                                                buildCustomStyle(
+                                                              FontWeightManager
+                                                                  .medium,
+                                                              FontSize.s18,
+                                                              0.27,
+                                                              ColorManager
+                                                                  .textColor,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 8),
+                                                          Text(
+                                                            'Try adjusting your search criteria',
+                                                            style:
+                                                                buildCustomStyle(
+                                                              FontWeightManager
+                                                                  .regular,
+                                                              FontSize.s14,
+                                                              0.20,
+                                                              Colors.grey,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    )
+                                                  : Table(
+                                                      columnWidths: const {
+                                                        0: FlexColumnWidth(
+                                                            0.5), // No
+                                                        1: FlexColumnWidth(
+                                                            2.0), // Name
+                                                        2: FlexColumnWidth(
+                                                            2.0), // Email
+                                                        3: FlexColumnWidth(
+                                                            1.5), // Phone
+                                                        4: FlexColumnWidth(
+                                                            2.0), // Address
+                                                        5: FlexColumnWidth(
+                                                            1.0), // Action
+                                                      },
+                                                      border: null,
+                                                      defaultVerticalAlignment:
+                                                          TableCellVerticalAlignment
+                                                              .middle,
+                                                      children: suppliers
+                                                          .asMap()
+                                                          .entries
+                                                          .map((entry) {
+                                                        final int index =
+                                                            entry.key;
+                                                        final supplier =
+                                                            entry.value;
+                                                        return TableRow(
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: index % 2 ==
+                                                                    0
+                                                                ? Colors.white
+                                                                : Colors.grey
                                                                     .withOpacity(
-                                                                        0.7),
-                                                              ),
-                                                              const SizedBox(
-                                                                  height: 15),
-                                                              Text(
-                                                                'No suppliers found',
+                                                                        0.1),
+                                                          ),
+                                                          children: [
+                                                            Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(8.0),
+                                                              child: Text(
+                                                                '${index + 1 + (supplierProvider.currentPage - 1) * supplierProvider.itemsPerPage}',
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
                                                                 style:
                                                                     buildCustomStyle(
                                                                   FontWeightManager
                                                                       .medium,
-                                                                  FontSize.s18,
-                                                                  0.27,
-                                                                  ColorManager
-                                                                      .textColor,
+                                                                  FontSize.s9,
+                                                                  0.13,
+                                                                  Colors.black,
                                                                 ),
                                                               ),
-                                                              const SizedBox(
-                                                                  height: 8),
-                                                              Text(
-                                                                'Try adjusting your search criteria',
+                                                            ),
+                                                            Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(8.0),
+                                                              child: Text(
+                                                                supplier.name,
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
                                                                 style:
                                                                     buildCustomStyle(
                                                                   FontWeightManager
-                                                                      .regular,
-                                                                  FontSize.s14,
-                                                                  0.20,
-                                                                  Colors.grey,
+                                                                      .medium,
+                                                                  FontSize.s9,
+                                                                  0.13,
+                                                                  Colors.black,
                                                                 ),
                                                               ),
-                                                            ],
-                                                          ),
-                                                        )
-                                                      : Table(
-                                                          columnWidths: const {
-                                                            0: FlexColumnWidth(
-                                                                0.5), // No
-                                                            1: FlexColumnWidth(
-                                                                2.0), // Name
-                                                            2: FlexColumnWidth(
-                                                                2.0), // Email
-                                                            3: FlexColumnWidth(
-                                                                1.5), // Phone
-                                                            4: FlexColumnWidth(
-                                                                2.0), // Address
-                                                            5: FlexColumnWidth(
-                                                                1.0), // Action
-                                                          },
-                                                          border: null,
-                                                          defaultVerticalAlignment:
-                                                              TableCellVerticalAlignment
-                                                                  .middle,
-                                                          children: suppliers
-                                                              .asMap()
-                                                              .entries
-                                                              .map((entry) {
-                                                            final int index =
-                                                                entry.key;
-                                                            final supplier =
-                                                                entry.value;
-                                                            return TableRow(
-                                                              decoration:
-                                                                  BoxDecoration(
-                                                                color: index %
-                                                                            2 ==
-                                                                        0
-                                                                    ? Colors
-                                                                        .white
-                                                                    : Colors
-                                                                        .grey
-                                                                        .withOpacity(
-                                                                            0.1),
+                                                            ),
+                                                            Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(8.0),
+                                                              child: Text(
+                                                                supplier.email,
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
+                                                                style:
+                                                                    buildCustomStyle(
+                                                                  FontWeightManager
+                                                                      .medium,
+                                                                  FontSize.s9,
+                                                                  0.13,
+                                                                  Colors.black,
+                                                                ),
                                                               ),
-                                                              children: [
-                                                                Padding(
-                                                                  padding:
-                                                                      const EdgeInsets
-                                                                          .all(
-                                                                          8.0),
-                                                                  child: Text(
-                                                                    '${index + 1 + (supplierProvider.currentPage - 1) * supplierProvider.itemsPerPage}',
-                                                                    textAlign:
-                                                                        TextAlign
-                                                                            .center,
-                                                                    style:
-                                                                        buildCustomStyle(
-                                                                      FontWeightManager
-                                                                          .medium,
-                                                                      FontSize
-                                                                          .s9,
-                                                                      0.13,
-                                                                      Colors
-                                                                          .black,
-                                                                    ),
-                                                                  ),
+                                                            ),
+                                                            Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(8.0),
+                                                              child: Text(
+                                                                supplier.phone,
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
+                                                                style:
+                                                                    buildCustomStyle(
+                                                                  FontWeightManager
+                                                                      .medium,
+                                                                  FontSize.s9,
+                                                                  0.13,
+                                                                  Colors.black,
                                                                 ),
-                                                                Padding(
-                                                                  padding:
-                                                                      const EdgeInsets
-                                                                          .all(
-                                                                          8.0),
-                                                                  child: Text(
-                                                                    supplier
-                                                                        .name,
-                                                                    textAlign:
-                                                                        TextAlign
-                                                                            .center,
-                                                                    style:
-                                                                        buildCustomStyle(
-                                                                      FontWeightManager
-                                                                          .medium,
-                                                                      FontSize
-                                                                          .s9,
-                                                                      0.13,
-                                                                      Colors
-                                                                          .black,
-                                                                    ),
-                                                                  ),
+                                                              ),
+                                                            ),
+                                                            Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(8.0),
+                                                              child: Text(
+                                                                supplier.address ??
+                                                                    '',
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
+                                                                style:
+                                                                    buildCustomStyle(
+                                                                  FontWeightManager
+                                                                      .medium,
+                                                                  FontSize.s9,
+                                                                  0.13,
+                                                                  Colors.black,
                                                                 ),
-                                                                Padding(
-                                                                  padding:
+                                                              ),
+                                                            ),
+                                                            Center(
+                                                              child: Padding(
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                        .all(
+                                                                        8.0),
+                                                                child:
+                                                                    BuildBoxShadowContainer(
+                                                                  margin:
                                                                       const EdgeInsets
-                                                                          .all(
-                                                                          8.0),
-                                                                  child: Text(
-                                                                    supplier
-                                                                        .email,
-                                                                    textAlign:
-                                                                        TextAlign
-                                                                            .center,
-                                                                    style:
-                                                                        buildCustomStyle(
-                                                                      FontWeightManager
-                                                                          .medium,
-                                                                      FontSize
-                                                                          .s9,
-                                                                      0.13,
-                                                                      Colors
-                                                                          .black,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                                Padding(
-                                                                  padding:
-                                                                      const EdgeInsets
-                                                                          .all(
-                                                                          8.0),
-                                                                  child: Text(
-                                                                    supplier
-                                                                        .phone,
-                                                                    textAlign:
-                                                                        TextAlign
-                                                                            .center,
-                                                                    style:
-                                                                        buildCustomStyle(
-                                                                      FontWeightManager
-                                                                          .medium,
-                                                                      FontSize
-                                                                          .s9,
-                                                                      0.13,
-                                                                      Colors
-                                                                          .black,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                                Padding(
-                                                                  padding:
-                                                                      const EdgeInsets
-                                                                          .all(
-                                                                          8.0),
-                                                                  child: Text(
-                                                                    supplier.address ??
-                                                                        '',
-                                                                    textAlign:
-                                                                        TextAlign
-                                                                            .center,
-                                                                    style:
-                                                                        buildCustomStyle(
-                                                                      FontWeightManager
-                                                                          .medium,
-                                                                      FontSize
-                                                                          .s9,
-                                                                      0.13,
-                                                                      Colors
-                                                                          .black,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                                Center(
-                                                                  child:
-                                                                      Padding(
-                                                                    padding:
-                                                                        const EdgeInsets
-                                                                            .all(
-                                                                            8.0),
-                                                                    child:
-                                                                        BuildBoxShadowContainer(
-                                                                      margin: const EdgeInsets
                                                                           .only(
                                                                           left:
                                                                               5,
                                                                           right:
                                                                               5),
-                                                                      circleRadius:
-                                                                          5,
-                                                                      child:
-                                                                          IconButton(
-                                                                        icon:
-                                                                            Icon(
-                                                                          Icons
-                                                                              .visibility,
-                                                                          size:
-                                                                              18,
-                                                                          color: ColorManager
-                                                                              .kPrimaryColor
-                                                                              .withOpacity(0.9),
-                                                                        ),
-                                                                        onPressed:
-                                                                            () {
-                                                                          supplierProvider
-                                                                              .selectSupplier(supplier);
-                                                                          showDialog(
-                                                                            context:
-                                                                                context,
-                                                                            builder: (context) =>
-                                                                                SupplierDetailModal(supplier: supplier),
-                                                                          );
-                                                                        },
-                                                                        constraints:
-                                                                            const BoxConstraints(
-                                                                          minWidth:
-                                                                              36,
-                                                                          minHeight:
-                                                                              36,
-                                                                        ),
-                                                                        padding:
-                                                                            EdgeInsets.zero,
-                                                                      ),
+                                                                  circleRadius:
+                                                                      5,
+                                                                  child:
+                                                                      IconButton(
+                                                                    icon: Icon(
+                                                                      Icons
+                                                                          .visibility,
+                                                                      size: 18,
+                                                                      color: ColorManager
+                                                                          .kPrimaryColor
+                                                                          .withOpacity(
+                                                                              0.9),
                                                                     ),
+                                                                    onPressed:
+                                                                        () {
+                                                                      supplierProvider
+                                                                          .selectSupplier(
+                                                                              supplier);
+                                                                      showDialog(
+                                                                        context:
+                                                                            context,
+                                                                        builder:
+                                                                            (context) =>
+                                                                                SupplierDetailModal(supplier: supplier),
+                                                                      );
+                                                                    },
+                                                                    constraints:
+                                                                        const BoxConstraints(
+                                                                      minWidth:
+                                                                          36,
+                                                                      minHeight:
+                                                                          36,
+                                                                    ),
+                                                                    padding:
+                                                                        EdgeInsets
+                                                                            .zero,
                                                                   ),
                                                                 ),
-                                                              ],
-                                                            );
-                                                          }).toList(),
-                                                        ),
-                                                ),
-                                              ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        );
+                                                      }).toList(),
+                                                    ),
                                             ),
                                           ),
-                                        ],
+                                        ),
                                       ),
-                                    ),
-                            ),
-                            const SizedBox(height: 10),
-                            PaginationControl(
-                              currentPage: supplierProvider.currentPage,
-                              totalPages: supplierProvider.totalPages,
-                              onPageChanged: (int page) {
-                                supplierProvider.goToPage(page);
-                              },
-                            ),
-                            const SizedBox(height: 25),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ],
+                                    ],
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(height: 10),
+                        PaginationControl(
+                          currentPage: supplierProvider.currentPage,
+                          totalPages: supplierProvider.totalPages,
+                          onPageChanged: (int page) {
+                            supplierProvider.goToPage(page);
+                          },
+                        ),
+                        const SizedBox(height: 25),
+                      ],
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -561,6 +555,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
       height: 90,
       child: Row(
         children: [
+          // Name Search Field
           Padding(
             padding: const EdgeInsets.only(left: 10.0),
             child: Column(
@@ -576,15 +571,21 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                 ),
                 buildColumnWidgetForTextFields(
                   height: 45,
-                  width: 120,
+                  width: 180,
                   onchanged: (value) {
                     if (value != null) {
                       Future.microtask(() {
-                        if (value.isEmpty) {
+                        if (value.isEmpty &&
+                            searchEmailController.text.isEmpty &&
+                            searchPhoneController.text.isEmpty) {
                           Provider.of<SupplierProvider>(context, listen: false)
                               .resetFilters();
                         } else {
-                          searchSuppliers(value);
+                          searchSuppliers(
+                            name: value,
+                            email: searchEmailController.text,
+                            phone: searchPhoneController.text,
+                          );
                         }
                       });
                     }
@@ -596,6 +597,94 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
               ],
             ),
           ),
+
+          // Email Search Field
+          Padding(
+            padding: const EdgeInsets.only(left: 10.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    "Email",
+                    style: buildCustomStyle(FontWeightManager.regular,
+                        FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
+                  ),
+                ),
+                buildColumnWidgetForTextFields(
+                  height: 45,
+                  width: 180,
+                  onchanged: (value) {
+                    if (value != null) {
+                      Future.microtask(() {
+                        if (value.isEmpty &&
+                            searchTextController.text.isEmpty &&
+                            searchPhoneController.text.isEmpty) {
+                          Provider.of<SupplierProvider>(context, listen: false)
+                              .resetFilters();
+                        } else {
+                          searchSuppliers(
+                            name: searchTextController.text,
+                            email: value,
+                            phone: searchPhoneController.text,
+                          );
+                        }
+                      });
+                    }
+                  },
+                  controller: searchEmailController,
+                  size: size,
+                  hintText: 'Email',
+                ),
+              ],
+            ),
+          ),
+
+          // Phone Search Field
+          Padding(
+            padding: const EdgeInsets.only(left: 10.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    "Phone",
+                    style: buildCustomStyle(FontWeightManager.regular,
+                        FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
+                  ),
+                ),
+                buildColumnWidgetForTextFields(
+                  height: 45,
+                  width: 180,
+                  onchanged: (value) {
+                    if (value != null) {
+                      Future.microtask(() {
+                        if (value.isEmpty &&
+                            searchTextController.text.isEmpty &&
+                            searchEmailController.text.isEmpty) {
+                          Provider.of<SupplierProvider>(context, listen: false)
+                              .resetFilters();
+                        } else {
+                          searchSuppliers(
+                            name: searchTextController.text,
+                            email: searchEmailController.text,
+                            phone: value,
+                          );
+                        }
+                      });
+                    }
+                  },
+                  controller: searchPhoneController,
+                  size: size,
+                  hintText: 'Phone',
+                ),
+              ],
+            ),
+          ),
+
+          // Reset Button
           Padding(
             padding: const EdgeInsets.only(left: 10.0, top: 30),
             child: CustomRoundButton(
@@ -605,6 +694,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
               fct: () {
                 setState(() {
                   searchTextController.clear();
+                  searchEmailController.clear();
+                  searchPhoneController.clear();
                 });
                 Future.microtask(() {
                   Provider.of<SupplierProvider>(context, listen: false)

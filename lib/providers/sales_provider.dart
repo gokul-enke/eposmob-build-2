@@ -67,17 +67,17 @@ class SalesProvider with ChangeNotifier {
     };
 
     if (orderNumber != null) queryParameters['number'] = orderNumber;
-    // if (filterName != null) queryParameters['filter_name'] = filterName;
+    if (filterName != null) queryParameters['filter_name'] = filterName;
     if (date != null) queryParameters['order_date'] = date;
     if (customerId != null) {
       queryParameters['customer_id'] = customerId.toString();
     }
     if (productId != null) queryParameters['product_id'] = productId.toString();
-    // if (filterStatus != null) queryParameters['filter_status'] = filterStatus;
-    // if (filterPrice != null) queryParameters['filter_price'] = filterPrice;
-    // if (filterEmail != null) queryParameters['filter_email'] = filterEmail;
-    // if (filterPhone != null) queryParameters['filter_phone'] = filterPhone;
-    // if (filterStore != null) queryParameters['filter_store'] = filterStore;
+    if (filterStatus != null) queryParameters['filter_status'] = filterStatus;
+    if (filterPrice != null) queryParameters['filter_price'] = filterPrice;
+    if (filterEmail != null) queryParameters['filter_email'] = filterEmail;
+    if (filterPhone != null) queryParameters['filter_phone'] = filterPhone;
+    if (filterStore != null) queryParameters['filter_store'] = filterStore;
     if (filterCreatedBy != null) {
       queryParameters['filter_created_by'] = filterCreatedBy;
     }

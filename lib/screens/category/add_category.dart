@@ -22,6 +22,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
   final TextEditingController categoryNameController = TextEditingController();
   final TextEditingController parentCategoryController =
       TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   bool initLoading = false;
   String? selectedCategoryId;
   String? selectedParentCategoryId;
@@ -65,8 +66,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     }
   }
 
-  void searchCategory(page) async {
-    // debugPrint("category search called");
+  void searchCategory(int page) async {
     try {
       if (mounted) {
         setState(() {
@@ -77,12 +77,13 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
           Provider.of<CategoryProvider>(context, listen: false);
 
       await categoryProvider.searchAllCategory(
-        filterName: selectedCategoryId,
+        filterName:
+            _searchController.text.isNotEmpty ? _searchController.text : null,
         filterParent: selectedParentCategoryId,
         page: page,
       );
     } catch (error) {
-      // debugPrint(error.toString());
+      debugPrint(error.toString());
     } finally {
       if (mounted) {
         setState(() {
@@ -92,17 +93,23 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void resetSearch() async {
+    _searchController.clear();
     CategoryProvider categoryProvider =
         Provider.of<CategoryProvider>(context, listen: false);
     await categoryProvider.searchAllCategory(
-      // accessToken: accessToken ?? "",
       page: 1,
     );
     if (mounted) {
       setState(() {
-        selectedCategoryId = null; // Reset selected category ID
-        selectedParentCategoryId = null; // Reset selected parent category ID
+        selectedCategoryId = null;
+        selectedParentCategoryId = null;
       });
     }
   }
@@ -164,7 +171,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              "Category",
+                              "Search Category",
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -179,68 +186,34 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                             child: BuildBoxShadowContainer(
                               circleRadius: 7,
                               alignment: Alignment.centerLeft,
-                              margin: const EdgeInsets.only(
-                                left: 5,
-                              ),
+                              margin: const EdgeInsets.only(left: 5),
                               padding: const EdgeInsets.only(left: 15),
-                              height: size.height * .07,
-                              width: size.width / 3,
-                              child: DropdownButtonFormField<Category>(
-                                isExpanded: true,
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                                value: (categoryProvider
-                                                .selectedCategoryIndex >=
-                                            0 &&
-                                        categoryList != null &&
-                                        categoryList!.isNotEmpty &&
-                                        categoryProvider.selectedCategoryIndex <
-                                            categoryList!.length)
-                                    ? categoryList![
-                                        categoryProvider.selectedCategoryIndex]
-                                    : null,
-                                hint: Text(
-                                  'Select Category',
-                                  style: buildCustomStyle(
+                              child: TextField(
+                                controller: _searchController,
+                                decoration: InputDecoration(
+                                  hintText: 'Type to search...',
+                                  hintStyle: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s12,
                                     0.27,
                                     ColorManager.textColor.withOpacity(.5),
                                   ),
+                                  border: InputBorder.none,
+                                  suffixIcon: _searchController.text.isNotEmpty
+                                      ? IconButton(
+                                          icon: Icon(Icons.clear, size: 18),
+                                          onPressed: () {
+                                            _searchController.clear();
+                                            resetSearch();
+                                          },
+                                        )
+                                      : null,
                                 ),
-                                items: categoryList != null &&
-                                        categoryList!.isNotEmpty
-                                    ? categoryList!
-                                        .map((Category category) {
-                                          return DropdownMenuItem<Category>(
-                                              value: category,
-                                              child: Text(
-                                                category.categoryName == "ALL"
-                                                    ? 'Please Select'
-                                                    : category.categoryName ??
-                                                        '',
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s12,
-                                                  0.27,
-                                                  ColorManager.textColor
-                                                      .withOpacity(.5),
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ));
-                                        })
-                                        .toSet()
-                                        .toList()
-                                    : [],
-                                onChanged: (Category? selectedCategory) async {
-                                  if (selectedCategory != null) {
-                                    setState(() {
-                                      selectedCategoryId = selectedCategory
-                                          .categoryId
-                                          .toString();
-                                    });
+                                onChanged: (value) {
+                                  if (value.isEmpty) {
+                                    resetSearch();
+                                  } else {
+                                    searchCategory(1);
                                   }
                                 },
                               ),
@@ -248,102 +221,91 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                           ),
                         ],
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 10.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(
-                                "Parent Category",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              height: 45,
-                              width: 180,
-                              child: BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                alignment: Alignment.centerLeft,
-                                margin: const EdgeInsets.only(
-                                  left: 5,
-                                ),
-                                padding: const EdgeInsets.only(left: 15),
-                                height: size.height * .07,
-                                width: size.width / 3,
-                                child: DropdownButtonFormField<Category>(
-                                  isExpanded: true,
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  value:
-                                      (categoryProvider.selectedCategoryIndex >=
-                                                  0 &&
-                                              categoryList != null &&
-                                              categoryList!.isNotEmpty &&
-                                              categoryProvider
-                                                      .selectedCategoryIndex <
-                                                  categoryList!.length)
-                                          ? categoryList![categoryProvider
-                                              .selectedCategoryIndex]
-                                          : null,
-                                  hint: Text(
-                                    'Select Category',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s12,
-                                      0.27,
-                                      ColorManager.textColor.withOpacity(.5),
-                                    ),
-                                  ),
-                                  items: categoryList != null &&
-                                          categoryList!.isNotEmpty
-                                      ? categoryList!
-                                          .map((Category category) {
-                                            return DropdownMenuItem<Category>(
-                                                value: category,
-                                                child: Text(
-                                                  category.categoryName == "ALL"
-                                                      ? 'Please Select'
-                                                      : category.categoryName ??
-                                                          '',
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.27,
-                                                    ColorManager.textColor
-                                                        .withOpacity(.5),
-                                                  ),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ));
-                                          })
-                                          .toSet()
-                                          .toList()
-                                      : [],
-                                  onChanged:
-                                      (Category? selectedCategory) async {
-                                    if (selectedCategory != null) {
-                                      setState(() {
-                                        selectedParentCategoryId =
-                                            selectedCategory.categoryId
-                                                .toString();
-                                      });
-                                    }
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+//                       Padding(
+//                         padding: const EdgeInsets.only(left: 10.0),
+//                         child: // Replace your existing parent category dropdown with this:
+// Column(
+//   crossAxisAlignment: CrossAxisAlignment.start,
+//   children: [
+//     Padding(
+//       padding: const EdgeInsets.all(8.0),
+//       child: Text(
+//         "Parent Category",
+//         style: buildCustomStyle(
+//           FontWeightManager.regular,
+//           FontSize.s14,
+//           0.27,
+//           Colors.black.withOpacity(0.6),
+//         ),
+//       ),
+//     ),
+//     SizedBox(
+//       height: 45,
+//       width: 180,
+//       child: BuildBoxShadowContainer(
+//         circleRadius: 7,
+//         alignment: Alignment.centerLeft,
+//         margin: const EdgeInsets.only(left: 5),
+//         padding: const EdgeInsets.only(left: 15),
+//         height: size.height * .07,
+//         width: size.width / 3,
+//         child: DropdownButtonFormField<Category>(
+//           isExpanded: true,
+//           decoration: const InputDecoration(
+//             border: InputBorder.none,
+//             contentPadding: EdgeInsets.zero,
+//           ),
+//           value: selectedParentCategoryId != null &&
+//               categoryProvider.searchCategory != null
+//               ? categoryProvider.searchCategory!.firstWhere(
+//                   (cat) => cat.categoryId.toString() == selectedParentCategoryId,
+//                   orElse: () => Category())
+//               : null,
+//           hint: Text(
+//             'Select Parent Category',
+//             style: buildCustomStyle(
+//               FontWeightManager.medium,
+//               FontSize.s12,
+//               0.27,
+//               ColorManager.textColor.withOpacity(.5),
+//             ),
+//           ),
+//           items: categoryProvider.searchCategory != null
+//               ? categoryProvider.searchCategory!
+//                   .map((Category category) {
+//                     return DropdownMenuItem<Category>(
+//                       value: category,
+//                       child: Text(
+//                         category.categoryName ?? 'No Name',
+//                         style: buildCustomStyle(
+//                           FontWeightManager.medium,
+//                           FontSize.s12,
+//                           0.27,
+//                           ColorManager.textColor.withOpacity(.5),
+//                         ),
+//                         overflow: TextOverflow.ellipsis,
+//                       ));
+//                   })
+//                   .toList()
+//               : [],
+//           onChanged: (Category? selectedCategory) async {
+//             if (selectedCategory != null) {
+//               setState(() {
+//                 selectedParentCategoryId =
+//                     selectedCategory.categoryId.toString();
+//               });
+//             } else {
+//               setState(() {
+//                 selectedParentCategoryId = null;
+//               });
+//             }
+//           },
+//         ),
+//       ),
+//     ),
+//   ],
+// // ),
+//                       ),
 
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0, top: 30),
