@@ -12,7 +12,7 @@ class APPUrl {
   //   baseURL = url;
   // }
 
-  // static String categoryListUrl = '$baseURL/api/v1/list-category';
+  static String verifyApiKey = '$baseURL/api/v1/verify-api-key';
   static String categoryListUrl = '$baseURL/api/v1/category/list-category';
   static String viewCategoryListUrl = '$baseURL/api/v1/category-details';
   static String addCategoryUrl = '$baseURL/api/v1/category/add-category';

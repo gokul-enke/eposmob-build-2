@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
-
-// import 'base_url_screen.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
+import 'package:pos_machine/screens/api_key_screen.dart';
 import 'login/login.dart';
 
 class BaseUrlWrapper extends StatefulWidget {
@@ -12,40 +11,43 @@ class BaseUrlWrapper extends StatefulWidget {
 }
 
 class _BaseUrlWrapperState extends State<BaseUrlWrapper> {
-  // bool? _isBaseURLSet;
+  bool? _hasApiKey;
+  final SharedPreferenceProvider _prefs = SharedPreferenceProvider();
 
   @override
   void initState() {
     super.initState();
-    // _checkBaseURL();
+    _checkApiKey();
   }
 
-  // Future<void> _checkBaseURL() async {
-  // SharedPreferences prefs = await SharedPreferences.getInstance();
-  // String? baseURL = "https://epos.enke.ae";
-  // String? baseURL = null;
-  // String? baseURL = prefs.getString('baseURL');
-
-  // String? baseURL = "https://epos.mevcakes.com";
-  // String? baseURL = "https://hypersouq.enke.in";
-  // String? baseURL = "https://three-places-cover.loca.lt";
-  // setState(() {
-  //   _isBaseURLSet = baseURL != null && baseURL.isNotEmpty;
-  // });
-  // }
+  Future<void> _checkApiKey() async {
+    try {
+      bool hasKey = await _prefs.hasApiKey();
+      setState(() {
+        _hasApiKey = hasKey;
+      });
+    } catch (e) {
+      setState(() {
+        _hasApiKey = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // if (_isBaseURLSet == null) {
-    //   return const Scaffold(
-    //     body: Center(
-    //       child: CircularProgressIndicator(),
-    //     ),
-    //   );
-    // } else if (_isBaseURLSet == true) {
-    return const SignInScreen();
-    // } else {
-    //   return BaseURLScreen();
-    // }
+    if (_hasApiKey == null) {
+      // Loading state
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    } else if (_hasApiKey == true) {
+      // API key exists, go to login
+      return const SignInScreen();
+    } else {
+      // No API key, show setup screen
+      return const ApiKeyScreen();
+    }
   }
 }

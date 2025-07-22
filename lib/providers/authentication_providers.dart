@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthenticationProvider {
   //                 *********************** Login API ***************************************************
@@ -11,6 +12,14 @@ class AuthenticationProvider {
   Future<dynamic> login(
       String email, String password, BuildContext context) async {
     // debugPrint("login");
+
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
 
     final Map<String, dynamic> apiBodyData = {
       'email': email,
@@ -21,7 +30,10 @@ class AuthenticationProvider {
     try {
       final response = await http.post(url,
           body: json.encode(apiBodyData),
-          headers: {'Content-Type': 'application/json'});
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-KEY': apiKey,
+          });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200 ||
           response.statusCode == 400 ||

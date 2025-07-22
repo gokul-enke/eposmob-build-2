@@ -6,7 +6,7 @@ class BaseURLScreen extends StatefulWidget {
   const BaseURLScreen({super.key});
 
   @override
-  _BaseURLScreenState createState() => _BaseURLScreenState();
+  State<BaseURLScreen> createState() => _BaseURLScreenState();
 }
 
 class _BaseURLScreenState extends State<BaseURLScreen> {
@@ -32,7 +32,9 @@ class _BaseURLScreenState extends State<BaseURLScreen> {
     setState(() {
       APPUrl.baseURL = _baseURLController.text;
     });
-    Navigator.pushReplacementNamed(context, '/login');
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
   }
 
   @override

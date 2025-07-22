@@ -17,6 +17,7 @@ import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -34,6 +35,7 @@ import 'providers/carousel_provider.dart';
 import 'providers/purchase_provider.dart';
 import 'screens/login/login.dart';
 import 'screens/base_url_wrapper.dart';
+import 'screens/api_key_screen.dart';
 import 'helpers/keyboard_dispatcher.dart';
 
 void main() async {
@@ -116,6 +118,7 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => KeyboardProvider()),
         ChangeNotifierProvider(create: (_) => BarcodeProvider()),
+        ChangeNotifierProvider(create: (_) => SharedPreferenceProvider()),
       ],
       child: KeyboardDispatcher(
         child: GetMaterialApp(
@@ -133,6 +136,7 @@ class MyApp extends StatelessWidget {
         home: const BaseUrlWrapper(),
         routes: {
           '/login': (context) => const SignInScreen(),
+          '/api-key': (context) => const ApiKeyScreen(),
         },
       ),
 ),    );
