@@ -1,42 +1,42 @@
-name: Dev Build CI
-on:
-  pull_request:
-    branches: ["staging"]
-  push:
-    branches: ["staging"]
+# name: Dev Build CI
+# on:
+#   pull_request:
+#     branches: ["staging"]
+#   push:
+#     branches: ["staging"]
 
-jobs:
-  build-and-release-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2.12.0
-        with:
-          flutter-version: 3.27.1
-          channel: stable
+# jobs:
+#   build-and-release-windows:
+#     runs-on: windows-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: subosito/flutter-action@v2.12.0
+#         with:
+#           flutter-version: 3.27.1
+#           channel: stable
 
-      - name: Install project dependencies
-        run: flutter pub get
+#       - name: Install project dependencies
+#         run: flutter pub get
 
-      - name: Build artifacts
-        run: flutter build windows --release -v
+#       - name: Build artifacts
+#         run: flutter build windows --release -v
 
-      - name: Copy DLLs to Release Folder
-        run: |
-          cp dependencies/*.dll build/windows/x64/runner/Release/
+#       - name: Copy DLLs to Release Folder
+#         run: |
+#           cp dependencies/*.dll build/windows/x64/runner/Release/
 
-      - name: Verify Files in Release Directory
-        run: dir build/windows/x64/runner/Release/
+#       - name: Verify Files in Release Directory
+#         run: dir build/windows/x64/runner/Release/
 
-      - name: Build Installer
-        run: iex ("& {0} {1} {2}" -f '"C:\Program Files (x86)\Inno Setup 6\iscc.exe"',"/DMyAppVersion='${{github.ref_name}}'", ".\inno_setup.iss")
+#       - name: Build Installer
+#         run: iex ("& {0} {1} {2}" -f '"C:\Program Files (x86)\Inno Setup 6\iscc.exe"',"/DMyAppVersion='${{github.ref_name}}'", ".\inno_setup.iss")
 
-      - name: Upload Executable Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          path: "Output/*.exe"
-          name: EposMachine-windows-${{github.ref_name}}.exe
-          retention-days: 5
-          # Explicitly specify that this is a single file
-          if-no-files-found: error
-          compression-level: 0
+#       - name: Upload Executable Artifact
+#         uses: actions/upload-artifact@v4
+#         with:
+#           path: "Output/*.exe"
+#           name: EposMachine-windows-${{github.ref_name}}.exe
+#           retention-days: 5
+#           # Explicitly specify that this is a single file
+#           if-no-files-found: error
+#           compression-level: 0
