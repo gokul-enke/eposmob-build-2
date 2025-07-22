@@ -1,6 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class SharedPreferenceProvider {
+class SharedPreferenceProvider extends ChangeNotifier {
   saveAccessToken(String accessToken) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     // debugPrint('inside shared ');
@@ -61,5 +62,27 @@ class SharedPreferenceProvider {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String? customerName = prefs.getString('customerName');
     return customerName ?? 'Default Name'; // Return a default value if null
+  }
+
+  // API Key management methods
+  Future<void> saveApiKey(String apiKey) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('api_key', apiKey);
+  }
+
+  Future<String?> getApiKey() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('api_key');
+  }
+
+  Future<bool> hasApiKey() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    return apiKey != null && apiKey.isNotEmpty;
+  }
+
+  Future<void> removeApiKey() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('api_key');
   }
 }
