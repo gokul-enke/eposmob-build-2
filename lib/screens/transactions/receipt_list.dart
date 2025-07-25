@@ -437,6 +437,120 @@ Widget _buildPaymentReferenceSearch() {
     );
   }
 
+  void _showReceiptDetails(Receipt receipt) {
+  showDialog(
+    context: context,
+    builder: (context) => Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      elevation: 8,
+      backgroundColor: Colors.white,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width / 2,
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Receipt Details',
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s24,
+                    0.36,
+                    Colors.black,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.black),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView(
+                shrinkWrap: true,
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  _buildDetailRow('Receipt Number', receipt.receiptNumber),
+                  _buildDetailRow('Customer Name', receipt.customer.user.name),
+                  _buildDetailRow('Amount', receipt.amount),
+                  _buildDetailRow('Payment Method', receipt.paymentMethod),
+                  _buildDetailRow('Status', receipt.receiptStatus),
+                  _buildDetailRow('Payment Reference', receipt.paymentReference),
+                  _buildDetailRow('Date', receipt.createdAt.toString()),
+                  if (receipt.company?.name != null)
+                    _buildDetailRow('Company', receipt.company!.name),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                CustomRoundButton(
+                  title: "Close",
+                  boxColor: Colors.white,
+                  textColor: ColorManager.kPrimaryColor,
+                  borderColor: ColorManager.kPrimaryColor,
+                  fct: () => Navigator.pop(context),
+                  height: 45,
+                  width: 120,
+                  fontSize: FontSize.s12,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildDetailRow(String title, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8.0),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 150,
+          child: Text(
+            title,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s14,
+              0.21,
+              Colors.black54,
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            value.isNotEmpty ? value : 'N/A',
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.21,
+              Colors.black,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
   Widget _buildTableHeader(String text) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
@@ -615,13 +729,16 @@ Widget _buildPaymentReferenceSearch() {
                                                       size: 18,
                                                       color: ColorManager.kPrimaryColor.withOpacity(0.9),
                                                     ),
+                                                    // onPressed: () {
+                                                    //   String? token = Provider.of<AuthModel>(context, listen: false).token;
+                                                    //   InvoiceProvider invoiceProvider = Provider.of<InvoiceProvider>(context, listen: false);
+                                                    //   invoiceProvider.callDetailsOfReceipt(
+                                                    //       id: receipt.id, accessToken: token ?? "");
+                                                    //   sideBarController.index.value = 48;
+                                                    // },
                                                     onPressed: () {
-                                                      String? token = Provider.of<AuthModel>(context, listen: false).token;
-                                                      InvoiceProvider invoiceProvider = Provider.of<InvoiceProvider>(context, listen: false);
-                                                      invoiceProvider.callDetailsOfReceipt(
-                                                          id: receipt.id, accessToken: token ?? "");
-                                                      sideBarController.index.value = 48;
-                                                    },
+                                                        _showReceiptDetails(receipt);
+                                                      },
                                                     constraints: const BoxConstraints(
                                                       minWidth: 36,
                                                       minHeight: 36,

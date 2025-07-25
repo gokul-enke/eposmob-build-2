@@ -209,7 +209,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                 ),
                                 buildColumnWidgetForTextFields(
                                   height: 45,
-                                  width: 120,
+                                  width: 200,
                                   onchanged: (value) {
                                     searchCustomers();
                                   },
@@ -239,7 +239,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                 ),
                                 buildColumnWidgetForTextFields(
                                   height: 45,
-                                  width: 120,
+                                  width: 200,
                                   onchanged: (value) {
                                     searchCustomers();
                                   },
@@ -269,7 +269,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                 ),
                                 buildColumnWidgetForTextFields(
                                   height: 45,
-                                  width: 120,
+                                  width: 200,
                                   onchanged: (value) {
                                     searchCustomers();
                                   },

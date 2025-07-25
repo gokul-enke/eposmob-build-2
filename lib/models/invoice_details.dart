@@ -12,7 +12,9 @@ class InvoiceDetails {
   final int createdBy;
   final String createdAt;
   final String updatedAt;
+  
   final Customer customer;
+  final Company company;
   final List<InvoiceItem> invoiceItems;
 
   InvoiceDetails({
@@ -30,6 +32,7 @@ class InvoiceDetails {
     required this.createdAt,
     required this.updatedAt,
     required this.customer,
+     required this.company,
     required this.invoiceItems,
   });
 
@@ -52,11 +55,56 @@ class InvoiceDetails {
       createdBy: json['created_by'],
       createdAt: json['created_at'],
       updatedAt: json['updated_at'],
+      company: Company.fromJson(json['company'] ?? {}),
       customer: Customer.fromJson(json['customer']),
       invoiceItems: itemsList,
     );
+
   }
 }
+
+
+class Company {
+  int id;
+  String name;
+  String code;
+  String webUrl;
+  int verified;
+  String status;
+  DateTime createdAt;
+  DateTime updatedAt;
+  dynamic deletedAt;
+
+  Company({
+    required this.id,
+    required this.name,
+    required this.code,
+    required this.webUrl,
+    required this.verified,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+  });
+
+  factory Company.fromJson(Map<String, dynamic> json) {
+    return Company(
+      id: json['id'] ?? 0, // Default to 0 if null
+      name: json['name'] ?? "", // Default to empty string
+      code: json['code'] ?? "", // Default to empty string
+      webUrl: json['web_url'] ?? "", // Default to empty string
+      verified: json['verified'] ?? 0, // Default to 0 if null
+      status: json['status'] ?? "", // Default to empty string
+      createdAt: DateTime.parse(json['created_at'] ??
+          DateTime.now().toIso8601String()), // Default to current time
+      updatedAt: DateTime.parse(json['updated_at'] ??
+          DateTime.now().toIso8601String()), // Default to current time
+      deletedAt: json['deleted_at'], // Keep as nullable
+    );
+  }
+}
+
+
 
 class Customer {
   final int id;
