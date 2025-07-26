@@ -716,7 +716,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                     invoice.dueDate),
                                                 _buildTableCell(
                                                     invoice.amount.toString()),
-                                                _buildTableCell(invoice.status),
+                                                Center(child: _buildStatusChip(invoice.status)),
                                                 Center(
                                                   child: Padding(
                                                     padding:
@@ -769,6 +769,50 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           ],
         );
       }),
+    );
+  }
+
+
+  Widget _buildStatusChip(String status) {
+    Color backgroundColor;
+    Color textColor;
+
+    switch (status.toUpperCase()) {
+      case 'paid':
+      case 'PAID':
+        backgroundColor = Colors.green.withOpacity(0.1);
+        textColor = Colors.green;
+        break;
+      case 'pending':
+      case 'PENDING':
+     
+        backgroundColor = Colors.orange.withOpacity(0.1);
+        textColor = Colors.orange;
+        break;
+      case 'FAIL':
+      case 'FAILED':
+        backgroundColor = Colors.red.withOpacity(0.1);
+        textColor = Colors.red;
+        break;
+      default:
+        backgroundColor = Colors.grey.withOpacity(0.1);
+        textColor = Colors.grey;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          color: textColor,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
