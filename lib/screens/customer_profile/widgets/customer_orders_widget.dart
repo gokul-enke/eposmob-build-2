@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -254,22 +255,34 @@ class CustomerOrdersWidget extends StatelessWidget {
     return paymentMethod.toString();
   }
 
-  Future<void> _refreshOrders(BuildContext context) async {
-    final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
-    
-    try {
-      await customerProvider.fetchUserById(
-        accessToken, // Using the passed accessToken
-        customer.id!,
-        context,
+Future<void> _refreshOrders(BuildContext context) async {
+  final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
+  
+  try {
+    await customerProvider.fetchUserById(
+      accessToken,
+      customer.id!,
+      context,
+    );
+    // Success: Just pop if you're in a dialog, or do nothing if it's a background refresh
+    Navigator.pop(context); // Only if you're inside a dialog/modal
+  } catch (e) {
+    // Check if the error is an authentication issue
+    if (e.toString().contains("401") || e.toString().contains("Unauthorized")) {
+      // Option 1: Show an error and let the user manually log in again
+      showScaffoldError(
+        context: context,
+        message: "Session expired. Please log in again.",
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Orders refreshed successfully')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error refreshing orders: ${e.toString()}')),
+      // Option 2: Automatically navigate to login (if that's your app's flow)
+      // Navigator.pushReplacementNamed(context, '/login');
+    } else {
+      // Other errors (network issues, etc.)
+      showScaffoldError(
+        context: context,
+        message: 'Error refreshing orders: ${e.toString()}',
       );
     }
   }
+}
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
@@ -288,10 +289,12 @@ class CustomerTransactionsWidget extends StatelessWidget {
   // }
 
   void _refreshData(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Refreshing transactions...')),
-    );
+    showScaffold(
+        context: context,
+        message: "Refreshing transactions...",
+      );
   }
+  
 }
 Widget _buildOrderStatusIndicator(String? status) {
     Color color;

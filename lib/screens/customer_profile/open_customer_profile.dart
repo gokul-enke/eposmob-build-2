@@ -171,7 +171,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                                 !isTransactions &&
                                                 selectedIndex == 0)
                                             ? Colors.white
-                                            : ColorManager.kListTiletextColor,
+                                            : ColorManager.textColor,
                                         fit: BoxFit.none,
                                       ),
                                       title: Text(
@@ -189,7 +189,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                                 FontSize.s12,
                                                 0.12,
                                                 ColorManager
-                                                    .kListTiletextColor),
+                                                    .textColor),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       trailing: Icon(
@@ -198,7 +198,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                                 !isTransactions &&
                                                 selectedIndex == 0)
                                             ? Colors.white
-                                            : ColorManager.kListTiletextColor,
+                                            : ColorManager.textColor,
                                       ),
                                     ),
                                   ),
@@ -226,7 +226,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                           color: (isChanged && !isTransactions)
                                               ? Colors.white
                                               : ColorManager
-                                                  .kListTiletextColor),
+                                                  .textColor),
                                       title: Text(
                                         "Edit Details",
                                         style: (isChanged && !isTransactions)
@@ -240,14 +240,14 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                                 FontSize.s12,
                                                 0.12,
                                                 ColorManager
-                                                    .kListTiletextColor),
+                                                    .textColor),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       trailing: Icon(
                                         Icons.keyboard_arrow_right,
                                         color: (isChanged && !isTransactions)
                                             ? Colors.white
-                                            : ColorManager.kListTiletextColor,
+                                            : ColorManager.textColor,
                                       ),
                                     ),
                                   ),
@@ -275,7 +275,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                           color: (!isChanged && isTransactions)
                                               ? Colors.white
                                               : ColorManager
-                                                  .kListTiletextColor),
+                                                  .textColor),
                                       title: Text(
                                         "Transactions",
                                         style: (!isChanged && isTransactions)
@@ -289,14 +289,14 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                                 FontSize.s12,
                                                 0.12,
                                                 ColorManager
-                                                    .kListTiletextColor),
+                                                    .textColor),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       trailing: Icon(
                                         Icons.keyboard_arrow_right,
                                         color: (!isChanged && isTransactions)
                                             ? Colors.white
-                                            : ColorManager.kListTiletextColor,
+                                            : ColorManager.textColor,
                                       ),
                                     ),
                                   ),
@@ -329,7 +329,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                                   selectedIndex == 1)
                                               ? Colors.white
                                               : ColorManager
-                                                  .kListTiletextColor),
+                                                  .textColor),
                                       title: Text(
                                         "All Orders",
                                         style: (!isChanged &&
@@ -345,7 +345,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                                 FontSize.s12,
                                                 0.12,
                                                 ColorManager
-                                                    .kListTiletextColor),
+                                                    .textColor),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       trailing: Icon(
@@ -354,7 +354,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                                 !isTransactions &&
                                                 selectedIndex == 1)
                                             ? Colors.white
-                                            : ColorManager.kListTiletextColor,
+                                            : ColorManager.textColor,
                                       ),
                                     ),
                                   ),
@@ -387,7 +387,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                                   selectedIndex == 2)
                                               ? Colors.white
                                               : ColorManager
-                                                  .kListTiletextColor),
+                                                  .textColor),
                                       title: Text(
                                         "Loyalty Card",
                                         style: (!isChanged &&
@@ -403,7 +403,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                                 FontSize.s12,
                                                 0.12,
                                                 ColorManager
-                                                    .kListTiletextColor),
+                                                    .textColor),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       trailing: Icon(
@@ -412,7 +412,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                                 !isTransactions &&
                                                 selectedIndex == 2)
                                             ? Colors.white
-                                            : ColorManager.kListTiletextColor,
+                                            : ColorManager.textColor,
                                       ),
                                     ),
                                   ),
@@ -445,7 +445,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                                   selectedIndex == 3)
                                               ? Colors.white
                                               : ColorManager
-                                                  .kListTiletextColor),
+                                                  .textColor),
                                       title: Text(
                                         "Chat",
                                         style: (!isChanged &&
@@ -461,7 +461,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                                 FontSize.s12,
                                                 0.12,
                                                 ColorManager
-                                                    .kListTiletextColor),
+                                                    .textColor),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       trailing: Icon(
@@ -470,7 +470,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                                                 !isTransactions &&
                                                 selectedIndex == 3)
                                             ? Colors.white
-                                            : ColorManager.kListTiletextColor,
+                                            : ColorManager.textColor,
                                       ),
                                     ),
                                   ),
