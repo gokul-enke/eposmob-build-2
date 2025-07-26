@@ -180,7 +180,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           // _buildDateRangeSearch(),
           _buildStatusFilter(),
           Padding(
-            padding: const EdgeInsets.only(left: 10.0, top: 25),
+            padding: const EdgeInsets.only(left: 10.0, top: 42),
             child: CustomRoundButton(
               title: "Reset",
               boxColor: Colors.white,
@@ -210,9 +210,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   0.27, Colors.black.withOpacity(0.6)),
             ),
           ),
-          SizedBox(
+         const SizedBox(height: 8),
+            BuildBoxShadowContainer(
+              
+            
             height: 45,
             width: 200,
+            circleRadius  : 7,
             child: TextFormField(
               controller: invoiceNumberController,
               onChanged: (value) => searchInvoices(),
@@ -320,9 +324,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   0.27, Colors.black.withOpacity(0.6)),
             ),
           ),
-          SizedBox(
+          SizedBox(height: 8 ),
+          BuildBoxShadowContainer(
             height: 45,
             width: 120,
+            circleRadius: 7,
             child: DropdownButtonFormField<String>(
               value: selectedStatus,
               decoration: decoration.copyWith(
@@ -542,7 +548,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-  Widget _buildSearchTextField() {
+  Widget 
+  _buildSearchTextField() {
     return Padding(
       padding: const EdgeInsets.only(left: 10.0),
       child: Column(
@@ -556,9 +563,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   0.27, Colors.black.withOpacity(0.6)),
             ),
           ),
-          SizedBox(
+          const SizedBox(height: 8,),
+            BuildBoxShadowContainer(
+              
+            
             height: 45,
             width: 180,
+            circleRadius:7,
             child: TextFormField(
               controller: searchTextController,
               onChanged: (value) {
@@ -575,7 +586,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 prefixIconColor: Colors.black,
               ),
             ),
-          ),
+            ),
         ],
       ),
     );

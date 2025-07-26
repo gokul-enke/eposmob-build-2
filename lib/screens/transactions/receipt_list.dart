@@ -177,7 +177,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
           _buildPaymentMethodSearch(),
         
           Padding(
-             padding: const EdgeInsets.only(left: 10.0, top: 25),
+             padding: const EdgeInsets.only(left: 10.0, top: 42),
             child: CustomRoundButton(
               title: "Reset",
               boxColor: Colors.white,
@@ -206,9 +206,13 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                 0.27, Colors.black.withOpacity(0.6)),
           ),
         ),
-        SizedBox(
+        SizedBox(height: 8,),
+        BuildBoxShadowContainer(
+          
+        
           height: 45,
           width: 180,
+          circleRadius: 7,
           child: TextFormField(
             controller: receiptNumberController, // You'll need to define this controller
             onChanged: (value) {
@@ -245,7 +249,10 @@ Widget _buildPaymentReferenceSearch() {
                 0.27, Colors.black.withOpacity(0.6)),
           ),
         ),
-        SizedBox(
+        SizedBox(height: 8),
+        BuildBoxShadowContainer(
+          
+          circleRadius: 7,
           height: 45,
           width: 180,
           child: TextFormField(
@@ -283,7 +290,10 @@ Widget _buildPaymentReferenceSearch() {
                 0.27, Colors.black.withOpacity(0.6)),
           ),
         ),
-        SizedBox(
+        SizedBox(height: 8),
+        BuildBoxShadowContainer(
+          circleRadius: 7,
+        
           height: 45,
           width: 120,
           child: DropdownButtonFormField<String>(
@@ -347,8 +357,12 @@ Widget _buildPaymentReferenceSearch() {
                 0.27, Colors.black.withOpacity(0.6)),
           ),
         ),
-        SizedBox(
+        SizedBox(height: 8),
+        BuildBoxShadowContainer(
+          
+          circleRadius: 7,
           height: 45,
+        
           width: 135,
           child: DropdownButtonFormField<String>(
             value: paymentMethod,
@@ -356,7 +370,7 @@ Widget _buildPaymentReferenceSearch() {
               contentPadding: const EdgeInsets.symmetric(horizontal: 10),
               hintText: "All Payment",
               hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
+                  FontSize.s12, 0.27, ColorManager.textColor),
             ),
             items: [
               DropdownMenuItem(
@@ -412,9 +426,13 @@ Widget _buildPaymentReferenceSearch() {
                   0.27, Colors.black.withOpacity(0.6)),
             ),
           ),
-          SizedBox(
+          SizedBox(height: 8,),
+          BuildBoxShadowContainer(
+            
+    
             height: 45,
             width: 180,
+            circleRadius:7,
             child: TextFormField(
               controller: searchTextController,
               onChanged: (value) {
