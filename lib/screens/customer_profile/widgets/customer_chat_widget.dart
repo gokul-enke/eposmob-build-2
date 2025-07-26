@@ -6,7 +6,6 @@ import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomerChatWidget extends StatefulWidget {
   final Size size;
@@ -44,28 +43,34 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
     try {
       setState(() {
         isLoading = true;
+        errorMessage = null;
       });
 
-      // Get API key from SharedPreferences
-      // SharedPreferences prefs = await SharedPreferences.getInstance();
-      // String? apiKey = prefs.getString('api_key');
+      // Simulate a network call
+      await Future.delayed(const Duration(seconds: 1));
 
-      // if (apiKey == null || apiKey.isEmpty) {
-      //   throw const HttpException("API key not found. Please restart the app.");
-      // }
-      // TODO: Replace with actual API call to get chat history
-      // final response = await http.get(
-      //   Uri.parse('${APPUrl.getCustomerChat}/${widget.customer.id}'),
-      //   headers: {
-      //     'Authorization': 'Bearer $accessToken',
-      //     'Content-Type': 'application/json',
-      //     'X-Tenant': apiKey,
-      //   },
-      // );
-
-      // For now, just set empty messages
+      // TODO: Replace with actual API call
       setState(() {
-        messages = [];
+        messages = [
+          ChatMessage(
+            id: '1',
+            text: 'Hello, I have a question about my last order.',
+            time: '10:30 AM',
+            isFromMe: false,
+          ),
+          ChatMessage(
+            id: '2',
+            text: 'Hi there! How can I help you today?',
+            time: '10:31 AM',
+            isFromMe: true,
+          ),
+          ChatMessage(
+            id: '3',
+            text: 'I was wondering about the warranty for my product.',
+            time: '10:32 AM',
+            isFromMe: false,
+          ),
+        ];
         isLoading = false;
       });
     } catch (error) {
@@ -80,18 +85,16 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    // TODO: Implement actual message sending
-    // final response = await http.post(
-    //   Uri.parse('${APPUrl.sendCustomerChat}'),
-    //   headers: {
-    //     'Authorization': 'Bearer $accessToken',
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: jsonEncode({
-    //     'customer_id': widget.customer.id,
-    //     'message': text,
-    //   }),
-    // );
+    final newMessage = ChatMessage(
+      id: (messages.length + 1).toString(),
+      text: text,
+      time: '10:33 AM', // Replace with actual time
+      isFromMe: true,
+    );
+
+    setState(() {
+      messages.add(newMessage);
+    });
 
     _messageController.clear();
   }
@@ -100,82 +103,137 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
   Widget build(BuildContext context) {
     return Expanded(
       child: BuildBoxShadowContainer(
-      margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(20),
-      height: widget.size.height * 0.75,
-      width: widget.size.width / 1.8,
-      circleRadius: 7,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(0),
+        height: widget.size.height * 0.75,
+        width: widget.size.width / 1.8,
+        circleRadius: 12,
+        child: Column(
+          children: [
+            _buildChatHeader(),
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : errorMessage != null
+                      ? _buildErrorState()
+                      : _buildChatInterface(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatHeader() {
+    return Container(
+      decoration: BoxDecoration(
+        color: ColorManager.kPrimaryWithOpacity10,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
         children: [
-          Text(
-            'Customer Chat',
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s20,
-              0.30,
-              ColorManager.textColor,
+          CircleAvatar(
+            backgroundColor: ColorManager.kPrimaryColor,
+            child: Text(
+              widget.customer.name![0],
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s18,
+                0,
+                Colors.white,
+              ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(width: 12),
           Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : errorMessage != null
-                    ? _buildErrorState()
-                    : _buildChatInterface(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.customer.name ?? 'Customer Name',
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s16,
+                    0,
+                    ColorManager.kTitleTextColor,
+                  ),
+                ),
+                Text(
+                  'Online',
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s12,
+                    0,
+                    ColorManager.kSuccessColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.more_vert),
+            onPressed: () {},
+            color: ColorManager.kGreyColor,
           ),
         ],
-      ),
       ),
     );
   }
 
   Widget _buildErrorState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 60,
-            color: Colors.red.withOpacity(0.7),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Error Loading Chat',
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s16,
-              0.30,
-              ColorManager.textColor,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 50,
+              color: ColorManager.kRed,
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            errorMessage ?? 'An unknown error occurred',
-            textAlign: TextAlign.center,
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s14,
-              0.30,
-              ColorManager.blackWithOpacity50,
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _loadChatHistory,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ColorManager.kPrimaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+            const SizedBox(height: 16),
+            Text(
+              'Error Loading Chat',
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s18,
+                0,
+                ColorManager.kTitleTextColor,
               ),
             ),
-            child: const Text('Try Again'),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              errorMessage ?? 'An unknown error occurred.',
+              textAlign: TextAlign.center,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0,
+                ColorManager.kGreyColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _loadChatHistory,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try Again'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ColorManager.kPrimaryColor,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -187,15 +245,14 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
           child: messages.isEmpty
               ? _buildEmptyState()
               : ListView.builder(
-                  reverse: true,
+                  padding: const EdgeInsets.all(16),
+                  reverse: false,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final message = messages[messages.length - 1 - index];
-                    return _buildChatBubble(message);
+                    return _buildChatBubble(messages[index]);
                   },
                 ),
         ),
-        const SizedBox(height: 16),
         _buildMessageInput(),
       ],
     );
@@ -207,29 +264,29 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.chat_bubble_outline,
+            Icons.chat_bubble_outline_rounded,
             size: 60,
-            color: ColorManager.kPrimaryColor.withOpacity(0.5),
+            color: ColorManager.kPrimaryColor.withOpacity(0.4),
           ),
           const SizedBox(height: 20),
           Text(
             'No Messages Yet',
             style: buildCustomStyle(
               FontWeightManager.semiBold,
-              FontSize.s16,
-              0.30,
-              ColorManager.textColor,
+              FontSize.s18,
+              0,
+              ColorManager.kTitleTextColor,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
-            'Start a conversation with this customer',
+            'Start a conversation with ${widget.customer.name}.',
             textAlign: TextAlign.center,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
-              0.30,
-              ColorManager.blackWithOpacity50,
+              0,
+              ColorManager.kGreyColor,
             ),
           ),
         ],
@@ -242,14 +299,23 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.4,
+          maxWidth: MediaQuery.of(context).size.width * 0.45,
         ),
         decoration: BoxDecoration(
-          color: isMe ? ColorManager.kPrimaryColor : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(16),
+          color: isMe
+              ? ColorManager.kPrimaryColor
+              : ColorManager.kPrimaryWithOpacity10,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft:
+                isMe ? const Radius.circular(16) : const Radius.circular(0),
+            bottomRight:
+                isMe ? const Radius.circular(0) : const Radius.circular(16),
+          ),
         ),
         child: Column(
           crossAxisAlignment:
@@ -258,16 +324,16 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
             Text(
               message.text,
               style: TextStyle(
-                color: isMe ? Colors.white : Colors.black87,
-                fontSize: 14,
+                color: isMe ? Colors.white : ColorManager.kTitleTextColor,
+                fontSize: 15,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 5),
             Text(
               message.time,
               style: TextStyle(
-                color: isMe ? Colors.white70 : Colors.black54,
-                fontSize: 10,
+                color: isMe ? Colors.white70 : ColorManager.kGreyColor,
+                fontSize: 11,
               ),
             ),
           ],
@@ -278,36 +344,37 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
 
   Widget _buildMessageInput() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width * 0.5,
-      ),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(12),
+          bottomRight: Radius.circular(12),
+        ),
+        border: Border(
+          top: BorderSide(color: ColorManager.kBgDarkColor),
+        ),
       ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.attach_file),
-            color: ColorManager.kPrimaryColor,
-            onPressed: () {
-              // TODO: Implement file attachment
-            },
+            icon: const Icon(Icons.add_photo_alternate_outlined),
+            color: ColorManager.kGreyColor,
+            onPressed: () {},
           ),
           Expanded(
             child: TextField(
               controller: _messageController,
               decoration: const InputDecoration(
-                hintText: 'Type a message...',
+                hintText: 'Type your message here...',
                 border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(horizontal: 8),
               ),
               onSubmitted: (_) => _sendMessage(),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.send),
+            icon: const Icon(Icons.send_rounded),
             color: ColorManager.kPrimaryColor,
             onPressed: _sendMessage,
           ),

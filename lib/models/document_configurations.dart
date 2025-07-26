@@ -95,47 +95,54 @@ class DocumentConfig {
     this.resolvedLabels,
   });
 
-  factory DocumentConfig.fromJson(Map<String, dynamic> json) => DocumentConfig(
-        id: json["id"],
-        companyId: json["company_id"],
-        type: json["type"],
-        logo: json["logo"],
-        showLogo: json["show_logo"],
-        numberPrefix: json["number_prefix"],
-        discountMethod: json["discount_method"],
-        header: json["header"],
-        subheader: json["subheader"],
-        terms: json["terms"],
-        footer: json["footer"],
-        accentColor: json["accent_color"],
-        font: json["font"],
-        template: json["template"],
-        itemName: json["item_name"] == null
-            ? null
-            : ItemName.fromJson(json["item_name"]),
-        taxName: json["tax_name"] == null
-            ? null
-            : ItemName.fromJson(json["tax_name"]),
-        unitName: json["unit_name"] == null
-            ? null
-            : ItemName.fromJson(json["unit_name"]),
-        priceName: json["price_name"] == null
-            ? null
-            : ItemName.fromJson(json["price_name"]),
-        amountName: json["amount_name"] == null
-            ? null
-            : ItemName.fromJson(json["amount_name"]),
-        createdBy: json["created_by"],
-        updatedBy: json["updated_by"],
-        createdAt: json["created_at"],
-        updatedAt: json["updated_at"],
-        displayConfiguration: json["display_configuration"] == null
-            ? null
-            : DisplayConfiguration.fromJson(json["display_configuration"]),
-        resolvedLabels: json["resolved_labels"] == null
-            ? null
-            : ResolvedLabels.fromJson(json["resolved_labels"]),
-      );
+  factory DocumentConfig.fromJson(Map<String, dynamic> json) {
+    var displayConfigJson = json["display_configuration"];
+    DisplayConfiguration? displayConfiguration;
+
+    if (displayConfigJson is Map<String, dynamic>) {
+      displayConfiguration = DisplayConfiguration.fromJson(displayConfigJson);
+    }
+
+    return DocumentConfig(
+      id: json["id"],
+      companyId: json["company_id"],
+      type: json["type"],
+      logo: json["logo"],
+      showLogo: json["show_logo"],
+      numberPrefix: json["number_prefix"],
+      discountMethod: json["discount_method"],
+      header: json["header"],
+      subheader: json["subheader"],
+      terms: json["terms"],
+      footer: json["footer"],
+      accentColor: json["accent_color"],
+      font: json["font"],
+      template: json["template"],
+      itemName: json["item_name"] == null
+          ? null
+          : ItemName.fromJson(json["item_name"]),
+      taxName: json["tax_name"] == null
+          ? null
+          : ItemName.fromJson(json["tax_name"]),
+      unitName: json["unit_name"] == null
+          ? null
+          : ItemName.fromJson(json["unit_name"]),
+      priceName: json["price_name"] == null
+          ? null
+          : ItemName.fromJson(json["price_name"]),
+      amountName: json["amount_name"] == null
+          ? null
+          : ItemName.fromJson(json["amount_name"]),
+      createdBy: json["created_by"],
+      updatedBy: json["updated_by"],
+      createdAt: json["created_at"],
+      updatedAt: json["updated_at"],
+      displayConfiguration: displayConfiguration,
+      resolvedLabels: json["resolved_labels"] == null
+          ? null
+          : ResolvedLabels.fromJson(json["resolved_labels"]),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         "id": id,

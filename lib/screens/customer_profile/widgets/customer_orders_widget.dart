@@ -1,76 +1,94 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/customer_list.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
-import 'package:provider/provider.dart';
+import 'package:pos_machine/resources/style_manager.dart';
 
-class CustomerOrdersWidget extends StatelessWidget {
+class CustomerOrdersWidget extends StatefulWidget {
   final Size size;
   final CustomerListModelData customer;
-  final String accessToken; // Added accessToken parameter
 
   const CustomerOrdersWidget({
     Key? key,
     required this.size,
     required this.customer,
-    required this.accessToken, // Required access token
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final orders = customer.orders ?? [];
-    final bool isSmallScreen = size.width < 1200;
-    final double contentWidth = isSmallScreen ? size.width / 1.8 : size.width / 2;
+  State<CustomerOrdersWidget> createState() => _CustomerOrdersWidgetState();
+}
 
+class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
+  late List<CustomerOrder> orders;
+
+  @override
+  void initState() {
+    super.initState();
+    orders = widget.customer.orders ?? [];
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Expanded(
       child: BuildBoxShadowContainer(
-      margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(20),
-      height: size.height * 0.75,
-      width: contentWidth,
-      circleRadius: 7,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeaderSection(context),
-          const SizedBox(height: 16),
-          if (orders.isEmpty)
-            _buildEmptyState()
-          else
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(0),
+        height: widget.size.height * 0.75,
+        width: widget.size.width / 1.8,
+        circleRadius: 12,
+        child: Column(
+          children: [
+            _buildHeader(),
             Expanded(
-              child: RefreshIndicator(
-                onRefresh: () => _refreshOrders(context),
-                child: ListView.builder(
-                  itemCount: orders.length,
-                  itemBuilder: (context, index) => _buildOrderCard(orders[index]),
-                ),
-              ),
+              child: orders.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: orders.length,
+                      itemBuilder: (context, index) =>
+                          _buildOrderCard(orders[index]),
+                    ),
             ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeaderSection(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Order History (${customer.orders?.length ?? 0})',
-          style: const TextStyle(
-            fontSize: FontSize.s20,
-            fontWeight: FontWeightManager.semiBold
+  Widget _buildHeader() {
+    return Container(
+      decoration: BoxDecoration(
+        color: ColorManager.kPrimaryWithOpacity10,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.shopping_bag,
+                  color: ColorManager.kPrimaryColor, size: 28),
+              const SizedBox(width: 12),
+              Text(
+                'Order History (${orders.length})',
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s18, 0,
+                    ColorManager.kTitleTextColor),
+              ),
+            ],
           ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.refresh),
-          onPressed: () => _refreshOrders(context),
-          tooltip: 'Refresh orders',
-        ),
-      ],
+          IconButton(
+            icon: const Icon(Icons.sort),
+            onPressed: () {},
+            color: ColorManager.kGreyColor,
+            tooltip: 'Sort orders',
+          ),
+        ],
+      ),
     );
   }
 
@@ -79,11 +97,20 @@ class CustomerOrdersWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.shopping_bag_outlined, size: 48, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          const Text(
-            'No orders found for this customer',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+          Icon(Icons.shopping_bag_outlined,
+              size: 60, color: ColorManager.kPrimaryColor.withOpacity(0.4)),
+          const SizedBox(height: 20),
+          Text(
+            'No Orders Found',
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s18,
+                0, ColorManager.kTitleTextColor),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This customer has not placed any orders yet.',
+            textAlign: TextAlign.center,
+            style: buildCustomStyle(
+                FontWeightManager.regular, FontSize.s14, 0, ColorManager.kGreyColor),
           ),
         ],
       ),
@@ -91,117 +118,114 @@ class CustomerOrdersWidget extends StatelessWidget {
   }
 
   Widget _buildOrderCard(CustomerOrder order) {
-    return BuildBoxShadowContainer(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      color: Colors.white,
-      circleRadius: 7,
-      child: ExpansionTile(
-        title: Row(
-          children: [
-            _buildOrderStatusIndicator(order.status),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Order #${order.orderNumber ?? 'N/A'}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    _formatDate(order.orderDate),
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              '₹${order.grandTotal ?? '0.00'}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
-          ],
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildOrderDetailRow('Payment Status:', order.paymentStatus),
-                _buildOrderDetailRow('Payment Method:', _formatPaymentMethod(order.paymentMethod)),
-                _buildOrderDetailRow('Subtotal:', '₹${order.subTotal ?? '0.00'}'),
-                if (order.discount != null && order.discount != '0.00')
-                  _buildOrderDetailRow('Discount:', '-₹${order.discount}'),
-                if (order.tax != null && order.tax != '0.00')
-                  _buildOrderDetailRow('Tax:', '₹${order.tax}'),
-                const Divider(),
-                const Text(
-                  'Order Items:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                ..._buildOrderItemsList(order.items),
-              ],
-            ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: ColorManager.kBgDarkColor),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: _buildOrderStatusIcon(order.status),
+          title: Text(
+            'Order #${order.orderNumber ?? 'N/A'}',
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s15, 0,
+                ColorManager.kTitleTextColor),
           ),
-        ],
+          subtitle: Text(
+            _formatDate(order.orderDate),
+            style: buildCustomStyle(
+                FontWeightManager.regular, FontSize.s12, 0, ColorManager.kGreyColor),
+          ),
+          trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '₹${order.grandTotal ?? '0.00'}',
+                style: buildCustomStyle(
+                    FontWeightManager.bold, FontSize.s14, 0, ColorManager.kSuccessColor),
+              ),
+              const SizedBox(height: 2),
+              _buildStatusBadge(order.status),
+            ],
+          ),
+          children: [_buildOrderDetails(order)],
+        ),
       ),
     );
   }
 
-  Widget _buildOrderStatusIndicator(String? status) {
-    Color color;
-    IconData icon;
-    
+  Widget _buildOrderStatusIcon(String? status) {
+    IconData iconData;
     switch (status?.toLowerCase()) {
-      case 'completed':
       case 'delivered':
-
-        color = Colors.green;
-        icon = Icons.check_circle;
+        iconData = Icons.local_shipping;
+        break;
+      case 'completed':
+        iconData = Icons.check_circle;
         break;
       case 'pending':
-        color = Colors.orange;
-        icon = Icons.pending;
+        iconData = Icons.pending_actions;
         break;
       case 'cancelled':
-        color = Colors.red;
-        icon = Icons.cancel;
-        break;
-      case 'processing':
-        color = Colors.blue;
-        icon = Icons.autorenew;
+        iconData = Icons.cancel;
         break;
       default:
-        color = Colors.grey;
-        icon = Icons.help_outline;
+        iconData = Icons.help_outline;
     }
-
-    return Tooltip(
-      message: status ?? 'Unknown status',
-      child: Icon(icon, color: color, size: 20),
+    return CircleAvatar(
+      backgroundColor: _getStatusColor(status).withOpacity(0.1),
+      child: Icon(iconData, color: _getStatusColor(status), size: 22),
     );
   }
 
-  Widget _buildOrderDetailRow(String label, String? value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+  Widget _buildStatusBadge(String? status) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _getStatusColor(status).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        status?.toUpperCase() ?? 'N/A',
+        style: buildCustomStyle(
+            FontWeightManager.medium, FontSize.s10, 0, _getStatusColor(status)),
+      ),
+    );
+  }
+
+  Widget _buildOrderDetails(CustomerOrder order) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: ColorManager.kBgLightColor,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(12),
+          bottomRight: Radius.circular(12),
+        ),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: Text(value ?? 'N/A'),
-          ),
+          _buildDetailRow('Payment Status', order.paymentStatus,
+              valueColor: _getPaymentStatusColor(order.paymentStatus)),
+          _buildDetailRow(
+              'Payment Method', _formatPaymentMethod(order.paymentMethod)),
+          const Divider(height: 20),
+          ..._buildOrderItemsList(order.items),
+          const Divider(height: 20),
+          _buildTotalRow('Subtotal', order.subTotal),
+          if (order.discount != null && order.discount != '0.00')
+            _buildTotalRow('Discount', '-${order.discount}',
+                color: ColorManager.kRed),
+          if (order.tax != null && order.tax != '0.00')
+            _buildTotalRow('Tax', order.tax),
+          const SizedBox(height: 8),
+          _buildTotalRow('Grand Total', order.grandTotal, isGrandTotal: true),
         ],
       ),
     );
@@ -209,40 +233,101 @@ class CustomerOrdersWidget extends StatelessWidget {
 
   List<Widget> _buildOrderItemsList(List<OrderItem>? items) {
     if (items == null || items.isEmpty) {
-      return [const Text('No items found')];
+      return [const Text('No items in this order.')];
     }
+    return items
+        .map((item) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Product ID: ${item.productId} (x${item.quantity})',
+                      style: buildCustomStyle(FontWeightManager.regular,
+                          FontSize.s12, 0, ColorManager.kTitleTextColor),
+                    ),
+                  ),
+                  Text(
+                    '₹${item.totalPrice ?? '0.00'}',
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s12, 0, ColorManager.kTitleTextColor),
+                  ),
+                ],
+              ),
+            ))
+        .toList();
+  }
 
-    return items.map((item) => Padding(
+  Widget _buildDetailRow(String label, String? value, {Color? valueColor}) {
+    return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Icon(Icons.circle, size: 8, color: Colors.grey),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Product ID: ${item.productId}',
-              style: const TextStyle(fontSize: 14),
-            ),
+          Text(label,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
+                  0, ColorManager.kGreyColor)),
+          Text(value ?? 'N/A',
+              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s12,
+                  0, valueColor ?? ColorManager.kTitleTextColor)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTotalRow(String label, String? value,
+      {bool isGrandTotal = false, Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: isGrandTotal
+                ? buildCustomStyle(FontWeightManager.bold, FontSize.s14, 0,
+                    ColorManager.kTitleTextColor)
+                : buildCustomStyle(FontWeightManager.medium, FontSize.s12, 0,
+                    ColorManager.kGreyColor),
           ),
           Text(
-            '${item.quantity}x',
-            style: const TextStyle(fontSize: 14),
-          ),
-          const SizedBox(width: 16),
-          Text(
-            '₹${item.totalPrice ?? '0.00'}',
-            style: const TextStyle(fontSize: 14),
+            '₹${value ?? '0.00'}',
+            style: isGrandTotal
+                ? buildCustomStyle(FontWeightManager.bold, FontSize.s14, 0,
+                    color ?? ColorManager.kSuccessColor)
+                : buildCustomStyle(FontWeightManager.semiBold, FontSize.s12,
+                    0, color ?? ColorManager.kTitleTextColor),
           ),
         ],
       ),
-    )).toList();
+    );
+  }
+
+  Color _getStatusColor(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'delivered':
+      case 'completed':
+        return ColorManager.kSuccessColor;
+      case 'pending':
+        return ColorManager.kOrange;
+      case 'cancelled':
+        return ColorManager.kRed;
+      default:
+        return ColorManager.kGreyColor;
+    }
+  }
+
+  Color _getPaymentStatusColor(String? status) {
+    return status?.toLowerCase() == 'paid'
+        ? ColorManager.kSuccessColor
+        : ColorManager.kRed;
   }
 
   String _formatDate(String? dateString) {
     if (dateString == null) return 'N/A';
     try {
       final date = DateTime.parse(dateString);
-      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+      return '${date.day}/${date.month}/${date.year}';
     } catch (e) {
       return dateString;
     }
@@ -252,37 +337,6 @@ class CustomerOrdersWidget extends StatelessWidget {
     if (paymentMethod == null) return 'N/A';
     if (paymentMethod is String) return paymentMethod;
     if (paymentMethod is List) return paymentMethod.join(', ');
-    return paymentMethod.toString();
+    return 'Multiple';
   }
-
-Future<void> _refreshOrders(BuildContext context) async {
-  final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
-  
-  try {
-    await customerProvider.fetchUserById(
-      accessToken,
-      customer.id!,
-      context,
-    );
-    // Success: Just pop if you're in a dialog, or do nothing if it's a background refresh
-    Navigator.pop(context); // Only if you're inside a dialog/modal
-  } catch (e) {
-    // Check if the error is an authentication issue
-    if (e.toString().contains("401") || e.toString().contains("Unauthorized")) {
-      // Option 1: Show an error and let the user manually log in again
-      showScaffoldError(
-        context: context,
-        message: "Session expired. Please log in again.",
-      );
-      // Option 2: Automatically navigate to login (if that's your app's flow)
-      // Navigator.pushReplacementNamed(context, '/login');
-    } else {
-      // Other errors (network issues, etc.)
-      showScaffoldError(
-        context: context,
-        message: 'Error refreshing orders: ${e.toString()}',
-      );
-    }
-  }
-}
 }

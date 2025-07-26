@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/customer_list.dart';
-import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/screens/customer_profile/widgets/customer_chat_widget.dart';
 import 'package:pos_machine/screens/customer_profile/widgets/customer_information_edit_widget.dart';
@@ -29,496 +28,180 @@ class OpenCustomerProfileScreen extends StatefulWidget {
 }
 
 class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
-  bool isChanged = false;
-  bool isTransactions = false;
-  int selectedIndex = 0; // Added to track which button is selected
+  int selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     CustomerProvider customerProvider = Provider.of<CustomerProvider>(context);
     CustomerListModelData? selectedCustomer =
         customerProvider.getSelectedCustomer;
-    final authModel = Provider.of<AuthModel>(context);
     Size size = MediaQuery.of(context).size;
     SideBarController sideBarController = Get.put(SideBarController());
 
-    // Calculate responsive widths
-    final bool isSmallScreen = size.width < 1200;
-    final double sidebarWidth =
-        isSmallScreen ? size.width / 3.5 : size.width / 4;
-    final double contentWidth =
-        isSmallScreen ? size.width / 1.8 : size.width / 2;
+    if (selectedCustomer == null) {
+      return const Center(child: Text("No customer selected."));
+    }
 
     return SafeArea(
-      child: SingleChildScrollView(
-        child: Container(
-          margin:
-              const EdgeInsets.only(left: 10, top: 20, bottom: 10, right: 10),
-          padding:
-              const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: const [
-                BoxShadow(
-                  color: ColorManager.boxShadowColor,
-                  blurRadius: 6,
-                  offset: Offset(1, 1),
-                ),
-              ],
-              color: Colors.white),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               CustomBackButton(
-                onPressed: () {
-                  sideBarController.index.value = 5;
-                },
+                onPressed: () => sideBarController.index.value = 5,
                 text: 'All Customers',
               ),
+              const SizedBox(height: 10),
               Text(
                 'Customer Profile',
-                style: buildCustomStyle(FontWeightManager.semiBold,
-                    FontSize.s20, 0.30, ColorManager.textColor),
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s24,
+                    0, ColorManager.kTitleTextColor),
               ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  BuildBoxShadowContainer(
-                    margin: const EdgeInsets.all(15),
-                    padding: const EdgeInsets.all(15),
-                    height: size.height * 0.75,
-                    width: sidebarWidth,
-                    circleRadius: 7,
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                              child: Stack(
-                            children: [
-                              const BuildProfilePicture(),
-                              Positioned(
-                                bottom: -5,
-                                right: -10,
-                                child: WebsafeSvg.asset(
-                                  ImageAssets.camera,
-                                  fit: BoxFit.none,
-                                ),
-                              ),
-                            ],
-                          )),
-                          const SizedBox(height: 10),
-                          Center(
-                            child: Column(
-                              children: [
-                                RichText(
-                                  textAlign: TextAlign.center,
-                                  text: TextSpan(
-                                    text: selectedCustomer!.name ??
-                                        'Customer Name',
-                                    style: buildCustomStyle(
-                                        FontWeightManager.semiBold,
-                                        FontSize.s24,
-                                        0.35,
-                                        ColorManager.textColor),
-                                  ),
-                                ),
-                                RichText(
-                                  textAlign: TextAlign.center,
-                                  text: TextSpan(
-                                    text:
-                                        'Customer ID : ${selectedCustomer.id}',
-                                    style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s13,
-                                        0.20,
-                                        ColorManager.blackWithOpacity50),
-                                  ),
-                                )
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 13),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: Column(
-                                children: [
-                                  BuildBoxShadowContainer(
-                                    circleRadius: 10,
-                                    margin: const EdgeInsets.only(
-                                        top: 10, bottom: 15),
-                                    color: (!isChanged &&
-                                            !isTransactions &&
-                                            selectedIndex == 0)
-                                        ? ColorManager.kPrimaryColor
-                                        : ColorManager.kListTileColor,
-                                    offsetValue: const Offset(1, 1),
-                                    blurRadius: 6,
-                                    child: ListTile(
-                                      onTap: () {
-                                        setState(() {
-                                          isChanged = false;
-                                          isTransactions = false;
-                                          selectedIndex = 0;
-                                        });
-                                      },
-                                      horizontalTitleGap: 0,
-                                      minVerticalPadding: 0,
-                                      minLeadingWidth: 30,
-                                      leading: WebsafeSvg.asset(
-                                        ImageAssets.userProfile,
-                                        color: (!isChanged &&
-                                                !isTransactions &&
-                                                selectedIndex == 0)
-                                            ? Colors.white
-                                            : ColorManager.textColor,
-                                        fit: BoxFit.none,
-                                      ),
-                                      title: Text(
-                                        'Customer Information',
-                                        style: (!isChanged &&
-                                                !isTransactions &&
-                                                selectedIndex == 0)
-                                            ? buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.12,
-                                                Colors.white)
-                                            : buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.12,
-                                                ColorManager
-                                                    .textColor),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      trailing: Icon(
-                                        Icons.keyboard_arrow_right,
-                                        color: (!isChanged &&
-                                                !isTransactions &&
-                                                selectedIndex == 0)
-                                            ? Colors.white
-                                            : ColorManager.textColor,
-                                      ),
-                                    ),
-                                  ),
-                                  BuildBoxShadowContainer(
-                                    margin: const EdgeInsets.only(
-                                        top: 0, bottom: 15),
-                                    circleRadius: 10,
-                                    color: (isChanged && !isTransactions)
-                                        ? ColorManager.kPrimaryColor
-                                        : ColorManager.kListTileColor,
-                                    offsetValue: const Offset(1, 1),
-                                    blurRadius: 6,
-                                    child: ListTile(
-                                      onTap: () {
-                                        setState(() {
-                                          isChanged = true;
-                                          isTransactions = false;
-                                        });
-                                      },
-                                      horizontalTitleGap: 0,
-                                      minVerticalPadding: 4,
-                                      minLeadingWidth: 30,
-                                      leading: WebsafeSvg.asset(
-                                          ImageAssets.lock,
-                                          color: (isChanged && !isTransactions)
-                                              ? Colors.white
-                                              : ColorManager
-                                                  .textColor),
-                                      title: Text(
-                                        "Edit Details",
-                                        style: (isChanged && !isTransactions)
-                                            ? buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.12,
-                                                Colors.white)
-                                            : buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.12,
-                                                ColorManager
-                                                    .textColor),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      trailing: Icon(
-                                        Icons.keyboard_arrow_right,
-                                        color: (isChanged && !isTransactions)
-                                            ? Colors.white
-                                            : ColorManager.textColor,
-                                      ),
-                                    ),
-                                  ),
-                                  BuildBoxShadowContainer(
-                                    margin: const EdgeInsets.only(
-                                        top: 0, bottom: 15),
-                                    circleRadius: 10,
-                                    color: (!isChanged && isTransactions)
-                                        ? ColorManager.kPrimaryColor
-                                        : ColorManager.kListTileColor,
-                                    offsetValue: const Offset(1, 1),
-                                    blurRadius: 6,
-                                    child: ListTile(
-                                      onTap: () {
-                                        setState(() {
-                                          isChanged = false;
-                                          isTransactions = true;
-                                        });
-                                      },
-                                      horizontalTitleGap: 0,
-                                      minVerticalPadding: 4,
-                                      minLeadingWidth: 30,
-                                      leading: WebsafeSvg.asset(
-                                          ImageAssets.transactionIcon,
-                                          color: (!isChanged && isTransactions)
-                                              ? Colors.white
-                                              : ColorManager
-                                                  .textColor),
-                                      title: Text(
-                                        "Transactions",
-                                        style: (!isChanged && isTransactions)
-                                            ? buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.12,
-                                                Colors.white)
-                                            : buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.12,
-                                                ColorManager
-                                                    .textColor),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      trailing: Icon(
-                                        Icons.keyboard_arrow_right,
-                                        color: (!isChanged && isTransactions)
-                                            ? Colors.white
-                                            : ColorManager.textColor,
-                                      ),
-                                    ),
-                                  ),
-                                  BuildBoxShadowContainer(
-                                    margin: const EdgeInsets.only(
-                                        top: 0, bottom: 15),
-                                    circleRadius: 10,
-                                    color: (!isChanged &&
-                                            !isTransactions &&
-                                            selectedIndex == 1)
-                                        ? ColorManager.kPrimaryColor
-                                        : ColorManager.kListTileColor,
-                                    offsetValue: const Offset(1, 1),
-                                    blurRadius: 6,
-                                    child: ListTile(
-                                      onTap: () {
-                                        setState(() {
-                                          isChanged = false;
-                                          isTransactions = false;
-                                          selectedIndex = 1;
-                                        });
-                                      },
-                                      horizontalTitleGap: 0,
-                                      minVerticalPadding: 4,
-                                      minLeadingWidth: 30,
-                                      leading: WebsafeSvg.asset(
-                                          ImageAssets.saleIcon,
-                                          color: (!isChanged &&
-                                                  !isTransactions &&
-                                                  selectedIndex == 1)
-                                              ? Colors.white
-                                              : ColorManager
-                                                  .textColor),
-                                      title: Text(
-                                        "All Orders",
-                                        style: (!isChanged &&
-                                                !isTransactions &&
-                                                selectedIndex == 1)
-                                            ? buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.12,
-                                                Colors.white)
-                                            : buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.12,
-                                                ColorManager
-                                                    .textColor),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      trailing: Icon(
-                                        Icons.keyboard_arrow_right,
-                                        color: (!isChanged &&
-                                                !isTransactions &&
-                                                selectedIndex == 1)
-                                            ? Colors.white
-                                            : ColorManager.textColor,
-                                      ),
-                                    ),
-                                  ),
-                                  BuildBoxShadowContainer(
-                                    margin: const EdgeInsets.only(
-                                        top: 0, bottom: 15),
-                                    circleRadius: 10,
-                                    color: (!isChanged &&
-                                            !isTransactions &&
-                                            selectedIndex == 2)
-                                        ? ColorManager.kPrimaryColor
-                                        : ColorManager.kListTileColor,
-                                    offsetValue: const Offset(1, 1),
-                                    blurRadius: 6,
-                                    child: ListTile(
-                                      onTap: () {
-                                        setState(() {
-                                          isChanged = false;
-                                          isTransactions = false;
-                                          selectedIndex = 2;
-                                        });
-                                      },
-                                      horizontalTitleGap: 0,
-                                      minVerticalPadding: 4,
-                                      minLeadingWidth: 30,
-                                      leading: WebsafeSvg.asset(
-                                          ImageAssets.cardIcon,
-                                          color: (!isChanged &&
-                                                  !isTransactions &&
-                                                  selectedIndex == 2)
-                                              ? Colors.white
-                                              : ColorManager
-                                                  .textColor),
-                                      title: Text(
-                                        "Loyalty Card",
-                                        style: (!isChanged &&
-                                                !isTransactions &&
-                                                selectedIndex == 2)
-                                            ? buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.12,
-                                                Colors.white)
-                                            : buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.12,
-                                                ColorManager
-                                                    .textColor),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      trailing: Icon(
-                                        Icons.keyboard_arrow_right,
-                                        color: (!isChanged &&
-                                                !isTransactions &&
-                                                selectedIndex == 2)
-                                            ? Colors.white
-                                            : ColorManager.textColor,
-                                      ),
-                                    ),
-                                  ),
-                                  BuildBoxShadowContainer(
-                                    margin: const EdgeInsets.only(
-                                        top: 0, bottom: 15),
-                                    circleRadius: 10,
-                                    color: (!isChanged &&
-                                            !isTransactions &&
-                                            selectedIndex == 3)
-                                        ? ColorManager.kPrimaryColor
-                                        : ColorManager.kListTileColor,
-                                    offsetValue: const Offset(1, 1),
-                                    blurRadius: 6,
-                                    child: ListTile(
-                                      onTap: () {
-                                        setState(() {
-                                          isChanged = false;
-                                          isTransactions = false;
-                                          selectedIndex = 3;
-                                        });
-                                      },
-                                      horizontalTitleGap: 0,
-                                      minVerticalPadding: 4,
-                                      minLeadingWidth: 30,
-                                      leading: WebsafeSvg.asset(
-                                          ImageAssets.supportIcon,
-                                          color: (!isChanged &&
-                                                  !isTransactions &&
-                                                  selectedIndex == 3)
-                                              ? Colors.white
-                                              : ColorManager
-                                                  .textColor),
-                                      title: Text(
-                                        "Chat",
-                                        style: (!isChanged &&
-                                                !isTransactions &&
-                                                selectedIndex == 3)
-                                            ? buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.12,
-                                                Colors.white)
-                                            : buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.12,
-                                                ColorManager
-                                                    .textColor),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      trailing: Icon(
-                                        Icons.keyboard_arrow_right,
-                                        color: (!isChanged &&
-                                                !isTransactions &&
-                                                selectedIndex == 3)
-                                            ? Colors.white
-                                            : ColorManager.textColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ]),
-                  ),
-                  !isChanged && !isTransactions && selectedIndex == 0
-                      ? CustomerInformationViewWidget(
-                          size: size,
-                          customer: selectedCustomer,
-                        )
-                      : isChanged && !isTransactions
-                          ? CustomerInformationEditWidget(
-                              size: size,
-                              customer: selectedCustomer,
-                            )
-                          : !isChanged && isTransactions
-                              ? CustomerTransactionsWidget(
-                                  size: size,
-                                  customer: selectedCustomer,
-                                )
-                              : !isChanged &&
-                                      !isTransactions &&
-                                      selectedIndex == 1
-                                  ? CustomerOrdersWidget(
-                                      size: size,
-                                      customer: selectedCustomer, accessToken: '',
-                                    )
-                                  : !isChanged &&
-                                          !isTransactions &&
-                                          selectedIndex == 2
-                                      ? CustomerLoyaltyWidget(
-                                          size: size,
-                                          customer: selectedCustomer,
-                                        )
-                                      : CustomerChatWidget(
-                                          size: size,
-                                          customer: selectedCustomer,
-                                        ),
-                ],
+              const SizedBox(height: 20),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Sidebar
+                    SizedBox(
+                      width: size.width / 4,
+                      child: _buildSidebar(size, selectedCustomer),
+                    ),
+                    // Main Content
+                    Expanded(
+                      child: _buildMainContent(size, selectedCustomer),
+                    ),
+                  ],
+                ),
               ),
-            ]),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildSidebar(Size size, CustomerListModelData customer) {
+    return BuildBoxShadowContainer(
+      margin: const EdgeInsets.only(right: 24),
+      padding: const EdgeInsets.all(20),
+      circleRadius: 12,
+      child: Column(
+        children: [
+          _buildProfileHeader(customer),
+          const SizedBox(height: 24),
+          _buildSidebarButton(0, 'Information', ImageAssets.userProfile),
+          _buildSidebarButton(1, 'Edit Details', ImageAssets.lock),
+          _buildSidebarButton(2, 'Transactions', ImageAssets.transactionIcon),
+          _buildSidebarButton(3, 'All Orders', ImageAssets.saleIcon),
+          _buildSidebarButton(4, 'Loyalty Card', ImageAssets.cardIcon),
+          _buildSidebarButton(5, 'Chat', ImageAssets.supportIcon),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader(CustomerListModelData customer) {
+    return Column(
+      children: [
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            const BuildProfilePicture(),
+            Positioned(
+              bottom: 0,
+              right: 40,
+              child: CircleAvatar(
+                radius: 15,
+                backgroundColor: ColorManager.kPrimaryColor,
+                child:
+                    WebsafeSvg.asset(ImageAssets.camera, color: Colors.white, width: 18),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          customer.name ?? 'Customer Name',
+          style: buildCustomStyle(FontWeightManager.bold, FontSize.s18, 0,
+              ColorManager.kTitleTextColor),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'ID: ${customer.id}',
+          style: buildCustomStyle(
+              FontWeightManager.regular, FontSize.s14, 0, ColorManager.kGreyColor),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSidebarButton(int index, String title, String iconPath) {
+    bool isSelected = selectedIndex == index;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: isSelected ? ColorManager.kPrimaryColor : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: () => setState(() => selectedIndex = index),
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isSelected
+                    ? Colors.transparent
+                    : ColorManager.kBgDarkColor,
+              ),
+            ),
+            child: Row(
+              children: [
+                WebsafeSvg.asset(
+                  iconPath,
+                  color: isSelected ? Colors.white : ColorManager.kGreyColor,
+                  width: 22,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s14,
+                        0,
+                        isSelected
+                            ? Colors.white
+                            : ColorManager.kTitleTextColor),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: isSelected ? Colors.white : ColorManager.kGreyColor,
+                )
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainContent(Size size, CustomerListModelData customer) {
+    final List<Widget> pages = [
+      CustomerInformationViewWidget(size: size, customer: customer),
+      CustomerInformationEditWidget(size: size, customer: customer),
+      CustomerTransactionsWidget(size: size, customer: customer),
+      CustomerOrdersWidget(size: size, customer: customer),
+      CustomerLoyaltyWidget(size: size, customer: customer),
+      CustomerChatWidget(size: size, customer: customer),
+    ];
+    return pages[selectedIndex];
   }
 }

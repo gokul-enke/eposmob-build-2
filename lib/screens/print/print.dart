@@ -70,7 +70,7 @@ class _PrintPageState extends State<PrintPage> {
           .fetchPaymentGateways(accessToken: accessToken!);
 
       await _loadDefaultPaperSize();
-      _loadDocumentConfigurationsFromProvider();
+      await _loadDocumentConfigurationsFromProvider();
       await _loadDefaultPrinter();
     });
   }
@@ -194,8 +194,10 @@ class _PrintPageState extends State<PrintPage> {
           final appSettingsProvider =
               Provider.of<AppSettingsProvider>(context, listen: false);
           final appSettings = appSettingsProvider.appSettings;
-          _handlePrinting(
-              appSettings!.customerCarePhone, appSettings.customerCareEmail);
+          if (appSettings != null) {
+            _handlePrinting(
+                appSettings.customerCarePhone, appSettings.customerCareEmail);
+          }
       }
     } else {
       setState(() {
@@ -231,11 +233,12 @@ class _PrintPageState extends State<PrintPage> {
     }
   }
 
-  void _loadDocumentConfigurationsFromProvider() {
+  Future<void> _loadDocumentConfigurationsFromProvider() async {
     try {
       final docConfigProvider =
           Provider.of<DocumentConfigProvider>(context, listen: false);
       
+      debugPrint("Loading document configurations from provider...");
       _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
       
       if (_billDocumentConfig == null) {
@@ -243,9 +246,12 @@ class _PrintPageState extends State<PrintPage> {
         // Fallback: try to load if not available
         String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
         if (accessToken != null) {
-          _loadDocumentConfigurations(accessToken);
+          debugPrint("Fetching document configurations from API...");
+          await _loadDocumentConfigurations(accessToken);
           return;
         }
+      } else {
+        debugPrint("SUCCESS: Bill document configuration loaded from provider");
       }
 
       setState(() {
@@ -263,10 +269,17 @@ class _PrintPageState extends State<PrintPage> {
     try {
       final docConfigProvider =
           Provider.of<DocumentConfigProvider>(context, listen: false);
+      debugPrint("Fetching document configurations from API with token...");
       await docConfigProvider.fetchDocumentConfigurations(
           accessToken: accessToken);
 
       _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+      
+      if (_billDocumentConfig != null) {
+        debugPrint("SUCCESS: Bill document configuration loaded from API");
+      } else {
+        debugPrint("ERROR: Bill document configuration still null after API fetch");
+      }
 
       setState(() {
         _isLoading = false;
@@ -289,6 +302,12 @@ class _PrintPageState extends State<PrintPage> {
       String customerCareNumber, String customerCareEmail) async {
     if (_billDocumentConfig == null) {
       debugPrint("ERROR: Bill document configuration not loaded yet.");
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: "Document configuration not loaded. Please try again.",
+        );
+      }
       return;
     }
 
@@ -600,11 +619,65 @@ class _PrintPageState extends State<PrintPage> {
                     ),
             ),
             const SizedBox(height: 16),
+            if (_billDocumentConfig == null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Loading document configuration...',
+                        style: TextStyle(
+                          color: Colors.orange[700],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+                        if (accessToken != null) {
+                          await _loadDocumentConfigurations(accessToken);
+                        }
+                      },
+                      child: Text(
+                        'Retry',
+                        style: TextStyle(
+                          color: Colors.orange[700],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ElevatedButton.icon(
-              onPressed: () => selectedPrinter == null
-                  ? null
-                  : _handlePrinting(appSettings!.customerCarePhone,
-                      appSettings.customerCareEmail),
+              onPressed: () {
+                if (selectedPrinter == null) {
+                  showScaffoldError(
+                    context: context,
+                    message: "Please select a printer first",
+                  );
+                  return;
+                }
+                if (_billDocumentConfig == null) {
+                  showScaffoldError(
+                    context: context,
+                    message: "Document configuration not loaded. Please wait or try again.",
+                  );
+                  return;
+                }
+                _handlePrinting(appSettings!.customerCarePhone,
+                    appSettings.customerCareEmail);
+              },
               icon: const Icon(Icons.receipt_long),
               label: const Text(
                 'Print Receipt',
@@ -616,7 +689,6 @@ class _PrintPageState extends State<PrintPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentColor,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: textSecondaryColor.withOpacity(0.3),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: 3,
                 shape: RoundedRectangleBorder(
