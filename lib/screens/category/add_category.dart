@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
@@ -182,7 +184,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                           ),
                           SizedBox(
                             height: 45,
-                            width: 180,
+                            width: 250,
                             child: BuildBoxShadowContainer(
                               circleRadius: 7,
                               alignment: Alignment.centerLeft,
@@ -221,91 +223,6 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                           ),
                         ],
                       ),
-//                       Padding(
-//                         padding: const EdgeInsets.only(left: 10.0),
-//                         child: // Replace your existing parent category dropdown with this:
-// Column(
-//   crossAxisAlignment: CrossAxisAlignment.start,
-//   children: [
-//     Padding(
-//       padding: const EdgeInsets.all(8.0),
-//       child: Text(
-//         "Parent Category",
-//         style: buildCustomStyle(
-//           FontWeightManager.regular,
-//           FontSize.s14,
-//           0.27,
-//           Colors.black.withOpacity(0.6),
-//         ),
-//       ),
-//     ),
-//     SizedBox(
-//       height: 45,
-//       width: 180,
-//       child: BuildBoxShadowContainer(
-//         circleRadius: 7,
-//         alignment: Alignment.centerLeft,
-//         margin: const EdgeInsets.only(left: 5),
-//         padding: const EdgeInsets.only(left: 15),
-//         height: size.height * .07,
-//         width: size.width / 3,
-//         child: DropdownButtonFormField<Category>(
-//           isExpanded: true,
-//           decoration: const InputDecoration(
-//             border: InputBorder.none,
-//             contentPadding: EdgeInsets.zero,
-//           ),
-//           value: selectedParentCategoryId != null &&
-//               categoryProvider.searchCategory != null
-//               ? categoryProvider.searchCategory!.firstWhere(
-//                   (cat) => cat.categoryId.toString() == selectedParentCategoryId,
-//                   orElse: () => Category())
-//               : null,
-//           hint: Text(
-//             'Select Parent Category',
-//             style: buildCustomStyle(
-//               FontWeightManager.medium,
-//               FontSize.s12,
-//               0.27,
-//               ColorManager.textColor.withOpacity(.5),
-//             ),
-//           ),
-//           items: categoryProvider.searchCategory != null
-//               ? categoryProvider.searchCategory!
-//                   .map((Category category) {
-//                     return DropdownMenuItem<Category>(
-//                       value: category,
-//                       child: Text(
-//                         category.categoryName ?? 'No Name',
-//                         style: buildCustomStyle(
-//                           FontWeightManager.medium,
-//                           FontSize.s12,
-//                           0.27,
-//                           ColorManager.textColor.withOpacity(.5),
-//                         ),
-//                         overflow: TextOverflow.ellipsis,
-//                       ));
-//                   })
-//                   .toList()
-//               : [],
-//           onChanged: (Category? selectedCategory) async {
-//             if (selectedCategory != null) {
-//               setState(() {
-//                 selectedParentCategoryId =
-//                     selectedCategory.categoryId.toString();
-//               });
-//             } else {
-//               setState(() {
-//                 selectedParentCategoryId = null;
-//               });
-//             }
-//           },
-//         ),
-//       ),
-//     ),
-//   ],
-// // ),
-//                       ),
 
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0, top: 30),
@@ -410,170 +327,171 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     );
   }
 
+  // Replace your existing _buildCategoryTable method with this:
+// Replace your existing _buildCategoryTable method with this:
   Widget _buildCategoryTable(
       CategoryProvider categoryProvider, SideBarController sideBarController) {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            child: categoryProvider.searchCategory!
-                    .skip(1)
-                    .toList()
-                    .asMap()
-                    .entries
-                    .isEmpty
-                ? BuildBoxShadowContainer(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(top: 20),
-                    circleRadius: 7,
-                    offsetValue: const Offset(1, 1),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 50.0),
-                      child: Center(
-                        child: Text(
-                          "No categories found",
-                          style: buildCustomStyle(
-                            FontWeightManager.medium,
-                            FontSize.s16,
-                            0.18,
-                            Colors.black,
+    return Consumer<CategoryProvider>(
+      builder: (context, categoryProvider, child) {
+        return BuildBoxShadowContainer(
+          margin: const EdgeInsets.only(top: 5),
+          circleRadius: 7,
+          offsetValue: const Offset(2, 2),
+          blurRadius: 8.0,
+          color: Colors.white,
+          child: Column(
+            children: [
+              // Fixed table header
+              Container(
+                decoration: const BoxDecoration(
+                  color: ColorManager.tableBGColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      offset: Offset(0, 2),
+                      blurRadius: 2.0,
+                    ),
+                  ],
+                ),
+                child: Table(
+                  columnWidths: const {
+                    0: FlexColumnWidth(1.0), // No
+                    1: FlexColumnWidth(3.0), // Category Name
+                    2: FlexColumnWidth(3.0), // Slug
+                  },
+                  border: null,
+                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                  children: [
+                    TableRow(
+                      children: [
+                        _buildTableHeader("No"),
+                        _buildTableHeader("Category Name"),
+                        _buildTableHeader("Slug"),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Scrollable table body
+              Expanded(
+                child: categoryProvider.searchCategory == null ||
+                        categoryProvider.searchCategory!.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.category,
+                              size: 60,
+                              color:
+                                  ColorManager.kPrimaryColor.withOpacity(0.7),
+                            ),
+                            const SizedBox(height: 15),
+                            Text(
+                              'No categories available',
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s18,
+                                0.27,
+                                ColorManager.textColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : MouseRegion(
+                        cursor: SystemMouseCursors.grab,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(
+                            dragDevices: {
+                              PointerDeviceKind.mouse,
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.stylus,
+                              PointerDeviceKind.trackpad,
+                            },
+                          ),
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            scrollDirection: Axis.vertical,
+                            child: Table(
+                              columnWidths: const {
+                                0: FlexColumnWidth(1.0), // No
+                                1: FlexColumnWidth(3.0), // Category Name
+                                2: FlexColumnWidth(3.0), // Slug
+                              },
+                              border: null,
+                              defaultVerticalAlignment:
+                                  TableCellVerticalAlignment.middle,
+                              children: [
+                                ...categoryProvider.searchCategory!
+                                    .skip(1)
+                                    .toList()
+                                    .asMap()
+                                    .entries
+                                    .map((entry) {
+                                  final int index = entry.key;
+                                  final category = entry.value;
+                                  return TableRow(
+                                    // Set minimum row height
+                                    decoration: BoxDecoration(
+                                      color: index % 2 == 0
+                                          ? Colors.white
+                                          : Colors.grey.withOpacity(0.1),
+                                    ),
+                                    children: [
+                                      _buildTableCell((index + 1).toString()),
+                                      _buildTableCell(
+                                          category.categoryName ?? ""),
+                                      _buildTableCell(
+                                          category.categorySlug ?? ""),
+                                    ],
+                                  );
+                                }).toList(),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  )
-                : BuildBoxShadowContainer(
-                    circleRadius: 7,
-                    offsetValue: const Offset(1, 1),
-                    child: Table(
-                      border: const TableBorder.symmetric(
-                        outside: BorderSide(
-                            color: ColorManager.tableBOrderColor, width: 0.3),
-                        inside: BorderSide(
-                            color: ColorManager.tableBOrderColor, width: 0.8),
-                      ),
-                      defaultVerticalAlignment:
-                          TableCellVerticalAlignment.middle,
-                      columnWidths: const {
-                        0: FlexColumnWidth(1),
-                        1: FlexColumnWidth(3),
-                        2: FlexColumnWidth(3),
-                        3: FlexColumnWidth(2),
-                      },
-                      children: [
-                        _buildTableHeader(),
-                        ...categoryProvider.searchCategory!
-                            .skip(1)
-                            .toList()
-                            .asMap()
-                            .entries
-                            .map((entry) {
-                          Category category = entry.value;
-                          int index = entry.key;
-                          return _buildTableRow(category, index,
-                              sideBarController, categoryProvider);
-                        }).toList(),
-                      ],
-                    ),
-                  ),
+              ),
+            ],
           ),
+        );
+      },
+    );
+  }
+
+// Updated _buildTableHeader with larger padding and font
+  Widget _buildTableHeader(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          vertical: 18.0, horizontal: 12.0), // Increased padding
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s12, // Increased font size
+          0.18,
+          ColorManager.kPrimaryColor,
         ),
-      ],
+      ),
     );
   }
 
-  TableRow _buildTableHeader() {
-    return TableRow(
-      decoration:
-          BoxDecoration(color: ColorManager.tableBGColor.withOpacity(0.4)),
-      children: [
-        "No",
-        "Category Name",
-        "Slug",
-      ]
-          // "Action"
-          .map((title) => TableCell(
-                verticalAlignment: TableCellVerticalAlignment.middle,
-                child: Padding(
-                  padding: const EdgeInsets.all(15.0),
-                  child: Center(
-                    child: Text(
-                      title,
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s12,
-                        0.18,
-                        ColorManager.kPrimaryColor,
-                      ),
-                    ),
-                  ),
-                ),
-              ))
-          .toList(),
-    );
-  }
-
-  TableRow _buildTableRow(Category category, int index,
-      SideBarController sideBarController, CategoryProvider categoryProvider) {
-    index = index + 1;
-    return TableRow(
-      children: [
-        _buildTableCell(index.toString()),
-        _buildTableCell(category.categoryName ?? ""),
-        _buildTableCell(category.categorySlug ?? ""),
-        // TableCell(
-        //   verticalAlignment: TableCellVerticalAlignment.middle,
-        //   child: Padding(
-        //     padding: const EdgeInsets.all(15.0),
-        //     child: Row(
-        //       mainAxisAlignment: MainAxisAlignment.center,
-        //       children: [
-        //         _buildActionButton(
-        //           Icons.visibility,
-        //           ColorManager.kPrimaryColor.withOpacity(0.9),
-        //           Colors.white,
-        //           () async {
-        //             await categoryProvider.viewCategoryApi(
-        //                 categoryId: category.categoryId ?? 1);
-        //             sideBarController.index.value = 27;
-        //           },
-        //         ),
-        //         _buildActionButton(
-        //           Icons.edit,
-        //           ColorManager.kPrimaryColor.withOpacity(0.9),
-        //           Colors.white,
-        //           () async {
-        //             await categoryProvider.setEditCategoryId(
-        //                 categoryId: category.categoryId ?? 1);
-        //             await categoryProvider.viewCategoryApi(
-        //                 categoryId: category.categoryId ?? 1);
-        //             sideBarController.index.value = 34;
-        //           },
-        //         ),
-        //       ],
-        //     ),
-        //   ),
-        // ),
-      ],
-    );
-  }
-
+// Updated _buildTableCell with larger padding and font
   Widget _buildTableCell(String text) {
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Center(
-          child: Text(
-            text,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s9,
-              0.13,
-              Colors.black,
-            ),
-          ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          vertical: 20.0, horizontal: 12.0), // Increased padding
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s9, // Increased font size
+          0.13,
+          Colors.black,
         ),
       ),
     );

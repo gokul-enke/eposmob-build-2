@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -51,6 +53,7 @@ class _SalesScreenState extends State<SalesScreen> {
   List<OrderDetailsModelDataCartItem>? cartItems = [];
 
   bool initLoading = false;
+
   @override
   void initState() {
     loadInitData();
@@ -262,6 +265,328 @@ class _SalesScreenState extends State<SalesScreen> {
     resetSearch();
   }
 
+  Widget _buildTableHeader(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s12,
+          0.18,
+          ColorManager.kPrimaryColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTableCell(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s9, // Increased from s9
+          0.18,
+          Colors.black,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
+    Color backgroundColor;
+    Color textColor;
+
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+        backgroundColor = Colors.green.withOpacity(0.1);
+        textColor = Colors.green;
+        break;
+      case 'pending':
+        backgroundColor = Colors.orange.withOpacity(0.1);
+        textColor = Colors.orange;
+        break;
+      case 'cancelled':
+        backgroundColor = Colors.red.withOpacity(0.1);
+        textColor = Colors.red;
+        break;
+      default:
+        backgroundColor = Colors.grey.withOpacity(0.1);
+        textColor = Colors.grey;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          color: textColor,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(ListOrderModelData order, BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          icon: Icon(Icons.visibility,
+              size: 18, color: ColorManager.kPrimaryColor),
+          onPressed: () {
+            Provider.of<SalesProvider>(context, listen: false)
+                .setOrderNumber(order.orderNumber ?? "0");
+            Get.find<SideBarController>().index.value = 11;
+          },
+        ),
+        if (order.status == "new")
+          IconButton(
+            icon: Icon(Icons.edit, size: 18, color: Colors.orange),
+            onPressed: () {
+              Provider.of<CartProvider>(context, listen: false)
+                  .setCartIDForOrder(int.parse(order.cartId.toString()));
+              Provider.of<SalesProvider>(context, listen: false)
+                  .setOrderNumber(order.orderNumber.toString());
+              Provider.of<SalesProvider>(context, listen: false)
+                  .setOrderId(order.id.toString());
+              Get.find<SideBarController>().index.value = 51;
+            },
+          ),
+        IconButton(
+          icon: Icon(Icons.print, size: 18, color: Colors.blue),
+          onPressed: () async {
+            try {
+              String ordersId = order.orderNumber.toString();
+              String? accessToken =
+                  Provider.of<AuthModel>(context, listen: false).token;
+
+              final OrderDetailsresponse = await SalesProvider()
+                  .listOrderDetails(context, ordersId, accessToken ?? "");
+
+              if (OrderDetailsresponse["status"] == "success") {
+                OrderDetailsModel orderDetails =
+                    OrderDetailsModel.fromJson(OrderDetailsresponse);
+
+                String? formattedTotal =
+                    orderDetails.data?.cart?.priceSummary?.netTotal.toString();
+                String? savedTotal = orderDetails
+                    .data?.cart?.priceSummary?.savedTotal
+                    .toString();
+
+                String storeName = orderDetails.data!.cart!.storeName ?? "";
+                String orderDate = orderDetails.data!.orderDate ?? "";
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PrintPage(
+                      storeName: storeName,
+                      cartItems: orderDetails.data?.cart?.cartItems ?? [],
+                      formattedTotal: formattedTotal!,
+                      savedTotal: savedTotal!,
+                      orderDate: orderDate,
+                      orderNumber: orderDetails.data!.orderNumber.toString(),
+                    ),
+                  ),
+                );
+              }
+            } catch (error) {
+              debugPrint(error.toString());
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState(SalesProvider provider) {
+    final hasFilters = orderNumberController.text.isNotEmpty ||
+        customerNameController.text.isNotEmpty ||
+        amountController.text.isNotEmpty ||
+        emailController.text.isNotEmpty ||
+        phoneController.text.isNotEmpty ||
+        storeController.text.isNotEmpty ||
+        selectedDate != null;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.shopping_cart_outlined,
+              size: 48, color: Colors.grey),
+          const SizedBox(height: 16),
+          Text(
+            provider.orders.isEmpty
+                ? "No orders available"
+                : "No orders match your filters",
+            style: const TextStyle(color: Colors.grey),
+          ),
+          if (hasFilters)
+            TextButton(
+              onPressed: resetSearch,
+              child: const Text("Reset filters"),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderTable(SalesProvider provider) {
+    return BuildBoxShadowContainer(
+      margin: const EdgeInsets.only(top: 5),
+      circleRadius: 7,
+      offsetValue: const Offset(2, 2),
+      blurRadius: 8.0,
+      color: Colors.white,
+      child: Column(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              color: ColorManager.tableBGColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  offset: Offset(0, 2),
+                  blurRadius: 2.0,
+                ),
+              ],
+            ),
+            child: Table(
+              columnWidths: const {
+                0: FixedColumnWidth(0.7), // SI No
+                1: FlexColumnWidth(2), // Order #
+                2: FlexColumnWidth(2), // Date
+                3: FlexColumnWidth(1.5), // Items
+                4: FlexColumnWidth(3), // Customer
+                5: FlexColumnWidth(2), // Amount
+                6: FlexColumnWidth(1.8), // Status
+                7: FixedColumnWidth(150), // Actions
+              },
+              border: null,
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              children: [
+                TableRow(
+                  children: [
+                    _buildTableHeader('SI No'),
+                    _buildTableHeader('Order #'),
+                    _buildTableHeader('Date'),
+                    _buildTableHeader('Items'),
+                    _buildTableHeader('Customer'),
+                    _buildTableHeader('Amount'),
+                    _buildTableHeader('Status'),
+                    _buildTableHeader('Actions'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: MouseRegion(
+              cursor: SystemMouseCursors.grab,
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: {
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.stylus,
+                    PointerDeviceKind.trackpad,
+                  },
+                ),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  scrollDirection: Axis.vertical,
+                  child: Table(
+                    columnWidths: const {
+                      0: FixedColumnWidth(0.7), // SI No
+                      1: FlexColumnWidth(2), // Order #
+                      2: FlexColumnWidth(2), // Date
+                      3: FlexColumnWidth(1.5), // Items
+                      4: FlexColumnWidth(3), // Customer
+                      5: FlexColumnWidth(2), // Amount
+                      6: FlexColumnWidth(1.8), // Status
+                      7: FixedColumnWidth(150), // Actions
+                    },
+                    border: null,
+                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                    children: [
+                      ...provider.orders.asMap().entries.map((entry) {
+                        int index = entry.key;
+                        ListOrderModelData order = entry.value;
+                        PriceSummary priceSummary =
+                            order.priceSummary ?? PriceSummary();
+
+                        return TableRow(
+                          decoration: BoxDecoration(
+                            color: index % 2 == 0
+                                ? Colors.white
+                                : Colors.grey.withOpacity(0.1),
+                          ),
+                          children: [
+                            SizedBox(
+                              height: 55, // Set your desired row height here
+                              child: _buildTableCell("${index + 1}"),
+                            ),
+                            SizedBox(
+                              height: 55,
+                              child: _buildTableCell("#${order.orderNumber}"),
+                            ),
+                            SizedBox(
+                              height: 55,
+                              child: _buildTableCell(
+                                  DateHelper.formatYearMonthDay(
+                                      order.orderDate!)),
+                            ),
+                            SizedBox(
+                              height: 55,
+                              child: _buildTableCell(
+                                  "${order.cartItems?.length ?? 0}"),
+                            ),
+                            SizedBox(
+                              height: 55,
+                              child: _buildTableCell(
+                                  "${order.customerName ?? "NA"}"),
+                            ),
+                            SizedBox(
+                              height: 55,
+                              child: _buildTableCell(
+                                  "Rs ${AmountHelper.formatAmount(priceSummary.grandTotal ?? 0.0)}"),
+                            ),
+                            SizedBox(
+                              height: 55,
+                              child: Center(
+                                  child: _buildStatusChip(
+                                      order.status ?? "pending")),
+                            ),
+                            SizedBox(
+                              height: 55,
+                              child: Center(
+                                  child: _buildActionButtons(order, context)),
+                            ),
+                          ],
+                        );
+                        ;
+                      }).toList(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     SideBarController sideBarController = Get.put(SideBarController());
@@ -269,970 +594,372 @@ class _SalesScreenState extends State<SalesScreen> {
     PurchaseProvider purchaseProvider =
         Provider.of<PurchaseProvider>(context, listen: false);
     List<GetStoreModelData>? storeList = purchaseProvider.getStoreList;
+
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: refreshData,
         child: Container(
-            margin:
-                const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: const [
-                  BoxShadow(
-                    color: ColorManager.boxShadowColor,
-                    blurRadius: 6,
-                    offset: Offset(1, 1),
-                  ),
-                ],
-                color: Colors.white),
-            child: Padding(
-              padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
-              child: ListView(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Orders List",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s20, 0.30, ColorManager.textColor),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  // Replace only the search and filter section in your build method (keep everything else the same)
-                 Row(
-  children: [
-    Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, // Align everything to the left
-        children: [
-          // First Row - Search Fields
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            crossAxisAlignment: WrapCrossAlignment.start, // Left-align items
-            children: [
-              // Order Number
-              SizedBox(
-                width: 350,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        "Order #",
-                        style: buildCustomStyle(
-                          FontWeightManager.regular,
-                          FontSize.s14,
-                          0.27,
-                          Colors.black.withOpacity(0.6),
-                        ),
-                      ),
-                    ),
-                    buildColumnWidgetForTextFields(
-                      height: 45,
-                      width: 350,
-                      onchanged: (value) {
-                        if (value!.isEmpty || value.length > 2) {
-                          searchOrders(1);
-                        }
-                      },
-                      controller: orderNumberController,
-                      size: size,
-                      hintText: 'Order Number',
-                    ),
-                  ],
-                ),
-              ),
-
-              // Customer Name
-              SizedBox(
-                width: 350,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        "Customer",
-                        style: buildCustomStyle(
-                          FontWeightManager.regular,
-                          FontSize.s14,
-                          0.27,
-                          Colors.black.withOpacity(0.6),
-                        ),
-                      ),
-                    ),
-                    buildColumnWidgetForTextFields(
-                      height: 45,
-                      width: 350,
-                      onchanged: (value) {
-                        if (value!.isEmpty || value.length > 2) {
-                          searchOrders(1);
-                        }
-                      },
-                      controller: customerNameController,
-                      size: size,
-                      hintText: 'Customer Name',
-                    ),
-                  ],
-                ),
-              ),
-            
-
-              // Phone
-               SizedBox(
-                width: 350,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        "Phone",
-                        style: buildCustomStyle(
-                          FontWeightManager.regular,
-                          FontSize.s14,
-                          0.27,
-                          Colors.black.withOpacity(0.6),
-                        ),
-                      ),
-                    ),
-                    buildColumnWidgetForTextFields(
-                      height: 45,
-                      width: 350,
-                      onchanged: (value) {
-                        if (value!.isEmpty || value.length > 2) {
-                          searchOrders(1);
-                        }
-                      },
-                      controller: phoneController,
-                      size: size,
-                      hintText: 'Phone',
-                    ),
-                  ],
-                ),
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: const [
+              BoxShadow(
+                color: ColorManager.boxShadowColor,
+                blurRadius: 6,
+                offset: Offset(1, 1),
               ),
             ],
+            color: Colors.white,
           ),
-          
-          const SizedBox(height: 10),
-          
-          // Second Row - Filters and Buttons
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            crossAxisAlignment: WrapCrossAlignment.start, // Left-align items
-            children: [
-                SizedBox(
-                width: 200,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        "Date",
-                        style: buildCustomStyle(
-                          FontWeightManager.regular,
-                          FontSize.s14,
-                          0.27,
-                          Colors.black.withOpacity(0.6),
-                        ),
-                      ),
-                    ),
-                    BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      height: 45,
-                      width: 200,
-                      child: Center(
-                        child: CalendarPickerTableCell(
-                          onDateSelected: (DateTime date) {
-                            setState(() {
-                              selectedDate = date;
-                            });
-                          },
-                        ),
+                    Text(
+                      "Orders List",
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s20,
+                        0.30,
+                        ColorManager.textColor,
                       ),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 15),
 
-              // Price
-              SizedBox(
-                width: 225,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                // Search and Filter Section (keep your existing search UI)
+                Row(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        "Price",
-                        style: buildCustomStyle(
-                          FontWeightManager.regular,
-                          FontSize.s14,
-                          0.27,
-                          Colors.black.withOpacity(0.6),
-                        ),
-                      ),
-                    ),
-                    buildColumnWidgetForTextFields(
-                      height: 45,
-                      width: 250,
-                      onchanged: (value) {
-                        if (value!.isEmpty || value.length > 2) {
-                          searchOrders(1);
-                        }
-                      },
-                      controller: amountController,
-                      size: size,
-                      hintText: 'Price',
-                    ),
-                  ],
-                ),
-              ),
-              
-       
-
-              // Store
-              SizedBox(
-                width: 200,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        "Store",
-                        style: buildCustomStyle(
-                          FontWeightManager.regular,
-                          FontSize.s14,
-                          0.27,
-                          Colors.black.withOpacity(0.6),
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      height: 45,
-                      width: 200,
-                      child: BuildBoxShadowContainer(
-                        circleRadius: 7,
-                        alignment: Alignment.centerLeft,
-                        margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-                        padding: const EdgeInsets.only(left: 15),
-                        child: DropdownButtonFormField<GetStoreModelData>(
-                          decoration: const InputDecoration(border: InputBorder.none),
-                          value: storeSelected,
-                          hint: Text(
-                            'Select Store',
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s12,
-                              0.27,
-                              ColorManager.textColor.withOpacity(.5),
-                            ),
-                          ),
-                          items: storeList!.map((GetStoreModelData store) {
-                            return DropdownMenuItem<GetStoreModelData>(
-                              value: store,
-                              child: Text(
-                                store.name ?? '',
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s12,
-                                  0.27,
-                                  ColorManager.textColor.withOpacity(.5),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            crossAxisAlignment: WrapCrossAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: 350,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Order #",
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          FontSize.s14,
+                                          0.27,
+                                          Colors.black.withOpacity(0.6),
+                                        ),
+                                      ),
+                                    ),
+                                    buildColumnWidgetForTextFields(
+                                      height: 45,
+                                      width: 350,
+                                      onchanged: (value) {
+                                        if (value!.isEmpty ||
+                                            value.length > 2) {
+                                          searchOrders(1);
+                                        }
+                                      },
+                                      controller: orderNumberController,
+                                      size: size,
+                                      hintText: 'Order Number',
+                                    ),
+                                  ],
                                 ),
                               ),
-                            );
-                          }).toList(),
-                          onChanged: (GetStoreModelData? storeModelData) {
-                            if (storeModelData != null) {
-                              setState(() {
-                                storeSelected = storeModelData;
-                                storeController.text = storeModelData.id.toString();
-                              });
-                              searchOrders(1);
-                            }
-                          },
-                        ),
+                              SizedBox(
+                                width: 350,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Customer",
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          FontSize.s14,
+                                          0.27,
+                                          Colors.black.withOpacity(0.6),
+                                        ),
+                                      ),
+                                    ),
+                                    buildColumnWidgetForTextFields(
+                                      height: 45,
+                                      width: 350,
+                                      onchanged: (value) {
+                                        if (value!.isEmpty ||
+                                            value.length > 2) {
+                                          searchOrders(1);
+                                        }
+                                      },
+                                      controller: customerNameController,
+                                      size: size,
+                                      hintText: 'Customer Name',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(
+                                width: 350,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Phone",
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          FontSize.s14,
+                                          0.27,
+                                          Colors.black.withOpacity(0.6),
+                                        ),
+                                      ),
+                                    ),
+                                    buildColumnWidgetForTextFields(
+                                      height: 45,
+                                      width: 350,
+                                      onchanged: (value) {
+                                        if (value!.isEmpty ||
+                                            value.length > 2) {
+                                          searchOrders(1);
+                                        }
+                                      },
+                                      controller: phoneController,
+                                      size: size,
+                                      hintText: 'Phone',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            crossAxisAlignment: WrapCrossAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: 200,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Date",
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          FontSize.s14,
+                                          0.27,
+                                          Colors.black.withOpacity(0.6),
+                                        ),
+                                      ),
+                                    ),
+                                    BuildBoxShadowContainer(
+                                      circleRadius: 7,
+                                      height: 45,
+                                      width: 200,
+                                      child: Center(
+                                        child: CalendarPickerTableCell(
+                                          onDateSelected: (DateTime date) {
+                                            setState(() {
+                                              selectedDate = date;
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(
+                                width: 225,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Price",
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          FontSize.s14,
+                                          0.27,
+                                          Colors.black.withOpacity(0.6),
+                                        ),
+                                      ),
+                                    ),
+                                    buildColumnWidgetForTextFields(
+                                      height: 45,
+                                      width: 250,
+                                      onchanged: (value) {
+                                        if (value!.isEmpty ||
+                                            value.length > 2) {
+                                          searchOrders(1);
+                                        }
+                                      },
+                                      controller: amountController,
+                                      size: size,
+                                      hintText: 'Price',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(
+                                width: 200,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Store",
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          FontSize.s14,
+                                          0.27,
+                                          Colors.black.withOpacity(0.6),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      height: 45,
+                                      width: 200,
+                                      child: BuildBoxShadowContainer(
+                                        circleRadius: 7,
+                                        alignment: Alignment.centerLeft,
+                                        margin: const EdgeInsets.symmetric(
+                                            horizontal: 5, vertical: 0),
+                                        padding:
+                                            const EdgeInsets.only(left: 15),
+                                        child: DropdownButtonFormField<
+                                            GetStoreModelData>(
+                                          decoration: const InputDecoration(
+                                              border: InputBorder.none),
+                                          value: storeSelected,
+                                          hint: Text(
+                                            'Select Store',
+                                            style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s12,
+                                              0.27,
+                                              ColorManager.textColor
+                                                  .withOpacity(.5),
+                                            ),
+                                          ),
+                                          items: storeList!
+                                              .map((GetStoreModelData store) {
+                                            return DropdownMenuItem<
+                                                GetStoreModelData>(
+                                              value: store,
+                                              child: Text(
+                                                store.name ?? '',
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.medium,
+                                                  FontSize.s12,
+                                                  0.27,
+                                                  ColorManager.textColor
+                                                      .withOpacity(.5),
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                          onChanged: (GetStoreModelData?
+                                              storeModelData) {
+                                            if (storeModelData != null) {
+                                              setState(() {
+                                                storeSelected = storeModelData;
+                                                storeController.text =
+                                                    storeModelData.id
+                                                        .toString();
+                                              });
+                                              searchOrders(1);
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 35.0),
+                                child: CustomRoundButton(
+                                  title: "Search",
+                                  fct: () {
+                                    searchOrders(1);
+                                  },
+                                  height: 45,
+                                  width: 200,
+                                  fontSize: FontSize.s12,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 35.0),
+                                child: CustomRoundButton(
+                                  title: "Reset",
+                                  boxColor: Colors.white,
+                                  textColor: ColorManager.kPrimaryColor,
+                                  fct: resetSearch,
+                                  height: 45,
+                                  width: 200,
+                                  fontSize: FontSize.s12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: Consumer<SalesProvider>(
+                    builder: (context, orderProvider, child) {
+                      if (initLoading) {
+                        // Changed from checking orderProvider.isLoading
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-              // Search Button
-              Padding(
-                padding: const EdgeInsets.only(top: 35.0),
-                child: CustomRoundButton(
-                  title: "Search",
-                  fct: () { searchOrders(1); },
-                  height: 45,
-                  width: 200,
-                  fontSize: FontSize.s12,
-                ),
-              ),
+                      if (orderProvider.orders.isEmpty) {
+                        return _buildEmptyState(orderProvider);
+                      }
 
-              // Reset Button
-              Padding(
-                padding: const EdgeInsets.only(top: 35.0),
-                child: CustomRoundButton(
-                  title: "Reset",
-                  boxColor: Colors.white,
-                  textColor: ColorManager.kPrimaryColor,
-                  fct: resetSearch,
-                  height: 45,
-                  width: 200,
-                  fontSize: FontSize.s12,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  ],
-),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      offsetValue: const Offset(1, 1),
-                      child: Consumer<SalesProvider>(
-                        builder: (context, orderProvider, child) {
-                          List<ListOrderModelData> orders =
-                              orderProvider.orders;
-
-                          // DEBUG: Print UI rendering details
-                          debugPrint('=== SALES UI RENDER DEBUG ===');
-                          debugPrint('Orders List Length: ${orders.length}');
-                          debugPrint(
-                              'Orders Provider State: ${orderProvider.runtimeType}');
-                          debugPrint(
-                              'Current Page: ${orderProvider.currentPage}');
-                          debugPrint(
-                              'Total Pages: ${orderProvider.totalPages}');
-
-                          if (orders.isEmpty) {
-                            debugPrint('=== NO ORDERS TO DISPLAY ===');
-                            debugPrint(
-                                'Orders list is empty - no data to render');
-                          } else {
-                            debugPrint('=== ORDERS TO RENDER ===');
-                            for (int i = 0; i < orders.length && i < 5; i++) {
-                              var order = orders[i];
-                              debugPrint(
-                                  'UI Order $i: ${order.orderNumber} - ${order.grantTotal}');
-                            }
-                          }
-
-                          return SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: SizedBox(
-                              width: size.width * 0.80,
-                              child: Table(
-                                columnWidths: const {
-                                  0: FlexColumnWidth(1),
-                                  1: FlexColumnWidth(3),
-                                  2: FlexColumnWidth(2),
-                                  3: FlexColumnWidth(2),
-                                  4: FlexColumnWidth(3),
-                                  5: FlexColumnWidth(3),
-                                  6: FlexColumnWidth(2),
-                                },
-                                border: const TableBorder.symmetric(
-                                    outside: BorderSide(
-                                        color: ColorManager.tableBOrderColor,
-                                        width: 0.1),
-                                    inside: BorderSide(
-                                        color: ColorManager.tableBOrderColor,
-                                        width: 0.5)),
-                                defaultVerticalAlignment:
-                                    TableCellVerticalAlignment.middle,
-                                children: [
-                                  TableRow(
-                                      decoration: BoxDecoration(
-                                          color: ColorManager.tableBGColor
-                                              .withOpacity(0.4)),
-                                      children: [
-                                        TableCell(
-                                            verticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(15.0),
-                                              child: Center(
-                                                  child: Text(
-                                                "No",
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s12,
-                                                  0.18,
-                                                  ColorManager.kPrimaryColor,
-                                                ),
-                                              )),
-                                            )),
-                                        TableCell(
-                                            verticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(15.0),
-                                              child: Center(
-                                                  child: Text(
-                                                "Order #",
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s12,
-                                                  0.18,
-                                                  ColorManager.kPrimaryColor,
-                                                ),
-                                              )),
-                                            )),
-                                        TableCell(
-                                            verticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(15.0),
-                                              child: Center(
-                                                  child: Text(
-                                                "Date",
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s12,
-                                                  0.18,
-                                                  ColorManager.kPrimaryColor,
-                                                ),
-                                              )),
-                                            )),
-                                        TableCell(
-                                            verticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(15.0),
-                                              child: Center(
-                                                  child: Text(
-                                                "Item Count",
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s12,
-                                                  0.18,
-                                                  ColorManager.kPrimaryColor,
-                                                ),
-                                              )),
-                                            )),
-                                        // TableCell(
-                                        //     verticalAlignment:
-                                        //         TableCellVerticalAlignment.middle,
-                                        //     child: Padding(
-                                        //       padding: const EdgeInsets.all(15.0),
-                                        //       child: Center(
-                                        //           child: Text(
-                                        //         "Offer",
-                                        //         // "Offers Applied",
-                                        //         style: buildCustomStyle(
-                                        //           FontWeightManager.medium,
-                                        //           FontSize.s12,
-                                        //           0.18,
-                                        //           ColorManager.kPrimaryColor,
-                                        //         ),
-                                        //       )),
-                                        //     )),
-                                        // TableCell(
-                                        //     verticalAlignment:
-                                        //         TableCellVerticalAlignment.middle,
-                                        //     child: Padding(
-                                        //       padding: const EdgeInsets.all(15.0),
-                                        //       child: Center(
-                                        //           child: Text(
-                                        //         "Store Name",
-                                        //         style: buildCustomStyle(
-                                        //           FontWeightManager.medium,
-                                        //           FontSize.s12,
-                                        //           0.18,
-                                        //           ColorManager.kPrimaryColor,
-                                        //         ),
-                                        //       )),
-                                        //     )),
-                                        TableCell(
-                                            verticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(15.0),
-                                              child: Center(
-                                                  child: Text(
-                                                "Payment summary",
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s12,
-                                                  0.18,
-                                                  ColorManager.kPrimaryColor,
-                                                ),
-                                              )),
-                                            )),
-                                        TableCell(
-                                            verticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(15.0),
-                                              child: Center(
-                                                  child: Text(
-                                                "Customer Details",
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s12,
-                                                  0.18,
-                                                  ColorManager.kPrimaryColor,
-                                                ),
-                                              )),
-                                            )),
-                                        TableCell(
-                                            verticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(15.0),
-                                              child: Center(
-                                                  child: Text(
-                                                "Action",
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s12,
-                                                  0.18,
-                                                  ColorManager.kPrimaryColor,
-                                                ),
-                                              )),
-                                            )),
-                                      ]),
-
-                                  // Map your order data to table rows here
-                                  ...orders.asMap().entries.map((entry) {
-                                    int index = entry.key;
-                                    ListOrderModelData order = entry.value;
-                                    PriceSummary priceSummary =
-                                        order.priceSummary ?? PriceSummary();
-
-                                    return TableRow(
-                                      children: [
-                                        TableCell(
-                                            verticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(20.0),
-                                              child: Center(
-                                                child: Text(
-                                                  "${index + 1}",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s9,
-                                                    0.13,
-                                                    Colors.black,
-                                                  ),
-                                                ),
-                                              ),
-                                            )),
-                                        TableCell(
-                                            verticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(30.0),
-                                              child: Center(
-                                                child: GestureDetector(
-                                                  onTap: () {
-                                                    sideBarController
-                                                        .index.value = 11;
-
-                                                    orderProvider
-                                                        .setOrderNumber(
-                                                            order.orderNumber ??
-                                                                "0");
-                                                  },
-                                                  child: Text(
-                                                    "#${order.orderNumber}",
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager.medium,
-                                                      FontSize.s9,
-                                                      0.13,
-                                                      ColorManager.kPrimaryColor
-                                                          .withOpacity(0.9),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            )),
-                                        TableCell(
-                                            verticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(20.0),
-                                              child: Center(
-                                                child: Text(
-                                                  DateHelper.formatYearMonthDay(
-                                                      order.orderDate!),
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s9,
-                                                    0.13,
-                                                    Colors.black,
-                                                  ),
-                                                ),
-                                              ),
-                                            )),
-                                        TableCell(
-                                            verticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(20.0),
-                                              child: Center(
-                                                child: Text(
-                                                  "${order.cartItems!.length}",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s9,
-                                                    0.13,
-                                                    Colors.black,
-                                                  ),
-                                                ),
-                                              ),
-                                            )),
-                                        // TableCell(
-                                        //     verticalAlignment:
-                                        //         TableCellVerticalAlignment.middle,
-                                        //     child: Padding(
-                                        //       padding: const EdgeInsets.all(20.0),
-                                        //       child: Center(
-                                        //         child: Text(
-                                        //           "0% ",
-                                        //           // "0% offer applied",
-                                        //           style: buildCustomStyle(
-                                        //             FontWeightManager.medium,
-                                        //             FontSize.s9,
-                                        //             0.13,
-                                        //             ColorManager.kPrimaryColor,
-                                        //           ),
-                                        //         ),
-                                        //       ),
-                                        //     )),
-                                        // TableCell(
-                                        //     verticalAlignment:
-                                        //         TableCellVerticalAlignment.middle,
-                                        //     child: Padding(
-                                        //       padding: const EdgeInsets.all(20.0),
-                                        //       child: Center(
-
-                                        //           // child: Text(
-                                        //           //   Provider.of<PurchaseProvider>(
-                                        //           //           context,
-                                        //           //           listen: false)
-                                        //           //       .getStoreNameFromId(
-                                        //           //           order.storeId ?? 0),
-                                        //           //   style: buildCustomStyle(
-                                        //           //     FontWeightManager.medium,
-                                        //           //     FontSize.s9,
-                                        //           //     0.13,
-                                        //           //     ColorManager.kPrimaryColor,
-                                        //           //   ),
-                                        //           // ),
-                                        //           ),
-                                        //     )),
-                                        TableCell(
-                                            verticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(20.0),
-                                              child: Center(
-                                                child: Text(
-                                                  "Rs ${AmountHelper.formatAmount(priceSummary.grandTotal ?? 0.0)}",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s9,
-                                                    0.13,
-                                                    Colors.black,
-                                                  ),
-                                                ),
-                                              ),
-                                            )),
-                                        TableCell(
-                                            verticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(20.0),
-                                              child: Center(
-                                                child: Text(
-                                                  "${order.customerName ?? "NA"}\n +91 ${order.customerDetails!.phone}",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s9,
-                                                    0.13,
-                                                    Colors.black,
-                                                  ),
-                                                ),
-                                              ),
-                                            )),
-                                        TableCell(
-                                            verticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(15.0),
-                                              child: Center(
-                                                child: Row(
-                                                  children: [
-                                                    BuildBoxShadowContainer(
-                                                        margin: const EdgeInsets
-                                                            .only(
-                                                            left: 5, right: 5),
-                                                        circleRadius: 5,
-                                                        child: IconButton(
-                                                          icon: Icon(
-                                                            Icons.visibility,
-                                                            size: 18,
-                                                            color: ColorManager
-                                                                .kPrimaryColor
-                                                                .withOpacity(
-                                                                    0.9),
-                                                          ),
-                                                          onPressed: () async {
-                                                            orderProvider
-                                                                .setOrderNumber(order
-                                                                    .orderNumber
-                                                                    .toString());
-                                                            sideBarController
-                                                                .index
-                                                                .value = 11;
-                                                          },
-                                                        )),
-                                                    (order.status == "new")
-                                                        ? BuildBoxShadowContainer(
-                                                            margin:
-                                                                const EdgeInsets
-                                                                    .only(
-                                                                    left: 5,
-                                                                    right: 5),
-                                                            color: ColorManager
-                                                                .kPrimaryColor
-                                                                .withOpacity(
-                                                                    0.9),
-                                                            circleRadius: 5,
-                                                            child: IconButton(
-                                                              icon: const Icon(
-                                                                Icons.edit,
-                                                                size: 18,
-                                                                color: Colors
-                                                                    .white,
-                                                              ),
-                                                              onPressed:
-                                                                  () async {
-                                                                Provider.of<CartProvider>(
-                                                                        context,
-                                                                        listen:
-                                                                            false)
-                                                                    .setCartIDForOrder(
-                                                                        int.parse(order
-                                                                            .cartId
-                                                                            .toString()));
-                                                                orderProvider
-                                                                    .setOrderNumber(order
-                                                                        .orderNumber
-                                                                        .toString());
-                                                                orderProvider
-                                                                    .setOrderId(
-                                                                        order.id
-                                                                            .toString());
-                                                                sideBarController
-                                                                    .index
-                                                                    .value = 51;
-                                                              },
-                                                            ))
-                                                        : Container(),
-                                                    BuildBoxShadowContainer(
-                                                        margin: const EdgeInsets
-                                                            .only(
-                                                            left: 5, right: 5),
-                                                        color: ColorManager
-                                                            .kPrimaryColor
-                                                            .withOpacity(0.9),
-                                                        circleRadius: 5,
-                                                        child: IconButton(
-                                                            icon: const Icon(
-                                                              Icons.print,
-                                                              size: 18,
-                                                              color:
-                                                                  Colors.white,
-                                                            ),
-                                                            onPressed:
-                                                                () async {
-                                                              try {
-                                                                String ordersId = order
-                                                                    .orderNumber
-                                                                    .toString();
-                                                                String?
-                                                                    accessToken =
-                                                                    Provider.of<AuthModel>(
-                                                                            context,
-                                                                            listen:
-                                                                                false)
-                                                                        .token;
-
-                                                                final OrderDetailsresponse =
-                                                                    await SalesProvider().listOrderDetails(
-                                                                        context,
-                                                                        ordersId,
-                                                                        accessToken ??
-                                                                            "");
-
-                                                                if (OrderDetailsresponse[
-                                                                        "status"] ==
-                                                                    "success") {
-                                                                  OrderDetailsModel
-                                                                      orderDetails =
-                                                                      OrderDetailsModel
-                                                                          .fromJson(
-                                                                              OrderDetailsresponse);
-
-                                                                  String?
-                                                                      formattedTotal =
-                                                                      orderDetails
-                                                                          .data
-                                                                          ?.cart
-                                                                          ?.priceSummary
-                                                                          ?.netTotal
-                                                                          .toString();
-                                                                  String?
-                                                                      savedTotal =
-                                                                      orderDetails
-                                                                          .data
-                                                                          ?.cart
-                                                                          ?.priceSummary
-                                                                          ?.savedTotal
-                                                                          .toString();
-
-                                                                  debugPrint(
-                                                                      "savedTotal: $savedTotal");
-                                                                  String
-                                                                      storeName =
-                                                                      orderDetails
-                                                                              .data!
-                                                                              .cart!
-                                                                              .storeName ??
-                                                                          "";
-                                                                  String
-                                                                      orderDate =
-                                                                      orderDetails
-                                                                              .data!
-                                                                              .orderDate ??
-                                                                          "";
-
-                                                                  Navigator
-                                                                      .push(
-                                                                    context,
-                                                                    MaterialPageRoute(
-                                                                      builder:
-                                                                          (context) =>
-                                                                              PrintPage(
-                                                                        storeName:
-                                                                            storeName,
-                                                                        cartItems:
-                                                                            orderDetails.data?.cart?.cartItems ??
-                                                                                [],
-                                                                        formattedTotal:
-                                                                            formattedTotal!,
-                                                                        savedTotal:
-                                                                            savedTotal!,
-                                                                        orderDate:
-                                                                            orderDate,
-                                                                        orderNumber: orderDetails
-                                                                            .data!
-                                                                            .orderNumber
-                                                                            .toString(),
-                                                                      ),
-                                                                    ),
-                                                                  );
-                                                                }
-                                                              } catch (error) {
-                                                                debugPrint(error
-                                                                    .toString());
-                                                              }
-                                                            })),
-                                                    // BuildBoxShadowContainer(
-                                                    //     margin: const EdgeInsets
-                                                    //         .only(
-                                                    //         left: 5, right: 5),
-                                                    //     color: ColorManager
-                                                    //         .kPrimaryColor
-                                                    //         .withOpacity(0.9),
-                                                    //     circleRadius: 5,
-                                                    //     child: IconButton(
-                                                    //       icon: const Icon(
-                                                    //         Icons.download,
-                                                    //         size: 18,
-                                                    //         color: Colors.white,
-                                                    //       ),
-                                                    //       onPressed: () async {
-                                                    //         await downloadFile(
-                                                    //             order.orderNumber ??
-                                                    //                 "0");
-                                                    //       },
-                                                    //     )),
-                                                  ],
-                                                ),
-                                              ),
-                                            )),
-                                      ],
-                                    );
-                                  }).toList(),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      )),
-                  PaginationControl(
-                    currentPage:
-                        Provider.of<SalesProvider>(context, listen: true)
-                            .currentPage,
-                    totalPages:
-                        Provider.of<SalesProvider>(context, listen: true)
-                            .totalPages,
-                    onPageChanged: (int page) {
-                      searchOrders(page);
+                      return Column(
+                        children: [
+                          Expanded(child: _buildOrderTable(orderProvider)),
+                          PaginationControl(
+                            currentPage: orderProvider.currentPage,
+                            totalPages: orderProvider.totalPages,
+                            onPageChanged: (int page) {
+                              searchOrders(page);
+                            },
+                          ),
+                        ],
+                      );
                     },
-                  )
-                ],
-              ),
-            )),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
