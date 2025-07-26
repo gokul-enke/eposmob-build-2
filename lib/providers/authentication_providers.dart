@@ -16,10 +16,12 @@ class AuthenticationProvider {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
-    
+
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    debugPrint("apiKey: $apiKey");
 
     final Map<String, dynamic> apiBodyData = {
       'email': email,
@@ -28,12 +30,11 @@ class AuthenticationProvider {
     // debugPrint(json.encode(apiBodyData));
     final url = Uri.parse(APPUrl.loginUrl);
     try {
-      final response = await http.post(url,
-          body: json.encode(apiBodyData),
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-KEY': apiKey,
-          });
+      final response =
+          await http.post(url, body: json.encode(apiBodyData), headers: {
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200 ||
           response.statusCode == 400 ||

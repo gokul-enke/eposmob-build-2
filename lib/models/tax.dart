@@ -42,6 +42,8 @@ Future<TaxCalculationResult> getCategoryTax({
   final uri = Uri.parse(APPUrl.getTaxtDetails)
       .replace(queryParameters: queryParameters);
 
+      
+
   try {
     final response = await http.get(
       uri,

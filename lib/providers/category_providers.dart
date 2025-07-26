@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/view_category.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../resources/app_url.dart';
 
@@ -108,10 +110,21 @@ class CategoryProvider extends ChangeNotifier {
     final uri = Uri.parse(APPUrl.categoryListUrl)
         .replace(queryParameters: queryParameters);
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
     try {
       final response = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
@@ -152,10 +165,21 @@ class CategoryProvider extends ChangeNotifier {
     final uri = Uri.parse(APPUrl.categoryListUrl)
         .replace(queryParameters: queryParameters);
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
     try {
       final response = await http.get(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
