@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-
+import 'package:shared_preferences/shared_preferences.dart';
 import '../resources/app_url.dart';
 
 class DashboardProvider {
@@ -11,12 +11,19 @@ class DashboardProvider {
 
   Future<dynamic> dashbaord(String accessToken, BuildContext context) async {
     // debugPrint("dashbaord");
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
 
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     final url = Uri.parse(APPUrl.dashBoardUrl);
     try {
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
       });
 
       // debugPrint('inside ${response.statusCode}');
@@ -36,12 +43,20 @@ class DashboardProvider {
   Future<List<GraphData>> fetchGraphData(String accessToken) async {
     final url =
         Uri.parse(APPUrl.dashBoardGraphUrl); // Replace with actual endpoint
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(
         url,
         headers: {
           'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
         },
       );
 
@@ -102,10 +117,18 @@ class DashboardProvider {
 
     final url = Uri.parse(
         "https://safai.enke.ae/api/carts/list-cart-items?customer_id=5");
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer 8|bTQHp0upEnGCgNEwbYo0bdhLLEg3CKBSvU6QPJe5',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,  
       });
 
       // debugPrint('inside ${response.statusCode}');

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/models/list_sales_return_items.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/list_sales_order.dart';
 import '../resources/app_url.dart';
@@ -93,11 +94,19 @@ class SalesProvider with ChangeNotifier {
     debugPrint('Access Token: ${accessToken.isNotEmpty ? "Present" : "Missing"}');
 
     try {
+      // Get API key from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
       final response = await http.get(
         uri,
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
         },
       ).timeout(const Duration(seconds: 15));
 
@@ -236,10 +245,18 @@ class SalesProvider with ChangeNotifier {
     // debugPrint(" API listOrderDetails $_orderId   passed one$orderNumber");
     final url = Uri.parse("${APPUrl.getListOrderDetails}/$orderNumber");
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
-        'content-type': 'application/json'
+        'content-type': 'application/json',
+        'X-Tenant': apiKey,
       });
       // if (response.statusCode == 200) {
       debugPrint('List listOrderDetails  inside');
@@ -271,11 +288,19 @@ class SalesProvider with ChangeNotifier {
         .replace(queryParameters: queryParameters);
 
     try {
+      // Get API key from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
       final response = await http.get(
         uri,
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
         },
       ).timeout(const Duration(seconds: 15));
 
@@ -323,11 +348,19 @@ class SalesProvider with ChangeNotifier {
         .replace(queryParameters: queryParameters);
 
     try {
+      // Get API key from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
       final response = await http.get(
         uri,
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
         },
       ).timeout(const Duration(seconds: 15));
 
@@ -360,11 +393,19 @@ class SalesProvider with ChangeNotifier {
     final url =
         Uri.parse(APPUrl.salesReturn); // Update with your server base URL
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     final response = await http.post(
       url,
       headers: {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
       },
       body: jsonEncode({
         'order_id': orderId,
@@ -401,11 +442,19 @@ class SalesProvider with ChangeNotifier {
     final url = Uri.parse(
         APPUrl.completeSalesReturn); // Update with your server base URL
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     final response = await http.post(
       url,
       headers: {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
       },
       body: jsonEncode({
         'return_order_id': returnOrderId,

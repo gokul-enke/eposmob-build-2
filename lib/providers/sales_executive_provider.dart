@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/sales_executive.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SalesExecutiveProvider extends ChangeNotifier {
   List<SalesExecutive> _salesExecutives = [];
@@ -72,11 +75,19 @@ class SalesExecutiveProvider extends ChangeNotifier {
       }
 
       debugPrint("🔧 SalesExecutiveProvider: Making API request...");
+      // Get API key from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
       final response = await http.get(
         Uri.parse(APPUrl.listSalesExecutives),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
+          'X-Tenant': apiKey,
         },
       );
 

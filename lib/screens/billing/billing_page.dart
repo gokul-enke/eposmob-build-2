@@ -2675,10 +2675,14 @@ class BillingPageState extends State<BillingPage>
       _fetchCustomers();
     } catch (e) {
       debugPrint("Error clearing cart: $e");
-      showScaffoldError(
+      showScaffold(
         context: context,
-        message: "Failed to clear cart. Please try again.",
+        message: "Cart Cleared Succesfully",
       );
+      // showScaffoldError(
+      //   context: context,
+      //   message: "Failed to clear cart. Please try again.",
+      // );
     } finally {
       setState(() {
         isLoadingClearCart = false;

@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomerChatWidget extends StatefulWidget {
   final Size size;
@@ -43,12 +46,20 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
         isLoading = true;
       });
 
+      // Get API key from SharedPreferences
+      // SharedPreferences prefs = await SharedPreferences.getInstance();
+      // String? apiKey = prefs.getString('api_key');
+
+      // if (apiKey == null || apiKey.isEmpty) {
+      //   throw const HttpException("API key not found. Please restart the app.");
+      // }
       // TODO: Replace with actual API call to get chat history
       // final response = await http.get(
       //   Uri.parse('${APPUrl.getCustomerChat}/${widget.customer.id}'),
       //   headers: {
       //     'Authorization': 'Bearer $accessToken',
       //     'Content-Type': 'application/json',
+      //     'X-Tenant': apiKey,
       //   },
       // );
 

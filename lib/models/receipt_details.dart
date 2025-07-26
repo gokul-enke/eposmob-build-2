@@ -67,7 +67,7 @@ class ReceiptData {
       receiptStatus: json['receipt_status'] ?? "", // Default to empty string
       paymentReference:
           json['payment_reference'] ?? "", // Default to empty string
-      paymentMethod: json['payment_method'] ?? "", // Default to empty string
+      paymentMethod: _parsePaymentMethod(json['payment_method']), // Handle both String and List
       userId: json['user_id'], // Keep as nullable
       customerId: json['customer_id'] ?? 0, // Default to 0 if null
       companyId: json['company_id'] ?? 0, // Default to 0 if null
@@ -79,6 +79,16 @@ class ReceiptData {
       customer: Customer.fromJson(json['customer'] ?? {}), // Handle null case
       receiptPayments: payments,
     );
+  }
+
+  // Helper method to handle payment_method which can be String or List<String>
+  static String _parsePaymentMethod(dynamic paymentMethod) {
+    if (paymentMethod == null) return "";
+    if (paymentMethod is String) return paymentMethod;
+    if (paymentMethod is List && paymentMethod.isNotEmpty) {
+      return paymentMethod.join(', ');
+    }
+    return "";
   }
 }
 

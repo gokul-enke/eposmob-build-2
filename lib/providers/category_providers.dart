@@ -11,6 +11,7 @@ import '../resources/app_url.dart';
 
 class CategoryProvider extends ChangeNotifier {
   bool isLoading = false;
+  bool _isCategoriesLoaded = false; // Add this flag to track if categories are loaded
   List<Category>? categoryList = [];
   List<Category>? searchCategoryList = [];
   List<Category>? filteredcategoryList = [];
@@ -24,7 +25,8 @@ class CategoryProvider extends ChangeNotifier {
   int totalPages = 1;
 
   CategoryProvider() {
-    listAllCategory();
+    // Remove the automatic API call from constructor
+    // listAllCategory();
   }
 
   ViewCategory? get getViewCategory => viewCategory;
@@ -96,6 +98,20 @@ class CategoryProvider extends ChangeNotifier {
     String? filterParent,
     int? page,
   }) async {
+    // If categories are already loaded and no filtering is applied, return early
+    if (_isCategoriesLoaded && filterName == null && filterParent == null) {
+      return;
+    }
+
+    // If filtering is applied, we need to make a new API call regardless
+    if (filterName != null || filterParent != null) {
+      // Reset the loaded flag for filtered results
+      _isCategoriesLoaded = false;
+    }
+
+    isLoading = true;
+    notifyListeners();
+
     final queryParameters = <String, String>{
       'page': page.toString(),
     };
@@ -136,15 +152,34 @@ class CategoryProvider extends ChangeNotifier {
         // Assuming categoryDemo is still relevant
         categoryList!.insert(0, categoryDemo);
 
+        // Mark as loaded only if no filtering was applied
+        if (filterName == null && filterParent == null) {
+          _isCategoriesLoaded = true;
+        }
+
+        isLoading = false;
         notifyListeners();
       } else {
+        isLoading = false;
+        notifyListeners();
         throw Exception('Failed to load categories');
       }
     } catch (error) {
+      isLoading = false;
+      notifyListeners();
       // debugPrint('Error fetching categories: $error');
       rethrow;
     }
   }
+
+  // Add a method to force refresh categories (useful for manual refresh)
+  Future<void> refreshCategories() async {
+    _isCategoriesLoaded = false;
+    await listAllCategory();
+  }
+
+  // Add a getter to check if categories are loaded
+  bool get isCategoriesLoaded => _isCategoriesLoaded;
 
   Future<void> searchAllCategory({
     String? filterName,
@@ -213,9 +248,19 @@ class CategoryProvider extends ChangeNotifier {
     // debugPrint("VIEW  CATEGORY ");
 
     final url = Uri.parse("${APPUrl.viewCategoryListUrl}?id=$categoryId");
+
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
-      final response =
-          await http.get(url, headers: {'Content-Type': 'application/json'});
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
         // debugPrint(json.decode(response.body).toString());
@@ -262,10 +307,18 @@ class CategoryProvider extends ChangeNotifier {
 
     // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.addCategoryUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -367,10 +420,18 @@ class CategoryProvider extends ChangeNotifier {
     // debugPrint(apiBodyData.toString());
 
     final url = Uri.parse("${APPUrl.editCategoryUrl}/$categoryId");
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -393,11 +454,18 @@ class CategoryProvider extends ChangeNotifier {
     // debugPrint("FETCH PROP VALUES for category_id $categoryId");
     final url =
         Uri.parse("${APPUrl.fetchCategoryProps}?category_id=$categoryId");
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
 
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('Response status: ${response.statusCode}');
       if (response.statusCode == 200) {

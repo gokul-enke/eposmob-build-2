@@ -200,21 +200,35 @@ class CustomerTransaction {
     this.status,
   });
 
-  factory CustomerTransaction.fromJson(Map<String, dynamic> json) =>
-      CustomerTransaction(
-        id: json["id"],
-        orderId: json["order_id"],
-        paymentMethod: json["payment_method"],
-        date: json["date"],
-        type: json["type"],
-        referenceId: json["reference_id"],
-        transactionType: json["transaction_type"],
-        amount: json["amount"],
-        currency: json["currency"],
-        reference: json["reference"],
-        transactionComment: json["transaction_comment"],
-        status: json["status"],
-      );
+  factory CustomerTransaction.fromJson(Map<String, dynamic> json) {
+    // Handle payment_method which can be either String or List<String>
+    String? paymentMethod;
+    if (json["payment_method"] != null) {
+      if (json["payment_method"] is List) {
+        // If it's a list, join the elements with comma
+        List<dynamic> paymentMethods = json["payment_method"];
+        paymentMethod = paymentMethods.join(', ');
+      } else {
+        // If it's a string, use it directly
+        paymentMethod = json["payment_method"].toString();
+      }
+    }
+
+    return CustomerTransaction(
+      id: json["id"],
+      orderId: json["order_id"],
+      paymentMethod: paymentMethod,
+      date: json["date"],
+      type: json["type"],
+      referenceId: json["reference_id"],
+      transactionType: json["transaction_type"],
+      amount: json["amount"],
+      currency: json["currency"],
+      reference: json["reference"],
+      transactionComment: json["transaction_comment"],
+      status: json["status"],
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         "id": id,

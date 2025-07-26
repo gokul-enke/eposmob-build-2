@@ -1,15 +1,18 @@
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../models/supplier.dart';
 import '../resources/app_url.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SupplierProvider with ChangeNotifier {
   List<Supplier>? _supplierList;
   List<Supplier>? _allSuppliers = []; // Store all suppliers for local filtering
   bool _isLoading = false;
   Supplier? _selectedSupplier;
-  
+
   // Pagination properties
   int _currentPage = 1;
   int _totalPages = 1;
@@ -17,7 +20,7 @@ class SupplierProvider with ChangeNotifier {
   String? _filterName;
   String? _filterEmail;
   String? _filterPhone;
-  
+
   List<Supplier>? get supplierList => _supplierList;
   bool get isLoading => _isLoading;
   Supplier? get selectedSupplier => _selectedSupplier;
@@ -42,7 +45,7 @@ class SupplierProvider with ChangeNotifier {
     _selectedSupplier = null;
     notifyListeners();
   }
-  
+
   // Apply local pagination and filtering
   void applyFiltersLocally({
     String? supplierName,
@@ -66,46 +69,52 @@ class SupplierProvider with ChangeNotifier {
 
     // Apply filters
     List<Supplier> filteredList = [..._allSuppliers!];
-    
+
     if (supplierName != null && supplierName.isNotEmpty) {
-      filteredList = filteredList.where((supplier) => 
-        supplier.name.toLowerCase().contains(supplierName.toLowerCase())
-      ).toList();
+      filteredList = filteredList
+          .where((supplier) =>
+              supplier.name.toLowerCase().contains(supplierName.toLowerCase()))
+          .toList();
     }
     //Email filter
     if (supplierEmail != null && supplierEmail.isNotEmpty) {
-    filteredList = filteredList.where((supplier) => 
-      supplier.email.toLowerCase().contains(supplierEmail.toLowerCase())
-    ).toList();
-  }
+      filteredList = filteredList
+          .where((supplier) => supplier.email
+              .toLowerCase()
+              .contains(supplierEmail.toLowerCase()))
+          .toList();
+    }
 
-  //phone filter
-  if (supplierPhone != null && supplierPhone.isNotEmpty) {
-    filteredList = filteredList.where((supplier) => 
-      supplier.phone.toLowerCase().contains(supplierPhone.toLowerCase())
-    ).toList();
-  }
+    //phone filter
+    if (supplierPhone != null && supplierPhone.isNotEmpty) {
+      filteredList = filteredList
+          .where((supplier) => supplier.phone
+              .toLowerCase()
+              .contains(supplierPhone.toLowerCase()))
+          .toList();
+    }
 
     // Calculate pagination
     _totalPages = (filteredList.length / _itemsPerPage).ceil();
     _totalPages = _totalPages == 0 ? 1 : _totalPages;
-    
+
     // Ensure current page is valid
     if (_currentPage > _totalPages) {
       _currentPage = _totalPages;
     }
-    
+
     // Apply pagination
     int startIndex = (_currentPage - 1) * _itemsPerPage;
     int endIndex = startIndex + _itemsPerPage;
-    
+
     if (startIndex >= filteredList.length) {
       _supplierList = [];
     } else {
-      endIndex = endIndex > filteredList.length ? filteredList.length : endIndex;
+      endIndex =
+          endIndex > filteredList.length ? filteredList.length : endIndex;
       _supplierList = filteredList.sublist(startIndex, endIndex);
     }
-    
+
     notifyListeners();
   }
 
@@ -113,45 +122,45 @@ class SupplierProvider with ChangeNotifier {
   void resetFilters() {
     _filterName = null;
     _filterEmail = null;
-    _filterPhone = null;  
+    _filterPhone = null;
     _currentPage = 1;
-    
+
     if (_allSuppliers != null && _allSuppliers!.isNotEmpty) {
       // Apply pagination without any filters to show all suppliers
       _supplierList = [];
-      
+
       List<Supplier> filteredList = [..._allSuppliers!];
-      
+
       // Calculate pagination
       _totalPages = (filteredList.length / _itemsPerPage).ceil();
       _totalPages = _totalPages == 0 ? 1 : _totalPages;
-      
+
       // Apply pagination
       int startIndex = 0; // Start from first page
       int endIndex = startIndex + _itemsPerPage;
-      
+
       if (startIndex >= filteredList.length) {
         _supplierList = [];
       } else {
-        endIndex = endIndex > filteredList.length ? filteredList.length : endIndex;
+        endIndex =
+            endIndex > filteredList.length ? filteredList.length : endIndex;
         _supplierList = filteredList.sublist(startIndex, endIndex);
       }
     }
-    
+
     notifyListeners();
   }
 
   // Change pagei
-  
+
   void goToPage(int page) {
     if (page < 1 || page > _totalPages) return;
-    
+
     applyFiltersLocally(
-      supplierName: _filterName,
-      supplierEmail: _filterEmail,
-      supplierPhone: _filterPhone,
-      page: page
-    );
+        supplierName: _filterName,
+        supplierEmail: _filterEmail,
+        supplierPhone: _filterPhone,
+        page: page);
   }
 
   // Fetch all suppliers from API
@@ -168,28 +177,35 @@ class SupplierProvider with ChangeNotifier {
       urlString += '?supplier_name=$supplierName';
     }
     final url = Uri.parse(urlString);
-    
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(
         url,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
         },
       );
-      
+
       debugPrint('Supplier API Response status: ${response.statusCode}');
-      
+
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         SupplierResponse supplierResponse = SupplierResponse.fromJson(jsonData);
-        
+
         // Store all suppliers for local filtering and pagination
         _allSuppliers = supplierResponse.data;
         applyFiltersLocally(supplierName: supplierName);
-        
+
         debugPrint('Fetched ${_allSuppliers?.length ?? 0} suppliers');
-        
+
         _isLoading = false;
         notifyListeners();
         return _supplierList;
@@ -230,7 +246,14 @@ class SupplierProvider with ChangeNotifier {
     };
 
     final url = Uri.parse(APPUrl.getSuppliers);
-    
+
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.post(
         url,
@@ -238,12 +261,13 @@ class SupplierProvider with ChangeNotifier {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
         },
       );
-      
+
       _isLoading = false;
       notifyListeners();
-      
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Refresh the supplier list
         await fetchSuppliers(accessToken: accessToken);
@@ -263,4 +287,4 @@ class SupplierProvider with ChangeNotifier {
       };
     }
   }
-} 
+}

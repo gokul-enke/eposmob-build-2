@@ -283,7 +283,7 @@ class _SalesScreenState extends State<SalesScreen> {
 
   Widget _buildTableCell(String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
       child: Text(
         text,
         textAlign: TextAlign.center,
@@ -463,7 +463,7 @@ class _SalesScreenState extends State<SalesScreen> {
             ),
             child: Table(
               columnWidths: const {
-                0: FixedColumnWidth(0.7), // SI No
+                0: FixedColumnWidth(1), // SI No
                 1: FlexColumnWidth(2), // Order #
                 2: FlexColumnWidth(2), // Date
                 3: FlexColumnWidth(1.5), // Items
@@ -507,7 +507,7 @@ class _SalesScreenState extends State<SalesScreen> {
                   scrollDirection: Axis.vertical,
                   child: Table(
                     columnWidths: const {
-                      0: FixedColumnWidth(0.7), // SI No
+                      0: FixedColumnWidth(1), // SI No
                       1: FlexColumnWidth(2), // Order #
                       2: FlexColumnWidth(2), // Date
                       3: FlexColumnWidth(1.5), // Items

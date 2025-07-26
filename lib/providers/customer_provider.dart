@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../resources/app_url.dart';
 
@@ -167,6 +168,13 @@ class CustomerProvider extends ChangeNotifier {
     if (filterAgeRange != null && filterAgeRange.isNotEmpty) {
       queryParameters['filter_age_range'] = filterAgeRange;
     }
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
 
     final url = Uri.parse(APPUrl.customerListUrl)
         .replace(queryParameters: queryParameters);
@@ -177,7 +185,8 @@ class CustomerProvider extends ChangeNotifier {
 
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
       });
       debugPrint('API response status code: ${response.statusCode}');
       debugPrint(
@@ -256,13 +265,21 @@ class CustomerProvider extends ChangeNotifier {
     };
     debugPrint("API request body: ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.addCustomerUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       debugPrint("Making API call to ${url.toString()}");
       final response = await http.post(url,
           body: json.encode(apiBodyData),
           headers: {
             'Authorization': 'Bearer $accessToken',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Tenant': apiKey,
           });
       debugPrint('API response status code: ${response.statusCode}');
       debugPrint('API response body: ${response.body}');
@@ -337,13 +354,21 @@ class CustomerProvider extends ChangeNotifier {
     };
     debugPrint("API request body: ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.updateCustomerUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       debugPrint("Making API call to ${url.toString()}");
       final response = await http.post(url,
           body: json.encode(apiBodyData),
           headers: {
             'Authorization': 'Bearer $accessToken',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Tenant': apiKey,
           });
       debugPrint('API response status code: ${response.statusCode}');
       debugPrint('API response body: ${response.body}');
@@ -398,14 +423,21 @@ class CustomerProvider extends ChangeNotifier {
       String accessToken, String phoneNumber, BuildContext context) async {
     final url =
         Uri.parse('${APPUrl.customerListUrl}?filter_phone=$phoneNumber');
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
 
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       // debugPrint('accessToken: $accessToken');
       // debugPrint('phoneNumber: $phoneNumber');
 
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
       });
 
       // debugPrint('response: ${response.toString()}');
@@ -433,13 +465,21 @@ class CustomerProvider extends ChangeNotifier {
     final url =
         Uri.parse('${APPUrl.customerListUrl}?filter_name=$customerName');
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       // debugPrint('accessToken: $accessToken');
       // debugPrint('phoneNumber: $phoneNumber');
 
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
       });
 
       // debugPrint('response: ${response.toString()}');
@@ -466,13 +506,21 @@ class CustomerProvider extends ChangeNotifier {
       String accessToken, int userId, BuildContext context) async {
     final url = Uri.parse('${APPUrl.userDetailsUrl}/$userId');
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       // debugPrint('accessToken: $accessToken');
       // debugPrint('phoneNumber: $userId');
 
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
       });
 
       // debugPrint('response: ${response.toString()}');

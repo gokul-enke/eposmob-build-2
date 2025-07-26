@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/get_invoice_account_type.dart';
@@ -121,14 +123,13 @@ class InvoiceProvider extends ChangeNotifier {
         page: page);
   }
 
-  void applyReceiptFilters({
-    String? name,
-    String? receiptNumber,
-    String? paymentReference,
-    String? receiptStatus,
-    String? paymentMethod,
-    int page = 1
-    }) {
+  void applyReceiptFilters(
+      {String? name,
+      String? receiptNumber,
+      String? paymentReference,
+      String? receiptStatus,
+      String? paymentMethod,
+      int page = 1}) {
     _receiptFilterName = name;
     _receiptFilterStatus = receiptStatus;
     _receiptFilterPaymentReference = paymentReference;
@@ -137,13 +138,12 @@ class InvoiceProvider extends ChangeNotifier {
 
     _receiptCurrentPage = page;
     applyReceiptFiltersLocally(
-      filterName: name, 
-      filterReceiptNumber: receiptNumber,
-      filterPaymentReference: paymentReference,
-      filterStatus: receiptStatus,
-      filterPaymentMethod: paymentMethod,
-      page: page
-      );
+        filterName: name,
+        filterReceiptNumber: receiptNumber,
+        filterPaymentReference: paymentReference,
+        filterStatus: receiptStatus,
+        filterPaymentMethod: paymentMethod,
+        page: page);
   }
 
   void resetFilters() {
@@ -269,14 +269,13 @@ class InvoiceProvider extends ChangeNotifier {
   }
 
   // Apply receipt filters locally
-  void applyReceiptFiltersLocally({
-    String? filterName,
-    String? filterReceiptNumber,
-    String? filterPaymentReference,
-    String? filterStatus,
-    String? filterPaymentMethod, 
-    int page = 1
-    }) {
+  void applyReceiptFiltersLocally(
+      {String? filterName,
+      String? filterReceiptNumber,
+      String? filterPaymentReference,
+      String? filterStatus,
+      String? filterPaymentMethod,
+      int page = 1}) {
     debugPrint(
         "applyReceiptFiltersLocally: filterName=$filterName, page=$page");
     debugPrint("_allReceipts: ${_allReceipts?.length ?? 0} receipts");
@@ -326,14 +325,16 @@ class InvoiceProvider extends ChangeNotifier {
     // Apply status filter
     if (filterStatus != null && filterStatus.isNotEmpty) {
       filteredReceipts = filteredReceipts.where((receipt) {
-        return receipt.receiptStatus.toLowerCase() == filterStatus.toLowerCase();
+        return receipt.receiptStatus.toLowerCase() ==
+            filterStatus.toLowerCase();
       }).toList();
     }
 
     // Apply payment method filter
     if (filterPaymentMethod != null && filterPaymentMethod.isNotEmpty) {
       filteredReceipts = filteredReceipts.where((receipt) {
-        return receipt.paymentMethod.toLowerCase() == filterPaymentMethod.toLowerCase();
+        return receipt.paymentMethod.toLowerCase() ==
+            filterPaymentMethod.toLowerCase();
       }).toList();
     }
 
@@ -444,10 +445,18 @@ class InvoiceProvider extends ChangeNotifier {
     // debugPrint("LIST ALL listAllPaymentList ");
 
     final url = Uri.parse(APPUrl.listTransactionType);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -469,10 +478,18 @@ class InvoiceProvider extends ChangeNotifier {
     // debugPrint("LIST ALL listAllInvoiceAccountTypes ");
 
     final url = Uri.parse(APPUrl.listInvoiceAccountType);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -496,10 +513,18 @@ class InvoiceProvider extends ChangeNotifier {
     // debugPrint("LIST ALL listVoucherAccountType ");
 
     final url = Uri.parse(APPUrl.listVoucherAccountType);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -521,10 +546,18 @@ class InvoiceProvider extends ChangeNotifier {
     // debugPrint("LIST ALL listUsersList ");
 
     final url = Uri.parse(APPUrl.listUser);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -574,10 +607,18 @@ class InvoiceProvider extends ChangeNotifier {
           };
     // debugPrint("voucher and invoice $apiBodyData");
     final url = Uri.parse(APPUrl.addInvoiceorVoucher);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -606,10 +647,18 @@ class InvoiceProvider extends ChangeNotifier {
         : type == "Cr"
             ? Uri.parse("${APPUrl.listAllTransaction}?type=Cr")
             : Uri.parse("${APPUrl.listAllTransaction}?type=Dr");
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         //'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -636,10 +685,18 @@ class InvoiceProvider extends ChangeNotifier {
     // debugPrint("CALL DETAILS OF TRANSACTION / INVOICE/ VOUCHER  API");
     final url = Uri.parse("${APPUrl.detailsOfTransaction}/$id");
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         //'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -674,12 +731,19 @@ class InvoiceProvider extends ChangeNotifier {
     final uri =
         Uri.parse(APPUrl.listAllInvoices).replace(queryParameters: queryParams);
     debugPrint("Fetching invoices from: $uri");
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
 
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(
         uri,
         headers: {
           'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
         },
       );
 
@@ -726,9 +790,17 @@ class InvoiceProvider extends ChangeNotifier {
     // debugPrint("CALL DETAILS OF INVOICE API");
     final url = Uri.parse("${APPUrl.detailsOfInvoice}/$id");
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('Response status: ${response.statusCode}');
 
@@ -773,10 +845,18 @@ class InvoiceProvider extends ChangeNotifier {
     try {
       debugPrint(
           "🔍 Token: ${accessToken.substring(0, min(10, accessToken.length))}...");
+      // Get API key from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
       final response = await http.get(
         url,
         headers: {
           'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
         },
       );
       debugPrint("🔍 Response status: ${response.statusCode}");
@@ -838,10 +918,17 @@ class InvoiceProvider extends ChangeNotifier {
     // debugPrint("CALL DETAILS OF RECEIPT API");
     final url = Uri.parse(
         "${APPUrl.detailsOfReceipt}/$id"); // Update the URL to point to receipt details
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
 
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('Response status: ${response.statusCode}');
 

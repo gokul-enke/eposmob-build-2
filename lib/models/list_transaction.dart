@@ -146,7 +146,7 @@ class ListTransaction {
       ListTransaction(
         id: json["id"],
         orderId: json["order_id"],
-        paymentMethod: json["payment_method"],
+        paymentMethod: _parsePaymentMethod(json["payment_method"]),
         date: json["date"], // Keeps the date as a string
         type: json["type"],
         referenceId:
@@ -166,6 +166,16 @@ class ListTransaction {
             : DateTime.parse(json["updated_at"]),
         customerName: json["customer_name"],
       );
+
+  // Helper method to handle payment_method which can be String or List<String>
+  static String? _parsePaymentMethod(dynamic paymentMethod) {
+    if (paymentMethod == null) return null;
+    if (paymentMethod is String) return paymentMethod;
+    if (paymentMethod is List && paymentMethod.isNotEmpty) {
+      return paymentMethod.join(', ');
+    }
+    return null;
+  }
 
   Map<String, dynamic> toJson() => {
         "id": id,

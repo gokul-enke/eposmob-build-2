@@ -9,6 +9,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
+import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/screens/login/forgot_password.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -438,6 +439,21 @@ class _SignInScreenState extends State<SignInScreen> {
                                               debugPrint(
                                                   "Warning: Failed to load document configurations during login: $e");
                                               // Don't block login if document config fails
+                                            }
+
+                                            // Load categories during login
+                                            try {
+                                              final categoryProvider = Provider
+                                                  .of<CategoryProvider>(
+                                                      context,
+                                                      listen: false);
+                                              await categoryProvider.listAllCategory();
+                                              debugPrint(
+                                                  "Categories loaded successfully during login");
+                                            } catch (e) {
+                                              debugPrint(
+                                                  "Warning: Failed to load categories during login: $e");
+                                              // Don't block login if categories fail
                                             }
 
                                             Navigator.pop(context);
