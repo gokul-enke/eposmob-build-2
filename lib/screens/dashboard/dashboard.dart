@@ -117,9 +117,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: 20),
                     _buildTodaysSales(),
                     _buildSalesCards(),
-                    const SizedBox(height: 10),
-                    // _buildSalesOverview(),
-                    // _buildQuickAccess(),
+                    const SizedBox(height: 20),
+                    _buildSalesOverview(),
+                    const SizedBox(height: 20),
+                    _buildQuickAccess(),
                   ],
                 ),
               ),
@@ -335,64 +336,196 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildSalesOverview() {
-    return SizedBox(
-      height: 300,
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 15, top: 15),
-                  child: Text(
-                    "Sales Overview",
-                    style: buildCustomStyle(
-                      FontWeightManager.semiBold,
-                      FontSize.s15,
-                      0.23,
-                      ColorManager.textColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                BuildBoxShadowContainer(
-                  margin: const EdgeInsets.all(15),
-                  padding: const EdgeInsets.all(15),
-                  height: 200,
-                  circleRadius: 7,
-                  child: _buildSalesOverviewChart(),
-                ),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Text(
+            "Analytics Overview",
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s15,
+              0.23,
+              ColorManager.textColor,
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 15, top: 15),
-                  child: Text(
-                    "Analytics",
-                    style: buildCustomStyle(
-                      FontWeightManager.semiBold,
-                      FontSize.s15,
-                      0.23,
-                      ColorManager.textColor,
-                    ),
+        ),
+        const SizedBox(height: 15),
+        SizedBox(
+          height: 300,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: BuildBoxShadowContainer(
+                  margin: const EdgeInsets.symmetric(horizontal: 15),
+                  padding: const EdgeInsets.all(15),
+                  height: 300,
+                  circleRadius: 7,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Sales Trend",
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s14,
+                              0.23,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              "Last 7 Days",
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s12,
+                                0.1,
+                                ColorManager.kPrimaryColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Expanded(child: _buildSalesOverviewChart()),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 10),
-                BuildBoxShadowContainer(
-                  margin: const EdgeInsets.all(15),
+              ),
+              Expanded(
+                child: BuildBoxShadowContainer(
+                  margin: const EdgeInsets.only(right: 15),
                   padding: const EdgeInsets.all(15),
-                  height: 200,
+                  height: 300,
                   circleRadius: 7,
-                  child: _buildAnalyticsChart(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Sales Distribution",
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s14,
+                              0.23,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                          Icon(Icons.more_vert, color: ColorManager.textColor.withOpacity(0.5)),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Expanded(child: _buildAnalyticsChart()),
+                    ],
+                  ),
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSalesOverviewChart() {
+    // Dummy data for the line chart
+    final List<FlSpot> dummySpots = [
+      const FlSpot(0, 10),
+      const FlSpot(1, 15),
+      const FlSpot(2, 13),
+      const FlSpot(3, 17),
+      const FlSpot(4, 14),
+      const FlSpot(5, 16),
+      const FlSpot(6, 19),
+    ];
+
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: 5,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Colors.grey.withOpacity(0.2),
+              strokeWidth: 1,
+            );
+          },
+        ),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              interval: 5,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  '${value.toInt()}k',
+                  style: TextStyle(
+                    color: ColorManager.textColor.withOpacity(0.5),
+                    fontSize: 12,
+                  ),
+                );
+              },
+              reservedSize: 35,
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                if (value.toInt() < days.length) {
+                  return Text(
+                    days[value.toInt()],
+                    style: TextStyle(
+                      color: ColorManager.textColor.withOpacity(0.5),
+                      fontSize: 12,
+                    ),
+                  );
+                }
+                return const Text('');
+              },
+            ),
+          ),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        borderData: FlBorderData(show: false),
+        minY: 0,
+        maxY: 20,
+        lineBarsData: [
+          LineChartBarData(
+            spots: dummySpots,
+            isCurved: true,
+            color: ColorManager.kPrimaryColor,
+            barWidth: 3,
+            isStrokeCapRound: true,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) {
+                return FlDotCirclePainter(
+                  radius: 4,
+                  color: Colors.white,
+                  strokeWidth: 2,
+                  strokeColor: ColorManager.kPrimaryColor,
+                );
+              },
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              color: ColorManager.kPrimaryColor.withOpacity(0.1),
             ),
           ),
         ],
@@ -400,162 +533,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildSalesOverviewChart() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: SizedBox(
-        height: 200,
-        child: LineChart(
-          LineChartData(
-            gridData: const FlGridData(show: false),
-            titlesData: FlTitlesData(
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  getTitlesWidget: (value, meta) {
-                    return Text(
-                      value.toInt().toString(),
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                      ),
-                    );
-                  },
-                  reservedSize: 30,
-                  interval: 5,
-                ),
-              ),
-              topTitles:
-                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles:
-                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  getTitlesWidget: (value, meta) {
-                    if (value.toInt() < graphData.length) {
-                      return Text(
-                        '${graphData[value.toInt()].date.day}/${graphData[value.toInt()].date.month}',
-                        style: const TextStyle(fontSize: 10),
-                      );
-                    }
-                    return const Text('');
-                  },
-                ),
-              ),
-            ),
-            borderData: FlBorderData(show: false),
-            minY: 0,
-            maxY: 20,
-            lineBarsData: [
-              LineChartBarData(
-                spots: graphData.asMap().entries.map((entry) {
-                  return FlSpot(
-                      entry.key.toDouble(), entry.value.count.toDouble());
-                }).toList(),
-                isCurved: true,
-                color: Colors.blue,
-                barWidth: 3,
-                isStrokeCapRound: true,
-                dotData: const FlDotData(show: true),
-                belowBarData: BarAreaData(show: false),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildAnalyticsChart() {
-    return SizedBox(
-      height: 200,
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          maxY: 20,
-          barTouchData: BarTouchData(
-            enabled: false,
-            touchTooltipData: BarTouchTooltipData(
-              tooltipPadding: EdgeInsets.zero,
-              tooltipMargin: 8,
-              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                return BarTooltipItem(
-                  chartData[groupIndex].count.toString(),
-                  const TextStyle(
-                    color: ColorManager.kPrimaryColor,
-                    fontWeight: FontWeight.bold,
+    // Dummy data for the bar chart
+    final List<double> dummyData = [8, 12, 15, 10, 13];
+    final List<String> categories = ['Food', 'Drinks', 'Snacks', 'Dessert', 'Other'];
+
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        maxY: 20,
+        barTouchData: BarTouchData(enabled: false),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              interval: 5,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  '${value.toInt()}k',
+                  style: TextStyle(
+                    color: ColorManager.textColor.withOpacity(0.5),
+                    fontSize: 10,
                   ),
                 );
               },
+              reservedSize: 30,
             ),
           ),
-          titlesData: FlTitlesData(
-            show: true,
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 30,
-                getTitlesWidget: (double value, TitleMeta meta) {
-                  if (value.toInt() >= 0 && value.toInt() < chartData.length) {
-                    return SideTitleWidget(
-                      axisSide: meta.axisSide,
-                      space: 4,
-                      child: Text(
-                        DateFormat('dd/MM')
-                            .format(chartData[value.toInt()].date),
-                        style: const TextStyle(
-                          color: ColorManager.textColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10,
-                        ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                if (value.toInt() < categories.length) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      categories[value.toInt()],
+                      style: TextStyle(
+                        color: ColorManager.textColor.withOpacity(0.5),
+                        fontSize: 10,
                       ),
-                    );
-                  }
-                  return const SizedBox();
-                },
-              ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (double value, TitleMeta meta) {
-                  return Text(
-                    value.toInt().toString(),
-                    style: const TextStyle(
-                      color: ColorManager.textColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
                     ),
                   );
-                },
-                reservedSize: 40,
-                interval: 5,
-              ),
-            ),
-            topTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          borderData: FlBorderData(show: false),
-          barGroups: List.generate(
-            chartData.length,
-            (index) => BarChartGroupData(
-              x: index,
-              barRods: [
-                BarChartRodData(
-                  toY: chartData[index].count.toDouble(),
-                  color: ColorManager.kPrimaryColor,
-                  width: 16,
-                )
-              ],
-              showingTooltipIndicators: [0],
+                }
+                return const Text('');
+              },
             ),
           ),
-          gridData: const FlGridData(show: false),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: 5,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Colors.grey.withOpacity(0.2),
+              strokeWidth: 1,
+            );
+          },
+        ),
+        borderData: FlBorderData(show: false),
+        barGroups: dummyData.asMap().entries.map((entry) {
+          return BarChartGroupData(
+            x: entry.key,
+            barRods: [
+              BarChartRodData(
+                toY: entry.value,
+                color: ColorManager.kPrimaryColor,
+                width: 12,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
+              ),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
@@ -564,10 +616,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Quick Access",
-          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s15,
-              0.23, ColorManager.textColor),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Text(
+            "Quick Access",
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s15,
+                0.23, ColorManager.textColor),
+          ),
         ),
         const SizedBox(height: 10),
         Row(

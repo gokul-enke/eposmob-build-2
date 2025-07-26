@@ -955,30 +955,47 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              child: BuildBoxShadowContainer(
-                circleRadius: 16,
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    Row(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Section
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Row(
+                        Row(
                           children: [
-                            Icon(
-                              Icons.print_rounded,
-                              color: ColorManager.kPrimaryColor,
-                              size: 24,
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.print_rounded,
+                                color: ColorManager.kPrimaryColor,
+                                size: 28,
+                              ),
                             ),
-                            SizedBox(width: 12),
-                            Text(
+                            const SizedBox(width: 16),
+                            const Text(
                               'Printer Settings',
                               style: TextStyle(
                                 color: ColorManager.kTitleTextColor,
@@ -993,18 +1010,18 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                             CustomRoundButton(
                               fct: () => {clearLocalStorageAndLogout()},
                               title: 'Clear Local Storage',
-                              height: 40,
+                              height: 44,
                               width: 220,
                               fontSize: 14,
                               borderColor: Colors.orange,
                               boxColor: Colors.orange,
                               textColor: Colors.white,
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 16),
                             CustomRoundButton(
                               fct: () => {clearDefaultPrinter()},
                               title: 'Clear Default Printer',
-                              height: 40,
+                              height: 44,
                               width: 200,
                               fontSize: 14,
                               borderColor: ColorManager.kButtonRed,
@@ -1015,393 +1032,559 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                  ),
+                  const SizedBox(height: 24),
 
-                    // Current Default Printer Section
-                    if (selectedPrinter != null)
-                      BuildBoxShadowContainer(
-                        circleRadius: 7,
-                        alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 10),
-                        color: Colors.white,
+                  // Current Default Printer Section
+                  // if (selectedPrinter != null)
+                  //   Container(
+                  //     padding: const EdgeInsets.all(24),
+                  //     decoration: BoxDecoration(
+                  //       color: Colors.white,
+                  //       borderRadius: BorderRadius.circular(12),
+                  //       boxShadow: [
+                  //         BoxShadow(
+                  //           color: Colors.black.withOpacity(0.03),
+                  //           blurRadius: 8,
+                  //           offset: const Offset(0, 2),
+                  //         ),
+                  //       ],
+                  //     ),
+                  //     child: Column(
+                  //       crossAxisAlignment: CrossAxisAlignment.start,
+                  //       children: [
+                  //         Row(
+                  //           children: [
+                  //             Container(
+                  //               padding: const EdgeInsets.all(8),
+                  //               decoration: BoxDecoration(
+                  //                 color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                  //                 borderRadius: BorderRadius.circular(8),
+                  //               ),
+                  //               child: const Icon(
+                  //                 Icons.check_circle_rounded,
+                  //                 color: ColorManager.kPrimaryColor,
+                  //                 size: 20,
+                  //               ),
+                  //             ),
+                  //             const SizedBox(width: 12),
+                  //             const Text(
+                  //               'Current Default Printer',
+                  //               style: TextStyle(
+                  //                 color: ColorManager.kPrimaryColor,
+                  //                 fontSize: 18,
+                  //                 fontWeight: FontWeight.bold,
+                  //               ),
+                  //             ),
+                  //           ],
+                  //         ),
+                  //         const SizedBox(height: 20),
+                  //         Container(
+                  //           padding: const EdgeInsets.all(20),
+                  //           decoration: BoxDecoration(
+                  //             color: ColorManager.kPrimaryColor.withOpacity(0.04),
+                  //             borderRadius: BorderRadius.circular(12),
+                  //           ),
+                  //           child: Row(
+                  //             children: [
+                  //               Container(
+                  //                 padding: const EdgeInsets.all(16),
+                  //                 decoration: BoxDecoration(
+                  //                   color: Colors.white,
+                  //                   borderRadius: BorderRadius.circular(12),
+                  //                 ),
+                  //                 child: const Icon(
+                  //                   Icons.print,
+                  //                   color: ColorManager.kPrimaryColor,
+                  //                   size: 32,
+                  //                 ),
+                  //               ),
+                  //               const SizedBox(width: 20),
+                  //               Expanded(
+                  //                 child: Column(
+                  //                   crossAxisAlignment: CrossAxisAlignment.start,
+                  //                   children: [
+                  //                     Text(
+                  //                       selectedPrinter!.deviceName ?? 'Unknown Printer',
+                  //                       style: const TextStyle(
+                  //                         color: ColorManager.kTitleTextColor,
+                  //                         fontSize: 20,
+                  //                         fontWeight: FontWeight.bold,
+                  //                       ),
+                  //                     ),
+                  //                     const SizedBox(height: 8),
+                  //                     Container(
+                  //                       padding: const EdgeInsets.symmetric(
+                  //                         horizontal: 12,
+                  //                         vertical: 6,
+                  //                       ),
+                  //                       decoration: BoxDecoration(
+                  //                         color: Colors.white,
+                  //                         borderRadius: BorderRadius.circular(20),
+                  //                       ),
+                  //                       child: Text(
+                  //                         'Type: ${selectedPrinter!.typePrinter}',
+                  //                         style: TextStyle(
+                  //                           color: ColorManager.kPrimaryColor,
+                  //                           fontSize: 14,
+                  //                           fontWeight: FontWeight.w500,
+                  //                         ),
+                  //                       ),
+                  //                     ),
+                  //                   ],
+                  //                 ),
+                  //               ),
+                  //             ],
+                  //           ),
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   ),
+
+                  // if (selectedPrinter != null) const SizedBox(height: 24),
+
+                  // Settings Grid
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Paper Size & Font Style Column
+                      Expanded(
+                        flex: 2,
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Current Default Printer',
-                              style: TextStyle(
-                                color: ColorManager.kPrimaryColor,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                            // Paper Size Selection
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.03),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: ColorManager.kPrimaryColor
-                                        .withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding: const EdgeInsets.all(12),
-                                  child: const Icon(
-                                    Icons.print,
-                                    color: ColorManager.kPrimaryColor,
-                                    size: 28,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
                                     children: [
-                                      Text(
-                                        selectedPrinter!.deviceName ??
-                                            'Unknown Printer',
-                                        style: const TextStyle(
-                                          color: ColorManager.kTitleTextColor,
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.description_rounded,
+                                          color: ColorManager.kPrimaryColor,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text(
+                                        'Paper Size Settings',
+                                        style: TextStyle(
+                                          color: ColorManager.kPrimaryColor,
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Type: ${selectedPrinter!.typePrinter}',
-                                        style: const TextStyle(
-                                          color: ColorManager.kGreyColor,
-                                          fontSize: 14,
-                                        ),
-                                      ),
                                     ],
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 24),
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[50],
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Text(
+                                          'Paper Size:',
+                                          style: TextStyle(
+                                            color: ColorManager.kTitleTextColor,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: DropdownButton<String>(
+                                              value: selectedPaperSize,
+                                              isExpanded: true,
+                                              underline: const SizedBox(),
+                                              items: paperSizes.map((String size) {
+                                                return DropdownMenuItem<String>(
+                                                  value: size,
+                                                  child: Text(size),
+                                                );
+                                              }).toList(),
+                                              onChanged: (String? newValue) {
+                                                if (newValue != null) {
+                                                  setState(() {
+                                                    selectedPaperSize = newValue;
+                                                  });
+                                                  _saveDefaultPaperSize(newValue);
+                                                }
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(height: 24),
+
+                            // Font Style Selection
+                            // Container(
+                            //   padding: const EdgeInsets.all(24),
+                            //   decoration: BoxDecoration(
+                            //     color: Colors.white,
+                            //     borderRadius: BorderRadius.circular(12),
+                            //     boxShadow: [
+                            //       BoxShadow(
+                            //         color: Colors.black.withOpacity(0.03),
+                            //         blurRadius: 8,
+                            //         offset: const Offset(0, 2),
+                            //       ),
+                            //     ],
+                            //   ),
+                            //   child: Column(
+                            //     crossAxisAlignment: CrossAxisAlignment.start,
+                            //     children: [
+                            //       Row(
+                            //         children: [
+                            //           Container(
+                            //             padding: const EdgeInsets.all(8),
+                            //             decoration: BoxDecoration(
+                            //               color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                            //               borderRadius: BorderRadius.circular(8),
+                            //             ),
+                            //             child: const Icon(
+                            //               Icons.font_download_rounded,
+                            //               color: ColorManager.kPrimaryColor,
+                            //               size: 20,
+                            //             ),
+                            //           ),
+                            //           const SizedBox(width: 12),
+                            //           const Text(
+                            //             'Font Style Settings',
+                            //             style: TextStyle(
+                            //               color: ColorManager.kPrimaryColor,
+                            //               fontSize: 18,
+                            //               fontWeight: FontWeight.bold,
+                            //             ),
+                            //           ),
+                            //         ],
+                            //       ),
+                            //       const SizedBox(height: 24),
+                            //       Container(
+                            //         padding: const EdgeInsets.all(16),
+                            //         decoration: BoxDecoration(
+                            //           color: Colors.grey[50],
+                            //           borderRadius: BorderRadius.circular(12),
+                            //         ),
+                            //         child: Row(
+                            //           children: [
+                            //             const Text(
+                            //               'Font Style:',
+                            //               style: TextStyle(
+                            //                 color: ColorManager.kTitleTextColor,
+                            //                 fontSize: 16,
+                            //                 fontWeight: FontWeight.w500,
+                            //               ),
+                            //             ),
+                            //             const SizedBox(width: 16),
+                            //             Expanded(
+                            //               child: Container(
+                            //                 padding: const EdgeInsets.symmetric(horizontal: 16),
+                            //                 decoration: BoxDecoration(
+                            //                   color: Colors.white,
+                            //                   borderRadius: BorderRadius.circular(8),
+                            //                 ),
+                            //                 child: DropdownButton<String>(
+                            //                   value: selectedFontStyle,
+                            //                   isExpanded: true,
+                            //                   underline: const SizedBox(),
+                            //                   items: fontStyles.map((String style) {
+                            //                     return DropdownMenuItem<String>(
+                            //                       value: style,
+                            //                       child: Text(style),
+                            //                     );
+                            //                   }).toList(),
+                            //                   onChanged: (String? newValue) {
+                            //                     if (newValue != null) {
+                            //                       setState(() {
+                            //                         selectedFontStyle = newValue;
+                            //                       });
+                            //                       _saveDefaultFontStyle(newValue);
+                            //                     }
+                            //                   },
+                            //                 ),
+                            //               ),
+                            //             ),
+                            //           ],
+                            //         ),
+                            //       ),
+                            //       const SizedBox(height: 16),
+                            //       Container(
+                            //         padding: const EdgeInsets.all(12),
+                            //         decoration: BoxDecoration(
+                            //           color: Colors.blue[50],
+                            //           borderRadius: BorderRadius.circular(8),
+                            //         ),
+                            //         child: Row(
+                            //           children: [
+                            //             Icon(
+                            //               Icons.info_outline_rounded,
+                            //               color: Colors.blue[700],
+                            //               size: 20,
+                            //             ),
+                            //             const SizedBox(width: 12),
+                            //             Expanded(
+                            //               child: Text(
+                            //                 'Select a font style and print a sample receipt to test how it looks.',
+                            //                 style: TextStyle(
+                            //                   color: Colors.blue[700],
+                            //                   fontSize: 14,
+                            //                 ),
+                            //               ),
+                            //             ),
+                            //           ],
+                            //         ),
+                            //       ),
+                            //     ],
+                            //   ),
+                            // ),
                           ],
                         ),
                       ),
+                      const SizedBox(width: 24),
 
-                    const SizedBox(height: 16),
-
-                    // Paper Size Selection
-                    BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 10),
-                      color: Colors.white,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Default Paper Size',
-                            style: TextStyle(
-                              color: ColorManager.kPrimaryColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              const Text(
-                                'Paper Size:',
-                                style: TextStyle(
-                                  color: ColorManager.kTitleTextColor,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: Colors.grey[300]!),
-                                ),
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8),
-                                child: DropdownButton<String>(
-                                  value: selectedPaperSize,
-                                  underline: const SizedBox(),
-                                  items: paperSizes.map((String size) {
-                                    return DropdownMenuItem<String>(
-                                      value: size,
-                                      child: Text(size),
-                                    );
-                                  }).toList(),
-                                  onChanged: (String? newValue) {
-                                    if (newValue != null) {
-                                      setState(() {
-                                        selectedPaperSize = newValue;
-                                      });
-                                      _saveDefaultPaperSize(newValue);
-                                    }
-                                  },
-                                ),
+                      // Available Printers Section
+                      Expanded(
+                        flex: 3,
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Font Style Selection & Sample Print
-                    BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 10),
-                      color: Colors.white,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Font Style & Sample Print',
-                                style: TextStyle(
-                                  color: ColorManager.kPrimaryColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              // CustomRoundButton(
-                              //   fct: () => _printSample(),
-                              //   title: 'Print Sample',
-                              //   height: 36,
-                              //   width: 120,
-                              //   fontSize: 12,
-                              //   borderColor: ColorManager.kPrimaryColor,
-                              //   boxColor: ColorManager.kPrimaryColor,
-                              //   textColor: Colors.white,
-                              // ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              const Text(
-                                'Font Style:',
-                                style: TextStyle(
-                                  color: ColorManager.kTitleTextColor,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: Colors.grey[300]!),
-                                ),
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8),
-                                child: DropdownButton<String>(
-                                  value: selectedFontStyle,
-                                  underline: const SizedBox(),
-                                  items: fontStyles.map((String style) {
-                                    return DropdownMenuItem<String>(
-                                      value: style,
-                                      child: Text(style),
-                                    );
-                                  }).toList(),
-                                  onChanged: (String? newValue) {
-                                    if (newValue != null) {
-                                      setState(() {
-                                        selectedFontStyle = newValue;
-                                      });
-                                      _saveDefaultFontStyle(newValue);
-                                    }
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Select a font style and print a sample receipt with dummy data to test how it looks on your printer.',
-                            style: TextStyle(
-                              color: ColorManager.kGreyColor.withOpacity(0.8),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Available Printers Section
-                    BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 10),
-                      color: Colors.white,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Available Printers',
-                                style: TextStyle(
-                                  color: ColorManager.kPrimaryColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              CustomRoundButton(
-                                fct: () =>
-                                    _isScanning ? null : _checkPermissions(),
-                                title: _isScanning ? 'Scanning...' : 'Scan',
-                                height: 36,
-                                width: 100,
-                                fontSize: 12,
-                                borderColor: _isScanning
-                                    ? ColorManager.kGreyColor
-                                    : ColorManager.kPrimaryColor,
-                                boxColor: _isScanning
-                                    ? ColorManager.kGreyColor
-                                    : ColorManager.kPrimaryColor,
-                                textColor: Colors.white,
-                                isLoading: _isScanning,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _isScanning
-                                ? 'Scanning for printers...'
-                                : '${devices.length} devices found',
-                            style: const TextStyle(
-                              color: ColorManager.kGreyColor,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Printers List
-                          devices.isEmpty
-                              ? Container(
-                                  padding: const EdgeInsets.all(20),
-                                  child: Column(
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
                                     children: [
-                                      const Icon(
-                                        Icons.print_disabled,
-                                        size: 48,
-                                        color: ColorManager.kGreyColor,
-                                      ),
-                                      const SizedBox(height: 12),
-                                      const Text(
-                                        'No printers found',
-                                        style: TextStyle(
-                                          color: ColorManager.kGreyColor,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500,
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.devices_rounded,
+                                          color: ColorManager.kPrimaryColor,
+                                          size: 20,
                                         ),
                                       ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Tap the scan button to search for printers',
+                                      const SizedBox(width: 12),
+                                      const Text(
+                                        'Available Printers',
                                         style: TextStyle(
-                                          color: ColorManager.kGreyColor
-                                              .withOpacity(0.8),
-                                          fontSize: 14,
+                                          color: ColorManager.kPrimaryColor,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                     ],
                                   ),
-                                )
-                              : ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: devices.length,
-                                  itemBuilder: (context, index) {
-                                    final printer = devices[index];
-                                    final isSelected =
-                                        selectedPrinter?.deviceName ==
-                                                printer.deviceName &&
-                                            selectedPrinter?.address ==
-                                                printer.address;
-
-                                    return Container(
-                                      margin: const EdgeInsets.only(bottom: 8),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: isSelected
-                                            ? Border.all(
-                                                color:
-                                                    ColorManager.kPrimaryColor,
-                                                width: 2)
-                                            : Border.all(
-                                                color: Colors.grey[300]!),
-                                        color: isSelected
-                                            ? ColorManager.kPrimaryColor
-                                                .withOpacity(0.1)
-                                            : Colors.grey[50],
-                                      ),
-                                      child: ListTile(
-                                        leading: Icon(
-                                          Icons.print,
-                                          color: isSelected
-                                              ? ColorManager.kPrimaryColor
-                                              : ColorManager.kGreyColor,
-                                          size: 28,
-                                        ),
-                                        title: Text(
-                                          printer.deviceName ??
-                                              'Unknown device',
-                                          style: TextStyle(
-                                            color: ColorManager.kTitleTextColor,
-                                            fontWeight: isSelected
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                        subtitle: Text(
-                                          printer.address ??
-                                              printer.typePrinter,
-                                          style: const TextStyle(
-                                            color: ColorManager.kGreyColor,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        trailing: CustomRoundButton(
-                                          fct: () => selectPrinter(printer),
-                                          title: isSelected
-                                              ? 'Selected'
-                                              : 'Select',
-                                          height: 32,
-                                          width: 80,
-                                          fontSize: 12,
-                                          borderColor: isSelected
-                                              ? ColorManager.kPrimaryColor
-                                              : ColorManager.kGreyColor,
-                                          boxColor: isSelected
-                                              ? ColorManager.kPrimaryColor
-                                              : Colors.white,
-                                          textColor: isSelected
-                                              ? Colors.white
-                                              : ColorManager.kGreyColor,
-                                        ),
-                                      ),
-                                    );
-                                  },
+                                  CustomRoundButton(
+                                    fct: () => _isScanning ? null : _checkPermissions(),
+                                    title: _isScanning ? 'Scanning...' : 'Scan for Printers',
+                                    height: 44,
+                                    width: 160,
+                                    fontSize: 14,
+                                    borderColor: _isScanning
+                                        ? ColorManager.kGreyColor
+                                        : ColorManager.kPrimaryColor,
+                                    boxColor: _isScanning
+                                        ? ColorManager.kGreyColor
+                                        : ColorManager.kPrimaryColor,
+                                    textColor: Colors.white,
+                                    isLoading: _isScanning,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
                                 ),
-                        ],
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  _isScanning
+                                      ? 'Scanning for printers...'
+                                      : '${devices.length} devices found',
+                                  style: const TextStyle(
+                                    color: ColorManager.kGreyColor,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+
+                              // Printers List
+                              devices.isEmpty
+                                  ? Container(
+                                      padding: const EdgeInsets.all(40),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[50],
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Icon(
+                                            Icons.print_disabled_rounded,
+                                            size: 64,
+                                            color: Colors.grey[400],
+                                          ),
+                                          const SizedBox(height: 16),
+                                          const Text(
+                                            'No printers found',
+                                            style: TextStyle(
+                                              color: ColorManager.kGreyColor,
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Click the scan button above to search for printers',
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : ListView.separated(
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      itemCount: devices.length,
+                                      separatorBuilder: (context, index) =>
+                                          const SizedBox(height: 12),
+                                      itemBuilder: (context, index) {
+                                        final printer = devices[index];
+                                        final isSelected =
+                                            selectedPrinter?.deviceName ==
+                                                    printer.deviceName &&
+                                                selectedPrinter?.address ==
+                                                    printer.address;
+
+                                        return Container(
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? ColorManager.kPrimaryColor.withOpacity(0.04)
+                                                : Colors.grey[50],
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: ListTile(
+                                            contentPadding: const EdgeInsets.symmetric(
+                                              horizontal: 20,
+                                              vertical: 8,
+                                            ),
+                                            leading: Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: isSelected
+                                                    ? ColorManager.kPrimaryColor.withOpacity(0.1)
+                                                    : Colors.white,
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Icon(
+                                                Icons.print,
+                                                color: isSelected
+                                                    ? ColorManager.kPrimaryColor
+                                                    : ColorManager.kGreyColor,
+                                                size: 24,
+                                              ),
+                                            ),
+                                            title: Text(
+                                              printer.deviceName ?? 'Unknown device',
+                                              style: TextStyle(
+                                                color: ColorManager.kTitleTextColor,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.bold
+                                                    : FontWeight.w500,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            subtitle: Padding(
+                                              padding: const EdgeInsets.only(top: 4),
+                                              child: Text(
+                                                printer.address ?? printer.typePrinter,
+                                                style: TextStyle(
+                                                  color: Colors.grey[600],
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ),
+                                            trailing: CustomRoundButton(
+                                              fct: () => selectPrinter(printer),
+                                              title: isSelected ? 'Selected' : 'Select',
+                                              height: 36,
+                                              width: 100,
+                                              fontSize: 14,
+                                              borderColor: isSelected
+                                                  ? ColorManager.kPrimaryColor
+                                                  : ColorManager.kGreyColor,
+                                              boxColor: isSelected
+                                                  ? ColorManager.kPrimaryColor
+                                                  : Colors.white,
+                                              textColor: isSelected
+                                                  ? Colors.white
+                                                  : ColorManager.kGreyColor,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
             ),
     );
