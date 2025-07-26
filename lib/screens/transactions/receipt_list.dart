@@ -164,6 +164,47 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       ],
     );
   }
+    Widget _buildStatusChip(String status) {
+    Color backgroundColor;
+    Color textColor;
+
+    switch (status.toUpperCase()) {
+      case 'paid':
+    case 'PAID':
+        backgroundColor = Colors.green.withOpacity(0.1);
+        textColor = Colors.green;
+        break;
+      case 'pending':
+      case 'PENDING':
+        backgroundColor = Colors.orange.withOpacity(0.1);
+        textColor = Colors.orange;
+        break;
+      case 'FAIL':
+      case 'FAILED':
+        backgroundColor = Colors.red.withOpacity(0.1);
+        textColor = Colors.red;
+        break;
+      default:
+        backgroundColor = Colors.grey.withOpacity(0.1);
+        textColor = Colors.grey;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          color: textColor,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
 
   Widget _buildSearchBar(Size size) {
     return SizedBox(
@@ -733,7 +774,7 @@ Widget _buildDetailRow(String title, String value) {
                                             _buildTableCell(receipt.receiptNumber),
                                             _buildTableCell(receipt.amount),
                                             _buildTableCell(receipt.paymentReference),
-                                            _buildTableCell(receipt.receiptStatus),
+                                            Center(child: _buildStatusChip(receipt.receiptStatus)),
                                             _buildTableCell(receipt.paymentMethod),
                                             Center(
                                               child: Padding(
