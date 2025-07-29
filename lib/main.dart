@@ -119,7 +119,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => KeyboardProvider()),
         ChangeNotifierProvider(create: (_) => BarcodeProvider()),
         ChangeNotifierProvider(create: (_) => SharedPreferenceProvider()),
-      ],
+      ], 
       child: KeyboardDispatcher(
         child: GetMaterialApp(
         debugShowCheckedModeBanner: false,

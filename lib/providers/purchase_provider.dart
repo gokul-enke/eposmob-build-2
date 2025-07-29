@@ -1,6 +1,9 @@
 import 'dart:convert';
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/list_purchase_voucher.dart';
@@ -126,10 +129,9 @@ class PurchaseProvider extends ChangeNotifier {
   String? supplierName(int value) {
     var supplier = supplierList.firstWhere((e) => e.id == value,
         orElse: () => GetSuppliersModelData(
-    id: 0, 
-    user: User(name: "Unknown") // Now correctly nested
-    ));
-    return supplier.user?.name ;
+            id: 0, user: User(name: "Unknown") // Now correctly nested
+            ));
+    return supplier.user?.name;
   }
 
   PurchaseProvider() {
@@ -149,11 +151,11 @@ class PurchaseProvider extends ChangeNotifier {
         "Initial purchaseItemListAllPurchase length: ${purchaseItemListAllPurchase.length}");
   }
   GetSuppliersModelData supplierDemo = GetSuppliersModelData(
-  id: 0,
-  user: User(name: "Select Supplier"), // Name now properly nested
-  phone: "",
-  email: "",
-);
+    id: 0,
+    user: User(name: "Select Supplier"), // Name now properly nested
+    phone: "",
+    email: "",
+  );
 
   //          *********************** LIST ALL STORES  API ***************************************************
 
@@ -163,10 +165,18 @@ class PurchaseProvider extends ChangeNotifier {
     final url = storeName == null
         ? Uri.parse(APPUrl.getStores)
         : Uri.parse("${APPUrl.getStores}=$storeName");
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -185,7 +195,13 @@ class PurchaseProvider extends ChangeNotifier {
   Future<void> listAllSuppliers(
       String accessToken, String? supplierName) async {
     // debugPrint("LIST ALL STORES ");
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
 
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     final url = supplierName == null
         ? Uri.parse(APPUrl.getSuppliers)
         : Uri.parse("${APPUrl.getSuppliers}?supplier_name=$supplierName");
@@ -193,6 +209,7 @@ class PurchaseProvider extends ChangeNotifier {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -222,10 +239,18 @@ class PurchaseProvider extends ChangeNotifier {
     // debugPrint("LIST ALL UNITS ");
 
     final url = Uri.parse(APPUrl.listUnits);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -289,10 +314,18 @@ class PurchaseProvider extends ChangeNotifier {
 
     debugPrint("API URL: ${url.toString()}");
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       debugPrint('API response status code: ${response.statusCode}');
 
@@ -438,10 +471,18 @@ class PurchaseProvider extends ChangeNotifier {
 
     final url = Uri.parse(APPUrl.listPurchaseVoucher)
         .replace(queryParameters: queryParameters);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -484,10 +525,18 @@ class PurchaseProvider extends ChangeNotifier {
     // debugPrint("LIST ALL Purchase Item");
 
     final url = Uri.parse(APPUrl.listPurchaseItems);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -526,10 +575,18 @@ class PurchaseProvider extends ChangeNotifier {
     };
     // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.addToPurchaseItem);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -573,12 +630,20 @@ class PurchaseProvider extends ChangeNotifier {
     };
     // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.addPurchaseStock);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.post(url,
           body: json.encode(apiBodyData),
           headers: {
             'Authorization': 'Bearer $accessToken',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Tenant': apiKey,
           });
 
       // debugPrint('inside ${response.statusCode}');
@@ -604,10 +669,18 @@ class PurchaseProvider extends ChangeNotifier {
     };
     // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.finishPurchaseOrder);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -631,10 +704,18 @@ class PurchaseProvider extends ChangeNotifier {
     };
     // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.removePurchaseitem);
-    try {
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+      try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {

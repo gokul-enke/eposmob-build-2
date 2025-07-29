@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:io';
+
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
@@ -11,6 +13,7 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/resources/app_url.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
@@ -239,6 +242,13 @@ class _AddStockScreenState extends State<AddStockScreen> {
         return;
       }
 
+      // Get API key from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
       debugPrint(
           "Using token: ${accessToken.substring(0, min(accessToken.length, 10))}...");
 
@@ -248,7 +258,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
 
         final response = await http.get(url, headers: {
           'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
         });
 
         debugPrint('API response status code: ${response.statusCode}');

@@ -126,7 +126,7 @@ class Receipt {
       amount: json['amount'] ?? '0',
       receiptStatus: json['receipt_status'] ?? '',
       paymentReference: json['payment_reference'] ?? '',
-      paymentMethod: json['payment_method'] ?? '',
+      paymentMethod: _parsePaymentMethod(json['payment_method']),
       userId: json['user_id'],
       customerId: json['customer_id'] ?? 0,
       companyId: json['company_id'] ?? 0,
@@ -135,6 +135,16 @@ class Receipt {
       company: Company.fromJson(json['company'] ?? {}),
       customer: Customer.fromJson(json['customer'] ?? {}),
     );
+  }
+
+  // Helper method to handle payment_method which can be String or List<String>
+  static String _parsePaymentMethod(dynamic paymentMethod) {
+    if (paymentMethod == null) return "";
+    if (paymentMethod is String) return paymentMethod;
+    if (paymentMethod is List && paymentMethod.isNotEmpty) {
+      return paymentMethod.join(', ');
+    }
+    return "";
   }
 }
 

@@ -1,6 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:pos_machine/models/get_product_sales_report_model.dart';
 import 'package:pos_machine/models/get_sales_report_model.dart';
 import 'package:pos_machine/models/get_supplier_sales_report_model.dart';
@@ -45,12 +49,20 @@ class ReportsProvider with ChangeNotifier {
     final uri = Uri.parse(APPUrl.customerAccountBook)
         .replace(queryParameters: queryParameters);
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(
         uri,
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
         },
       );
 
@@ -98,12 +110,20 @@ class ReportsProvider with ChangeNotifier {
     final uri = Uri.parse(APPUrl.productSalesReport)
         .replace(queryParameters: queryParameters);
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(
         uri,
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
         },
       ).timeout(const Duration(seconds: 15)); // Adding a timeout
 
@@ -154,12 +174,20 @@ class ReportsProvider with ChangeNotifier {
     final uri =
         Uri.parse(APPUrl.salesReport).replace(queryParameters: queryParameters);
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(
         uri,
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
         },
       ).timeout(const Duration(seconds: 15)); // Adding a timeout
 
@@ -209,12 +237,20 @@ class ReportsProvider with ChangeNotifier {
     final uri = Uri.parse(APPUrl.supplierSalesReport)
         .replace(queryParameters: queryParameters);
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(
         uri,
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
         },
       ).timeout(const Duration(seconds: 15)); // Adding a timeout
 

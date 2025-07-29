@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../models/list_stock.dart' as stock_models;
 import '../providers/local_product_provider.dart';
 import '../resources/app_url.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Dedicated provider for managing all stock-related operations
 /// This provider handles:
@@ -16,7 +19,8 @@ import '../resources/app_url.dart';
 class StockProvider extends ChangeNotifier {
   // Stock data management
   List<stock_models.ListStockModelData>? _listStockModelDataList = [];
-  List<stock_models.ListStockModelData>? _allStocks = []; // Store all stocks for local filtering
+  List<stock_models.ListStockModelData>? _allStocks =
+      []; // Store all stocks for local filtering
   List<stock_models.ListStockModelData>? _filteredStockList = [];
   stock_models.ListStockModelData? _viewStockModelData;
 
@@ -24,22 +28,23 @@ class StockProvider extends ChangeNotifier {
   int _stockCurrentPage = 1;
   int _stockTotalPages = 1;
   int _stockItemsPerPage = 20;
-  
+
   // Filter properties
   String? _stockFilterName;
   String? _stockFilterCategory;
-  
+
   // Loading state
   bool _stockIsLoading = false;
 
   // Getters
-  List<stock_models.ListStockModelData>? get listStockModelDataList => 
+  List<stock_models.ListStockModelData>? get listStockModelDataList =>
       _filteredStockList ?? _listStockModelDataList;
-  
+
   List<stock_models.ListStockModelData>? get allStocks => _allStocks;
-  
-  stock_models.ListStockModelData? get viewStockModelData => _viewStockModelData;
-  
+
+  stock_models.ListStockModelData? get viewStockModelData =>
+      _viewStockModelData;
+
   int get stockCurrentPage => _stockCurrentPage;
   int get stockTotalPages => _stockTotalPages;
   int get stockItemsPerPage => _stockItemsPerPage;
@@ -52,11 +57,8 @@ class StockProvider extends ChangeNotifier {
     if (_allStocks == null || _allStocks!.isEmpty) {
       return;
     }
-    
-    applyStockFiltersLocally(
-      filterName: query,
-      page: 1
-    );
+
+    applyStockFiltersLocally(filterName: query, page: 1);
   }
 
   /// Extract unique categories from loaded stocks
@@ -76,7 +78,7 @@ class StockProvider extends ChangeNotifier {
   }
 
   /// *********************** ADD TO STOCK API ***************************************************
-  
+
   Future<dynamic> addProductStockAPI({
     required String accessToken,
     required String productId,
@@ -116,7 +118,9 @@ class StockProvider extends ChangeNotifier {
       'retail_price': double.parse(retailPrice),
       'purchase_rate': double.parse(purchaseRate),
       'mrp': mrp.isNotEmpty ? double.parse(mrp) : double.parse(retailPrice),
-      'wholesale_price': wholesalePrice.isNotEmpty ? double.parse(wholesalePrice) : double.parse(retailPrice),
+      'wholesale_price': wholesalePrice.isNotEmpty
+          ? double.parse(wholesalePrice)
+          : double.parse(retailPrice),
       'unit': unit,
       'supplier_id': int.parse(supplierId),
       'store_id': int.parse(storeId),
@@ -126,7 +130,8 @@ class StockProvider extends ChangeNotifier {
       'purchase_id': purchaseId,
       'tax_amount_retail': taxAmountRetail,
       'tax_amount_wholesale': taxAmountWholesale,
-      'wholesale_min_unit': wholesaleMinUnit.isNotEmpty ? int.parse(wholesaleMinUnit) : 1,
+      'wholesale_min_unit':
+          wholesaleMinUnit.isNotEmpty ? int.parse(wholesaleMinUnit) : 1,
       'rack': rack,
       'barcode': barcode,
       'batch_number': batchNumber,
@@ -135,33 +140,39 @@ class StockProvider extends ChangeNotifier {
       'purchase_number': purchaseNumber,
       'tax_include': taxInclude,
       'initial_retail_price': double.parse(initialRetailPrice),
-      'initial_wholesale_price': initialWholesalePrice.isNotEmpty ? double.parse(initialWholesalePrice) : double.parse(retailPrice),
+      'initial_wholesale_price': initialWholesalePrice.isNotEmpty
+          ? double.parse(initialWholesalePrice)
+          : double.parse(retailPrice),
       'retail_price_tax': retailPriceTax,
       'wholesale_price_tax': wholesalePriceTax,
     };
 
     final url = Uri.parse(APPUrl.addToStock);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
-      final response = await http.post(
-        url,
-        body: json.encode(apiBodyData),
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json'
-        }
-      );
+      final response = await http.post(url,
+          body: json.encode(apiBodyData),
+          headers: {
+            'Authorization': 'Bearer $accessToken',
+            'Content-Type': 'application/json',
+            'X-Tenant': apiKey,
+          });
 
       if (response.statusCode == 200) {
         final result = json.decode(response.body);
-        
+
         // ✅ FAST UPDATE: Manually update LocalProductProvider instead of full API fetch
         if (context != null) {
           try {
-            final localProductProvider = Provider.of<LocalProductProvider>(
-              context, 
-              listen: false
-            );
-            
+            final localProductProvider =
+                Provider.of<LocalProductProvider>(context, listen: false);
+
             // Extract stock ID from response (adjust based on your API response structure)
             int stockId;
             if (result['data'] != null && result['data']['id'] != null) {
@@ -173,7 +184,7 @@ class StockProvider extends ChangeNotifier {
             } else {
               stockId = DateTime.now().millisecondsSinceEpoch; // Fallback ID
             }
-            
+
             // Manually update the product stock in LocalProductProvider
             localProductProvider.addStockToProduct(
               productId: int.parse(productId),
@@ -183,23 +194,25 @@ class StockProvider extends ChangeNotifier {
               mrp: mrp,
               purchasePrice: purchaseRate,
             );
-            
-            debugPrint("🚀 LOCAL PRODUCT PROVIDER UPDATED MANUALLY - NO 10-SECOND API FETCH NEEDED!");
+
+            debugPrint(
+                "🚀 LOCAL PRODUCT PROVIDER UPDATED MANUALLY - NO 10-SECOND API FETCH NEEDED!");
           } catch (e) {
             debugPrint("❌ Error updating LocalProductProvider: $e");
             // Fallback: If manual update fails, we could still do full refresh
             // but in most cases manual update should work fine
           }
         } else {
-          debugPrint("⚠️ Context not provided - skipping manual LocalProductProvider update");
+          debugPrint(
+              "⚠️ Context not provided - skipping manual LocalProductProvider update");
         }
-        
+
         // Refresh stock data for stock list UI
         await loadAllStocks(accessToken);
-        
+
         // Notify listeners
         notifyListeners();
-        
+
         return result;
       }
     } catch (e) {
@@ -208,7 +221,7 @@ class StockProvider extends ChangeNotifier {
         'message': e.toString(),
       };
     }
-    
+
     return {
       'status': "failed",
       'message': "Failed to add stock",
@@ -216,7 +229,7 @@ class StockProvider extends ChangeNotifier {
   }
 
   /// *********************** LIST STOCK API ***************************************************
-  
+
   Future<void> listStockAPI({
     required String accessToken,
     String? filterName,
@@ -225,7 +238,7 @@ class StockProvider extends ChangeNotifier {
   }) async {
     _stockIsLoading = true;
     notifyListeners();
-    
+
     final queryParameters = <String, String>{
       'page': (page ?? 1).toString(),
       if (loadAll) 'per_page': '1000',
@@ -235,14 +248,23 @@ class StockProvider extends ChangeNotifier {
       queryParameters['filter_name'] = filterName;
     }
 
-    final uri = Uri.parse(APPUrl.listStock).replace(queryParameters: queryParameters);
+    final uri =
+        Uri.parse(APPUrl.listStock).replace(queryParameters: queryParameters);
 
     try {
+      // Get API key from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
       final response = await http.get(
         uri,
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
         },
       ).timeout(const Duration(seconds: 15));
 
@@ -253,17 +275,17 @@ class StockProvider extends ChangeNotifier {
           final jsonData = json.decode(response.body);
 
           try {
-            stock_models.ListStockModel listStockModel = 
+            stock_models.ListStockModel listStockModel =
                 stock_models.ListStockModel.fromJson(jsonData);
-            
+
             if (loadAll) {
               _allStocks = listStockModel.data;
               applyStockFiltersLocally(page: 1);
             } else {
               _listStockModelDataList = listStockModel.data;
-              _filteredStockList = List<stock_models.ListStockModelData>
-                  .from(_listStockModelDataList!);
-              
+              _filteredStockList = List<stock_models.ListStockModelData>.from(
+                  _listStockModelDataList!);
+
               _stockCurrentPage = listStockModel.pagination?.currentPage ?? 1;
               int totalItems = listStockModel.pagination?.lastPage ?? 0;
               int itemsPerPage = listStockModel.pagination?.perPage ?? 20;
@@ -291,7 +313,7 @@ class StockProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   /// Load all stocks for local filtering and pagination
   Future<void> loadAllStocks(String accessToken) async {
     try {
@@ -304,7 +326,7 @@ class StockProvider extends ChangeNotifier {
       rethrow;
     }
   }
-  
+
   /// Apply local pagination and filtering for stocks
   void applyStockFiltersLocally({
     String? filterName,
@@ -327,86 +349,99 @@ class StockProvider extends ChangeNotifier {
 
     // Apply filters
     List<stock_models.ListStockModelData> filteredList = [..._allStocks!];
-    
+
     if (filterName != null && filterName.isNotEmpty) {
-      filteredList = filteredList.where((stock) => 
-        stock.productName != null && 
-        stock.productName!.toLowerCase().contains(filterName.toLowerCase())
-      ).toList();
+      filteredList = filteredList
+          .where((stock) =>
+              stock.productName != null &&
+              stock.productName!
+                  .toLowerCase()
+                  .contains(filterName.toLowerCase()))
+          .toList();
     }
-    
+
     // Apply category filter
-    if (filterCategory != null && filterCategory.isNotEmpty && filterCategory != "0") {
-      filteredList = filteredList.where((stock) => 
-        stock.categoryName != null && 
-        stock.categoryName!.toLowerCase() == filterCategory.toLowerCase()
-      ).toList();
+    if (filterCategory != null &&
+        filterCategory.isNotEmpty &&
+        filterCategory != "0") {
+      filteredList = filteredList
+          .where((stock) =>
+              stock.categoryName != null &&
+              stock.categoryName!.toLowerCase() == filterCategory.toLowerCase())
+          .toList();
     }
 
     // Calculate pagination
     _stockTotalPages = (filteredList.length / _stockItemsPerPage).ceil();
     _stockTotalPages = _stockTotalPages == 0 ? 1 : _stockTotalPages;
-    
+
     // Ensure current page is valid
     if (_stockCurrentPage > _stockTotalPages) {
       _stockCurrentPage = _stockTotalPages;
     }
-    
+
     // Apply pagination
     int startIndex = (_stockCurrentPage - 1) * _stockItemsPerPage;
     int endIndex = startIndex + _stockItemsPerPage;
-    
+
     if (startIndex >= filteredList.length) {
       _listStockModelDataList = [];
       _filteredStockList = [];
     } else {
-      endIndex = endIndex > filteredList.length ? filteredList.length : endIndex;
+      endIndex =
+          endIndex > filteredList.length ? filteredList.length : endIndex;
       _listStockModelDataList = filteredList.sublist(startIndex, endIndex);
-      _filteredStockList = List<stock_models.ListStockModelData>
-          .from(_listStockModelDataList!);
+      _filteredStockList =
+          List<stock_models.ListStockModelData>.from(_listStockModelDataList!);
     }
-    
+
     notifyListeners();
   }
-  
+
   /// Reset stock filters and pagination
   void resetStockFilters() {
     _stockFilterName = null;
     _stockFilterCategory = null;
     _stockCurrentPage = 1;
-    
+
     if (_allStocks != null && _allStocks!.isNotEmpty) {
       applyStockFiltersLocally(page: 1);
     }
   }
-  
+
   /// Change stock page
   void goToStockPage(int page) {
     if (page < 1 || page > _stockTotalPages) return;
-    
+
     applyStockFiltersLocally(
-      filterName: _stockFilterName,
-      filterCategory: _stockFilterCategory,
-      page: page
-    );
+        filterName: _stockFilterName,
+        filterCategory: _stockFilterCategory,
+        page: page);
   }
 
   /// *********************** CALL VIEW STOCK DETAILS API ***************************************************
-  
-  Future<void> callStockDetails({
-    required int stockId, 
-    required String accessToken
-  }) async {
+
+  Future<void> callStockDetails(
+      {required int stockId, required String accessToken}) async {
     final url = Uri.parse("${APPUrl.detailsOfStock}?id=$stockId");
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
       });
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        _viewStockModelData = stock_models.ListStockModelData.fromJson(jsonData["data"]);
+        _viewStockModelData =
+            stock_models.ListStockModelData.fromJson(jsonData["data"]);
         notifyListeners();
       } else {
         debugPrint('Failed to load stock details: ${response.statusCode}');
@@ -417,7 +452,7 @@ class StockProvider extends ChangeNotifier {
   }
 
   /// *********************** UPDATE STOCK DETAILS API ***************************************************
-  
+
   Future<bool> updateStockDetails({
     required int stockId,
     required String retailPrice,
@@ -429,12 +464,19 @@ class StockProvider extends ChangeNotifier {
   }) async {
     try {
       final url = Uri.parse('${APPUrl.updateStockDetails}/$stockId');
-      
+      // Get API key from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
       final response = await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
         },
         body: jsonEncode({
           'retail_price': retailPrice,
@@ -453,7 +495,7 @@ class StockProvider extends ChangeNotifier {
           return true;
         }
       }
-      
+
       return false;
     } catch (e) {
       debugPrint('Error updating stock details: $e');
@@ -474,4 +516,4 @@ class StockProvider extends ChangeNotifier {
     _stockIsLoading = false;
     notifyListeners();
   }
-} 
+}

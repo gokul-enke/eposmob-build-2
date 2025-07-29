@@ -283,15 +283,17 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       debugPrint("  - Net Total: $netTotal");
       debugPrint("  - You Saved: $youSaved");
 
+      // Use the stored total from order (already rounded when saved)
+      double finalTotal = order.total;
+      
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => PrintPage(
             storeName: "SOUQ POINT",
             cartItems: cartItems,
-            formattedTotal: netTotal.toString(), // Use calculated net total
-            savedTotal:
-                youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
+            formattedTotal: finalTotal.toString(), // Use order's total
+            savedTotal: youSaved.toString(),
             orderDate: order.createdAt,
             orderNumber: order.orderNumber,
             isFromLocalStorage: true,
@@ -683,3 +685,4 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
     });
   }
 }
+

@@ -184,8 +184,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
               const SizedBox(height: 15),
               _buildSearchBar(size),
               const SizedBox(height: 15),
-              SizedBox(
-                height: 560, // Set a fixed height or adjust as needed
+              Expanded(
                 child: Consumer<SupplierProvider>(
                   builder: (context, supplierProvider, child) {
                     final isLoading = supplierProvider.isLoading;
@@ -524,7 +523,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                             supplierProvider.goToPage(page);
                           },
                         ),
-                        const SizedBox(height: 25),
+                        const SizedBox(height: 15),
                       ],
                     );
                   },

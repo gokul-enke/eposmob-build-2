@@ -1,6 +1,9 @@
 import 'dart:convert';
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/get_product.dart';
 
@@ -28,9 +31,7 @@ class GridSelectionProvider extends ChangeNotifier {
   List<GetProduct>? get getSelectedProductList => selectedProductList;
   List<GetProduct>? get getCategoryProductList => categoryProductList;
   List<GetProduct>? get getSelectedProductListAPI => selectedProductListAPI;
-  
 
-  
   // Pagination properties
   int currentPage = 1;
   int totalPages = 1;
@@ -41,8 +42,6 @@ class GridSelectionProvider extends ChangeNotifier {
 
     return product.productName ?? "";
   }
-
-
 
   GridSelectionProvider() {
     listAllProducts(categoryId: 0);
@@ -69,8 +68,6 @@ class GridSelectionProvider extends ChangeNotifier {
       return categoryProductList!;
     }
   }
-
-
 
   List<GetProduct> searchProducts(String query) {
     if (query.isEmpty) {
@@ -184,8 +181,17 @@ class GridSelectionProvider extends ChangeNotifier {
     productList = [];
     final url =
         Uri.parse(APPUrl.getProductUrl).replace(queryParameters: queryParams);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
-      final response = await http.get(url);
+      final response = await http.get(url, headers: {
+        'X-Tenant': apiKey,
+      });
 
       debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -257,8 +263,17 @@ class GridSelectionProvider extends ChangeNotifier {
     productList = [];
     final url =
         Uri.parse(APPUrl.getProductUrl).replace(queryParameters: queryParams);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
-      final response = await http.get(url);
+      final response = await http.get(url, headers: {
+        'X-Tenant': apiKey,
+      });
 
       debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -305,10 +320,17 @@ class GridSelectionProvider extends ChangeNotifier {
     notifyListeners();
     selectedProductListAPI = [];
     final url = Uri.parse(APPUrl.getProductUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.post(url,
           body: json.encode(apiBodyData),
-          headers: {'Content-Type': 'application/json'});
+          headers: {'Content-Type': 'application/json', 'api_key': apiKey});
       // debugPrint('inside ${response.body}');
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -339,8 +361,17 @@ class GridSelectionProvider extends ChangeNotifier {
     final url =
         Uri.parse(APPUrl.getProductUrl).replace(queryParameters: queryParams);
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
-      final response = await http.get(url);
+      final response = await http.get(url, headers: {
+        'X-Tenant': apiKey,
+        });
       debugPrint('Response Status Code: ${response.statusCode}');
 
       if (response.statusCode == 200) {
@@ -390,10 +421,19 @@ class GridSelectionProvider extends ChangeNotifier {
     notifyListeners();
     productList = [];
     final url = Uri.parse(APPUrl.getProductUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
-      final response = await http.post(url,
-          body: json.encode(apiBodyData),
-          headers: {'Content-Type': 'application/json'});
+      final response =
+          await http.post(url, body: json.encode(apiBodyData), headers: {
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
         // debugPrint('inside');
@@ -443,11 +483,19 @@ class GridSelectionProvider extends ChangeNotifier {
     debugPrint("accessToken ${accessToken.toString()}");
 
     final url = Uri.parse(APPUrl.createProductUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       debugPrint('Response status: ${response.statusCode}');
       debugPrint('Response body: ${response.body}'); // Log the response body
@@ -487,11 +535,19 @@ class GridSelectionProvider extends ChangeNotifier {
     debugPrint("accessToken ${accessToken.toString()}");
 
     final url = Uri.parse(APPUrl.createProductUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       debugPrint('Response status: ${response.statusCode}');
       debugPrint('Response body: ${response.body}'); // Log the response body
@@ -535,11 +591,19 @@ class GridSelectionProvider extends ChangeNotifier {
     };
     // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.addProductUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -571,10 +635,18 @@ class GridSelectionProvider extends ChangeNotifier {
     };
     // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.addProductNameUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -624,11 +696,19 @@ class GridSelectionProvider extends ChangeNotifier {
     };
     // debugPrint("apiBodyData + ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.addProductPropsUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -663,10 +743,18 @@ class GridSelectionProvider extends ChangeNotifier {
     };
     // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.addProductImageUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         //  'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -707,11 +795,19 @@ class GridSelectionProvider extends ChangeNotifier {
     };
     // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.editProductUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -750,10 +846,18 @@ class GridSelectionProvider extends ChangeNotifier {
 
     // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.editProductNameUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         // 'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -792,11 +896,19 @@ class GridSelectionProvider extends ChangeNotifier {
     };
     // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.editProductPropsUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -830,10 +942,18 @@ class GridSelectionProvider extends ChangeNotifier {
     };
     // debugPrint(apiBodyData.toString());
     final url = Uri.parse(APPUrl.editProductImageUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.post(url, body: apiBodyData, headers: {
         //  'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -855,10 +975,18 @@ class GridSelectionProvider extends ChangeNotifier {
     };
 
     final url = Uri.parse(APPUrl.listFilesForImageUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
       });
 
       // debugPrint('inside ${response.statusCode}');

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 
-class CustomerTransactionsWidget extends StatelessWidget {
+class CustomerTransactionsWidget extends StatefulWidget {
   final Size size;
   final CustomerListModelData customer;
 
@@ -19,49 +17,80 @@ class CustomerTransactionsWidget extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final transactions = customer.transactions ?? [];
+  State<CustomerTransactionsWidget> createState() =>
+      _CustomerTransactionsWidgetState();
+}
 
+class _CustomerTransactionsWidgetState
+    extends State<CustomerTransactionsWidget> {
+  late List<CustomerTransaction> transactions;
+
+  @override
+  void initState() {
+    super.initState();
+    transactions = widget.customer.transactions ?? [];
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Expanded(
       child: BuildBoxShadowContainer(
         margin: const EdgeInsets.all(24),
-        padding: const EdgeInsets.all(20),
-        height: size.height * 0.75,
-        width: size.width < 1200 ? size.width / 1.8 : size.width / 2,
-        circleRadius: 7,
+        padding: const EdgeInsets.all(0),
+        height: widget.size.height * 0.75,
+        width: widget.size.width / 1.8,
+        circleRadius: 12,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Transactions (${transactions.length})',
-                  style: const TextStyle(
-            fontSize: FontSize.s20,
-            fontWeight: FontWeightManager.semiBold
-          ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: () => _refreshData(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+            _buildHeader(),
             Expanded(
               child: transactions.isEmpty
                   ? _buildEmptyState()
                   : ListView.builder(
+                      padding: const EdgeInsets.all(16),
                       itemCount: transactions.length,
-                      itemBuilder: (context, index) => _buildTransactionCard(
-                        context,
-                        transactions[index],
-                      ),
+                      itemBuilder: (context, index) =>
+                          _buildTransactionCard(context, transactions[index]),
                     ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      decoration: BoxDecoration(
+        color: ColorManager.kPrimaryWithOpacity10,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.receipt_long,
+                  color: ColorManager.kPrimaryColor, size: 28),
+              const SizedBox(width: 12),
+              Text(
+                'Transactions (${transactions.length})',
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s18, 0,
+                    ColorManager.kTitleTextColor),
+              ),
+            ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.filter_list_alt),
+            onPressed: () {},
+            color: ColorManager.kGreyColor,
+            tooltip: 'Filter transactions',
+          ),
+        ],
       ),
     );
   }
@@ -71,16 +100,18 @@ class CustomerTransactionsWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_long, size: 48, color: Colors.grey[400]),
-          const SizedBox(height: 16),
+          Icon(Icons.receipt_long_outlined,
+              size: 60, color: ColorManager.kPrimaryColor.withOpacity(0.4)),
+          const SizedBox(height: 20),
+          Text('No Transactions Found',
+              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s18,
+                  0, ColorManager.kTitleTextColor)),
+          const SizedBox(height: 8),
           Text(
-            'No transactions found for this customer',
+            'This customer has not made any transactions yet.',
+            textAlign: TextAlign.center,
             style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s14,
-              0.20,
-              ColorManager.textColor,
-            ),
+                FontWeightManager.regular, FontSize.s14, 0, ColorManager.kGreyColor),
           ),
         ],
       ),
@@ -91,143 +122,119 @@ class CustomerTransactionsWidget extends StatelessWidget {
     BuildContext context,
     CustomerTransaction transaction,
   ) {
-    return BuildBoxShadowContainer(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      color: Colors.white,
-      circleRadius: 7,
-      child: ExpansionTile(
-        title: Row(
-          children: [
-            // Status indicator
-            _buildOrderStatusIndicator(transaction.status),
-            const SizedBox(width: 12),
-
-            // Main content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    transaction.reference ?? 'No Reference',
-                    style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      FontSize.s16,
-                      0.20,
-                      ColorManager.textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    DateHelper.formatISODate(transaction.date ?? ''),
-                    style: buildCustomStyle(
-                      FontWeightManager.regular,
-                      FontSize.s12,
-                      0.18,
-                      Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Amount
-            Text(
-              '${transaction.amount} ${transaction.currency}',
-              style: buildCustomStyle(
-                FontWeightManager.bold,
-                FontSize.s14,
-                0.20,
-                transaction.status?.toLowerCase() == 'succ'
-                    ? Colors.green
-                    : ColorManager.kOrange,
-              ),
-            ),
-          ],
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Transaction Details
-                _buildDetailRow('Transaction ID:',transaction.id?.toString()  ?? 'N/A'),
-                _buildDetailRow('Type:', transaction.type ?? 'N/A'),
-                _buildDetailRow(
-                    'Payment Method:', transaction.paymentMethod ?? 'N/A'),
-
-                // Status with colored text
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(
-                        width: 120,
-                        child: Text(
-                          'Status:',
-                          style:TextStyle(fontWeight: FontWeight.bold),
-
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          transaction.status ?? 'N/A',
-                          style: buildCustomStyle(
-                            FontWeightManager.regular,
-                            FontSize.s12,
-                            0.18,
-                            _getStatusColor(transaction.status),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Additional notes if available
-                if (transaction.transactionComment != null)
-                  _buildDetailRow('Notes:', transaction.transactionComment!),
-
-                // View Details Button
-                // Center(
-                //   child: TextButton(
-                //     onPressed: ()=> _showTransactionDetails(context, transaction),
-                //     child: const Text(
-                //       'VIEW FULL DETAILS',
-                //       style: TextStyle(
-                //         color: ColorManager.kPrimaryColor,
-                //         fontWeight: FontWeightManager.medium,
-                //       ),
-                //     ),
-                //   ),
-                // ),
-              ],
-            ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: ColorManager.kBgDarkColor),
+        boxShadow: [
+          BoxShadow(
+            color: ColorManager.boxShadowColor.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
+        ],
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: _buildTransactionIcon(transaction.type),
+          title: Text(
+            transaction.reference ?? 'No Reference',
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s15, 0,
+                ColorManager.kTitleTextColor),
+          ),
+          subtitle: Text(
+            DateHelper.formatISODate(transaction.date ?? ''),
+            style: buildCustomStyle(
+                FontWeightManager.regular, FontSize.s12, 0, ColorManager.kGreyColor),
+          ),
+          trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${transaction.amount} ${transaction.currency ?? ''}',
+                style: buildCustomStyle(
+                  FontWeightManager.bold,
+                  FontSize.s14,
+                  0,
+                  _getStatusColor(transaction.status),
+                ),
+              ),
+              const SizedBox(height: 2),
+              _buildStatusBadge(transaction.status),
+            ],
+          ),
+          children: [_buildTransactionDetails(transaction)],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionIcon(String? type) {
+    IconData iconData;
+    switch (type?.toLowerCase()) {
+      case 'sale':
+        iconData = Icons.shopping_cart_checkout;
+        break;
+      case 'refund':
+        iconData = Icons.replay_circle_filled_outlined;
+        break;
+      case 'payment':
+        iconData = Icons.payment;
+        break;
+      default:
+        iconData = Icons.receipt_long;
+    }
+    return CircleAvatar(
+      backgroundColor: ColorManager.kPrimaryWithOpacity10,
+      child: Icon(iconData, color: ColorManager.kPrimaryColor, size: 22),
+    );
+  }
+
+  Widget _buildStatusBadge(String? status) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _getStatusColor(status).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        status ?? 'N/A',
+        style: buildCustomStyle(
+            FontWeightManager.medium, FontSize.s10, 0, _getStatusColor(status)),
+      ),
+    );
+  }
+
+  Widget _buildTransactionDetails(CustomerTransaction transaction) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: ColorManager.kBgLightColor,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(12),
+          bottomRight: Radius.circular(12),
+        ),
+      ),
+      child: Column(
+        children: [
+          _buildDetailRow('Transaction ID', transaction.id?.toString() ?? 'N/A'),
+          _buildDetailRow('Type', transaction.type ?? 'N/A'),
+          _buildDetailRow('Payment Method', transaction.paymentMethod ?? 'N/A'),
+          if (transaction.transactionComment != null)
+            _buildDetailRow('Comment', transaction.transactionComment!),
         ],
       ),
     );
   }
 
-// Helper function for status colors
-  Color _getStatusColor(String? status) {
-    switch (status?.toLowerCase()) {
-      case 'succ':
-        return Colors.green;
-      case 'failed':
-        return Colors.red;
-      case 'init':
-        return Colors.orange;
-      default:
-        return ColorManager.textColor;
-    }
-  }
-
-// Reusable detail row widget
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -235,18 +242,15 @@ class CustomerTransactionsWidget extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
+                  0, ColorManager.kGreyColor),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s12,
-                0.18,
-                ColorManager.textColor,
-              ),
+              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s12,
+                  0, ColorManager.kTitleTextColor),
             ),
           ),
         ],
@@ -254,77 +258,19 @@ class CustomerTransactionsWidget extends StatelessWidget {
     );
   }
 
-  // Widget _buildDetailRow(String label, String value) {
-  //   return Padding(
-  //     padding: const EdgeInsets.symmetric(vertical: 8),
-  //     child: Row(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         SizedBox(
-  //           width: 120,
-  //           child: Text(
-  //             label,
-  //             style: buildCustomStyle(
-  //               FontWeightManager.medium,
-  //               FontSize.s14,
-  //               0.20,
-  //               ColorManager.textColor,
-  //             ),
-  //           ),
-  //         ),
-  //         Expanded(
-  //           child: Text(
-  //             value,
-  //             style: buildCustomStyle(
-  //               FontWeightManager.regular,
-  //               FontSize.s14,
-  //               0.20,
-  //               ColorManager.textColor,
-  //             ),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  void _refreshData(BuildContext context) {
-    showScaffold(
-        context: context,
-        message: "Refreshing transactions...",
-      );
-  }
-  
-}
-Widget _buildOrderStatusIndicator(String? status) {
-    Color color;
-    IconData icon;
-    
+  Color _getStatusColor(String? status) {
     switch (status?.toLowerCase()) {
+      case 'succ':
       case 'completed':
-      case 'delivered':
-        color = Colors.green;
-        icon = Icons.check_circle;
-        break;
+        return ColorManager.kSuccessColor;
+      case 'fail':
+      case 'failed':
+        return ColorManager.kRed;
+      case 'init':
       case 'pending':
-        color = Colors.orange;
-        icon = Icons.pending;
-        break;
-      case 'cancelled':
-        color = Colors.red;
-        icon = Icons.cancel;
-        break;
-      case 'processing':
-        color = Colors.blue;
-        icon = Icons.autorenew;
-        break;
+        return ColorManager.kOrange;
       default:
-        color = Colors.grey;
-        icon = Icons.help_outline;
+        return ColorManager.kGreyColor;
     }
-
-    return Tooltip(
-      message: status ?? 'Unknown status',
-      child: Icon(icon, color: color, size: 20),
-    );
   }
+}

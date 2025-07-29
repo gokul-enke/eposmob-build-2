@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/resources/app_url.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TaxCalculationResult {
   final double retailPrice;
@@ -42,12 +44,21 @@ Future<TaxCalculationResult> getCategoryTax({
   final uri = Uri.parse(APPUrl.getTaxtDetails)
       .replace(queryParameters: queryParameters);
 
+  // Get API key from SharedPreferences
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? apiKey = prefs.getString('api_key');
+
+  if (apiKey == null || apiKey.isEmpty) {
+    throw const HttpException("API key not found. Please restart the app.");
+  }
+
   try {
     final response = await http.get(
       uri,
       headers: {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
       },
     ).timeout(const Duration(seconds: 15));
 

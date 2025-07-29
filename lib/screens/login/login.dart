@@ -9,6 +9,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
+import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/screens/login/forgot_password.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -76,6 +77,24 @@ class _SignInScreenState extends State<SignInScreen> {
     setState(() {
       _rememberMe = value;
     });
+  }
+
+  Future<void> _resetApiKey() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.remove('api_key');
+      
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/api-key');
+      }
+    } catch (e) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Failed to reset API key. Please try again.',
+        );
+      }
+    }
   }
 
   @override
@@ -422,6 +441,21 @@ class _SignInScreenState extends State<SignInScreen> {
                                               // Don't block login if document config fails
                                             }
 
+                                            // Load categories during login
+                                            try {
+                                              final categoryProvider = Provider
+                                                  .of<CategoryProvider>(
+                                                      context,
+                                                      listen: false);
+                                              await categoryProvider.listAllCategory();
+                                              debugPrint(
+                                                  "Categories loaded successfully during login");
+                                            } catch (e) {
+                                              debugPrint(
+                                                  "Warning: Failed to load categories during login: $e");
+                                              // Don't block login if categories fail
+                                            }
+
                                             Navigator.pop(context);
 
                                             await Future.delayed(
@@ -447,6 +481,32 @@ class _SignInScreenState extends State<SignInScreen> {
                                     },
                                   ),
                                 ),
+                          // Reset API Key Button
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: size.width / 2,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 25),
+                              child: TextButton.icon(
+                                onPressed: _resetApiKey,
+                                icon: const Icon(
+                                  Icons.refresh,
+                                  size: 16,
+                                  color: ColorManager.kPrimaryColor,
+                                ),
+                                label: const Text(
+                                  'Reset API Key',
+                                  style: TextStyle(
+                                    fontWeight: FontWeightManager.medium,
+                                    fontFamily: FontConstants.fontFamily,
+                                    fontSize: FontSize.s10,
+                                    letterSpacing: 0.16,
+                                    color: ColorManager.kPrimaryColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ]),
                   ),
                 ]),

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -139,11 +140,18 @@ class CartProvider with ChangeNotifier {
       'customer_id': "1",
       if (cartId != null) 'cart_id': cartId.toString(),
     });
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
 
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -247,11 +255,20 @@ class CartProvider with ChangeNotifier {
     // debugPrint("customerId $customerId");
     debugPrint("customerId $apiBodyData");
     final url = Uri.parse(APPUrl.addToCartUrl);
+    // Get API key from SharedPreferences
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       debugPrint('inside ${response.statusCode}');
       debugPrint('inside 200');
@@ -309,11 +326,19 @@ class CartProvider with ChangeNotifier {
     // debugPrint("productId $productId");
     final url = Uri.parse(APPUrl
         .removeFromCartUrl); // Update this to the correct endpoint for removing items
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -367,11 +392,19 @@ class CartProvider with ChangeNotifier {
     // debugPrint("productId $productId");
     final url = Uri.parse(APPUrl
         .removeFromCartUrl); // Update this to the correct endpoint for removing items
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -427,11 +460,19 @@ class CartProvider with ChangeNotifier {
     debugPrint("apiBodyData $apiBodyData");
     final url = Uri.parse(APPUrl
         .removeFromCartUrl); // Update this to the correct endpoint for removing items
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
@@ -477,11 +518,19 @@ class CartProvider with ChangeNotifier {
       'unit_price': unitPrice,
     };
     final url = Uri.parse(APPUrl.updateCartItemPriceUrl);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
       // debugPrint('inside ${response.statusCode}');
       // debugPrint('inside ${response.body.toString()}');
@@ -553,7 +602,7 @@ class CartProvider with ChangeNotifier {
     debugPrint("🚚 Delivery Method ID: $deliveryMethodId");
     debugPrint("🚗 Car Number: $carNumber");
     debugPrint("📊 Status: $status");
-    
+
     DateTime now = DateTime.now();
 
     String formattedDate = DateFormat('yyyy-MM-dd').format(now);
@@ -566,7 +615,9 @@ class CartProvider with ChangeNotifier {
     Map<String, dynamic> apiBodyData = {};
 
     // Use multi-payment format if available, otherwise fall back to single payment
-    if (paymentMethods != null && paidMethods != null && paidMethods.isNotEmpty) {
+    if (paymentMethods != null &&
+        paidMethods != null &&
+        paidMethods.isNotEmpty) {
       apiBodyData = {
         "items": items,
         "phone": customerPhone,
@@ -610,24 +661,35 @@ class CartProvider with ChangeNotifier {
     final url = Uri.parse(APPUrl.addToOrderUrl);
     debugPrint("🌐 API URL: ${url.toString()}");
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    debugPrint("apiKey is xxx $apiKey");
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       debugPrint("🔄 Sending POST request to server...");
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
 
       debugPrint('📥 Response status code: ${response.statusCode}');
       debugPrint('📥 Response body: ${response.body}');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        debugPrint('✅ Order created successfully (status ${response.statusCode})');
+        debugPrint(
+            '✅ Order created successfully (status ${response.statusCode})');
 
         final jsonData = json.decode(response.body);
         debugPrint('📊 Order ID: ${jsonData["order_id"]}');
         debugPrint('📊 Order Number: ${jsonData["order_number"]}');
-        
+
         getData();
         return jsonData;
       } else {
@@ -671,7 +733,9 @@ class CartProvider with ChangeNotifier {
     Map<String, dynamic> apiBodyData = {};
 
     // Use multi-payment format if available, otherwise fall back to single payment
-    if (paymentMethods != null && paidMethods != null && paidMethods.isNotEmpty) {
+    if (paymentMethods != null &&
+        paidMethods != null &&
+        paidMethods.isNotEmpty) {
       apiBodyData = {
         "phone": customerPhone,
         "transaction_number": transactionId,
@@ -709,19 +773,28 @@ class CartProvider with ChangeNotifier {
     final url = Uri.parse(APPUrl.updateOrderUrl);
     debugPrint("🌐 API URL: ${url.toString()}");
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       debugPrint("🔄 Sending POST request to server...");
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
 
       debugPrint('📥 Response status code: ${response.statusCode}');
       debugPrint('📥 Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('✅ Order updated successfully (status ${response.statusCode})');
+        debugPrint(
+            '✅ Order updated successfully (status ${response.statusCode})');
 
         final jsonData = json.decode(response.body);
         getData();
@@ -765,7 +838,9 @@ class CartProvider with ChangeNotifier {
     Map<String, dynamic> apiBodyData = {};
 
     // Use multi-payment format if available, otherwise fall back to single payment
-    if (paymentMethods != null && paidMethods != null && paidMethods.isNotEmpty) {
+    if (paymentMethods != null &&
+        paidMethods != null &&
+        paidMethods.isNotEmpty) {
       apiBodyData = {
         "phone": customerPhone,
         "transaction_number": transactionId,
@@ -803,17 +878,25 @@ class CartProvider with ChangeNotifier {
     final url = Uri.parse(APPUrl.addToOrderConfirmUrl);
     debugPrint("🌐 API URL: ${url.toString()}");
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       debugPrint("🔄 Sending POST request to server...");
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
       });
-      
+
       debugPrint('📥 Response status code: ${response.statusCode}');
       debugPrint('📥 Response body: ${response.body}');
-      
+
       if (response.statusCode == 200) {
         debugPrint('✅ Order confirmed successfully');
         final jsonData = json.decode(response.body);
@@ -843,12 +926,20 @@ class CartProvider with ChangeNotifier {
       'coupon_code': couponCode,
     });
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(
         url,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
         },
       );
 

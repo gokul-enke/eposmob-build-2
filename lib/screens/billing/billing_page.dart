@@ -1794,17 +1794,26 @@ class BillingPageState extends State<BillingPage>
             title: "Net amount",
             color: ColorManager.textColor,
           ),
-          // if (localProductProvider.priceSummary!.discount > 0)
-          BuildPaymentRow(
-            amount:
-                "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)}",
-            title: "Discount",
-            color: ColorManager.textColor,
-          ),
+          (Provider.of<AppSettingsProvider>(context, listen: false)
+                      .appSettings
+                      ?.priceRoundOff ==
+                  true)
+              ? BuildPaymentRow(
+                  amount:
+                      "INR ${AmountHelper.roundOffAmount(localProductProvider.priceSummary!.discount)}",
+                  title: "Discount",
+                  color: ColorManager.textColor,
+                )
+              : BuildPaymentRow(
+                  amount:
+                      "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)}",
+                  title: "Discount",
+                  color: ColorManager.textColor,
+                ),
           const Divider(thickness: 2),
           BuildPaymentRow(
             amount:
-                "INR ${AmountHelper.formatAmount(localProductProvider.cartTotal)}",
+                "INR ${AmountHelper.roundOffAmount(localProductProvider.cartTotal)}",
             title: "Total Payable",
             secondRowTextStyle: buildCustomStyle(
               FontWeightManager.bold,
@@ -1882,8 +1891,7 @@ class BillingPageState extends State<BillingPage>
         ),
         const Divider(thickness: 2),
         BuildPaymentRow(
-          amount:
-              "INR ${AmountHelper.formatAmount(localProductProvider.cartTotal)}", // Use cartTotal from LocalProductProvider
+          amount: "INR ${_getFormattedTotal()}", // Use helper method
           title: "Total Payable",
           secondRowTextStyle: buildCustomStyle(
             FontWeightManager.bold,
@@ -1901,6 +1909,21 @@ class BillingPageState extends State<BillingPage>
         ),
       ],
     );
+  }
+
+  // Helper method to get formatted total
+  String _getFormattedTotal() {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+
+    if (appSettingsProvider.appSettings?.priceRoundOff == true) {
+      double roundedTotal = localProductProvider.getRoundedTotal(context);
+      return AmountHelper.formatAmount(roundedTotal);
+    }
+
+    return AmountHelper.formatAmount(localProductProvider.cartTotal);
   }
 
   Widget _buildMobileNumberInput({
@@ -2652,6 +2675,10 @@ class BillingPageState extends State<BillingPage>
       _fetchCustomers();
     } catch (e) {
       debugPrint("Error clearing cart: $e");
+      // showScaffold(
+      //   context: context,
+      //   message: "Cart Cleared Succesfully",
+      // );
       showScaffoldError(
         context: context,
         message: "Failed to clear cart. Please try again.",
@@ -2801,6 +2828,7 @@ class BillingPageState extends State<BillingPage>
           status: "saved",
           deliveryDate: deliveryDate, // Pass deliveryDate
           deliveryTime: deliveryTime, // Pass deliveryTime
+          // context: context, // Pass context
         );
 
         showScaffold(
@@ -2894,13 +2922,7 @@ class BillingPageState extends State<BillingPage>
           paymentMethod: paymentMethod,
           paidAmount: paidAmount,
           balanceAmount: _balanceAmount.toString(),
-          transactionId: _transactionNumberController.text,
-          couponId: isCouponApplied ? coupenCodeTextController.text : null,
-          deliveryMethodId: deliveryMethodId,
-          carNumber: _carNumberController.text,
-          status: "saved",
-          deliveryDate: deliveryDate, // Pass deliveryDate
-          deliveryTime: deliveryTime, // Pass deliveryTime
+          context: context, // Pass context
         );
 
         showScaffold(
@@ -2908,62 +2930,15 @@ class BillingPageState extends State<BillingPage>
           message: "Order Saved Successfully",
         );
       }
-
-      localProductProvider.clearCart();
-
-      // Clear form fields
-      setState(() {
-        mobileNumberText = ""; // Clear the variable
-        selectedCustomerID = null;
-        selectedCustomerPhone = null;
-        // Remove iconColor reset
-        // iconColor = 1; // DELETE THIS LINE
-        mobileNumberTextController.clear();
-        quantityController.clear();
-        barcodeController.clear();
-        selectedProductIdController.clear();
-        unitPriceController.clear();
-        isCustomerFound = false;
-        selectedCustomer = null;
-        isCouponApplied = false;
-        coupenCodeTextController.clear();
-        _transactionNumberController.clear();
-        _paidAmountController.clear();
-        _balanceAmount = 0;
-        _carNumberController.clear();
-        _commentController.clear();
-        _isCustomerManuallySelected =
-            false; // Reset manual selection after save
-        // Reset multi-payment fields
-        _isCashSelected = true;
-        _isCardSelected = false;
-        _isUpiSelected = false;
-        _cashAmountController.clear();
-        _cardAmountController.clear();
-        _upiAmountController.clear();
-        deliveryDate = null;
-        deliveryTime = null;
-      });
-
-      resetAutocomplete(
-          shouldFetchCustomers:
-              false); // Preserve customer selection after saving
-      _focusTextField();
-
-      // Reset to default sales executive after saving only if no manual customer was selected
-      if (!_isCustomerManuallySelected) {
-        _clearCart();
-        _fetchCustomers();
-      }
-    } catch (error) {
-      debugPrint(error.toString());
+    } catch (e) {
+      debugPrint("Error saving order: $e");
       showScaffoldError(
         context: context,
         message: "Failed to save order. Please try again.",
       );
     } finally {
       setState(() {
-        isLoadingSaveOrder = false; // Indicate that loading has finished
+        isLoadingSaveOrder = false;
       });
     }
   }
@@ -3596,8 +3571,8 @@ class BillingPageState extends State<BillingPage>
             // Check if it's a JSON string (multi-payment)
             if (currentOrder.paymentMethod!.startsWith('{')) {
               try {
-                Map<String, dynamic> multiPaymentData =
-                    json.decode(currentOrder.paymentMethod!); // Use json.decode here
+                Map<String, dynamic> multiPaymentData = json.decode(
+                    currentOrder.paymentMethod!); // Use json.decode here
                 if (multiPaymentData['isMultiPayment'] == true) {
                   List<String> methods =
                       List<String>.from(multiPaymentData['methods'] ?? []);

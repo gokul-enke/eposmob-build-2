@@ -1,10 +1,15 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
+import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/get_product.dart';
 import '../models/local_models.dart';
 import '../resources/app_url.dart';
+import '../providers/app_settings_provider.dart';
 
 /// A model representing a local cart item.
 /// It holds a product and its associated quantity in the offline cart.
@@ -35,7 +40,7 @@ class SavedOrder {
   final String createdAt;
   final double total;
   final String? deliveryMethod;
-  
+
   // New fields for API compatibility
   final int? customerId;
   final String? paymentMethod;
@@ -157,13 +162,13 @@ class LocalProductProvider extends ChangeNotifier {
   // Stock management settings - need to be injected from outside since this provider
   // doesn't have access to GeneralSettingsProvider directly
   bool? _stockEnabled;
-  
+
   /// Sets the stock enabled status from the GeneralSettingsProvider
   void setStockEnabled(bool enabled) {
     _stockEnabled = enabled;
     debugPrint("📦 Stock management setting updated: $_stockEnabled");
   }
-  
+
   /// Gets the current stock enabled status
   bool get isStockEnabled => _stockEnabled ?? false;
 
@@ -216,7 +221,8 @@ class LocalProductProvider extends ChangeNotifier {
             product: product,
             quantity: hiveCartItem.quantity,
             price: hiveCartItem.price,
-            mrp: hiveCartItem.mrp, // 🔧 FIX: Include MRP when loading confirmed orders from Hive
+            mrp: hiveCartItem
+                .mrp, // 🔧 FIX: Include MRP when loading confirmed orders from Hive
             selectedStock: selectedStock,
           );
         }).toList();
@@ -275,7 +281,8 @@ class LocalProductProvider extends ChangeNotifier {
             productId: item.product.productId!,
             quantity: item.quantity,
             price: item.price,
-            mrp: item.mrp, // 🔧 FIX: Include MRP when saving confirmed orders to Hive
+            mrp: item
+                .mrp, // 🔧 FIX: Include MRP when saving confirmed orders to Hive
             serializedProduct:
                 HiveStringValue(json.encode(item.product.toJson())),
             serializedSelectedStock: serializedStock,
@@ -342,7 +349,8 @@ class LocalProductProvider extends ChangeNotifier {
         product: product,
         quantity: hiveCartItem.quantity,
         price: hiveCartItem.price,
-        mrp: hiveCartItem.mrp, // 🔧 FIX: Include MRP when loading cart from Hive
+        mrp:
+            hiveCartItem.mrp, // 🔧 FIX: Include MRP when loading cart from Hive
         selectedStock: selectedStock,
       ));
     }
@@ -369,7 +377,8 @@ class LocalProductProvider extends ChangeNotifier {
           product: product,
           quantity: hiveCartItem.quantity,
           price: hiveCartItem.price,
-          mrp: hiveCartItem.mrp, // 🔧 FIX: Include MRP when loading saved orders from Hive
+          mrp: hiveCartItem
+              .mrp, // 🔧 FIX: Include MRP when loading saved orders from Hive
           selectedStock: selectedStock,
         );
       }).toList();
@@ -556,7 +565,7 @@ class LocalProductProvider extends ChangeNotifier {
         final queryParams = <String, String>{
           // if (filterName != null) 'name': filterName,
           // if (categoryId != null && categoryId != 0)
-            // 'category_id': categoryId.toString(),
+          // 'category_id': categoryId.toString(),
           'page': currentPage.toString(),
           // 'items_per_page': itemsPerPage.toString(),
         };
@@ -564,7 +573,19 @@ class LocalProductProvider extends ChangeNotifier {
         final url = Uri.parse(APPUrl.getProductUrl)
             .replace(queryParameters: queryParams);
 
-        final response = await http.get(url);
+        // Get API key from SharedPreferences
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        String? apiKey = prefs.getString('api_key');
+
+        if (apiKey == null || apiKey.isEmpty) {
+          throw const HttpException(
+              "API key not found. Please restart the app.");
+        }
+
+        final response = await http.get(url, headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        });
         debugPrint(
             'Fetching products - Page $currentPage, Status Code: ${response.statusCode}');
 
@@ -675,21 +696,22 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     if (filterBarcode != null && filterBarcode.isNotEmpty) {
-  result = result.where((p) => 
-    p.barcode != null && 
-    p.barcode!.toLowerCase().contains(filterBarcode.toLowerCase())
-  ).toList();
-}
+      result = result
+          .where((p) =>
+              p.barcode != null &&
+              p.barcode!.toLowerCase().contains(filterBarcode.toLowerCase()))
+          .toList();
+    }
 
-   if (filterPrice != null && filterPrice.isNotEmpty) {
-  result = result.where((p) {
-    // Convert product price to string for partial matching
-    final priceString = p.price?.price?.toString() ?? '';
-    
-    // Check if the price string contains the filter text
-    return priceString.contains(filterPrice);
-  }).toList();
-}
+    if (filterPrice != null && filterPrice.isNotEmpty) {
+      result = result.where((p) {
+        // Convert product price to string for partial matching
+        final priceString = p.price?.price?.toString() ?? '';
+
+        // Check if the price string contains the filter text
+        return priceString.contains(filterPrice);
+      }).toList();
+    }
 
     // Note: createdBy, properties, store, and supplier filters are not available in the GetProduct model
     // These filters are kept for API compatibility but won't affect the results
@@ -750,7 +772,7 @@ class LocalProductProvider extends ChangeNotifier {
       debugPrint("📦 Stock management disabled - skipping stock update");
       return;
     }
-    
+
     // Find and update the stock in the products list
     for (var product in _products) {
       if (product.stock != null) {
@@ -759,20 +781,21 @@ class LocalProductProvider extends ChangeNotifier {
             final currentStock = product.stock![i];
             final previousQuantity = currentStock.quantity ?? 0;
             final newQuantity = previousQuantity + quantityChange;
-            
+
             debugPrint("📦 STOCK UPDATE:");
             debugPrint("  - Stock ID: ${stock.id}");
             debugPrint("  - Operation: $operation");
             debugPrint("  - Quantity Change: $quantityChange");
             debugPrint("  - Previous Quantity: $previousQuantity");
             debugPrint("  - New Quantity: $newQuantity");
-            
+
             // Show warning if stock goes negative (but don't prevent the operation)
             if (newQuantity < 0) {
-              debugPrint("⚠️ WARNING: Stock quantity went negative ($newQuantity) - this indicates overselling");
+              debugPrint(
+                  "⚠️ WARNING: Stock quantity went negative ($newQuantity) - this indicates overselling");
               // Note: We don't prevent this - business decision is to allow sales even with negative stock
             }
-            
+
             // Create a new Stock object with updated quantity (since Stock fields are final)
             product.stock![i] = Stock(
               id: currentStock.id,
@@ -782,12 +805,13 @@ class LocalProductProvider extends ChangeNotifier {
               mrp: currentStock.mrp,
               purchasePrice: currentStock.purchasePrice,
             );
-            
-            debugPrint("📦 Updated stock in product list: ${product.productName}");
-            
+
+            debugPrint(
+                "📦 Updated stock in product list: ${product.productName}");
+
             // Save updated products to Hive
             _saveProductsToHive();
-            
+
             // Notify listeners to update UI
             notifyListeners();
             return;
@@ -795,10 +819,10 @@ class LocalProductProvider extends ChangeNotifier {
         }
       }
     }
-    
+
     debugPrint("⚠️ Stock entry not found for update: ${stock.id}");
   }
-  
+
   /// Updates a specific stock entry within the products list
   void _updateProductStockInList(Stock updatedStock) {
     for (var product in _products) {
@@ -806,7 +830,8 @@ class LocalProductProvider extends ChangeNotifier {
         for (int i = 0; i < product.stock!.length; i++) {
           if (product.stock![i].id == updatedStock.id) {
             product.stock![i] = updatedStock;
-            debugPrint("📦 Updated stock in product list: ${product.productName}");
+            debugPrint(
+                "📦 Updated stock in product list: ${product.productName}");
             return;
           }
         }
@@ -854,15 +879,17 @@ class LocalProductProvider extends ChangeNotifier {
 
     if (index != -1) {
       debugPrint("📝 Product already in cart - updating quantity");
-      
+
       // STOCK DEDUCTION: Deduct the additional quantity being added
       if (isStockEnabled && selectedStock != null) {
-        _updateStockQuantity(selectedStock, -cartQuantity, "ADD_TO_CART_INCREMENT");
+        _updateStockQuantity(
+            selectedStock, -cartQuantity, "ADD_TO_CART_INCREMENT");
       }
-      
+
       // If the product already exists in cart with the same stock, just update the quantity and price
-      _cartItems[index].quantity += cartQuantity; // Increment by the specified quantity
-      
+      _cartItems[index].quantity +=
+          cartQuantity; // Increment by the specified quantity
+
       // 🔧 FIX: Handle price updates based on explicit price provision and source
       if (price != null) {
         // When ANY source provides an explicit price, use it (custom pricing from Add Item, quantity control, etc.)
@@ -883,11 +910,13 @@ class LocalProductProvider extends ChangeNotifier {
             debugPrint("💰 Using product price: ${_cartItems[index].price}");
           }
         } else {
-          debugPrint("💰 Preserving existing price: ${_cartItems[index].price}");
+          debugPrint(
+              "💰 Preserving existing price: ${_cartItems[index].price}");
         }
         // If existing price exists (could be custom), preserve it when adding from external sources without explicit price
       } else {
-        debugPrint("💰 Preserving existing price from quantity control: ${_cartItems[index].price}");
+        debugPrint(
+            "💰 Preserving existing price from quantity control: ${_cartItems[index].price}");
       }
       // Always use explicit price when provided, otherwise preserve existing custom price
 
@@ -905,7 +934,8 @@ class LocalProductProvider extends ChangeNotifier {
             _cartItems[index].mrp = double.tryParse(selectedStock.mrp!);
             debugPrint("💰 Using stock MRP: ${_cartItems[index].mrp}");
           } else {
-            _cartItems[index].mrp = product.mrp != null ? double.tryParse(product.mrp!) : 0.0;
+            _cartItems[index].mrp =
+                product.mrp != null ? double.tryParse(product.mrp!) : 0.0;
             debugPrint("💰 Using product MRP: ${_cartItems[index].mrp}");
           }
         } else {
@@ -913,7 +943,8 @@ class LocalProductProvider extends ChangeNotifier {
         }
         // If existing MRP exists (could be custom), preserve it when adding from external sources without explicit MRP
       } else {
-        debugPrint("💰 Preserving existing MRP from quantity control: ${_cartItems[index].mrp}");
+        debugPrint(
+            "💰 Preserving existing MRP from quantity control: ${_cartItems[index].mrp}");
       }
       // Always use explicit MRP when provided, otherwise preserve existing custom MRP
 
@@ -924,12 +955,12 @@ class LocalProductProvider extends ChangeNotifier {
       }
     } else {
       debugPrint("🆕 Adding new product to cart");
-      
+
       // STOCK DEDUCTION: Deduct quantity for new cart item
       if (isStockEnabled && selectedStock != null) {
         _updateStockQuantity(selectedStock, -cartQuantity, "ADD_TO_CART_NEW");
       }
-      
+
       // Safely handle null product price when adding new cart item
       double productPrice = 0.0;
       double productMrp = 0.0;
@@ -960,11 +991,11 @@ class LocalProductProvider extends ChangeNotifier {
             selectedStock: selectedStock,
           ));
     }
-    
+
     resetSelectedProduct();
     _saveCartToHive();
     notifyListeners();
-    
+
     debugPrint("✅ ADD TO CART COMPLETED");
   }
 
@@ -979,7 +1010,7 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("Product ID: $productId");
     debugPrint("Selected Stock: ${selectedStock?.id}");
     debugPrint("Stock Management Enabled: $isStockEnabled");
-    
+
     int index = _cartItems.indexWhere((item) =>
         item.product.productId == productId &&
         (item.selectedStock?.id == selectedStock?.id ||
@@ -988,18 +1019,19 @@ class LocalProductProvider extends ChangeNotifier {
     if (index != -1) {
       final cartItem = _cartItems[index];
       final quantityToRestore = cartItem.quantity;
-      
+
       debugPrint("📝 Found cart item - removing ${quantityToRestore} units");
-      
+
       // STOCK RESTORATION: Add back the quantity being removed
       if (isStockEnabled && selectedStock != null) {
-        _updateStockQuantity(selectedStock, quantityToRestore, "REMOVE_FROM_CART");
+        _updateStockQuantity(
+            selectedStock, quantityToRestore, "REMOVE_FROM_CART");
       }
-      
+
       _cartItems.removeAt(index);
       _saveCartToHive();
       notifyListeners();
-      
+
       debugPrint("✅ REMOVE FROM CART COMPLETED");
     } else {
       debugPrint("⚠️ Cart item not found for removal");
@@ -1042,21 +1074,22 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("Product ID: $productId");
     debugPrint("Selected Stock: ${selectedStock?.id}");
     debugPrint("Stock Management Enabled: $isStockEnabled");
-    
+
     int index = _cartItems.indexWhere((item) =>
         item.product.productId == productId &&
         (item.selectedStock?.id == selectedStock?.id ||
             (item.selectedStock == null && selectedStock == null)));
 
     if (index != -1) {
-      debugPrint("📝 Found cart item - current quantity: ${_cartItems[index].quantity}");
-      
+      debugPrint(
+          "📝 Found cart item - current quantity: ${_cartItems[index].quantity}");
+
       if (_cartItems[index].quantity > 1) {
         // STOCK RESTORATION: Add back 1 unit
         if (isStockEnabled && selectedStock != null) {
           _updateStockQuantity(selectedStock, 1, "DECREMENT_CART_ITEM");
         }
-        
+
         _cartItems[index].quantity--;
         debugPrint("📝 Decremented quantity to: ${_cartItems[index].quantity}");
       } else {
@@ -1064,14 +1097,14 @@ class LocalProductProvider extends ChangeNotifier {
         if (isStockEnabled && selectedStock != null) {
           _updateStockQuantity(selectedStock, 1, "DECREMENT_CART_ITEM_REMOVE");
         }
-        
+
         _cartItems.removeAt(index);
         debugPrint("📝 Removed item from cart (quantity was 1)");
       }
-      
+
       _saveCartToHive();
       notifyListeners();
-      
+
       debugPrint("✅ DECREMENT CART ITEM COMPLETED");
     } else {
       debugPrint("⚠️ Cart item not found for decrement");
@@ -1084,20 +1117,21 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("🧹 CLEAR CART STARTED");
     debugPrint("Cart items count: ${_cartItems.length}");
     debugPrint("Stock Management Enabled: $isStockEnabled");
-    
+
     // STOCK RESTORATION: Restore all quantities from cart items
     if (isStockEnabled) {
       for (var cartItem in _cartItems) {
         if (cartItem.selectedStock != null) {
-          _updateStockQuantity(cartItem.selectedStock!, cartItem.quantity, "CLEAR_CART");
+          _updateStockQuantity(
+              cartItem.selectedStock!, cartItem.quantity, "CLEAR_CART");
         }
       }
     }
-    
+
     _cartItems.clear();
     _cartItemsBox.clear();
     notifyListeners();
-    
+
     debugPrint("✅ CLEAR CART COMPLETED");
   }
 
@@ -1150,33 +1184,34 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("Stock ID: $stockId");
     debugPrint("Quantity: $quantity");
     debugPrint("Price: $price");
-    
+
     // Find the product in the local list
     int productIndex = _products.indexWhere((p) => p.productId == productId);
-    
+
     if (productIndex != -1) {
       GetProduct oldProduct = _products[productIndex];
-      
+
       // Create a copy of existing stock list
-      List<Stock> updatedStock = oldProduct.stock != null 
-          ? List<Stock>.from(oldProduct.stock!) 
-          : [];
-      
+      List<Stock> updatedStock =
+          oldProduct.stock != null ? List<Stock>.from(oldProduct.stock!) : [];
+
       // Check if stock entry already exists
       int stockIndex = updatedStock.indexWhere((s) => s.id == stockId);
-      
+
       if (stockIndex != -1) {
         // Update existing stock entry
         Stock existingStock = updatedStock[stockIndex];
         updatedStock[stockIndex] = Stock(
           id: existingStock.id,
           productId: existingStock.productId,
-          quantity: (existingStock.quantity ?? 0) + quantity, // Add to existing quantity
+          quantity: (existingStock.quantity ?? 0) +
+              quantity, // Add to existing quantity
           price: price,
           mrp: mrp,
           purchasePrice: purchasePrice,
         );
-        debugPrint("📦 Updated existing stock entry - New quantity: ${updatedStock[stockIndex].quantity}");
+        debugPrint(
+            "📦 Updated existing stock entry - New quantity: ${updatedStock[stockIndex].quantity}");
       } else {
         // Add new stock entry
         Stock newStock = Stock(
@@ -1187,11 +1222,11 @@ class LocalProductProvider extends ChangeNotifier {
           mrp: mrp,
           purchasePrice: purchasePrice,
         );
-        
+
         updatedStock.add(newStock);
         debugPrint("📦 Added new stock entry to product");
       }
-      
+
       // Create new product instance with updated stock
       GetProduct updatedProduct = GetProduct(
         productId: oldProduct.productId,
@@ -1213,16 +1248,16 @@ class LocalProductProvider extends ChangeNotifier {
         weightInfo: oldProduct.weightInfo,
         stock: updatedStock, // Updated stock list
       );
-      
+
       // Update the product in the list
       _products[productIndex] = updatedProduct;
-      
+
       // Save to Hive
       _saveProductsToHive();
-      
+
       // Update filtered products if needed
       refreshProducts();
-      
+
       debugPrint("✅ MANUAL STOCK UPDATE COMPLETED");
     } else {
       debugPrint("❌ Product not found for stock update: $productId");
@@ -1237,19 +1272,20 @@ class LocalProductProvider extends ChangeNotifier {
     required num newQuantity,
   }) {
     debugPrint("📦 MANUAL STOCK QUANTITY UPDATE");
-    debugPrint("Product ID: $productId, Stock ID: $stockId, New Quantity: $newQuantity");
-    
+    debugPrint(
+        "Product ID: $productId, Stock ID: $stockId, New Quantity: $newQuantity");
+
     int productIndex = _products.indexWhere((p) => p.productId == productId);
-    
+
     if (productIndex != -1) {
       GetProduct oldProduct = _products[productIndex];
-      
+
       if (oldProduct.stock != null) {
         // Create a copy of existing stock list
         List<Stock> updatedStock = List<Stock>.from(oldProduct.stock!);
-        
+
         int stockIndex = updatedStock.indexWhere((s) => s.id == stockId);
-        
+
         if (stockIndex != -1) {
           Stock existingStock = updatedStock[stockIndex];
           updatedStock[stockIndex] = Stock(
@@ -1260,7 +1296,7 @@ class LocalProductProvider extends ChangeNotifier {
             mrp: existingStock.mrp,
             purchasePrice: existingStock.purchasePrice,
           );
-          
+
           // Create new product instance with updated stock
           GetProduct updatedProduct = GetProduct(
             productId: oldProduct.productId,
@@ -1282,16 +1318,16 @@ class LocalProductProvider extends ChangeNotifier {
             weightInfo: oldProduct.weightInfo,
             stock: updatedStock, // Updated stock list
           );
-          
+
           // Update the product in the list
           _products[productIndex] = updatedProduct;
-          
+
           // Save to Hive
           _saveProductsToHive();
-          
+
           // Refresh products
           refreshProducts();
-          
+
           debugPrint("✅ Stock quantity updated successfully");
         } else {
           debugPrint("❌ Stock entry not found: $stockId");
@@ -1352,6 +1388,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? status,
     String? deliveryDate, // Add deliveryDate
     String? deliveryTime, // Add deliveryTime
+    BuildContext? context, // Add context parameter
   }) {
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as confirmed order");
@@ -1360,8 +1397,8 @@ class LocalProductProvider extends ChangeNotifier {
     // Generate a unique ID for the order (timestamp-based)
     final String orderId = DateTime.now().millisecondsSinceEpoch.toString();
 
-    // Calculate total
-    double total = cartTotal;
+    // Calculate total with rounding if enabled
+    double total = context != null ? getRoundedTotal(context) : cartTotal;
 
     // Create a deep copy of cart items to prevent modification
     List<LocalCartItem> orderItems = _cartItems
@@ -1519,12 +1556,13 @@ class LocalProductProvider extends ChangeNotifier {
     String? status,
     String? deliveryDate, // Add deliveryDate
     String? deliveryTime, // Add deliveryTime
+    BuildContext? context, // Add context parameter
   }) {
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder called");
     debugPrint("  - Customer Phone parameter: '$customerPhone'");
     debugPrint("  - Customer Name parameter: '$customerName'");
     debugPrint("  - Customer ID parameter: $customerId");
-    
+
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as order");
     }
@@ -1532,8 +1570,8 @@ class LocalProductProvider extends ChangeNotifier {
     // Generate a unique ID for the order (timestamp-based)
     final String orderId = DateTime.now().millisecondsSinceEpoch.toString();
 
-    // Calculate total
-    double total = cartTotal;
+    // Calculate total with rounding if enabled
+    double total = context != null ? getRoundedTotal(context) : cartTotal;
 
     // Create a deep copy of cart items to prevent modification
     List<LocalCartItem> orderItems = _cartItems
@@ -1584,7 +1622,7 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("  - Saved order name: '${order.customerName}'");
     debugPrint("  - Saved order customer ID: ${order.customerId}");
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder completed");
-    
+
     return order;
   }
 
@@ -1671,12 +1709,13 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("  - Customer Phone parameter: '$customerPhone'");
     debugPrint("  - Customer Name parameter: '$customerName'");
     debugPrint("  - Customer ID parameter: $customerId");
-    
+
     int index = _savedOrders.indexWhere((o) => o.id == orderId);
 
     if (index != -1) {
       debugPrint("  - Found order at index: $index");
-      debugPrint("  - Original order phone: '${_savedOrders[index].customerPhone}'");
+      debugPrint(
+          "  - Original order phone: '${_savedOrders[index].customerPhone}'");
       // Get current cart total
       double total = cartTotal;
 
@@ -1710,16 +1749,19 @@ class LocalProductProvider extends ChangeNotifier {
         balanceAmount: balanceAmount ?? _savedOrders[index].balanceAmount,
         transactionId: transactionId ?? _savedOrders[index].transactionId,
         couponId: couponId ?? _savedOrders[index].couponId,
-        deliveryMethodId: deliveryMethodId ?? _savedOrders[index].deliveryMethodId,
+        deliveryMethodId:
+            deliveryMethodId ?? _savedOrders[index].deliveryMethodId,
         carNumber: carNumber ?? _savedOrders[index].carNumber,
         status: status ?? _savedOrders[index].status,
-        deliveryDate: deliveryDate ?? _savedOrders[index].deliveryDate, // Update deliveryDate
-        deliveryTime: deliveryTime ?? _savedOrders[index].deliveryTime, // Update deliveryTime
+        deliveryDate: deliveryDate ??
+            _savedOrders[index].deliveryDate, // Update deliveryDate
+        deliveryTime: deliveryTime ??
+            _savedOrders[index].deliveryTime, // Update deliveryTime
       );
 
       // Update in list
       _savedOrders[index] = updatedOrder;
-      
+
       debugPrint("  - Updated order phone: '${updatedOrder.customerPhone}'");
       debugPrint("  - Updated order name: '${updatedOrder.customerName}'");
       debugPrint("  - Updated order customer ID: ${updatedOrder.customerId}");
@@ -1729,7 +1771,7 @@ class LocalProductProvider extends ChangeNotifier {
 
       _saveSavedOrdersToHive();
       notifyListeners();
-      
+
       debugPrint("💾 LOCAL PROVIDER - updateSavedOrder completed");
     } else {
       debugPrint("⚠️ LOCAL PROVIDER - Order not found: $orderId");
@@ -1812,8 +1854,9 @@ class LocalProductProvider extends ChangeNotifier {
 
   /// Gets current stock information for a product (for debugging/monitoring)
   Map<String, dynamic> getStockInfo(int productId) {
-    final product = _products.firstWhere((p) => p.productId == productId, orElse: () => throw Exception("Product not found"));
-    
+    final product = _products.firstWhere((p) => p.productId == productId,
+        orElse: () => throw Exception("Product not found"));
+
     if (product.stock == null || product.stock!.isEmpty) {
       return {
         'productName': product.productName,
@@ -1822,28 +1865,33 @@ class LocalProductProvider extends ChangeNotifier {
         'stockEntries': []
       };
     }
-    
-    List<Map<String, dynamic>> stockEntries = product.stock!.map((stock) => {
-      'stockId': stock.id,
-      'quantity': stock.quantity,
-      'price': stock.price,
-      'mrp': stock.mrp,
-      'status': (stock.quantity ?? 0) <= 0 ? 'OUT_OF_STOCK' : 'AVAILABLE'
-    }).toList();
-    
+
+    List<Map<String, dynamic>> stockEntries = product.stock!
+        .map((stock) => {
+              'stockId': stock.id,
+              'quantity': stock.quantity,
+              'price': stock.price,
+              'mrp': stock.mrp,
+              'status':
+                  (stock.quantity ?? 0) <= 0 ? 'OUT_OF_STOCK' : 'AVAILABLE'
+            })
+        .toList();
+
     return {
       'productName': product.productName,
       'stockManagementEnabled': isStockEnabled,
       'hasStockEntries': true,
       'stockEntries': stockEntries,
-      'totalAvailableQuantity': product.stock!.fold<num>(0, (sum, stock) => sum + (stock.quantity ?? 0))
+      'totalAvailableQuantity': product.stock!
+          .fold<num>(0, (sum, stock) => sum + (stock.quantity ?? 0))
     };
   }
 
   /// Sets the exact quantity of a cart item. Supports fractional quantities.
   /// If [newQuantity] is 0 or less, the item is removed from the cart.
   /// Stock levels are adjusted based on the difference between old and new quantities.
-  void setCartItemQuantity(int productId, Stock? selectedStock, num newQuantity) {
+  void setCartItemQuantity(
+      int productId, Stock? selectedStock, num newQuantity) {
     debugPrint("🔄 SET CART ITEM QUANTITY STARTED");
     debugPrint("Product ID: $productId");
     debugPrint("Selected Stock: ${selectedStock?.id}");
@@ -1861,13 +1909,15 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     final currentQuantity = _cartItems[index].quantity;
-    final num difference = newQuantity - currentQuantity; // positive if increasing
+    final num difference =
+        newQuantity - currentQuantity; // positive if increasing
 
     // Handle stock adjustment if enabled
     if (isStockEnabled && selectedStock != null && difference != 0) {
       // If difference is positive we are selling more → deduct stock (-difference)
       // If difference is negative we are reducing sale → restore stock (+abs(difference))
-      _updateStockQuantity(selectedStock, -difference, "SET_CART_ITEM_QUANTITY");
+      _updateStockQuantity(
+          selectedStock, -difference, "SET_CART_ITEM_QUANTITY");
     }
 
     if (newQuantity <= 0) {
@@ -1883,6 +1933,20 @@ class LocalProductProvider extends ChangeNotifier {
     _saveCartToHive();
     notifyListeners();
     debugPrint("🔄 SET CART ITEM QUANTITY COMPLETED");
+  }
+
+  // Add method to get rounded total
+  double getRoundedTotal(BuildContext context) {
+    double originalTotal = cartTotal;
+
+    // Check if rounding is enabled
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    if (appSettingsProvider.appSettings?.priceRoundOff == true) {
+      return AmountHelper.roundOffAmount(originalTotal);
+    }
+
+    return originalTotal;
   }
 
   // End of LocalProductProvider

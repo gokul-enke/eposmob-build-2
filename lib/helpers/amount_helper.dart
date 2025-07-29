@@ -125,4 +125,16 @@ class AmountHelper {
 
     return result.trim();
   }
+
+  /// Rounds amount to nearest integer using standard rounding rules
+  /// Example: 2.4 -> 2, 2.5 -> 3, 2.6 -> 3
+  static double roundOffAmount(double amount) {
+    return amount.roundToDouble();
+  }
+
+  /// Formats rounded amount
+  static String formatRoundedAmount(double amount) {
+    double rounded = roundOffAmount(amount);
+    return rounded.toStringAsFixed(0); // No decimal places for rounded amounts
+  }
 }

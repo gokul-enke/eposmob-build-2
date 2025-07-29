@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/resources/app_url.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomerPurchaseProvider {
   
@@ -31,11 +34,19 @@ class CustomerPurchaseProvider {
       debugPrint('Request Body: ${json.encode(requestBody)}');
       debugPrint('Making HTTP POST request...');
       
+      // Get API key from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
       final response = await http.post(
         Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
         },
         body: json.encode(requestBody),
       );

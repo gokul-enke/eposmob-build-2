@@ -52,7 +52,11 @@ class _SideBarProductListState extends State<SideBarProductList> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<CategoryProvider>(context, listen: false).listAllCategory();
+      // Only load categories if not already loaded
+      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+      if (!categoryProvider.isCategoriesLoaded) {
+        categoryProvider.listAllCategory();
+      }
       Provider.of<LocalProductProvider>(context, listen: false)
           .refreshProducts();
     });

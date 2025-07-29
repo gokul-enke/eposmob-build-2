@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../models/document_configurations.dart';
 import '../resources/app_url.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DocumentConfigProvider extends ChangeNotifier {
   bool isLoading = false;
@@ -20,13 +22,20 @@ class DocumentConfigProvider extends ChangeNotifier {
     notifyListeners();
 
     final url = Uri.parse(APPUrl.documentConfigs);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
 
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
     try {
       final response = await http.get(
         url,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
         },
       ).timeout(const Duration(seconds: 15));
 
