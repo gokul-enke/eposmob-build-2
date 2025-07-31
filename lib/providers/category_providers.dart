@@ -16,6 +16,7 @@ class CategoryProvider extends ChangeNotifier {
   List<Category>? searchCategoryList = [];
   List<Category>? filteredcategoryList = [];
   List<Category>? categoryListWithoutQuery = [];
+  List<Category>? _originalCategoryList = []; // Store original unfiltered list
   String categoryText = '';
   ViewCategory? viewCategory;
   String parentCategory = '0';
@@ -152,8 +153,9 @@ class CategoryProvider extends ChangeNotifier {
         // Assuming categoryDemo is still relevant
         categoryList!.insert(0, categoryDemo);
 
-        // Mark as loaded only if no filtering was applied
+        // Store the original unfiltered list only when no filtering is applied
         if (filterName == null && filterParent == null) {
+          _originalCategoryList = List.from(categoryList!);
           _isCategoriesLoaded = true;
         }
 
@@ -180,6 +182,20 @@ class CategoryProvider extends ChangeNotifier {
 
   // Add a getter to check if categories are loaded
   bool get isCategoriesLoaded => _isCategoriesLoaded;
+
+  /// Resets the category filter without making an API call
+  /// This method restores the original unfiltered category list
+  void resetCategoryFilter() {
+    // Restore the original unfiltered category list if available
+    if (_originalCategoryList != null && _originalCategoryList!.isNotEmpty) {
+      categoryList = List.from(_originalCategoryList!);
+      notifyListeners();
+    } else {
+      // Fallback: reload categories if original list is not available
+      _isCategoriesLoaded = false;
+      listAllCategory();
+    }
+  }
 
   Future<void> searchAllCategory({
     String? filterName,

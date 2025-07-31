@@ -9,11 +9,17 @@ import '../../../resources/style_manager.dart';
 class CustomerInformationViewWidget extends StatefulWidget {
   final Size size;
   final CustomerListModelData? customer;
+  final VoidCallback? onEditCustomer;
+  final VoidCallback? onViewOrders;
+  final VoidCallback? onMessage;
 
   const CustomerInformationViewWidget({
     Key? key,
     required this.size,
     required this.customer,
+    this.onEditCustomer,
+    this.onViewOrders,
+    this.onMessage,
   }) : super(key: key);
 
   @override
@@ -336,9 +342,7 @@ class _CustomerInformationViewWidgetState
                   icon: Icons.edit_outlined,
                   label: "Edit Customer",
                   color: ColorManager.kPrimaryColor,
-                  onTap: () {
-                    // Add edit functionality
-                  },
+                  onTap: widget.onEditCustomer ?? () {},
                 ),
               ),
               const SizedBox(width: 12),
@@ -347,9 +351,7 @@ class _CustomerInformationViewWidgetState
                   icon: Icons.history_outlined,
                   label: "View Orders",
                   color: ColorManager.kButtonGreen,
-                  onTap: () {
-                    // Add view orders functionality
-                  },
+                  onTap: widget.onViewOrders ?? () {},
                 ),
               ),
               const SizedBox(width: 12),
@@ -358,9 +360,7 @@ class _CustomerInformationViewWidgetState
                   icon: Icons.chat_outlined,
                   label: "Message",
                   color: ColorManager.kButtonBlue,
-                  onTap: () {
-                    // Add messaging functionality
-                  },
+                  onTap: widget.onMessage ?? () {},
                 ),
               ),
             ],

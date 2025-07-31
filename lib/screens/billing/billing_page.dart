@@ -2835,6 +2835,41 @@ class BillingPageState extends State<BillingPage>
           context: context,
           message: "Order Updated Successfully",
         );
+
+        // Clear cart after successful update
+        localProductProvider.clearCart();
+
+        // Clear form fields
+        setState(() {
+          mobileNumberText = ""; // Clear the variable
+          selectedCustomerID = null;
+          selectedCustomerPhone = null;
+          mobileNumberTextController.clear();
+          quantityController.clear();
+          barcodeController.clear();
+          selectedProductIdController.clear();
+          unitPriceController.clear();
+          isCustomerFound = false;
+          selectedCustomer = null;
+          isCouponApplied = false;
+          coupenCodeTextController.clear();
+          _transactionNumberController.clear();
+          _paidAmountController.clear();
+          _balanceAmount = 0;
+          _carNumberController.clear();
+          _commentController.clear();
+          _isCustomerManuallySelected = false; // Reset manual selection after save
+          deliveryDate = null;
+          deliveryTime = null;
+        });
+
+        resetAutocomplete(shouldFetchCustomers: false); // Preserve customer selection after saving
+        _focusTextField();
+
+        // Reset to default sales executive after saving only if no manual customer was selected
+        if (!_isCustomerManuallySelected) {
+          _fetchCustomers();
+        }
       } else {
         // Save as new order
         debugPrint("💾 Saving as new order");
@@ -2929,6 +2964,41 @@ class BillingPageState extends State<BillingPage>
           context: context,
           message: "Order Saved Successfully",
         );
+
+        // Clear cart after successful save
+        localProductProvider.clearCart();
+
+        // Clear form fields
+        setState(() {
+          mobileNumberText = ""; // Clear the variable
+          selectedCustomerID = null;
+          selectedCustomerPhone = null;
+          mobileNumberTextController.clear();
+          quantityController.clear();
+          barcodeController.clear();
+          selectedProductIdController.clear();
+          unitPriceController.clear();
+          isCustomerFound = false;
+          selectedCustomer = null;
+          isCouponApplied = false;
+          coupenCodeTextController.clear();
+          _transactionNumberController.clear();
+          _paidAmountController.clear();
+          _balanceAmount = 0;
+          _carNumberController.clear();
+          _commentController.clear();
+          _isCustomerManuallySelected = false; // Reset manual selection after save
+          deliveryDate = null;
+          deliveryTime = null;
+        });
+
+        resetAutocomplete(shouldFetchCustomers: false); // Preserve customer selection after saving
+        _focusTextField();
+
+        // Reset to default sales executive after saving only if no manual customer was selected
+        if (!_isCustomerManuallySelected) {
+          _fetchCustomers();
+        }
       }
     } catch (e) {
       debugPrint("Error saving order: $e");

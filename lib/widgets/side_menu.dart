@@ -258,11 +258,11 @@ class SideMenu extends StatelessWidget {
                 onTapTitle1: () {
                   sideBarController.index.value = 14;
                 },
-                onTapTitle2: () {
-                  sideBarController.index.value = 15;
-                },
+                // onTapTitle2: () {
+                //   sideBarController.index.value = 15;
+                // },
                 listTitle1: "Product",
-                listTitle2: "Stock",
+                // listTitle2: "Stock",
                 iconPath: ImageAssets.allCategoryIcon,
                 title: 'Product',
                 onTap: () async {
