@@ -35,7 +35,9 @@ class _CustomerInformationEditWidgetState
   late TextEditingController lastNameController;
   late TextEditingController emailController;
   late TextEditingController phoneController;
-  late TextEditingController addressController;
+  late TextEditingController altPhoneController;
+  String? selectedGender;
+  DateTime? selectedDate;
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -47,7 +49,11 @@ class _CustomerInformationEditWidgetState
         text: nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '');
     emailController = TextEditingController(text: widget.customer?.email ?? '');
     phoneController = TextEditingController(text: widget.customer?.phone ?? '');
-    addressController = TextEditingController(text: ''); // No address in model
+    altPhoneController = TextEditingController(text: widget.customer?.altPhone ?? '');
+    
+    // Initialize gender and date
+    selectedGender = widget.customer?.gender;
+    selectedDate = widget.customer?.dob != null ? DateTime.tryParse(widget.customer!.dob!) : null;
   }
 
   @override
@@ -56,7 +62,7 @@ class _CustomerInformationEditWidgetState
     lastNameController.dispose();
     emailController.dispose();
     phoneController.dispose();
-    addressController.dispose();
+    altPhoneController.dispose();
     super.dispose();
   }
 
@@ -115,14 +121,11 @@ class _CustomerInformationEditWidgetState
                         },
                       ),
                       const SizedBox(height: 20),
-                      buildColumnWidgetForTextFields(
-                        controller: addressController,
-                        hintText: 'Address (Optional)',
-                        title: 'Address (Optional)',
-                        size: widget.size,
-                        width: double.infinity,
-                        height: widget.size.height * 0.15,
-                      ),
+                      _buildAltPhoneField(),
+                      const SizedBox(height: 20),
+                      _buildGenderField(),
+                      const SizedBox(height: 20),
+                      _buildDateOfBirthField(),
                       const SizedBox(height: 30),
                       _buildActionButtons(),
                     ],
@@ -262,19 +265,58 @@ class _CustomerInformationEditWidgetState
         phoneController.text,
         "${firstNameController.text} ${lastNameController.text}",
         emailController.text,
-        addressController.text,
+        "", // address - removed since not in API
         "", "", "", "", // pincode, city, state, country
         customerId,
         context,
+        altPhone: altPhoneController.text,
+        gender: selectedGender,
+        dob: selectedDate?.toIso8601String().split('T')[0], // Format as YYYY-MM-DD
+        storeId: widget.customer?.storeId ?? 1,
       );
 
       Navigator.pop(context); // Close loading dialog
 
       if (response["status"] == "success") {
+        debugPrint("Customer update successful, updating local customer data...");
         showScaffold(
             context: context,
             message: response["message"] ?? "Customer updated successfully");
-        await customerProvider.fetchUserById(accessToken, customerId, context);
+        
+        // Update the local customer data with the new information
+        if (widget.customer != null) {
+          // Create a new customer object with updated data
+          final updatedCustomer = CustomerListModelData(
+            id: widget.customer!.id,
+            name: "${firstNameController.text} ${lastNameController.text}",
+            email: emailController.text,
+            phone: phoneController.text,
+            altPhone: altPhoneController.text.isNotEmpty ? altPhoneController.text : widget.customer!.altPhone,
+            gender: selectedGender ?? widget.customer!.gender,
+            dob: selectedDate?.toIso8601String().split('T')[0] ?? widget.customer!.dob,
+            profileImage: widget.customer!.profileImage,
+            storeId: widget.customer!.storeId,
+            userId: widget.customer!.userId,
+            createdAt: widget.customer!.createdAt,
+            updatedAt: widget.customer!.updatedAt,
+            deletedAt: widget.customer!.deletedAt,
+            cardNumber: widget.customer!.cardNumber,
+            loyaltyPoints: widget.customer!.loyaltyPoints,
+            validFrom: widget.customer!.validFrom,
+            validUntil: widget.customer!.validUntil,
+            cardStatus: widget.customer!.cardStatus,
+            membershipName: widget.customer!.membershipName,
+            membershipCode: widget.customer!.membershipCode,
+            minRedeemablePoints: widget.customer!.minRedeemablePoints,
+            pricePerPoint: widget.customer!.pricePerPoint,
+            balance: widget.customer!.balance,
+            transactions: widget.customer!.transactions,
+            orders: widget.customer!.orders,
+          );
+          
+          // Update the selected customer in the provider
+          customerProvider.selectCustomer(updatedCustomer);
+        }
       } else {
         String errorMsg = response["message"] ?? "Failed to update customer";
         if (response["errors"] != null) {
@@ -289,6 +331,96 @@ class _CustomerInformationEditWidgetState
       showScaffoldError(
           context: context, message: "An error occurred: $error");
     }
+  }
+
+  Widget _buildAltPhoneField() {
+    return buildColumnWidgetForTextFields(
+      controller: altPhoneController,
+      hintText: 'Alternative Phone Number',
+      title: 'Alternative Phone Number',
+      size: widget.size,
+      width: double.infinity,
+      keyboardType: TextInputType.phone,
+    );
+  }
+
+  Widget _buildGenderField() {
+    return buildColumnWidgetForTextFields(
+      controller: TextEditingController(text: selectedGender ?? ''),
+      hintText: 'Select Gender',
+      title: 'Gender',
+      size: widget.size,
+      width: double.infinity,
+      readOnly: true,
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Select Gender'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  title: const Text('Male'),
+                  onTap: () {
+                    setState(() {
+                      selectedGender = 'male';
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  title: const Text('Female'),
+                  onTap: () {
+                    setState(() {
+                      selectedGender = 'female';
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  title: const Text('Other'),
+                  onTap: () {
+                    setState(() {
+                      selectedGender = 'other';
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDateOfBirthField() {
+    return buildColumnWidgetForTextFields(
+      controller: TextEditingController(
+        text: selectedDate != null
+            ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
+            : '',
+      ),
+      hintText: 'Select Date of Birth',
+      title: 'Date of Birth',
+      size: widget.size,
+      width: double.infinity,
+      readOnly: true,
+      onTap: () async {
+        final DateTime? picked = await showDatePicker(
+          context: context,
+          initialDate: selectedDate ?? DateTime.now(),
+          firstDate: DateTime(1900),
+          lastDate: DateTime.now(),
+        );
+        if (picked != null) {
+          setState(() {
+            selectedDate = picked;
+          });
+        }
+      },
+    );
   }
 
   void _showPasswordChangeConfirmation(BuildContext context) {
