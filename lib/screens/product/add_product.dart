@@ -124,20 +124,26 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   void resetSearch() {
-    setState(() {
-      productNameController.clear();
-      storeController.clear();
-      amountController.clear();
-      barcodeController.clear();
-      selectedCategoryId = null;
-      selectedProperties = null;
-      selectedSupplierId = null;
-      selectedProperty = null;
-      supplierIdController.clear();
-      page = 1;
-    });
-    loadInitData();
-  }
+  setState(() {
+    productNameController.clear();
+    storeController.clear();
+    amountController.clear();
+    barcodeController.clear();
+    createdByController.clear();
+    supplierIdController.clear();
+    
+    // Reset dropdown selections
+    selectedCategoryId = null;
+    selectedProperties = null;
+    selectedSupplierId = null;
+    selectedProperty = null;
+    storeSelected = null;
+    supplier = null;
+    
+    page = 1;
+  });
+  loadInitData();
+}
 
   void _showProductDetails(GetProduct product) {
     setState(() {

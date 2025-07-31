@@ -728,11 +728,13 @@ class SupplierDetailModal extends StatelessWidget {
       backgroundColor: Colors.white,
       child: Container(
         constraints: BoxConstraints(
-            maxWidth: 600, maxHeight: MediaQuery.of(context).size.height * 0.8),
+               maxWidth: MediaQuery.of(context).size.width / 2,
+              maxHeight: MediaQuery.of(context).size.height * 0.7,
+              ),
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header with close button
             Row(
@@ -742,8 +744,8 @@ class SupplierDetailModal extends StatelessWidget {
                   "Supplier Details",
                   style: buildCustomStyle(
                     FontWeightManager.bold,
-                    FontSize.s20,
-                    0.30,
+                    FontSize.s24,
+                    0.36,
                     ColorManager.textColor,
                   ),
                 ),
@@ -753,30 +755,16 @@ class SupplierDetailModal extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Supplier Information Card
-            Card(
-              elevation: 2,
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: Colors.grey[300]!),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+            Expanded(
+              child: SingleChildScrollView(
+                // padding: const EdgeInsets.all(16),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  
                   children: [
-                    Text(
-                      "Supplier Information",
-                      style: buildCustomStyle(
-                        FontWeightManager.bold,
-                        FontSize.s16,
-                        0.30,
-                        ColorManager.textColor,
-                      ),
-                    ),
+                    
                     const SizedBox(height: 16),
                     _buildInfoRow("Name", supplier.name),
                     const SizedBox(height: 8),
@@ -816,33 +804,37 @@ class SupplierDetailModal extends StatelessWidget {
   }
 
   Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 150,
-          child: Text(
-            "$label: ",
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s12,
-              0.30,
-              Colors.black54,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(
+              "$label ",
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s14,
+                0.21,
+                Colors.black54,
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s12,
-              0.30,
-              Colors.black,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+               value.isNotEmpty ? value : 'N/A',
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.21,
+                Colors.black,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
