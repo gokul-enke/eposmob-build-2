@@ -5,8 +5,8 @@ class APPUrl {
   // static String baseURL = "https://epos.mevcakes.com";
   // static String baseURL = "https://kmstoys.enke.in";
   // static String baseURL = "https://stagingepos.enke.ae";
-  static String baseURL = "https://tenant.hypersouq.in";
-  // static String baseURL = "https://eposdemo.hypersouq.in";
+  // static String baseURL = "https://tenant.hypersouq.in";
+  static String baseURL = "https://eposdemo.hypersouq.in";
   // static String baseURL = "https://stagingepos.enke.ae";
   // static String baseURL = "https://open-poems-sneeze.loca.lt";
   // static String baseURL = "http://localhost:8000";
@@ -55,7 +55,7 @@ class APPUrl {
   static String dashBoardUrl = '$baseURL/api/v1/dashboard';
   static String dashBoardGraphUrl = '$baseURL/api/v1/dashboard/orders';
   static String addCustomerUrl = '$baseURL/api/v1/customer/add-customer';
-  static String updateCustomerUrl = '$baseURL/api/v1/customer/update-customer';
+  static String updateCustomerUrl = '$baseURL/api/v1/customer/customer-edit';
   // static String customerListUrl = '$baseURL/api/v1/sales/list-customer';
   static String customerListUrl = '$baseURL/api/v1/customer/customer-searchbar';
   static String userDetailsUrl = '$baseURL/api/v1/user/get-user-details';

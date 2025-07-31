@@ -339,7 +339,12 @@ class CustomerProvider extends ChangeNotifier {
       String state,
       String country,
       int customerId,
-      BuildContext context) async {
+      BuildContext context, {
+      String? altPhone,
+      String? gender,
+      String? dob,
+      int? storeId,
+    }) async {
     debugPrint("updateCustomer API called");
     final Map<String, dynamic> apiBodyData = {
       'phone': phone,
@@ -352,6 +357,20 @@ class CustomerProvider extends ChangeNotifier {
       'country': country,
       'customer_id': customerId,
     };
+    
+    // Add optional fields if provided
+    if (altPhone != null && altPhone.isNotEmpty) {
+      apiBodyData['alt_phone'] = altPhone;
+    }
+    if (gender != null && gender.isNotEmpty) {
+      apiBodyData['gender'] = gender;
+    }
+    if (dob != null && dob.isNotEmpty) {
+      apiBodyData['dob'] = dob;
+    }
+    if (storeId != null) {
+      apiBodyData['store_id'] = storeId;
+    }
     debugPrint("API request body: ${apiBodyData.toString()}");
     final url = Uri.parse(APPUrl.updateCustomerUrl);
     // Get API key from SharedPreferences
@@ -504,7 +523,9 @@ class CustomerProvider extends ChangeNotifier {
 
   Future<dynamic> fetchUserById(
       String accessToken, int userId, BuildContext context) async {
+    debugPrint("fetchUserById API called for user ID: $userId");
     final url = Uri.parse('${APPUrl.userDetailsUrl}/$userId');
+    debugPrint("fetchUserById URL: ${url.toString()}");
 
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -523,9 +544,8 @@ class CustomerProvider extends ChangeNotifier {
         'X-Tenant': apiKey,
       });
 
-      // debugPrint('response: ${response.toString()}');
-      // debugPrint('response status: ${response.statusCode}');
-      // debugPrint('response body: ${response.body.toString()}');
+      debugPrint('fetchUserById response status: ${response.statusCode}');
+      debugPrint('fetchUserById response body: ${response.body.toString()}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -544,7 +564,7 @@ class CustomerProvider extends ChangeNotifier {
         throw const HttpException('Failed to load data, Try Again Later!');
       }
     } catch (error) {
-      // debugPrint('Error: ${error.toString()}');
+      debugPrint('fetchUserById Error: ${error.toString()}');
       rethrow;
     }
   }
