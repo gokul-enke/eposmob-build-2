@@ -176,7 +176,7 @@ class PurchaseProvider extends ChangeNotifier {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
-        'X-Tenant': apiKey,
+        'X-Tenant': apiKey, 
       });
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {

@@ -30,6 +30,13 @@ class OpenCustomerProfileScreen extends StatefulWidget {
 class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
   int selectedIndex = 0;
 
+  // Method to navigate to specific tab
+  void navigateToTab(int index) {
+    setState(() {
+      selectedIndex = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     CustomerProvider customerProvider = Provider.of<CustomerProvider>(context);
@@ -107,22 +114,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
   Widget _buildProfileHeader(CustomerListModelData customer) {
     return Column(
       children: [
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            const BuildProfilePicture(),
-            Positioned(
-              bottom: 0,
-              right: 40,
-              child: CircleAvatar(
-                radius: 15,
-                backgroundColor: ColorManager.kPrimaryColor,
-                child:
-                    WebsafeSvg.asset(ImageAssets.camera, color: Colors.white, width: 18),
-              ),
-            ),
-          ],
-        ),
+        const BuildProfilePicture(),
         const SizedBox(height: 12),
         Text(
           customer.name ?? 'Customer Name',
@@ -195,7 +187,13 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
 
   Widget _buildMainContent(Size size, CustomerListModelData customer) {
     final List<Widget> pages = [
-      CustomerInformationViewWidget(size: size, customer: customer),
+      CustomerInformationViewWidget(
+        size: size, 
+        customer: customer,
+        onEditCustomer: () => navigateToTab(1),
+        onViewOrders: () => navigateToTab(3),
+        onMessage: () => navigateToTab(5),
+      ),
       CustomerInformationEditWidget(size: size, customer: customer),
       CustomerTransactionsWidget(size: size, customer: customer),
       CustomerOrdersWidget(size: size, customer: customer),

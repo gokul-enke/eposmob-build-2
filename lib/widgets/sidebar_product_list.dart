@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:provider/provider.dart';
@@ -48,12 +49,27 @@ class _SideBarProductListState extends State<SideBarProductList> {
       TextEditingController();
   final ScrollController _categoryScrollController = ScrollController();
 
+  // Add focus nodes for proper keyboard handling
+  final FocusNode _categoryFocusNode = FocusNode();
+  final FocusNode _productFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
+
+    // Add focus listeners for debugging
+    _categoryFocusNode.addListener(() {
+      debugPrint("Category focus: ${_categoryFocusNode.hasFocus}");
+    });
+
+    _productFocusNode.addListener(() {
+      debugPrint("Product focus: ${_productFocusNode.hasFocus}");
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Only load categories if not already loaded
-      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+      final categoryProvider =
+          Provider.of<CategoryProvider>(context, listen: false);
       if (!categoryProvider.isCategoriesLoaded) {
         categoryProvider.listAllCategory();
       }
@@ -67,6 +83,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
     _searchCategoryController.dispose();
     _searchProductController.dispose();
     _categoryScrollController.dispose();
+    _categoryFocusNode.dispose();
+    _productFocusNode.dispose();
     super.dispose();
   }
 
@@ -74,11 +92,14 @@ class _SideBarProductListState extends State<SideBarProductList> {
     debugPrint("🎯 SIDEBAR PRODUCT SELECTION:");
     debugPrint("  - Product: ${product.productName}");
     debugPrint("  - Product ID: ${product.productId}");
-    
+
     // Get customer info from global provider
-    final customerSelectionProvider = Provider.of<CustomerSelectionProvider>(context, listen: false);
-    debugPrint("  - Customer from provider: ${customerSelectionProvider.selectedCustomerName}");
-    debugPrint("  - Customer ID from provider: ${customerSelectionProvider.selectedCustomerID}");
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    debugPrint(
+        "  - Customer from provider: ${customerSelectionProvider.selectedCustomerName}");
+    debugPrint(
+        "  - Customer ID from provider: ${customerSelectionProvider.selectedCustomerID}");
 
     if (widget.onProductSelected != null) {
       debugPrint("  - Using custom callback");
@@ -115,50 +136,58 @@ class _SideBarProductListState extends State<SideBarProductList> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Text(
-            'Search Category',
+            'Categories',
             style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s18,
                 0.30, ColorManager.textColor),
           ),
         ),
-    
-        // Category search field
+
+        // Category search field using reusable widget
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: TextField(
-            controller: _searchCategoryController,
-            cursorColor: ColorManager.kPrimaryColor,
-            decoration: InputDecoration(
-              hintText: 'Search category',
-              hintStyle: TextStyle(
-                color: Colors.grey.shade400,
-                fontSize: 14,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              Expanded(
+                child: buildColumnWidgetForTextFields(
+                  controller: _searchCategoryController,
+                  size: MediaQuery.of(context).size,
+                  hintText: 'Search category',
+                  readOnly: false,
+                  focusNode: _categoryFocusNode,
+                  width: double.infinity, // Take full width
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 8), // Minimal margin
+                  onchanged: (query) {
+                    Provider.of<CategoryProvider>(context, listen: false)
+                        .listAllCategory(filterName: query);
+                    setState(() {}); // Update to show/hide clear button
+                  },
+                ),
               ),
-              prefixIcon:
-                  const Icon(Icons.search, color: ColorManager.kPrimaryColor),
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide:
-                    const BorderSide(color: ColorManager.kPrimaryColor),
-              ),
-            ),
-            onChanged: (query) {
-              Provider.of<CategoryProvider>(context, listen: false)
-                  .listAllCategory(filterName: query);
-            },
+              // Clear button for category search
+              if (_searchCategoryController.text.isNotEmpty)
+                BuildBoxShadowContainer(
+                  circleRadius: 7,
+                  padding: const EdgeInsets.all(5),
+                  width: 50,
+                  height: MediaQuery.of(context).size.height *
+                      .07, // Same height as text field
+                  child: IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () {
+                      _searchCategoryController.clear();
+                      // Don't call API, just reset the local category list
+                      Provider.of<CategoryProvider>(context, listen: false)
+                          .resetCategoryFilter();
+                      setState(() {}); // Update to show/hide clear button
+                    },
+                  ),
+                ),
+            ],
           ),
         ),
-    
+
         // Category horizontal list
         Container(
           height: widget.categoryHeight,
@@ -166,7 +195,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
           child: Consumer<CategoryProvider>(
             builder: (context, categoryProvider, child) {
               final categories = categoryProvider.category ?? [];
-    
+
               return categories.isEmpty
                   ? const Center(child: CircularProgressIndicator())
                   : MouseRegion(
@@ -188,9 +217,9 @@ class _SideBarProductListState extends State<SideBarProductList> {
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemBuilder: (context, index) {
                             final category = categories[index];
-                            final isSelected = index ==
-                                categoryProvider.selectedCategoryIndex;
-    
+                            final isSelected =
+                                index == categoryProvider.selectedCategoryIndex;
+
                             return GestureDetector(
                               behavior: HitTestBehavior.opaque,
                               onTap: () {
@@ -199,7 +228,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                   category.categoryName ?? '',
                                   category.productsCount ?? 0,
                                 );
-    
+
                                 // Filter products by selected category
                                 if (category.categoryId == 0) {
                                   // "ALL" category selected
@@ -213,7 +242,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                       .listAllProducts(
                                           categoryId: category.categoryId);
                                 }
-    
+
                                 // Force rebuild to ensure UI updates
                                 setState(() {});
                               },
@@ -248,7 +277,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                               ),
                                             ),
                                           ),
-    
+
                                         // Main circle avatar
                                         CircleAvatar(
                                           backgroundColor: isSelected
@@ -281,11 +310,10 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                                     color: isSelected
                                                         ? ColorManager
                                                             .kPrimaryColor
-                                                        : Colors
-                                                            .grey.shade400),
+                                                        : Colors.grey.shade400),
                                           ),
                                         ),
-    
+
                                         // Selection indicator dot
                                         if (isSelected)
                                           Positioned(
@@ -294,8 +322,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                               width: 12,
                                               height: 3,
                                               decoration: BoxDecoration(
-                                                color: ColorManager
-                                                    .kPrimaryColor,
+                                                color:
+                                                    ColorManager.kPrimaryColor,
                                                 borderRadius:
                                                     BorderRadius.circular(2),
                                               ),
@@ -331,16 +359,16 @@ class _SideBarProductListState extends State<SideBarProductList> {
             },
           ),
         ),
-    
+
         // Divider
         Container(
           height: widget.dividerHeight,
           color: widget.dividerColor,
         ),
-    
+
         // Product search section
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
           child: Row(
             children: [
               Expanded(
@@ -356,51 +384,16 @@ class _SideBarProductListState extends State<SideBarProductList> {
                     Row(
                       children: [
                         Expanded(
-                          child: TextField(
+                          child: buildColumnWidgetForTextFields(
                             controller: _searchProductController,
-                            cursorColor: ColorManager.kPrimaryColor,
-                            decoration: InputDecoration(
-                              hintText: 'Search product',
-                              hintStyle: TextStyle(
-                                color: Colors.grey.shade400,
-                                fontSize: 14,
-                              ),
-                              prefixIcon: const Icon(Icons.search,
-                                  color: ColorManager.kPrimaryColor),
-                              suffixIcon: _searchProductController
-                                      .text.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear, size: 18),
-                                      onPressed: () {
-                                        _searchProductController.clear();
-                                        Provider.of<LocalProductProvider>(
-                                                context,
-                                                listen: false)
-                                            .refreshProducts();
-                                      },
-                                    )
-                                  : null,
-                              filled: true,
-                              fillColor: Colors.grey.shade50,
-                              contentPadding:
-                                  const EdgeInsets.symmetric(vertical: 0),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide:
-                                    BorderSide(color: Colors.grey.shade200),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide:
-                                    BorderSide(color: Colors.grey.shade200),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(
-                                    color: ColorManager.kPrimaryColor),
-                              ),
-                            ),
-                            onChanged: (query) {
+                            size: MediaQuery.of(context).size,
+                            hintText: 'Search product',
+                            readOnly: false,
+                            focusNode: _productFocusNode,
+                            width: double.infinity, // Take full width
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 8), // Minimal margin
+                            onchanged: (query) {
                               Provider.of<LocalProductProvider>(context,
                                       listen: false)
                                   .listAllProducts(filterName: query);
@@ -409,24 +402,25 @@ class _SideBarProductListState extends State<SideBarProductList> {
                             },
                           ),
                         ),
-                        // const SizedBox(width: 8),
-                        // Container(
-                        //   height: 48,
-                        //   width: 48,
-                        //   decoration: BoxDecoration(
-                        //     color: Colors.grey.shade50,
-                        //     borderRadius: BorderRadius.circular(10),
-                        //     border: Border.all(color: Colors.grey.shade200),
-                        //   ),
-                        //   child: IconButton(
-                        //     icon: const Icon(Icons.filter_list,
-                        //         color: ColorManager.kPrimaryColor),
-                        //     onPressed: () {
-                        //       // Show filter options
-                        //       // You can implement this later
-                        //     },
-                        //   ),
-                        // ),
+                        // Clear button for product search
+                        if (_searchProductController.text.isNotEmpty)
+                          BuildBoxShadowContainer(
+                            circleRadius: 7,
+                            padding: const EdgeInsets.all(5),
+                            width: 50,
+                            height: MediaQuery.of(context).size.height *
+                                .07, // Same height as text field
+                            child: IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                _searchProductController.clear();
+                                Provider.of<LocalProductProvider>(context,
+                                        listen: false)
+                                    .refreshProducts();
+                                setState(() {});
+                              },
+                            ),
+                          ),
                       ],
                     ),
                   ],
@@ -435,13 +429,13 @@ class _SideBarProductListState extends State<SideBarProductList> {
             ],
           ),
         ),
-    
+
         // Products grid
         Expanded(
           child: Consumer<LocalProductProvider>(
             builder: (context, productProvider, child) {
               final products = productProvider.filteredProducts;
-    
+
               return products.isEmpty
                   ? Center(
                       child: Column(
@@ -483,7 +477,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                             final product = products[index];
                             final isSelected =
                                 product == productProvider.selectedProduct;
-    
+
                             // Find primary image
                             String? primaryImage;
                             if (product.attachment != null &&
@@ -501,7 +495,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                     product.attachment!.first.filePath;
                               }
                             }
-    
+
                             return GestureDetector(
                               behavior: HitTestBehavior.opaque,
                               onTap: () => _handleProductSelection(product),
@@ -513,12 +507,10 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                       ? Border.all(
                                           color: ColorManager.kPrimaryColor,
                                           width: 1)
-                                      : Border.all(
-                                          color: Colors.grey.shade100),
+                                      : Border.all(color: Colors.grey.shade100),
                                 ),
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     // Product image
                                     Expanded(
@@ -544,8 +536,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                                               Icons
                                                                   .image_not_supported,
                                                               size: 24,
-                                                              color: Colors
-                                                                  .grey),
+                                                              color:
+                                                                  Colors.grey),
                                                     )
                                                   : const Icon(
                                                       Icons
@@ -589,14 +581,12 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                               child: Container(
                                                 height: 16,
                                                 width: 16,
-                                                decoration:
-                                                    const BoxDecoration(
+                                                decoration: const BoxDecoration(
                                                   color: ColorManager
                                                       .kPrimaryColor,
                                                   borderRadius:
                                                       BorderRadius.only(
-                                                    topLeft:
-                                                        Radius.circular(8),
+                                                    topLeft: Radius.circular(8),
                                                     bottomRight:
                                                         Radius.circular(8),
                                                   ),
@@ -611,7 +601,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                         ],
                                       ),
                                     ),
-    
+
                                     // Product name/unit
                                     Padding(
                                       padding: const EdgeInsets.all(4.0),
@@ -638,8 +628,6 @@ class _SideBarProductListState extends State<SideBarProductList> {
       ],
     );
   }
-
-
 
 // Helper widget for image display in carousel
   Widget buildCarouselImage(String? urlImage) {
