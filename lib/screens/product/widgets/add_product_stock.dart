@@ -77,10 +77,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Future<void> _submitForm() async {
+   
     if (!_formKey.currentState!.validate()) {
       showScaffold(context: context, message: 'Please fill all required fields');
       return;
     }
+    debugPrint("🔄 Attempting to add stock with the following data:");
+    debugPrint("📦 Product ID: ${selectedProduct?.productId}");
+    debugPrint("🏷️ Category ID: ${selectedCategory?.categoryId}");
+    debugPrint("🔢 Quantity: ${quantityController.text}");
+    debugPrint("💰 Retail Price: ${retailPriceController.text}");
+    debugPrint("📅 Expiry Date: ${DateFormat('yyyy-MM-dd').format(selectedExpiryDate)}");
+    debugPrint("🏬 Store ID: ${selectedStore?.id}");
+    debugPrint("📌 Unit: $selectedUnit");
 
     if (selectedCategory == null) {
       showScaffold(context: context, message: 'Please select a category');
@@ -113,14 +122,24 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         throw Exception('Access token not found');
       }
 
+
+      debugPrint("===== API REQUEST PAYLOAD =====");
+    debugPrint("Product ID: ${selectedProduct!.productId}");
+    debugPrint("Category ID: ${selectedCategory!.categoryId}");
+    debugPrint("Quantity: ${quantityController.text.isEmpty ? '1' : quantityController.text}");
+    debugPrint("Retail Price: ${retailPriceController.text.isEmpty ? '0' : retailPriceController.text}");
+    debugPrint("Expiry Date: ${DateFormat('yyyy-MM-dd').format(selectedExpiryDate)}");
+   
+
+
       final result = await Provider.of<StockProvider>(context, listen: false)
           .addProductStockAPI(
         accessToken: accessToken,
         productId: selectedProduct!.productId.toString(),
         categoryId: selectedCategory!.categoryId.toString(),
         quantity: quantityController.text.isEmpty ? '1' : quantityController.text,
-        retailPrice: retailPriceController.text.isEmpty ? '0' : retailPriceController.text,
-        purchaseRate: purchaseRateController.text.isEmpty ? '0' : purchaseRateController.text,
+        retailPrice: retailPriceController.text.isEmpty ? '0.00' : double.parse(retailPriceController.text).toStringAsFixed(2),
+        purchaseRate: purchaseRateController.text.isEmpty ? '0.00' : double.parse(purchaseRateController.text).toStringAsFixed(2),
         mrp: mrpController.text.isEmpty ? retailPriceController.text : mrpController.text,
         wholesalePrice: wholesalePriceController.text.isEmpty ? retailPriceController.text : wholesalePriceController.text,
         unit: selectedUnit!,
@@ -146,6 +165,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         wholesalePriceTax: null,
         context: context, // ✅ Pass context for manual LocalProductProvider updates
       );
+
+
+debugPrint("⬇️ RAW RESPONSE: ${result.toString()}");
+debugPrint("Status: ${result['status']}");
+debugPrint("Message: ${result['message']}");
+debugPrint("Data: ${result['data'] ?? 'No data'}");
 
       if (result['status'] == 'success') {
         showScaffold(context: context, message: result['message'] ?? 'Stock added successfully');
