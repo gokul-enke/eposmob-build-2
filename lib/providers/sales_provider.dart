@@ -311,13 +311,20 @@ class SalesProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         try {
+          debugPrint('=== SALES RETURN JSON PARSING DEBUG ===');
+          debugPrint('About to parse SalesReturnResponse.fromJson...');
+          debugPrint('JSON Data Keys: ${jsonData.keys}');
+          debugPrint('Data section: ${jsonData['data']}');
           final salesReturnResponse = SalesReturnResponse.fromJson(jsonData);
           debugPrint(
-              'fetch Sales Return list response data: ${salesReturnResponse.data}');
-          _salesReturnOrders = salesReturnResponse.data; // Store fetched data
+              'fetch Sales Return list response data: ${salesReturnResponse.data.data}');
+          _salesReturnOrders = salesReturnResponse.data.data; // Store fetched data from nested structure
           notifyListeners(); // Notify listeners to update UI
-        } catch (e) {
+        } catch (e, stackTrace) {
+          debugPrint('=== JSON PARSING ERROR ===');
           debugPrint('Error parsing JSON data: $e');
+          debugPrint('Stack Trace: $stackTrace');
+          debugPrint('JSON that failed to parse: ${jsonData.toString()}');
         }
       } else {
         debugPrint(
@@ -370,11 +377,18 @@ class SalesProvider with ChangeNotifier {
 
       final jsonData = json.decode(response.body);
       try {
+        debugPrint('=== SALES RETURN ITEMS JSON PARSING DEBUG ===');
+        debugPrint('About to parse SalesReturnItemsResponse.fromJson...');
+        debugPrint('JSON Data Keys: ${jsonData.keys}');
+        debugPrint('Data section: ${jsonData['data']}');
         final salesReturnResponse = SalesReturnItemsResponse.fromJson(jsonData);
         _salesReturnItems = salesReturnResponse.data;
         notifyListeners();
-      } catch (e) {
+      } catch (e, stackTrace) {
+        debugPrint('=== SALES RETURN ITEMS JSON PARSING ERROR ===');
         debugPrint('Error parsing JSON data: $e');
+        debugPrint('Stack Trace: $stackTrace');
+        debugPrint('JSON that failed to parse: ${jsonData.toString()}');
       }
     } catch (error) {
       debugPrint('Error in fetchOrders: $error');

@@ -30,6 +30,21 @@ class ThermalPrinter {
 
   ThermalPrinter(this.context);
 
+  String _sanitizeTextForThermalPrinter(String text) {
+    return text
+        // Replace em dash with regular hyphen
+        .replaceAll('–', '-')
+        .replaceAll('—', '-') // en dash as well
+        // Replace other problematic Unicode characters
+        .replaceAll('“', '"') // smart quotes to regular quotes
+        .replaceAll('”', '"')
+        .replaceAll('‘', "'") // smart apostrophes
+        .replaceAll('’', "'")
+        .replaceAll('…', '...') // ellipsis
+        // Remove any remaining non-printable characters except basic punctuation
+        .replaceAll(RegExp(r'[^\x20-\x7E]'), '');
+  }
+
   // Load font type from SharedPreferences
   Future<PosFontType> _loadFontType() async {
     final prefs = await SharedPreferences.getInstance();
@@ -596,16 +611,18 @@ class ThermalPrinter {
         if (displayConfig?['showSLNumber']?.visible == true &&
             displayConfig?['showParticulars']?.visible == true) {
           // Both SL and product name
-          leftColumnText = '$slNumber $productName';
+          leftColumnText =
+              '$slNumber ${_sanitizeTextForThermalPrinter(productName)}';
         } else if (displayConfig?['showSLNumber']?.visible == true) {
           // Only SL number
           leftColumnText = slNumber;
         } else {
           // Only product name
-          leftColumnText = productName;
+          leftColumnText = _sanitizeTextForThermalPrinter(productName);
         }
 
-        debugPrint("Left column text: '$leftColumnText' (length: ${leftColumnText.length})");
+        debugPrint(
+            "Left column text: '$leftColumnText' (length: ${leftColumnText.length})");
 
         if (leftColumnText.length <= maxCharsPerLine) {
           // Text fits in one line - use the date/time row approach

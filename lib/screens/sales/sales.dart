@@ -641,13 +641,10 @@ class _SalesScreenState extends State<SalesScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            crossAxisAlignment: WrapCrossAlignment.start,
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(
-                                width: 350,
+                              Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -665,7 +662,6 @@ class _SalesScreenState extends State<SalesScreen> {
                                     ),
                                     buildColumnWidgetForTextFields(
                                       height: 45,
-                                      width: 350,
                                       onchanged: (value) {
                                         if (value!.isEmpty ||
                                             value.length > 2) {
@@ -679,8 +675,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                   ],
                                 ),
                               ),
-                              SizedBox(
-                                width: 350,
+                              const SizedBox(width: 10),
+                              Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -698,7 +694,6 @@ class _SalesScreenState extends State<SalesScreen> {
                                     ),
                                     buildColumnWidgetForTextFields(
                                       height: 45,
-                                      width: 350,
                                       onchanged: (value) {
                                         if (value!.isEmpty ||
                                             value.length > 2) {
@@ -712,8 +707,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                   ],
                                 ),
                               ),
-                              SizedBox(
-                                width: 350,
+                              const SizedBox(width: 10),
+                              Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -731,7 +726,6 @@ class _SalesScreenState extends State<SalesScreen> {
                                     ),
                                     buildColumnWidgetForTextFields(
                                       height: 45,
-                                      width: 350,
                                       onchanged: (value) {
                                         if (value!.isEmpty ||
                                             value.length > 2) {
