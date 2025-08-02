@@ -46,6 +46,7 @@ class _SalesScreenState extends State<SalesScreen> {
   final TextEditingController storeController = TextEditingController();
   GetStoreModelData? storeSelected;
   DateTime? selectedDate;
+  Key calendarPickerKey = UniqueKey();
 
   bool isInitLoading = false;
   String orderNumber = "";
@@ -191,6 +192,7 @@ class _SalesScreenState extends State<SalesScreen> {
 
   void searchOrders(page) async {
     debugPrint('=== SEARCH ORDERS START ===');
+    debugPrint('Requested Page: $page');
     try {
       setState(() {
         initLoading = true;
@@ -221,6 +223,7 @@ class _SalesScreenState extends State<SalesScreen> {
       };
 
       debugPrint('Search filters: $filters');
+      debugPrint('Calling fetchOrders with page: $page');
 
       await orderProvider.fetchOrders(
         accessToken: accessToken ?? '',
@@ -233,12 +236,18 @@ class _SalesScreenState extends State<SalesScreen> {
         filterStore: filters['filterStore'],
         page: int.tryParse(filters['page'] ?? '1') ?? 1,
       );
+      
+      debugPrint('=== SEARCH ORDERS COMPLETED ===');
+      debugPrint('Current Page: ${orderProvider.currentPage}');
+      debugPrint('Total Pages: ${orderProvider.totalPages}');
+      debugPrint('Orders Count: ${orderProvider.orders.length}');
+      
     } catch (error, stackTrace) {
       debugPrint('Search error: $error');
       debugPrint('Stack trace: $stackTrace');
       showScaffoldError(
         context: context,
-        message: 'Failed to search orders: ${error.toString()}',
+        message: 'No Orders Found',
       );
     } finally {
       setState(() {
@@ -257,6 +266,7 @@ class _SalesScreenState extends State<SalesScreen> {
       storeController.clear();
       storeSelected = null;
       selectedDate = null;
+      calendarPickerKey = UniqueKey();
     });
     searchOrders(1); // Trigger fresh search after reset
   }
@@ -739,16 +749,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            crossAxisAlignment: WrapCrossAlignment.start,
-                            children: [
-                              SizedBox(
-                                width: 200,
+                              const SizedBox(width: 10),
+                              Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -767,13 +769,14 @@ class _SalesScreenState extends State<SalesScreen> {
                                     BuildBoxShadowContainer(
                                       circleRadius: 7,
                                       height: 45,
-                                      width: 200,
                                       child: Center(
                                         child: CalendarPickerTableCell(
+                                          key: calendarPickerKey,
                                           onDateSelected: (DateTime date) {
                                             setState(() {
                                               selectedDate = date;
                                             });
+                                            searchOrders(1);
                                           },
                                         ),
                                       ),
@@ -781,6 +784,14 @@ class _SalesScreenState extends State<SalesScreen> {
                                   ],
                                 ),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            crossAxisAlignment: WrapCrossAlignment.start,
+                            children: [
                               SizedBox(
                                 width: 225,
                                 child: Column(
@@ -800,7 +811,6 @@ class _SalesScreenState extends State<SalesScreen> {
                                     ),
                                     buildColumnWidgetForTextFields(
                                       height: 45,
-                                      width: 250,
                                       onchanged: (value) {
                                         if (value!.isEmpty ||
                                             value.length > 2) {
@@ -856,13 +866,11 @@ class _SalesScreenState extends State<SalesScreen> {
                                                   .withOpacity(.5),
                                             ),
                                           ),
-                                          items: storeList!
-                                              .map((GetStoreModelData store) {
-                                            return DropdownMenuItem<
-                                                GetStoreModelData>(
-                                              value: store,
+                                          items: [
+                                            DropdownMenuItem<GetStoreModelData>(
+                                              value: null,
                                               child: Text(
-                                                store.name ?? '',
+                                                'All Stores',
                                                 style: buildCustomStyle(
                                                   FontWeightManager.medium,
                                                   FontSize.s12,
@@ -871,36 +879,42 @@ class _SalesScreenState extends State<SalesScreen> {
                                                       .withOpacity(.5),
                                                 ),
                                               ),
-                                            );
-                                          }).toList(),
+                                            ),
+                                            ...storeList!
+                                                .map((GetStoreModelData store) {
+                                              return DropdownMenuItem<
+                                                  GetStoreModelData>(
+                                                value: store,
+                                                child: Text(
+                                                  store.name ?? '',
+                                                  style: buildCustomStyle(
+                                                    FontWeightManager.medium,
+                                                    FontSize.s12,
+                                                    0.27,
+                                                    ColorManager.textColor
+                                                        .withOpacity(.5),
+                                                  ),
+                                                ),
+                                              );
+                                            }).toList()
+                                          ],
                                           onChanged: (GetStoreModelData?
                                               storeModelData) {
-                                            if (storeModelData != null) {
-                                              setState(() {
-                                                storeSelected = storeModelData;
+                                            setState(() {
+                                              storeSelected = storeModelData;
+                                              if (storeModelData != null) {
                                                 storeController.text =
-                                                    storeModelData.id
-                                                        .toString();
-                                              });
-                                              searchOrders(1);
-                                            }
+                                                    storeModelData.id.toString();
+                                              } else {
+                                                storeController.clear();
+                                              }
+                                            });
+                                            searchOrders(1);
                                           },
                                         ),
                                       ),
                                     ),
                                   ],
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(top: 35.0),
-                                child: CustomRoundButton(
-                                  title: "Search",
-                                  fct: () {
-                                    searchOrders(1);
-                                  },
-                                  height: 45,
-                                  width: 200,
-                                  fontSize: FontSize.s12,
                                 ),
                               ),
                               Padding(
@@ -942,6 +956,10 @@ class _SalesScreenState extends State<SalesScreen> {
                             currentPage: orderProvider.currentPage,
                             totalPages: orderProvider.totalPages,
                             onPageChanged: (int page) {
+                              debugPrint('=== PAGINATION CLICKED ===');
+                              debugPrint('User clicked page: $page');
+                              debugPrint('Current provider page: ${orderProvider.currentPage}');
+                              debugPrint('Total pages: ${orderProvider.totalPages}');
                               searchOrders(page);
                             },
                           ),

@@ -171,6 +171,11 @@ class SalesProvider with ChangeNotifier {
               debugPrint('Previous Total Pages: $totalPages');
               debugPrint('New Current Page: $newCurrentPage');
               debugPrint('New Total Pages: $newTotalPages');
+              debugPrint('Total Orders in Response: ${_orders.length}');
+              debugPrint('From: ${listSalesOrderModel.pagination?.from}');
+              debugPrint('To: ${listSalesOrderModel.pagination?.to}');
+              debugPrint('Next Page URL: ${listSalesOrderModel.pagination?.nextPageUrl}');
+              debugPrint('Prev Page URL: ${listSalesOrderModel.pagination?.prevPageUrl}');
               
               currentPage = newCurrentPage;
               totalPages = newTotalPages;

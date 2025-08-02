@@ -184,7 +184,6 @@ class PurchaseProvider extends ChangeNotifier {
         GetStoreModel getStoreModel = GetStoreModel.fromJson(jsonData);
 
         storeList = getStoreModel.data ?? [];
-        storeList.insert(0, storeDemo);
 
         notifyListeners();
       } else {}

@@ -29,11 +29,6 @@ class _TransactionScreenState extends State<TransactionScreen> {
   final TextEditingController supplierController = TextEditingController();
   final TextEditingController supplierSearchController = TextEditingController();
 
-  
-
-  
-
-
   TransactionModel? selectedTransaction;
   bool initLoading = false;
   bool isInitialized = false;

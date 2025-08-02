@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_text_fields.dart';
-import 'package:provider/provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/resources/style_manager.dart';
 
 class CustomerAutocomplete extends StatefulWidget {
   final Size size;
   final Function(String) onSelected;
   final List<String> customerList;
+  final TextEditingController controller;
   final bool autofocus;
 
   const CustomerAutocomplete({
@@ -15,6 +17,7 @@ class CustomerAutocomplete extends StatefulWidget {
     required this.size,
     required this.onSelected,
     required this.customerList,
+    required this.controller,
     this.autofocus = false,
   }) : super(key: key);
 
@@ -27,13 +30,11 @@ class _CustomerAutocompleteState extends State<CustomerAutocomplete> {
   final FocusNode _textFieldFocus = FocusNode();
   final ScrollController _scrollController = ScrollController();
   final double _itemHeight = 48.0;
-  final TextEditingController _textEditingController = TextEditingController();
 
   @override
   void dispose() {
     _textFieldFocus.dispose();
     _scrollController.dispose();
-    _textEditingController.dispose();
     super.dispose();
   }
 
@@ -63,12 +64,19 @@ class _CustomerAutocompleteState extends State<CustomerAutocomplete> {
 
   List<String> _searchCustomers(String query) {
     if (query.isEmpty) {
+      debugPrint('CustomerAutocomplete: Query is empty, returning empty list');
       return const <String>[];
     }
 
-    return widget.customerList
+    debugPrint('CustomerAutocomplete: Searching for query: "$query"');
+    debugPrint('CustomerAutocomplete: Available customers: ${widget.customerList}');
+    
+    final results = widget.customerList
         .where((customer) => customer.toLowerCase().contains(query.toLowerCase()))
         .toList();
+    
+    debugPrint('CustomerAutocomplete: Search results: $results');
+    return results;
   }
 
   @override
@@ -79,19 +87,24 @@ class _CustomerAutocompleteState extends State<CustomerAutocomplete> {
       padding: const EdgeInsets.symmetric(horizontal: 2.0),
       child: Autocomplete<String>(
         optionsBuilder: (TextEditingValue textEditingValue) {
+          debugPrint('CustomerAutocomplete: optionsBuilder called with text: "${textEditingValue.text}"');
+          
           if (textEditingValue.text.isEmpty) {
             currentOptions = const Iterable<String>.empty();
+            debugPrint('CustomerAutocomplete: Text is empty, returning empty options');
             return currentOptions;
           }
 
           final searchResults = _searchCustomers(textEditingValue.text);
           _highlightedOptionIndex = null;
           currentOptions = searchResults;
+          debugPrint('CustomerAutocomplete: Returning ${currentOptions.length} options: $currentOptions');
           return currentOptions;
         },
         onSelected: (String selectedCustomer) {
+          debugPrint('CustomerAutocomplete: Customer selected: "$selectedCustomer"');
           widget.onSelected(selectedCustomer);
-          _textEditingController.text = selectedCustomer;
+          widget.controller.text = selectedCustomer;
         },
         fieldViewBuilder:
             (context, textEditingController, focusNode, onFieldSubmitted) {
@@ -104,6 +117,11 @@ class _CustomerAutocompleteState extends State<CustomerAutocomplete> {
                 TextPosition(offset: textEditingController.text.length),
               );
             });
+          }
+
+          // Sync the internal controller with external controller
+          if (textEditingController.text != widget.controller.text) {
+            textEditingController.text = widget.controller.text;
           }
 
           textEditingController.removeListener(_ensureFocus);
@@ -142,19 +160,41 @@ class _CustomerAutocompleteState extends State<CustomerAutocomplete> {
                     final selectedCustomer =
                         currentOptions.elementAt(_highlightedOptionIndex!);
                     widget.onSelected(selectedCustomer);
-                    textEditingController.text = selectedCustomer;
+                    widget.controller.text = selectedCustomer;
                     focusNode.unfocus();
                   }
                 }
               }
             },
-            child: buildColumnWidgetForTextFields(
-              controller: textEditingController,
-              focusNode: focusNode,
-              autofocus: widget.autofocus,
-              size: widget.size,
-              hintText: 'Search Customer',
-              onSubmitted: (_) => onFieldSubmitted(),
+            child: BuildBoxShadowContainer(
+              circleRadius: 7,
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.only(left: 15),
+              height: 45,
+              child: TextField(
+                controller: widget.controller,
+                focusNode: focusNode,
+                autofocus: widget.autofocus,
+                decoration: InputDecoration(
+                  hintText: 'Search Customer',
+                  hintStyle: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s12,
+                    0.27,
+                    ColorManager.textColor.withOpacity(.5),
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.27,
+                  ColorManager.textColor.withOpacity(.5),
+                ),
+                onChanged: (value) => widget.onSelected(value),
+                onSubmitted: (_) => onFieldSubmitted(),
+              ),
             ),
           );
         },
@@ -224,7 +264,7 @@ class _CustomerAutocompleteState extends State<CustomerAutocomplete> {
                         ),
                         onTap: () {
                           onSelected(option);
-                          _textEditingController.text = option;
+                          widget.controller.text = option;
                         },
                       ),
                     ),
