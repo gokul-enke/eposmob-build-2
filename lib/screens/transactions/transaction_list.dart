@@ -52,7 +52,6 @@ class _CustomerTransactionListScreenState
   int totalPages = 1;
   int _calendarKey = 0;
   final int itemsPerPage = 20;
-  final GlobalKey _customerAutocompleteKey = GlobalKey();
 
   List<String> getCustomerSuggestions() {
   if (allTransactions == null) return [];
@@ -543,6 +542,7 @@ class _CustomerTransactionListScreenState
       CustomerAutocomplete(
         size: size,
         customerList: getCustomerSuggestions(),
+        controller: customerSearchController,
         onSelected: (String selectedCustomer) {
           setState(() {
             searchCustomer = selectedCustomer;

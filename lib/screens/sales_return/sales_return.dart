@@ -90,8 +90,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         accessToken: accessToken ?? '',
         storeId: 1,
       );
-    } catch (error) {
-      // debugPrint(error.toString());
+    } catch (error, stackTrace) {
+      debugPrint('Error in loadInitData: $error');
+      debugPrint('Stack Trace for loadInitData: $stackTrace');
     } finally {
       setState(() {
         initLoading = false;
@@ -127,8 +128,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         // filterStore: storeController.text,
         page: page,
       );
-    } catch (error) {
-      // debugPrint(error.toString());
+    } catch (error, stackTrace) {
+      debugPrint('Error in searchOrders: $error');
+      debugPrint('Stack Trace for searchOrders: $stackTrace');
     } finally {
       setState(() {
         initLoading = false;
@@ -174,8 +176,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       _salesReturnItems =
           Provider.of<SalesProvider>(context, listen: false).salesReturnItems;
       debugPrint('salesReturnItems: ${_salesReturnItems}');
-    } catch (error) {
-      debugPrint(error.toString());
+    } catch (error, stackTrace) {
+      debugPrint('Error in getOrderDetails for order ID $ordersId: $error');
+      debugPrint('Stack Trace for getOrderDetails: $stackTrace');
     }
   }
 
@@ -581,8 +584,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   } else {
                     // debugPrint('Error in response: ${response["message"]}');
                   }
-                } catch (error) {
-                  // debugPrint('Exception caught: $error');
+                } catch (error, stackTrace) {
+                  debugPrint('Exception caught: $error');
+                  debugPrint(
+                      'Stack Trace for findCustomerByPhone: $stackTrace');
                 }
                 setState(() {
                   isCustomerFound = false;
@@ -716,6 +721,14 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     required String totalPrice,
     required String quantity,
   }) {
+    debugPrint('_showReturnDialog called with:');
+    debugPrint('  productName: $productName');
+    debugPrint('  unitPrice: $unitPrice');
+    debugPrint('  orderId: $orderId');
+    debugPrint('  cartItemId: $cartItemId');
+    debugPrint('  currency: $currency');
+    debugPrint('  totalPrice: $totalPrice');
+    debugPrint('  quantity: $quantity');
     final TextEditingController quantityController = TextEditingController();
     final TextEditingController reasonController = TextEditingController();
     final TextEditingController returnTotalController = TextEditingController();
@@ -1021,8 +1034,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                             getOrderDetails(selectedOrderNumber.toString());
 
                             Navigator.pop(context);
-                          } catch (error) {
-                            // debugPrint('Error submitting sales return: $error');
+                          } catch (error, stackTrace) {
+                            debugPrint('Error submitting sales return: $error');
+                            debugPrint(
+                                'Stack Trace for submitSalesReturn: $stackTrace');
                             showScaffoldError(
                               context: context,
                               message: 'Failed to submit sales return',
@@ -1080,7 +1095,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             DataColumn(label: Text('Returned')),
             DataColumn(label: Text('Action')),
           ],
-          rows: _salesReturnItems.map((item) {
+          rows: salesReturnItems.map((item) {
             return DataRow(
               cells: [
                 DataCell(InkWell(
@@ -1123,13 +1138,13 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     onPressed: () {
                       _showReturnDialog(
                         context,
-                        productName: item.productName,
-                        unitPrice: item.unitPrice,
+                        productName: item.productName.toString(),
+                        unitPrice: item.unitPrice.toString(),
                         orderId: selectedOrderId.toString(),
                         cartItemId: item.cartItemId,
                         currency: '',
                         totalPrice: item.totalPrice.toString(),
-                        quantity: item.quantity,
+                        quantity: item.quantity.toString(),
                       );
                     },
                     child: const Text("Return"),
@@ -1150,7 +1165,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       title: "Create Sales Return",
       fct: () async {
         debugPrint('Return Order ID: $selectedOrderId');
-        
+
         // Check if there are any items with return_order_id
         if (_salesReturnItems.isEmpty) {
           showScaffoldError(
@@ -1159,21 +1174,22 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           );
           return;
         }
-        
+
         // Find the first item with a valid return_order_id
         final validReturnItem = _salesReturnItems.firstWhere(
           (item) => item.returnOrderId != 0,
           orElse: () => _salesReturnItems.first,
         );
-        
+
         if (validReturnItem.returnOrderId == 0) {
           showScaffoldError(
             context: context,
-            message: 'No valid return order ID found. Please submit return items first.',
+            message:
+                'No valid return order ID found. Please submit return items first.',
           );
           return;
         }
-        
+
         try {
           String? accessToken =
               Provider.of<AuthModel>(context, listen: false).token;
@@ -1190,8 +1206,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           );
 
           sideBarController.index.value = 50;
-        } catch (error) {
+        } catch (error, stackTrace) {
           debugPrint('Error creating sales return: $error');
+          debugPrint('Stack Trace for completeSalesReturn: $stackTrace');
           showScaffoldError(
             context: context,
             message: 'Failed to create sales return',

@@ -140,6 +140,11 @@ class _SupplierAutocompleteState extends State<SupplierAutocomplete> {
             });
           }
 
+          // Sync the internal controller with external controller
+          if (textEditingController.text != widget.controller.text) {
+            textEditingController.text = widget.controller.text;
+          }
+
           textEditingController.removeListener(_ensureFocus);
           textEditingController.addListener(_ensureFocus);
           
@@ -176,14 +181,14 @@ class _SupplierAutocompleteState extends State<SupplierAutocomplete> {
                     final selectedSupplier =
                         currentOptions.elementAt(_highlightedOptionIndex!);
                     widget.onSelected(selectedSupplier);
-                    textEditingController.text = selectedSupplier;
+                    widget.controller.text = selectedSupplier;
                     focusNode.unfocus();
                   }
                 }
               }
             },
             child: TextField(
-              controller: textEditingController,
+              controller: widget.controller,
               focusNode: focusNode,
               autofocus: widget.autofocus,
               decoration: InputDecoration(

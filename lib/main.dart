@@ -119,26 +119,27 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => KeyboardProvider()),
         ChangeNotifierProvider(create: (_) => BarcodeProvider()),
         ChangeNotifierProvider(create: (_) => SharedPreferenceProvider()),
-      ], 
+      ],
       child: KeyboardDispatcher(
         child: GetMaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Flutter POS Machine',
-        theme: ThemeData(),
-        builder: (context, child) {
-          return Stack(
-            children: [
-              child ?? const SizedBox.shrink(),
-              const GlobalVirtualKeyboard(),
-            ],
-          );
-        },
-        home: const BaseUrlWrapper(),
-        routes: {
-          '/login': (context) => const SignInScreen(),
-          '/api-key': (context) => const ApiKeyScreen(),
-        },
+          debugShowCheckedModeBanner: false,
+          title: 'Flutter POS Machine',
+          theme: ThemeData(),
+          builder: (context, child) {
+            return Stack(
+              children: [
+                child ?? const SizedBox.shrink(),
+                const GlobalVirtualKeyboard(),
+              ],
+            );
+          },
+          home: const BaseUrlWrapper(),
+          routes: {
+            '/login': (context) => const SignInScreen(),
+            '/api-key': (context) => const ApiKeyScreen(),
+          },
+        ),
       ),
-),    );
+    );
   }
 }

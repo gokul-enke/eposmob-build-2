@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_round_button.dart';
@@ -91,8 +92,19 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
     Size size = MediaQuery.of(context).size;
 
     return SafeArea(
-      child: SingleChildScrollView(
-        child: Container(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.grab,
+        child: ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(
+            dragDevices: {
+              PointerDeviceKind.mouse,
+              PointerDeviceKind.touch,
+              PointerDeviceKind.stylus,
+              PointerDeviceKind.trackpad,
+            },
+          ),
+          child: SingleChildScrollView(
+            child: Container(
           margin: const EdgeInsets.all(10.0),
           padding: const EdgeInsets.all(8.0),
           decoration: BoxDecoration(
@@ -197,6 +209,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                       _buildPrintButton(size),
                     ],
                   ),
+              ),
+            ),
           ),
         ),
       ),
