@@ -191,12 +191,9 @@ class _CustomerInformationEditWidgetState
             hintText: 'Last Name',
             title: 'Last Name',
             size: widget.size,
-            isStarRed: true,
+            isStarRed: false,
             width: double.infinity,
             validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Last name is required';
-              }
               return null;
             },
           ),
