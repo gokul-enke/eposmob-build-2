@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
 import 'package:pos_machine/screens/billing/billing_page.dart';
+import 'package:pos_machine/screens/billing/kitchen_master.dart';
+import 'package:pos_machine/screens/billing/restaurant_page.dart';
 import 'package:pos_machine/screens/category/add_category.dart';
 import 'package:pos_machine/screens/category/add_category_properties.dart';
 import 'package:pos_machine/screens/category/add_category_screen.dart';
@@ -119,5 +121,7 @@ class SideBarController extends GetxController {
     SupplierListScreen(), // 52 Suppliers List
     PrinterSettings(), // 53 Printer Settings
     ConfirmedOrdersScreen(), // 54 Confirmed Orders
+    RestaurantPage(), // 55 Restaurant Page
+    KitchenMaster(), // 56 Kitchen Master
   ];
 }
