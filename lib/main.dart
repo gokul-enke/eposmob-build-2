@@ -17,6 +17,9 @@ import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/providers/restaurant/menu_provider.dart';
+import 'package:pos_machine/providers/restaurant/order_provider.dart';
+import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
@@ -119,6 +122,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => KeyboardProvider()),
         ChangeNotifierProvider(create: (_) => BarcodeProvider()),
         ChangeNotifierProvider(create: (_) => SharedPreferenceProvider()),
+        ChangeNotifierProvider(create: (_) => TableProvider()),
+        ChangeNotifierProvider(create: (_) => MenuProvider()),
+        ChangeNotifierProvider(create: (_) => OrderProvider()),
       ],
       child: KeyboardDispatcher(
         child: GetMaterialApp(
