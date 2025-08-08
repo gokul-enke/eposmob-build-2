@@ -242,7 +242,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Product ID: ${item.productId} (x${item.quantity})',
+                      'Product: ${item.productId} (${item.unitPrice}x${item.quantity})',
                       style: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s12, 0, ColorManager.kTitleTextColor),
                     ),
@@ -317,11 +317,18 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
     }
   }
 
-  Color _getPaymentStatusColor(String? status) {
-    return status?.toLowerCase() == 'paid'
-        ? ColorManager.kSuccessColor
-        : ColorManager.kRed;
+ Color _getPaymentStatusColor(String? status) {
+  if (status == null) return ColorManager.grey; // Default color
+  switch (status.toLowerCase()) {
+    case 'paid':
+      return ColorManager.kSuccessColor;
+    case 'pending':
+      return ColorManager.kRed;
+    default:
+      return ColorManager.grey; // Default fallback color
   }
+}
+
 
   String _formatDate(String? dateString) {
     if (dateString == null) return 'N/A';

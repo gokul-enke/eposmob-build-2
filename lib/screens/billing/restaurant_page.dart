@@ -894,28 +894,31 @@ class _MenuPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuItem(MenuItemModel item, bool compact, BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: item.isAvailable
-            ? () {
-                if (item.modifierGroups.isNotEmpty) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => ModifierSelectionModal(
-                      menuItem: item,
-                      onModifiersSelected: (selectedModifiers, notes) {
-                        onItemAdd(item, 1, selectedModifiers, notes);
-                      },
-                    ),
-                  );
-                } else {
-                  onItemAdd(item, 1, {}, null);
-                }
+Widget _buildMenuItem(MenuItemModel item, bool compact, BuildContext context) {
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: item.isAvailable
+          ? () {
+              if (item.modifierGroups.isNotEmpty) {
+                showDialog(
+                  context: context,
+                  builder: (context) => ModifierSelectionModal(
+                    menuItem: item,
+                    onModifiersSelected: (selectedModifiers, notes) {
+                      onItemAdd(item, 1, selectedModifiers, notes);
+                    },
+                  ),
+                );
+              } else {
+                onItemAdd(item, 1, {}, null);
               }
-            : null,
-        borderRadius: BorderRadius.circular(8),
+            }
+          : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Align(
+        alignment: Alignment.topCenter,
+        heightFactor: 1.0,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
@@ -937,9 +940,9 @@ class _MenuPanel extends StatelessWidget {
             padding: EdgeInsets.all(compact ? 8.0 : 12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize: MainAxisSize.min, // Shrink to fit content
               children: [
-                // Header with name and price - more compact
+                // Header with name and price
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -949,18 +952,20 @@ class _MenuPanel extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: buildCustomStyle(
-                          FontWeightManager.bold, 
-                          compact ? FontSize.s10 : FontSize.s12, 
-                          0.21, 
-                          item.isAvailable ? const Color(0xFF1E293B) : const Color(0xFF64748B)
+                          FontWeightManager.bold,
+                          compact ? FontSize.s10 : FontSize.s12,
+                          0.21,
+                          item.isAvailable
+                              ? const Color(0xFF1E293B)
+                              : const Color(0xFF64748B),
                         ),
                       ),
                     ),
                     const SizedBox(width: 6),
                     Container(
                       padding: EdgeInsets.symmetric(
-                        horizontal: compact ? 4 : 6, 
-                        vertical: compact ? 2 : 3
+                        horizontal: compact ? 4 : 6,
+                        vertical: compact ? 2 : 3,
                       ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF059669).withOpacity(0.1),
@@ -969,32 +974,32 @@ class _MenuPanel extends StatelessWidget {
                       child: Text(
                         '₹${item.price.toStringAsFixed(0)}',
                         style: buildCustomStyle(
-                          FontWeightManager.bold, 
-                          compact ? FontSize.s9 : FontSize.s11, 
-                          0.23, 
-                          item.isAvailable ? const Color(0xFF059669) : const Color(0xFF059669).withOpacity(0.5)
+                          FontWeightManager.bold,
+                          compact ? FontSize.s9 : FontSize.s11,
+                          0.23,
+                          item.isAvailable
+                              ? const Color(0xFF059669)
+                              : const Color(0xFF059669).withOpacity(0.5),
                         ),
                       ),
                     ),
                   ],
                 ),
                 SizedBox(height: compact ? 4 : 6),
-                // Description - flexible height
-                Flexible(
-                  child: Text(
-                    item.description,
-                    maxLines: compact ? 1 : 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: buildCustomStyle(
-                      FontWeightManager.regular, 
-                      compact ? FontSize.s8 : FontSize.s10, 
-                      0.21, 
-                      const Color(0xFF64748B)
-                    ),
+                // Description
+                Text(
+                  item.description,
+                  maxLines: compact ? 1 : 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    compact ? FontSize.s8 : FontSize.s10,
+                    0.21,
+                    const Color(0xFF64748B),
                   ),
                 ),
                 SizedBox(height: compact ? 4 : 6),
-                // Tags with modern styling - more compact
+                // Tags
                 Row(
                   children: [
                     Expanded(
@@ -1031,8 +1036,9 @@ class _MenuPanel extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTag(String text, Color color, bool compact) {
     return Container(
