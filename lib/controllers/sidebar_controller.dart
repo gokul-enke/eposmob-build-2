@@ -20,6 +20,7 @@ import 'package:pos_machine/screens/notifications/notifications.dart';
 import 'package:pos_machine/screens/print/printer_settings.dart';
 import 'package:pos_machine/screens/product/add_product.dart';
 import 'package:pos_machine/screens/product/tabbar_for_edit_product.dart';
+import 'package:pos_machine/screens/product/widgets/add_product_stock.dart';
 import 'package:pos_machine/screens/product/widgets/view_product.dart';
 import 'package:pos_machine/screens/purchase/purchase.dart';
 import 'package:pos_machine/screens/product/tabbar_for_add_new_product.dart';
@@ -51,7 +52,6 @@ import 'package:pos_machine/screens/transactions/widgets/view_transaction_detail
 import 'package:pos_machine/screens/transactions/widgets/view_voucher_details.dart';
 import 'package:pos_machine/screens/transactions/supplier_transactions/supplier_transactions.dart';
 
-import '../screens/product/widgets/add_product_stock.dart';
 import '../screens/product/widgets/stock_details.dart';
 import '../screens/sales/widgets/sales_order_details.dart';
 import '../widgets/category_list.dart';

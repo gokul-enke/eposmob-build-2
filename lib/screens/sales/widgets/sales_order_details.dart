@@ -55,20 +55,26 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
 
       final response = await SalesProvider()
           .listOrderDetails(context, ordersId, accessToken ?? "");
+      
       if (response["status"] == "success") {
         setState(() {
           OrderDetailsModel? orderDetails;
           try {
             orderDetails = OrderDetailsModel.fromJson(response);
+            if (orderDetails?.data != null) {
+              orderDetailsModelData = orderDetails!.data;
+              cart = orderDetailsModelData?.cart;
+              priceSummary = cart?.priceSummary;
+              customerDetails = orderDetailsModelData?.customerDetails;
+              cartItems = cart?.cartItems ?? [];
+              orderNumber = orderDetailsModelData?.orderNumber ?? "N/A";
+            } else {
+              orderNumber = "Order data is null";
+            }
           } catch (e) {
             debugPrint("Error parsing JSON data: $e");
+            orderNumber = "Error parsing order data";
           }
-          orderDetailsModelData = orderDetails!.data;
-          cart = orderDetailsModelData?.cart;
-          priceSummary = cart?.priceSummary;
-          customerDetails = orderDetailsModelData?.customerDetails;
-          cartItems = cart?.cartItems;
-          orderNumber = orderDetailsModelData?.orderNumber ?? "";
         });
       } else {
         setState(() {
@@ -76,7 +82,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         });
       }
     } catch (error) {
-      // debugPrint(error.toString());
+      debugPrint("Error fetching order details: $error");
       setState(() {
         orderNumber = "Error fetching order details";
       });
@@ -278,12 +284,21 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         boxColor: Colors.white,
         textColor: ColorManager.kPrimaryColor,
         fct: () async {
-          String? formattedTotal =
-              orderDetailsModelData?.cart?.priceSummary?.netTotal.toString();
-          String? savedTotal =
-              orderDetailsModelData?.cart?.priceSummary?.savedTotal.toString();
-          String storeName = orderDetailsModelData!.cart!.storeName ?? "";
-          String orderDate = orderDetailsModelData!.orderDate ?? "";
+          // Check if we have the required data
+          if (orderDetailsModelData?.cart == null || cartItems == null || cartItems!.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No order data available for printing'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
+
+          String? formattedTotal = orderDetailsModelData?.cart?.priceSummary?.netTotal?.toString() ?? "0.00";
+          String? savedTotal = orderDetailsModelData?.cart?.priceSummary?.savedTotal?.toString() ?? "0.00";
+          String storeName = orderDetailsModelData?.cart?.storeName ?? "Store";
+          String orderDate = orderDetailsModelData?.orderDate ?? "";
 
           Navigator.push(
             context,
@@ -291,7 +306,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               builder: (context) => PrintPage(
                 storeName: storeName,
                 cartItems: cartItems!,
-                formattedTotal: formattedTotal!,
+                formattedTotal: formattedTotal,
                 savedTotal: savedTotal,
                 orderDate: orderDate,
                 orderNumber: orderNumber,

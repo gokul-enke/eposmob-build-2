@@ -242,7 +242,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Product ID: ${item.productId} (x${item.quantity})',
+                      'Product: ${item.productName} (x${item.quantity})',
                       style: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s12, 0, ColorManager.kTitleTextColor),
                     ),

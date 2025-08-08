@@ -47,6 +47,7 @@ import 'package:pos_machine/screens/billing/widgets/payment_method_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/delivery_method_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/price_fields.dart';
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
 
 class BillingPage extends StatefulWidget {
   const BillingPage({super.key});
@@ -167,8 +168,9 @@ class BillingPageState extends State<BillingPage>
     _focusNode.addListener(_handleFocusChange);
     _paidAmountFocusNode
         .addListener(_handlePaidAmountFocusChange); // Add this line
-    deliveryMethodId = "3";
-    deliveryMethod = "Store Takeaway";
+    
+    // Initialize with dynamic default delivery method
+    _initializeDeliveryMethod();
 
     // Initialize multi-payment with cash selected by default
     _isCashSelected = true;
@@ -3755,10 +3757,10 @@ class BillingPageState extends State<BillingPage>
           // Restore delivery method
           if (currentOrder.deliveryMethod != null) {
             deliveryMethod = currentOrder.deliveryMethod!;
-            deliveryMethodId = currentOrder.deliveryMethodId ?? "3";
+            deliveryMethodId = currentOrder.deliveryMethodId ?? _getDefaultDeliveryMethodId();
           } else {
             deliveryMethod = "Store Takeaway";
-            deliveryMethodId = "3";
+            deliveryMethodId = _getDefaultDeliveryMethodId();
           }
 
           // Restore comments and car number
@@ -4722,7 +4724,7 @@ class BillingPageState extends State<BillingPage>
             "  - Skipping _fetchCustomers() because customer was manually selected");
       }
 
-      deliveryMethodId = "3";
+      deliveryMethodId = _getDefaultDeliveryMethodId();
       deliveryMethod = "Store Takeaway";
       // Remove iconColor reset
       // iconColor = 1; // DELETE THIS LINE
@@ -4881,7 +4883,7 @@ class BillingPageState extends State<BillingPage>
       // Clear payment and delivery states
       // iconColor = 1; // Default to cash
       deliveryMethod = "Store Takeaway";
-      deliveryMethodId = "3";
+      deliveryMethodId = _getDefaultDeliveryMethodId();
 
       // Clear all controllers
       coupenCodeTextController.clear();
@@ -4956,5 +4958,50 @@ class BillingPageState extends State<BillingPage>
 
     // Re-fetch customers to set new default based on new executive
     _fetchCustomers();
+  }
+
+  void _initializeDeliveryMethod() {
+    // Set initial default values
+    deliveryMethod = "Store Takeaway";
+    deliveryMethodId = "11"; // Updated to match API response
+    
+    // Listen for delivery methods to be loaded and update default
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final deliveryMethodsProvider = Provider.of<DeliveryMethodsProvider>(context, listen: false);
+      
+      // Add listener to update default when delivery methods are loaded
+      deliveryMethodsProvider.addListener(() {
+        if (!deliveryMethodsProvider.isLoading && deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
+          final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+          if (defaultMethod != null) {
+            setState(() {
+              deliveryMethod = defaultMethod.name;
+              deliveryMethodId = defaultMethod.id;
+            });
+            debugPrint("🚚 Updated default delivery method: ${defaultMethod.name} (ID: ${defaultMethod.id})");
+          }
+        }
+      });
+      
+      // If delivery methods are already loaded, set the default immediately
+      if (!deliveryMethodsProvider.isLoading && deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
+        final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+        if (defaultMethod != null) {
+          deliveryMethod = defaultMethod.name;
+          deliveryMethodId = defaultMethod.id;
+          debugPrint("🚚 Set initial default delivery method: ${defaultMethod.name} (ID: ${defaultMethod.id})");
+        }
+      }
+    });
+  }
+
+  String _getDefaultDeliveryMethodId() {
+    try {
+      final deliveryMethodsProvider = Provider.of<DeliveryMethodsProvider>(context, listen: false);
+      final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+      return defaultMethod?.id ?? "11"; // Fallback to Store Takeaway ID from API
+    } catch (e) {
+      return "11"; // Fallback to Store Takeaway ID from API
+    }
   }
 }

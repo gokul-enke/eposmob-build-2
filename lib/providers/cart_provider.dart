@@ -641,7 +641,7 @@ class CartProvider with ChangeNotifier {
         "items": items,
         "phone": customerPhone,
         "transaction_number": transactionId,
-        "payment_method": paymentMethod,
+        "payment_methods": paymentMethod,
         "paid_amount": paidAmount,
         "source_type": "executive",
         "balance": balanceAmount,

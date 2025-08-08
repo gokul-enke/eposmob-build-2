@@ -348,9 +348,7 @@ class OrderDetailWidget extends StatelessWidget {
                       const SizedBox(height: 8),
                       if (orderDetailsModelData?.paymentDetails?.paymentMethod != null)
                         _buildInfoRow('Payment Method', 
-                          orderDetailsModelData!.paymentDetails!.paymentMethod is List 
-                            ? (orderDetailsModelData!.paymentDetails!.paymentMethod as List).join(', ')
-                            : orderDetailsModelData!.paymentDetails!.paymentMethod.toString()
+                          orderDetailsModelData!.paymentDetails!.paymentMethod!
                         ),
                       if (orderDetailsModelData?.paymentDetails?.transactionId != null)
                         _buildInfoRow('Transaction ID', orderDetailsModelData!.paymentDetails!.transactionId.toString()),
