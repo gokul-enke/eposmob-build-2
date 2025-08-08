@@ -352,6 +352,77 @@ class OrderDetailWidget extends StatelessWidget {
                         ),
                       if (orderDetailsModelData?.paymentDetails?.transactionId != null)
                         _buildInfoRow('Transaction ID', orderDetailsModelData!.paymentDetails!.transactionId.toString()),
+                      
+                      // Add payment breakdown
+                      if (orderDetailsModelData?.payments != null && orderDetailsModelData!.payments!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Payment Breakdown:',
+                          style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            FontSize.s12,
+                            0.18,
+                            ColorManager.textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        ...orderDetailsModelData!.payments!.entries.map((entry) => 
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 2),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  entry.key,
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s11,
+                                    0.16,
+                                    ColorManager.textColor,
+                                  ),
+                                ),
+                                Text(
+                                  'Rs ${entry.value}',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.semiBold,
+                                    FontSize.s11,
+                                    0.16,
+                                    ColorManager.kPrimaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ).toList(),
+                        
+                        // Add total payment amount
+                        if (orderDetailsModelData!.payments!.isNotEmpty) ...[
+                          const Divider(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Total Paid:',
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s12,
+                                  0.18,
+                                  ColorManager.textColor,
+                                ),
+                              ),
+                              Text(
+                                'Rs ${_calculateTotalPayments(orderDetailsModelData!.payments!)}',
+                                style: buildCustomStyle(
+                                  FontWeightManager.bold,
+                                  FontSize.s12,
+                                  0.18,
+                                  ColorManager.kPrimaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
                     ],
                   ),
                 ),
@@ -525,5 +596,9 @@ class OrderDetailWidget extends StatelessWidget {
       default:
         return value;
     }
+  }
+
+  double _calculateTotalPayments(Map<String, dynamic> payments) {
+    return payments.values.fold(0.0, (sum, value) => sum + (double.tryParse(value.toString()) ?? 0.0));
   }
 }

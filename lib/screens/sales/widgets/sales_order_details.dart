@@ -68,6 +68,16 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               customerDetails = orderDetailsModelData?.customerDetails;
               cartItems = cart?.cartItems ?? [];
               orderNumber = orderDetailsModelData?.orderNumber ?? "N/A";
+              
+              // Debug: Check payments data
+              if (orderDetailsModelData?.payments != null) {
+                debugPrint("Payments data: ${orderDetailsModelData!.payments}");
+                orderDetailsModelData!.payments!.forEach((key, value) {
+                  debugPrint("Payment method: $key, Amount: $value");
+                });
+              } else {
+                debugPrint("No payments data found");
+              }
             } else {
               orderNumber = "Order data is null";
             }

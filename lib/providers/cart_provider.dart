@@ -614,6 +614,9 @@ class CartProvider with ChangeNotifier {
 
     Map<String, dynamic> apiBodyData = {};
 
+    debugPrint("paymentMethods $paymentMethods");
+    debugPrint("paidMethods $paidMethods");
+
     // Use multi-payment format if available, otherwise fall back to single payment
     if (paymentMethods != null &&
         paidMethods != null &&
@@ -622,7 +625,7 @@ class CartProvider with ChangeNotifier {
         "items": items,
         "phone": customerPhone,
         "transaction_number": transactionId,
-        "payment_methods": paymentMethods,
+        "payment_method": paymentMethods,
         "paid_methods": paidMethods,
         "source_type": "executive",
         "balance": balanceAmount,
@@ -641,7 +644,7 @@ class CartProvider with ChangeNotifier {
         "items": items,
         "phone": customerPhone,
         "transaction_number": transactionId,
-        "payment_methods": paymentMethod,
+        "payment_method": paymentMethod,
         "paid_amount": paidAmount,
         "source_type": "executive",
         "balance": balanceAmount,
