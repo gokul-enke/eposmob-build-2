@@ -73,6 +73,7 @@ class ListOrderModelData {
   final List<OrderProp>? orderProps;
   final List<CartItem>? cartItems;
   final String? customerName;
+  final String? invoiceHash;
 
   ListOrderModelData({
     this.id,
@@ -87,6 +88,7 @@ class ListOrderModelData {
     this.orderProps,
     this.cartItems,
     this.customerName,
+    this.invoiceHash,
   });
 
   factory ListOrderModelData.fromJson(Map<String, dynamic> json) {
@@ -137,6 +139,7 @@ class ListOrderModelData {
             ? []
             : List<CartItem>.from(json["cart_items"]["cart_items"]
                 .map((x) => CartItem.fromJson(x))),
+        invoiceHash: json["invoice_hash"],
       );
     } catch (e, stackTrace) {
       debugPrint('=== ListOrderModelData.fromJson ERROR ===');
@@ -166,6 +169,7 @@ class ListOrderModelData {
         "order_props": orderProps == null
             ? []
             : List<dynamic>.from(orderProps!.map((x) => x.toJson())),
+        "invoice_hash": invoiceHash,
       };
 }
 

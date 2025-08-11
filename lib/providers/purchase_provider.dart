@@ -51,6 +51,8 @@ class PurchaseProvider extends ChangeNotifier {
   // UnitList? get getUnitList => unitList;
   Map<String, String>? unitList;
   Map<String, String>? get getUnitList => unitList;
+  Map<String, String>? masterDataValues;
+  Map<String, String>? get getMasterDataValues => masterDataValues;
   List<VoucherDetail>? get getVoucherDetailsList => voucherDetailsList;
   List<PurchaseItem> get getPurchaseDetailsList {
     debugPrint("getPurchaseDetailsList called");
@@ -262,6 +264,54 @@ class PurchaseProvider extends ChangeNotifier {
         notifyListeners();
       } else {}
     } finally {}
+  }
+
+  //          *********************** LIST MASTER DATA VALUES  API ***************************************************
+
+  Future<void> listMasterDataValues(
+    String accessToken,
+    String code,
+  ) async {
+    debugPrint("LIST MASTER DATA VALUES for code: $code");
+
+    final url = Uri.parse('${APPUrl.getMasterDataValues}?code=$code');
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+    try {
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      });
+      debugPrint('Master data API response status: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        debugPrint('Master data response: ${response.body}');
+        final jsonData = json.decode(response.body);
+        
+        if (jsonData['status'] == 'success' && jsonData['data'] != null) {
+          masterDataValues = Map<String, String>.from(jsonData['data']);
+          debugPrint('Master data values loaded: $masterDataValues');
+        } else {
+          debugPrint('Failed to load master data: ${jsonData['message']}');
+          masterDataValues = {};
+        }
+
+        notifyListeners();
+      } else {
+        debugPrint('Master data API failed with status: ${response.statusCode}');
+        masterDataValues = {};
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading master data: $e');
+      masterDataValues = {};
+      notifyListeners();
+    }
   }
 
   //          *********************** LIST PURCHASES  API ***************************************************
@@ -725,6 +775,64 @@ class PurchaseProvider extends ChangeNotifier {
     } finally {
       // _isLoading = false;
       // notifyListeners();
+    }
+  }
+
+  //          *********************** FINISH PURCHASE ORDER API ***************************************************
+
+  Future<dynamic> finishPurchaseOrder({
+    required String accessToken,
+    required String purchaseId,
+  }) async {
+    debugPrint("FINISH PURCHASE ORDER API CALLED");
+    debugPrint("Purchase ID: $purchaseId");
+
+    final Map<String, dynamic> apiBodyData = {
+      'purchase_id': purchaseId,
+    };
+    
+    debugPrint("API Body Data: $apiBodyData");
+    
+    final url = Uri.parse(APPUrl.finishPurchaseOrder);
+    
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+    
+    try {
+      final response = await http.post(url, 
+        body: json.encode(apiBodyData), 
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        }
+      );
+      
+      debugPrint('Finish Purchase Order API response status: ${response.statusCode}');
+      debugPrint('Finish Purchase Order API response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final result = json.decode(response.body);
+        debugPrint('Finish Purchase Order API success: $result');
+        return result;
+      } else {
+        debugPrint('Finish Purchase Order API failed with status: ${response.statusCode}');
+        return {
+          'status': 'failed',
+          'message': 'API request failed with status: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      debugPrint('Error in finishPurchaseOrder: $e');
+      return {
+        'status': 'failed',
+        'message': 'Error: ${e.toString()}',
+      };
     }
   }
 }

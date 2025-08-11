@@ -6,8 +6,8 @@ class APPUrl {
   // static String baseURL = "https://kmstoys.enke.in";
   //  static String baseURL = "https://stagingepos.enke.ae";
   // static String baseURL = "https://tenant.hypersouq.in";
-  // static String baseURL = "https://eposdemo.hypersouq.in";
-  static String baseURL = "https://epos.hypersouq.in";
+  static String baseURL = "https://eposdemo.hypersouq.in";
+  // static String baseURL = "https://epos.hypersouq.in";
   // static String baseURL = "https://stagingepos.enke.ae";
   // static String baseURL = "https://open-poems-sneeze.loca.lt";
   // static String baseURL = "http://localhost:8000";
@@ -149,7 +149,9 @@ class APPUrl {
   static String listSalesExecutives = '$baseURL/api/v1/list-sales-executives';
   static String getRacksDataValues =
       '$baseURL/api/v1/master-data-values?code=RACKS';
+  static String getMasterDataValues = '$baseURL/api/v1/master-data-values';
   static String documentConfigs = '$baseURL/api/v1/document/document-configs';
   static String supplierTransactions =
       '$baseURL/api/v1/suppliers/list-transactions';
+  static String calculateTax = '$baseURL/api/v1/calculate-tax';
 }

@@ -553,7 +553,7 @@ class BillingPageState extends State<BillingPage>
         // Set dialog state to open
         await showDialog(
           context: context,
-          builder: (context) => AddProductWithBarcodeModal(barcode: query),
+          builder: (context) => AddProductWithBarcodeModal(barcode: query, isAddToCart: true),
         );
         // Reset dialog state
 

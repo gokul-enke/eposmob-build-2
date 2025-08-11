@@ -17,6 +17,10 @@ class BuildDropDownWithSearch<T> extends StatelessWidget {
   final bool isRequired;
   final double? height;
   final String? searchHintText;
+  final bool showName;
+  final EdgeInsetsGeometry? margin;
+  final EdgeInsetsGeometry? contentPadding;
+  final double? width;
 
   const BuildDropDownWithSearch({
     Key? key,
@@ -30,6 +34,10 @@ class BuildDropDownWithSearch<T> extends StatelessWidget {
     this.isRequired = false,
     this.height,
     this.searchHintText,
+    this.showName = true,
+    this.margin,
+    this.contentPadding,
+    this.width,
   }) : super(key: key);
 
   @override
@@ -37,7 +45,7 @@ class BuildDropDownWithSearch<T> extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (title != null) ...[
+        if (showName && title != null) ...[
           BuildTextTile(
             title: title!,
             isStarRed: isRequired,
@@ -49,13 +57,15 @@ class BuildDropDownWithSearch<T> extends StatelessWidget {
               Colors.black.withOpacity(0.6),
             ),
           ),
-          const SizedBox(height: 8),
+          if (!isRequired) const SizedBox(height: 8),
         ],
         BuildBoxShadowContainer(
           circleRadius: 7,
           alignment: Alignment.centerLeft,
+          margin: margin ?? const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
           height: height ?? MediaQuery.of(context).size.height * .07,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 10),
+          width: width,
           child: DropdownButton2<T>(
             isExpanded: true,
             value: value,
@@ -148,13 +158,17 @@ class BuildDropDownWithSearch<T> extends StatelessWidget {
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                      borderSide:
+                          BorderSide(color: Colors.grey.withOpacity(0.3)),
                     ),
                   ),
                 ),
               ),
               searchMatchFn: (item, searchValue) {
-                return item.value != null && displayText(item.value!).toLowerCase().contains(searchValue.toLowerCase());
+                return item.value != null &&
+                    displayText(item.value!)
+                        .toLowerCase()
+                        .contains(searchValue.toLowerCase());
               },
             ),
             onMenuStateChange: (isOpen) {
@@ -167,4 +181,4 @@ class BuildDropDownWithSearch<T> extends StatelessWidget {
       ],
     );
   }
-} 
+}

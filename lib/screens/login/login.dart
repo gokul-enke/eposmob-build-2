@@ -410,6 +410,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                                 authModel.token ?? '', null);
                                             purchaseProvider.listAllUnits(
                                                 authModel.token ?? '');
+                                            purchaseProvider.listMasterDataValues(
+                                                authModel.token ?? '', 'RACKS');
 
                                             showScaffold(
                                               context: context,

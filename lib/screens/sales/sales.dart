@@ -19,11 +19,13 @@ import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../models/list_sales_order.dart';
 import '../../providers/auth_model.dart';
+import '../../resources/app_url.dart';
 import '../../resources/color_manager.dart';
 
 import '../../resources/font_manager.dart';
@@ -61,7 +63,7 @@ class _SalesScreenState extends State<SalesScreen> {
     super.initState();
   }
 
-  Future<void> downloadFile(String orderNumber) async {
+  Future<void> downloadFile(String invoiceHash) async {
     try {
       // Show loading indicator
       showDialog(
@@ -75,14 +77,14 @@ class _SalesScreenState extends State<SalesScreen> {
       );
 
       // URL of the PDF file
-      final url = 'https://hypersouq.enke.in/download-invoice/$orderNumber';
+      final url = '${APPUrl.baseURL}/invoice-download/$invoiceHash';
       debugPrint('Attempting to download from: $url');
 
       // Get the application directory
       final directory = await getApplicationDocumentsDirectory();
 
       // Create a file path for the PDF
-      final filePath = '${directory.path}/invoice_$orderNumber.pdf';
+      final filePath = '${directory.path}/invoice_$invoiceHash.pdf';
 
       // Configure Dio with options
       final dio = Dio();
@@ -412,6 +414,50 @@ class _SalesScreenState extends State<SalesScreen> {
               }
             } catch (error) {
               debugPrint(error.toString());
+            }
+          },
+        ),
+        IconButton(
+          icon: Icon(Icons.share, size: 18, color: Colors.blue),
+          onPressed: () async {
+            try {
+              String? invoiceHash = order.invoiceHash; // Use the new invoiceHash field
+              if (invoiceHash == null) {
+                if (context.mounted) {
+                  showScaffoldError(
+                    context: context,
+                    message: 'Invoice not available for sharing.',
+                  );
+                }
+                return;
+              }
+              String invoiceUrl = "${APPUrl.baseURL}/invoice-download/$invoiceHash";
+              String message = "Here is the link for your invoice :- $invoiceUrl";
+              
+              // Encode the message for WhatsApp
+              String encodedMessage = Uri.encodeComponent(message);
+              String whatsappUrl = "https://wa.me/?text=$encodedMessage";
+              
+              // Launch WhatsApp
+              if (await canLaunchUrl(Uri.parse(whatsappUrl))) {
+                await launchUrl(Uri.parse(whatsappUrl), mode: LaunchMode.externalApplication);
+              } else {
+                // Fallback: show error message
+                if (context.mounted) {
+                  showScaffoldError(
+                    context: context,
+                    message: 'Could not open WhatsApp. Please make sure WhatsApp is installed.',
+                  );
+                }
+              }
+            } catch (error) {
+              debugPrint('Error sharing invoice: $error');
+              if (context.mounted) {
+                showScaffoldError(
+                  context: context,
+                  message: 'Error sharing invoice. Please try again.',
+                );
+              }
             }
           },
         ),
