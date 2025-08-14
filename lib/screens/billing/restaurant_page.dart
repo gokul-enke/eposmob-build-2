@@ -2174,30 +2174,16 @@ class _OrderPanelState extends State<_OrderPanel> {
       final customerId = _selectedOrder['cart']['customer_id'] ?? 1;
       final cartId = int.tryParse(_selectedOrder['cart_id'].toString());
       
-      // Determine the product ID to send to the API
-      final int productIdToSend;
-      if (cartItem['product_id'] != null) {
-        productIdToSend = int.parse(cartItem['product_id'].toString());
-      } else if (cartItem['product'] != null && cartItem['product']['id'] != null) {
-        productIdToSend = int.parse(cartItem['product']['id'].toString());
-      } else {
-        // Fallback: If product_id is not explicitly found, use the cart_item_id as product_id
-        // This might be the case if the API expects cart_item_id as productId in some scenarios
-        productIdToSend = int.parse(cartItem['id'].toString());
-        debugPrint('⚠️ Warning: Using cart_item_id as productId for update. Verify if this is correct.');
-      }
-
       debugPrint('🔄 Updating cart item quantity:');
       debugPrint('   Customer ID: $customerId');
       debugPrint('   Cart ID: $cartId');
-      debugPrint('   Product ID (to send): $productIdToSend');
-      debugPrint('   Cart Item ID (original): ${cartItem['id']}');
+      debugPrint('   Cart Item ID (to send): ${cartItem['id']}'); // Send the cart_item_id
       debugPrint('   New Quantity: $newQuantity');
 
       // Use the decrementCartItemQuantityAPI for quantity updates
       final response = await cartProvider.decrementCartItemQuantityAPI(
         customerId: int.parse(customerId.toString()),
-        productId: productIdToSend,
+        productId: int.parse(cartItem['id'].toString()), // Send cart_item_id here
         cartId: cartId,
         quantity: newQuantity.toInt(),
         accessToken: authModel.token ?? '',
@@ -2268,28 +2254,15 @@ class _OrderPanelState extends State<_OrderPanel> {
       final customerId = _selectedOrder['cart']['customer_id'] ?? 1;
       final cartId = int.tryParse(_selectedOrder['cart_id'].toString());
 
-      // Determine the product ID to send to the API
-      final int productIdToSend;
-      if (cartItem['product_id'] != null) {
-        productIdToSend = int.parse(cartItem['product_id'].toString());
-      } else if (cartItem['product'] != null && cartItem['product']['id'] != null) {
-        productIdToSend = int.parse(cartItem['product']['id'].toString());
-      } else {
-        // Fallback: If product_id is not explicitly found, use the cart_item_id as product_id
-        productIdToSend = int.parse(cartItem['id'].toString());
-        debugPrint('⚠️ Warning: Using cart_item_id as productId for removal. Verify if this is correct.');
-      }
-
       debugPrint('🗑️ Removing cart item:');
       debugPrint('   Customer ID: $customerId');
       debugPrint('   Cart ID: $cartId');
-      debugPrint('   Product ID (to send): $productIdToSend');
-      debugPrint('   Cart Item ID (original): ${cartItem['id']}');
+      debugPrint('   Cart Item ID (to send): ${cartItem['id']}'); // Send the cart_item_id
 
-      // Use the cart API to remove item with correct product_id
+      // Use the cart API to remove item with correct cart_item_id
       final response = await cartProvider.removeFromCartAPI(
         customerId: int.parse(customerId.toString()),
-        productId: productIdToSend, // This should be product_id, not cart_item_id
+        productId: int.parse(cartItem['id'].toString()), // Send cart_item_id here
         accessToken: authModel.token ?? '',
         cartId: cartId,
       );

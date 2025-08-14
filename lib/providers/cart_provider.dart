@@ -240,7 +240,7 @@ class CartProvider with ChangeNotifier {
     // debugPrint(quantity.toString());
     Map<String, dynamic> apiBodyData = {};
     apiBodyData = {
-      'customer_id': "1",
+      'customer_id': customerId.toString(),
       'quantity': quantity,
       // 'app_type': "api",
       'product_id': productId,
