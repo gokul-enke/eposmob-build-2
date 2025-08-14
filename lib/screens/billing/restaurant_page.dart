@@ -26,6 +26,7 @@ class RestaurantPage extends StatefulWidget {
 class _RestaurantPageState extends State<RestaurantPage> {
   String? _activeTableId;
   int? _activeCategoryId;
+  dynamic _selectedOrderFromOrderPanel; // New state to hold selected order
 
   @override
   void initState() {
@@ -132,6 +133,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             activeCategoryId: _activeCategoryId,
             onItemAdd: _handleItemAdd,
             screenSize: screenSize,
+            selectedOrder: _selectedOrderFromOrderPanel, // Pass selected order
           ),
         ),
         // Order panel - flexible width
@@ -141,6 +143,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
             tableId: _activeTableId,
             screenSize: screenSize,
             onSendToKitchen: _sendOrderToKitchen, // Pass the new callback
+            onNewOrder: _handleNewOrder, // Pass the new callback
+            onOrderSelected: (order) {
+              setState(() {
+                _selectedOrderFromOrderPanel = order;
+              });
+            }, // Pass callback to update selected order
+            selectedOrderFromParent:
+                _selectedOrderFromOrderPanel, // Pass the selected order
           ),
         ),
       ],
@@ -177,6 +187,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   isCompact: true,
                   screenSize: screenSize,
                   onSendToKitchen: _sendOrderToKitchen, // Pass the new callback
+                  onNewOrder: _handleNewOrder, // Pass the new callback
+                  onOrderSelected: (order) {
+                    setState(() {
+                      _selectedOrderFromOrderPanel = order;
+                    });
+                  },
+                  selectedOrderFromParent:
+                      _selectedOrderFromOrderPanel, // Pass the selected order
                 ),
               ),
             ],
@@ -190,6 +208,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             onItemAdd: _handleItemAdd,
             isCompact: true,
             screenSize: screenSize,
+            selectedOrder: _selectedOrderFromOrderPanel, // Pass selected order
           ),
         ),
       ],
@@ -209,14 +228,48 @@ class _RestaurantPageState extends State<RestaurantPage> {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
+      // Determine the cartId to use
+      int? targetCartId;
+      if (_selectedOrderFromOrderPanel != null) {
+        // If a saved order is open, use its cart_id
+        targetCartId = int.tryParse((_selectedOrderFromOrderPanel['cart']
+                        ?['id'] ??
+                    _selectedOrderFromOrderPanel['cart_id'])
+                ?.toString() ??
+            '');
+        debugPrint('Using cart_id from selected order: $targetCartId');
+      } else {
+        // If no saved order is open, proceed with default logic (new cart or existing current cart)
+        // This part remains mostly the same as original logic for addToCartAPI
+      }
+
+      // Check if this is a new cart (no existing cart items)
+      final isNewCart = cartProvider.cartData.isEmpty ||
+          cartProvider.cartData.first.cartItems?.isEmpty == true;
+
       // Use cart API directly instead of ProductCartHelper
-      await cartProvider.addToCartAPI(
-        customerId: 1, // Use a default customer ID or get from auth
+      debugPrint(
+          '📦 addToCartAPI Request Body: {customerId: ${authModel.userId ?? 1}, productId: ${product.productId!}, quantity: $quantity, unitPrice: ${product.price?.price?.toString()}, cartId: $targetCartId}');
+      debugPrint('➡️ Calling CartProvider.addToCartAPI');
+      final addResponse = await cartProvider.addToCartAPI(
+        customerId: authModel.userId ??
+            1, // Use authModel.userId instead of hardcoded 1
         productId: product.productId!,
         quantity: quantity,
         accessToken: authModel.token ?? '',
         unitPrice: product.price?.price?.toString(),
+        cartId: targetCartId,
       );
+      debugPrint('✅ addToCartAPI Response: $addResponse');
+
+      // If this is the first item in a new cart, automatically create an order with status "init"
+      if (isNewCart && _selectedOrderFromOrderPanel == null) {
+        debugPrint(
+            '🔄 First item added to new cart, creating initial order...');
+        // Wait a bit for cart data to be updated
+        await Future.delayed(const Duration(milliseconds: 500));
+        await _createInitialOrder();
+      }
 
       // Show success message
       if (mounted) {
@@ -224,12 +277,108 @@ class _RestaurantPageState extends State<RestaurantPage> {
           context: context,
           message: 'Added ${product.productName} to Table $_activeTableId',
         );
+
+        // If a saved order was active, trigger a refresh
+        if (_selectedOrderFromOrderPanel != null) {
+          // Wait a bit for the cart to be updated on the server
+          await Future.delayed(const Duration(milliseconds: 1000));
+
+          // Create a new map to trigger didUpdateWidget in the order panel
+          setState(() {
+            _selectedOrderFromOrderPanel = {
+              ..._selectedOrderFromOrderPanel,
+              '_refresh_trigger': DateTime.now().millisecondsSinceEpoch,
+            };
+          });
+        }
       }
     } catch (e) {
       showScaffoldError(
         context: context,
         message: 'Failed to add item: ${e.toString()}',
       );
+    }
+  }
+
+  Future<void> _createInitialOrder() async {
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      // Refresh cart data to get the latest items
+      debugPrint('➡️ Calling CartProvider.fetchCartDataFromApi');
+      await cartProvider.fetchCartDataFromApi(
+        customerId: authModel.userId ?? 1,
+        accessToken: authModel.token ?? '',
+      );
+
+      // Get the updated cart data
+      final cartData = cartProvider.cartData;
+      debugPrint('🔍 Cart data after refresh: ${cartData.length} carts');
+      if (cartData.isNotEmpty) {
+        debugPrint(
+            '🔍 First cart items: ${cartData.first.cartItems?.length ?? 0} items');
+      }
+
+      if (cartData.isEmpty || cartData.first.cartItems?.isEmpty == true) {
+        debugPrint('❌ No cart items found to create order from');
+        return; // No cart items to create order from
+      }
+
+      final cartItems = cartData.first.cartItems!;
+      List<Map<String, dynamic>> items = [];
+      for (var item in cartItems) {
+        items.add({
+          'product_id': item.productId,
+          'quantity': item.quantity,
+          'price': item.unitPrice,
+          'mrp': item.mrp,
+          'stock_id': null,
+        });
+      }
+
+      final total = cartData.first.priceSummary?.netTotal ?? 0.0;
+
+      // Create order with status "init"
+      debugPrint(
+          '🔄 Creating order with ${items.length} items for Table $_activeTableId');
+      debugPrint('➡️ Calling CartProvider.addToOrderAPI');
+      final response = await cartProvider.addToOrderAPI(
+        items: items,
+        cartIds: cartData.first.id ?? 0,
+        accessToken: authModel.token ?? "",
+        transactionId: "",
+        totalPrice: total.toStringAsFixed(2),
+        customerId: cartData.first.customerId,
+        customerPhone: null,
+        paymentMethod: null,
+        paidAmount: null,
+        paymentMethods: [],
+        paidMethods: [],
+        balanceAmount: "0",
+        couponId: null,
+        comment: "Order for Table $_activeTableId",
+        deliveryMethodId: null,
+        carNumber: null,
+        status: "init", // Set status to "init"
+        deliveryDate: null,
+        deliveryTime: null,
+        tableId: _activeTableId,
+      );
+
+      debugPrint(
+          '✅ Initial order created with status "init" for Table $_activeTableId');
+      debugPrint('🔍 Order response: $response');
+
+      // Refresh saved orders to show the new order
+      if (mounted) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        // Trigger a refresh of saved orders in the order panel
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to create initial order: ${e.toString()}');
+      // Don't show error to user as this is background operation
     }
   }
 
@@ -273,6 +422,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       final total = cartData.first.priceSummary?.netTotal ?? 0.0;
 
       // Call the addToOrderAPI with status: "init"
+      debugPrint('➡️ Calling CartProvider.addToOrderAPI');
       final response = await cartProvider.addToOrderAPI(
         items: items,
         cartIds: cartData.first.id ?? 0,
@@ -302,12 +452,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
           message:
               'Order for Table $_activeTableId sent to kitchen successfully! Order ID: ${response["order_id"]}',
         );
-        
+
         // Clear the cart after successful submission using cart API
         if (cartItems.isNotEmpty) {
+          debugPrint('➡️ Calling CartProvider.clearCartAPI');
           await cartProvider.clearCartAPI(
             customerId: cartData.first.customerId ?? 1,
-            productId: cartItems.first.id ?? 0, // Just need any cart item ID for clear action
+            productId: cartItems.first.id ??
+                0, // Just need any cart item ID for clear action
             accessToken: authModel.token ?? "",
           );
         }
@@ -324,6 +476,32 @@ class _RestaurantPageState extends State<RestaurantPage> {
         message: 'Failed to send order to kitchen: ${e.toString()}',
       );
     }
+  }
+
+  Future<void> _handleNewOrder() async {
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+    // Clear the cart
+    if (cartProvider.cartData.isNotEmpty &&
+        cartProvider.cartData.first.cartItems?.isNotEmpty == true) {
+      debugPrint('➡️ Calling CartProvider.clearCartAPI');
+      await cartProvider.clearCartAPI(
+        customerId: cartProvider.cartData.first.customerId ?? 1,
+        productId: cartProvider.cartData.first.cartItems!.first.id ??
+            0, // A dummy product ID, as clearCartAPI uses cart_item_id only if provided
+        accessToken: Provider.of<AuthModel>(context, listen: false).token ?? '',
+      );
+    }
+
+    // Deselect the active table
+    setState(() {
+      _activeTableId = null;
+    });
+
+    showScaffold(
+      context: context,
+      message: 'New order started. Cart cleared and table deselected.',
+    );
   }
 }
 
@@ -835,6 +1013,7 @@ class _MenuPanel extends StatelessWidget {
   final Function(GetProduct product, int quantity) onItemAdd;
   final bool isCompact;
   final Size screenSize;
+  final dynamic selectedOrder; // New parameter to receive selected order
 
   const _MenuPanel({
     required this.onCategoryChanged,
@@ -842,6 +1021,7 @@ class _MenuPanel extends StatelessWidget {
     required this.onItemAdd,
     this.isCompact = false,
     required this.screenSize,
+    this.selectedOrder, // Make it optional for now, as it might be null
   });
 
   @override
@@ -1380,9 +1560,10 @@ class _MenuPanel extends StatelessWidget {
         ];
       case 'NON-VEG':
       case 'NONVEG':
+      case 'NON VEG':
       case 'NON_VEG':
         return [
-          _buildVegNonVegTag('NON-VEG', const Color(0xFFDC2626), compact, false)
+          _buildVegNonVegTag('NON VEG', const Color(0xFFDC2626), compact, false)
         ];
       default:
         // If it's some other food type, show it as is
@@ -1437,12 +1618,20 @@ class _OrderPanel extends StatefulWidget {
   final bool isCompact;
   final Size screenSize;
   final VoidCallback onSendToKitchen; // New callback for send to kitchen
+  final VoidCallback onNewOrder; // New callback for new order
+  final Function(dynamic)
+      onOrderSelected; // New callback to update selected order
+  final dynamic
+      selectedOrderFromParent; // Add this to track parent's selected order
 
   const _OrderPanel({
     required this.tableId,
     this.isCompact = false,
     required this.screenSize,
     required this.onSendToKitchen, // Make it required
+    required this.onNewOrder, // Make it required
+    required this.onOrderSelected, // Make it required
+    this.selectedOrderFromParent, // Add this parameter
   });
 
   @override
@@ -1468,6 +1657,14 @@ class _OrderPanelState extends State<_OrderPanel> {
         _error = null;
       });
     }
+
+    // Check if the selected order from parent has changed (indicating a refresh is needed)
+    if (widget.selectedOrderFromParent != oldWidget.selectedOrderFromParent &&
+        widget.selectedOrderFromParent != null &&
+        _selectedOrder != null) {
+      // Refresh the selected order details
+      _refreshSelectedOrderAfterCartUpdate();
+    }
   }
 
   Future<void> _fetchSavedOrders() async {
@@ -1481,11 +1678,15 @@ class _OrderPanelState extends State<_OrderPanel> {
     final authModel = Provider.of<AuthModel>(context, listen: false);
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
+    debugPrint(
+        '🔄 _fetchSavedOrders: Sending request with tableId: ${widget.tableId}');
     try {
+      debugPrint('➡️ Calling CartProvider.listSavedOrders');
       final response = await cartProvider.listSavedOrders(
         accessToken: authModel.token ?? '',
         tableId: widget.tableId,
       );
+      debugPrint('✅ listSavedOrders Response: $response');
       if (response['status'] == 'success') {
         setState(() {
           _savedOrders = response['orders'];
@@ -1516,6 +1717,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('🔄 _fetchOrderDetails: Processing saved order data.');
       _selectedOrder =
           order; // Set the selected order directly - no need to modify local cart
+      widget.onOrderSelected(
+          order); // Call the callback to update the parent widget
     } catch (e) {
       debugPrint('❌ _fetchOrderDetails Exception: ${e.toString()}');
       setState(() {
@@ -1581,6 +1784,14 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
 
     if (_error != null) {
+      // If the error is about no orders found, show the custom empty state instead
+      if (_error!.toLowerCase().contains('no init status orders found') ||
+          _error!.toLowerCase().contains('no orders found') ||
+          _error!.toLowerCase().contains('no saved orders')) {
+        // Show the custom empty state instead of error
+        return _buildSavedOrdersList();
+      }
+      // For other errors, show the error message
       return Center(child: Text('Error: $_error'));
     }
 
@@ -1592,9 +1803,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       return Consumer<CartProvider>(
         builder: (context, cartProvider, _) {
           final cartData = cartProvider.cartData;
-          final hasCurrentCart = cartData.isNotEmpty && 
-                                 cartData.first.cartItems?.isNotEmpty == true;
-          
+          final hasCurrentCart = cartData.isNotEmpty &&
+              cartData.first.cartItems?.isNotEmpty == true;
+
           if (hasCurrentCart) {
             // Show current cart items
             return _buildCurrentCartView(cartData.first);
@@ -1610,7 +1821,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   Widget _buildCurrentCartView(dynamic cartData) {
     final cartItems = cartData.cartItems as List<dynamic>;
     final total = cartData.priceSummary?.netTotal ?? 0.0;
-    
+
     return Container(
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -1712,28 +1923,48 @@ class _OrderPanelState extends State<_OrderPanel> {
       ),
       child: Column(
         children: [
-          _buildPanelHeader('Saved Orders', Icons.receipt, Colors.blue),
+          _buildPanelHeader('Saved Orders', Icons.receipt, Colors.blue,
+              itemCount: _savedOrders.length,
+              subtitle: widget.tableId.toString()),
           Expanded(
             child: _savedOrders.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: widget.isCompact ? 36 : 48,
-                          color: const Color(0xFF64748B),
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF059669).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(
+                            Icons.add_shopping_cart,
+                            size: widget.isCompact ? 48 : 64,
+                            color: const Color(0xFF059669),
+                          ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
                         Text(
-                          'No saved orders for Table ${widget.tableId}',
+                          'No orders found',
                           textAlign: TextAlign.center,
                           style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              widget.isCompact ? FontSize.s14 : FontSize.s16,
+                              FontWeightManager.bold,
+                              widget.isCompact ? FontSize.s16 : FontSize.s18,
+                              0.21,
+                              const Color(0xFF1E293B)),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Add products from the menu\nto start a new order',
+                          textAlign: TextAlign.center,
+                          style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              widget.isCompact ? FontSize.s13 : FontSize.s14,
                               0.21,
                               const Color(0xFF64748B)),
                         ),
+                        const SizedBox(height: 16),
                       ],
                     ),
                   )
@@ -1895,12 +2126,13 @@ class _OrderPanelState extends State<_OrderPanel> {
       child: Column(
         children: [
           _buildPanelHeader(
-            'Order #${_selectedOrder['order_number']}',
+            'Edit Order',
             Icons.shopping_cart,
             const Color(0xFFD97706),
             showBackButton: true,
             onBackButtonPressed: () => setState(() => _selectedOrder = null),
             totalPrice: total,
+            subtitle: '${_selectedOrder['order_number']}',
           ),
           Expanded(
             child: cartItems.isEmpty
@@ -1969,9 +2201,13 @@ class _OrderPanelState extends State<_OrderPanel> {
   Widget _buildPanelHeader(String title, IconData icon, Color color,
       {bool showBackButton = false,
       VoidCallback? onBackButtonPressed,
-      double? totalPrice}) {
+      double? totalPrice,
+      int? itemCount,
+      String? subtitle}) {
     return Container(
-      padding: EdgeInsets.all(widget.isCompact ? 16.0 : 20.0),
+      padding: showBackButton
+          ? const EdgeInsets.fromLTRB(0, 16, 16, 16)
+          : EdgeInsets.all(widget.isCompact ? 16.0 : 20.0),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -1989,10 +2225,11 @@ class _OrderPanelState extends State<_OrderPanel> {
         ),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           if (showBackButton)
             IconButton(
-              icon: Icon(Icons.arrow_back, color: Color(0xFF64748B)),
+              icon: const Icon(Icons.arrow_back, color: Color(0xFF64748B)),
               onPressed: onBackButtonPressed,
               splashRadius: 20,
             ),
@@ -2021,9 +2258,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                       0.30,
                       const Color(0xFF1E293B)),
                 ),
-                if (totalPrice == null)
+                if (subtitle != null)
                   Text(
-                    '${widget.tableId}',
+                    subtitle,
                     style: buildCustomStyle(
                         FontWeightManager.medium,
                         widget.isCompact ? FontSize.s12 : FontSize.s13,
@@ -2047,6 +2284,19 @@ class _OrderPanelState extends State<_OrderPanel> {
                     widget.isCompact ? FontSize.s14 : FontSize.s16,
                     0.23,
                     const Color(0xFF059669)),
+              ),
+            ),
+          if (itemCount != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$itemCount',
+                style: buildCustomStyle(
+                    FontWeightManager.semiBold, FontSize.s12, 0.21, color),
               ),
             ),
         ],
@@ -2161,6 +2411,9 @@ class _OrderPanelState extends State<_OrderPanel> {
   // Cart API methods for saved orders
   Future<void> _updateCartItemQuantity(
       dynamic cartItem, double newQuantity) async {
+    final currentQuantity =
+        double.tryParse(cartItem['quantity'].toString()) ?? 0.0;
+
     if (newQuantity <= 0) {
       await _removeCartItem(cartItem);
       return;
@@ -2171,46 +2424,98 @@ class _OrderPanelState extends State<_OrderPanel> {
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
       // Get customer ID from the order data
-      final customerId = _selectedOrder['cart']['customer_id'] ?? 1;
-      final cartId = int.tryParse(_selectedOrder['cart_id'].toString());
-      
-      debugPrint('🔄 Updating cart item quantity:');
-      debugPrint('   Customer ID: $customerId');
-      debugPrint('   Cart ID: $cartId');
-      debugPrint('   Cart Item ID (to send): ${cartItem['id']}'); // Send the cart_item_id
-      debugPrint('   New Quantity: $newQuantity');
+      final customerId = _selectedOrder['cart']?['customer_id'] ?? 1;
+      final orderCartId = int.tryParse(
+          (_selectedOrder['cart']?['id'] ?? _selectedOrder['cart_id'])
+                  ?.toString() ??
+              '');
 
-      // Use the decrementCartItemQuantityAPI for quantity updates
-      final response = await cartProvider.decrementCartItemQuantityAPI(
-        customerId: int.parse(customerId.toString()),
-        productId: int.parse(cartItem['id'].toString()), // Send cart_item_id here
-        cartId: cartId,
-        quantity: newQuantity.toInt(),
-        accessToken: authModel.token ?? '',
-      );
+      dynamic response;
 
-      debugPrint('🔄 Update response: $response');
+      if (newQuantity > currentQuantity) {
+        // Increment quantity - use addToCartAPI
+        final deltaQuantity = (newQuantity - currentQuantity).toInt();
+        final productId =
+            cartItem['product_id']; // Assuming product_id is available
+        final unitPrice = cartItem['unit_price']?.toString();
+
+        if (productId == null) {
+          showScaffoldError(
+              context: context, message: 'Product ID not found for item.');
+          return;
+        }
+
+        debugPrint('➡️ Calling CartProvider.addToCartAPI for increment');
+        debugPrint(
+            '📦 addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: $deltaQuantity, unitPrice: $unitPrice, cartId: $orderCartId}');
+
+        response = await cartProvider.addToCartAPI(
+          customerId: int.parse(customerId.toString()),
+          productId: int.parse(productId.toString()),
+          quantity: deltaQuantity,
+          unitPrice: unitPrice,
+          accessToken: authModel.token ?? '',
+          cartId: orderCartId,
+        );
+        debugPrint('✅ addToCartAPI Response: $response');
+      } else if (newQuantity < currentQuantity) {
+        // Decrement quantity - use decrementCartItemQuantityAPI
+        debugPrint(
+            '➡️ Calling CartProvider.decrementCartItemQuantityAPI for decrement');
+        debugPrint(
+            '📦 decrementCartItemQuantityAPI Request Body: {customerId: $customerId, cartItemId: ${cartItem['id']}, quantity: ${newQuantity.toInt()}, cartId: $orderCartId}');
+
+        response = await cartProvider.decrementCartItemQuantityAPI(
+          customerId: int.parse(customerId.toString()),
+          productId:
+              int.parse(cartItem['id'].toString()), // This is cart_item_id
+          cartId: orderCartId,
+          quantity: newQuantity.toInt(),
+          accessToken: authModel.token ?? '',
+        );
+        debugPrint('✅ decrementCartItemQuantityAPI Response: $response');
+      } else {
+        // Quantity is the same, no action needed
+        debugPrint(
+            'Quantity is already ${newQuantity.toInt()}. No API call needed.');
+        return;
+      }
 
       // Update the UI optimistically first
       setState(() {
         // Find and update the cart item in the selected order
-        final cartItems = _selectedOrder['cart']['cart_items'] as List<dynamic>;
-        for (var item in cartItems) {
+        List<dynamic> cartItemsList;
+        if (_selectedOrder['cart'] != null &&
+            _selectedOrder['cart']['cart_items'] != null) {
+          cartItemsList = _selectedOrder['cart']['cart_items'];
+        } else if (_selectedOrder['cart_items'] != null &&
+            _selectedOrder['cart_items']['cart_items'] != null) {
+          cartItemsList = _selectedOrder['cart_items']['cart_items'];
+        } else {
+          cartItemsList = [];
+        }
+
+        for (var item in cartItemsList) {
           if (item['id'].toString() == cartItem['id'].toString()) {
             item['quantity'] = newQuantity.toString();
-            item['total_price'] = (newQuantity * double.parse(item['unit_price'].toString())).toString();
+            item['total_price'] =
+                (newQuantity * double.parse(item['unit_price'].toString()))
+                    .toString();
             break;
           }
         }
       });
 
-      // Check if the response indicates success
-      if (response != null) {
+      // Check if the response indicates success (handle 'success' and 'sucesss' typo)
+      if (response != null &&
+          (response['status']?.toLowerCase() == 'success' ||
+              response['status']?.toLowerCase() == 'sucesss')) {
         // Try to refresh the order details, but don't fail if it doesn't work
         try {
           await _refreshOrderDetails();
         } catch (e) {
-          debugPrint('⚠️ Could not refresh order details, but update was successful: $e');
+          debugPrint(
+              '⚠️ Could not refresh order details, but update was successful: $e');
         }
 
         showScaffold(
@@ -2220,20 +2525,33 @@ class _OrderPanelState extends State<_OrderPanel> {
       } else {
         // Revert the optimistic update
         setState(() {
-          // Revert the change
-          final cartItems = _selectedOrder['cart']['cart_items'] as List<dynamic>;
-          for (var item in cartItems) {
+          List<dynamic> cartItemsList;
+          if (_selectedOrder['cart'] != null &&
+              _selectedOrder['cart']['cart_items'] != null) {
+            cartItemsList = _selectedOrder['cart']['cart_items'];
+          } else if (_selectedOrder['cart_items'] != null &&
+              _selectedOrder['cart_items']['cart_items'] != null) {
+            cartItemsList = _selectedOrder['cart_items']['cart_items'];
+          } else {
+            cartItemsList = [];
+          }
+
+          for (var item in cartItemsList) {
             if (item['id'].toString() == cartItem['id'].toString()) {
-              item['quantity'] = cartItem['quantity'].toString();
-              item['total_price'] = cartItem['total_price'].toString();
+              item['quantity'] =
+                  currentQuantity.toString(); // Revert to original
+              item['total_price'] = (currentQuantity *
+                      double.parse(item['unit_price'].toString()))
+                  .toString(); // Revert to original
               break;
             }
           }
         });
-        
+
         showScaffoldError(
           context: context,
-          message: 'Failed to update quantity: Server returned empty response',
+          message:
+              'Failed to update quantity: ${response?['message'] ?? 'Unknown error'}',
         );
       }
     } catch (e) {
@@ -2254,15 +2572,13 @@ class _OrderPanelState extends State<_OrderPanel> {
       final customerId = _selectedOrder['cart']['customer_id'] ?? 1;
       final cartId = int.tryParse(_selectedOrder['cart_id'].toString());
 
-      debugPrint('🗑️ Removing cart item:');
-      debugPrint('   Customer ID: $customerId');
-      debugPrint('   Cart ID: $cartId');
-      debugPrint('   Cart Item ID (to send): ${cartItem['id']}'); // Send the cart_item_id
-
+      debugPrint(
+          '🗑️ Removing cart item: Sending request with customerId: $customerId, cartItemId: ${cartItem['id']}');
       // Use the cart API to remove item with correct cart_item_id
       final response = await cartProvider.removeFromCartAPI(
         customerId: int.parse(customerId.toString()),
-        productId: int.parse(cartItem['id'].toString()), // Send cart_item_id here
+        productId:
+            int.parse(cartItem['id'].toString()), // Send cart_item_id here
         accessToken: authModel.token ?? '',
         cartId: cartId,
       );
@@ -2273,7 +2589,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       setState(() {
         // Remove the cart item from the selected order
         final cartItems = _selectedOrder['cart']['cart_items'] as List<dynamic>;
-        cartItems.removeWhere((item) => item['id'].toString() == cartItem['id'].toString());
+        cartItems.removeWhere(
+            (item) => item['id'].toString() == cartItem['id'].toString());
       });
 
       // Check if the response indicates success
@@ -2282,7 +2599,8 @@ class _OrderPanelState extends State<_OrderPanel> {
         try {
           await _refreshOrderDetails();
         } catch (e) {
-          debugPrint('⚠️ Could not refresh order details, but removal was successful: $e');
+          debugPrint(
+              '⚠️ Could not refresh order details, but removal was successful: $e');
         }
 
         showScaffold(
@@ -2292,7 +2610,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       } else {
         // Revert the optimistic update by refreshing saved orders
         await _fetchSavedOrders();
-        
+
         showScaffoldError(
           context: context,
           message: 'Failed to remove item: Server returned empty response',
@@ -2310,8 +2628,8 @@ class _OrderPanelState extends State<_OrderPanel> {
   Future<void> _refreshOrderDetails() async {
     try {
       debugPrint('🔄 Refreshing order details by fetching saved orders...');
-      
-      // Instead of trying to fetch cart data directly, 
+
+      // Instead of trying to fetch cart data directly,
       // refresh the saved orders list and find the current order
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
@@ -2320,17 +2638,20 @@ class _OrderPanelState extends State<_OrderPanel> {
         accessToken: authModel.token ?? '',
         tableId: widget.tableId,
       );
-      
+
       if (response['status'] == 'success') {
         final orders = response['orders'] as List<dynamic>;
-        
+
         // Find the current order in the updated list
-        final currentOrderId = _selectedOrder['id'] ?? _selectedOrder['order_id'];
+        final currentOrderId =
+            _selectedOrder['id'] ?? _selectedOrder['order_id'];
         final updatedOrder = orders.firstWhere(
-          (order) => order['id'] == currentOrderId || order['order_id'] == currentOrderId,
+          (order) =>
+              order['id'] == currentOrderId ||
+              order['order_id'] == currentOrderId,
           orElse: () => null,
         );
-        
+
         if (updatedOrder != null) {
           setState(() {
             _selectedOrder = updatedOrder;
@@ -2348,8 +2669,66 @@ class _OrderPanelState extends State<_OrderPanel> {
       try {
         await _fetchSavedOrders();
       } catch (fallbackError) {
-        debugPrint('❌ Fallback refresh also failed: ${fallbackError.toString()}');
+        debugPrint(
+            '❌ Fallback refresh also failed: ${fallbackError.toString()}');
       }
+    }
+  }
+
+  Future<void> _refreshSelectedOrderAfterCartUpdate() async {
+    if (_selectedOrder == null) return;
+
+    debugPrint('🔄 Refreshing selected order after cart update...');
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      // Fetch updated saved orders
+      final response = await cartProvider.listSavedOrders(
+        accessToken: authModel.token ?? '',
+        tableId: widget.tableId,
+      );
+
+      if (response['status'] == 'success') {
+        final orders = response['orders'] as List<dynamic>;
+
+        // Update the saved orders list
+        setState(() {
+          _savedOrders = orders;
+        });
+
+        // Find and update the currently selected order
+        final currentOrderId =
+            _selectedOrder['id'] ?? _selectedOrder['order_id'];
+        final updatedOrder = orders.firstWhere(
+          (order) =>
+              order['id'] == currentOrderId ||
+              order['order_id'] == currentOrderId,
+          orElse: () => null,
+        );
+
+        if (updatedOrder != null) {
+          setState(() {
+            _selectedOrder = updatedOrder;
+          });
+
+          // Also update the parent widget's selected order
+          widget.onOrderSelected(updatedOrder);
+
+          debugPrint(
+              '✅ Selected order refreshed successfully after cart update');
+        } else {
+          debugPrint(
+              '⚠️ Could not find updated order in the list after cart update');
+        }
+      } else {
+        debugPrint(
+            '⚠️ Failed to refresh saved orders after cart update: ${response['message']}');
+      }
+    } catch (e) {
+      debugPrint(
+          '❌ Error refreshing selected order after cart update: ${e.toString()}');
     }
   }
 
@@ -2375,8 +2754,9 @@ class _OrderPanelState extends State<_OrderPanel> {
     final productName = cartItem.product?.name ?? 'Unknown Product';
     final quantity = double.tryParse(cartItem.quantity.toString()) ?? 0.0;
     final unitPrice = double.tryParse(cartItem.unitPrice.toString()) ?? 0.0;
-    final totalPrice = double.tryParse(cartItem.totalPrice.toString()) ?? (quantity * unitPrice);
-    
+    final totalPrice = double.tryParse(cartItem.totalPrice.toString()) ??
+        (quantity * unitPrice);
+
     return Container(
       padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
       decoration: BoxDecoration(
@@ -2426,7 +2806,7 @@ class _OrderPanelState extends State<_OrderPanel> {
           ),
 
           const SizedBox(height: 8),
-          
+
           // Unit price and quantity info
           Row(
             children: [
@@ -2462,7 +2842,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => _updateCurrentCartItemQuantity(cartItem, quantity - 1),
+                        onTap: () => _updateCurrentCartItemQuantity(
+                            cartItem, quantity - 1),
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
                           padding: const EdgeInsets.all(8),
@@ -2489,7 +2870,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => _updateCurrentCartItemQuantity(cartItem, quantity + 1),
+                        onTap: () => _updateCurrentCartItemQuantity(
+                            cartItem, quantity + 1),
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
                           padding: const EdgeInsets.all(8),
@@ -2551,7 +2933,7 @@ class _OrderPanelState extends State<_OrderPanel> {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: cartItems.isEmpty ? null : () => _clearCurrentCart(),
+                  onTap: () => widget.onNewOrder(),
                   borderRadius: BorderRadius.circular(12),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
@@ -2559,21 +2941,19 @@ class _OrderPanelState extends State<_OrderPanel> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       border: Border.all(
-                        color: const Color(0xFFDC2626),
+                        color: const Color(0xFF64748B),
                         width: 1.5,
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
                       child: Text(
-                        'Clear',
+                        'New Order',
                         style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             widget.isCompact ? FontSize.s13 : FontSize.s14,
                             0.21,
-                            cartItems.isEmpty
-                                ? const Color(0xFF94A3B8)
-                                : const Color(0xFFDC2626)),
+                            const Color(0xFF64748B)),
                       ),
                     ),
                   ),
@@ -2586,7 +2966,8 @@ class _OrderPanelState extends State<_OrderPanel> {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: cartItems.isEmpty ? null : () => widget.onSendToKitchen(),
+                  onTap:
+                      cartItems.isEmpty ? null : () => widget.onSendToKitchen(),
                   borderRadius: BorderRadius.circular(12),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
@@ -2638,7 +3019,8 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   // Methods for current cart operations
-  Future<void> _updateCurrentCartItemQuantity(dynamic cartItem, double newQuantity) async {
+  Future<void> _updateCurrentCartItemQuantity(
+      dynamic cartItem, double newQuantity) async {
     if (newQuantity <= 0) {
       await _removeCurrentCartItem(cartItem);
       return;
@@ -2648,6 +3030,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
+      debugPrint(
+          '🔄 _updateCurrentCartItemQuantity: Sending request with customerId: 1, cartItemId: ${cartItem.id}, quantity: ${newQuantity.toInt()}');
       // Use the decrementCartItemQuantityAPI for quantity updates
       await cartProvider.decrementCartItemQuantityAPI(
         customerId: 1,
@@ -2655,6 +3039,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         quantity: newQuantity.toInt(),
         accessToken: authModel.token ?? '',
       );
+      debugPrint('✅ decrementCartItemQuantityAPI Response: Success');
 
       showScaffold(
         context: context,
@@ -2673,12 +3058,15 @@ class _OrderPanelState extends State<_OrderPanel> {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
+      debugPrint(
+          '🗑️ _removeCurrentCartItem: Sending request with customerId: 1, cartItemId: ${cartItem.id}');
       // Use the cart API to remove item with correct cart_item_id
       await cartProvider.removeFromCartAPI(
         customerId: 1,
         productId: cartItem.id, // This is cart_item_id
         accessToken: authModel.token ?? '',
       );
+      debugPrint('✅ removeFromCartAPI Response: Success');
 
       showScaffold(
         context: context,
@@ -2699,12 +3087,15 @@ class _OrderPanelState extends State<_OrderPanel> {
       final cartData = cartProvider.cartData;
 
       if (cartData.isNotEmpty && cartData.first.cartItems?.isNotEmpty == true) {
+        debugPrint(
+            '🗑️ _clearCurrentCart: Sending request with customerId: 1, productId: ${cartData.first.cartItems!.first.id ?? 0}');
         // Use the clearCartAPI
         await cartProvider.clearCartAPI(
           customerId: 1,
           productId: cartData.first.cartItems!.first.id ?? 0,
           accessToken: authModel.token ?? '',
         );
+        debugPrint('✅ clearCartAPI Response: Success');
 
         showScaffold(
           context: context,

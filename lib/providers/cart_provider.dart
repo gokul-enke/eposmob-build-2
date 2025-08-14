@@ -140,6 +140,7 @@ class CartProvider with ChangeNotifier {
       'customer_id': "1",
       if (cartId != null) 'cart_id': cartId.toString(),
     });
+    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -255,6 +256,7 @@ class CartProvider with ChangeNotifier {
     // debugPrint("customerId $customerId");
     debugPrint("customerId $apiBodyData");
     final url = Uri.parse(APPUrl.addToCartUrl);
+    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -326,6 +328,7 @@ class CartProvider with ChangeNotifier {
     // debugPrint("productId $productId");
     final url = Uri.parse(APPUrl
         .removeFromCartUrl); // Update this to the correct endpoint for removing items
+    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -392,6 +395,7 @@ class CartProvider with ChangeNotifier {
     // debugPrint("productId $productId");
     final url = Uri.parse(APPUrl
         .removeFromCartUrl); // Update this to the correct endpoint for removing items
+    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -460,6 +464,7 @@ class CartProvider with ChangeNotifier {
     debugPrint("apiBodyData $apiBodyData");
     final url = Uri.parse(APPUrl
         .removeFromCartUrl); // Update this to the correct endpoint for removing items
+    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -518,6 +523,7 @@ class CartProvider with ChangeNotifier {
       'unit_price': unitPrice,
     };
     final url = Uri.parse(APPUrl.updateCartItemPriceUrl);
+    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -931,7 +937,7 @@ class CartProvider with ChangeNotifier {
       'price': totalAmount.toString(),
       'coupon_code': couponCode,
     });
-
+    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -991,8 +997,14 @@ class CartProvider with ChangeNotifier {
       };
     }
     try {
+      // Build URL with table query parameter if tableId is provided
+      String url = APPUrl.listSavedOrders;
+      if (tableId != null && tableId.isNotEmpty) {
+        url += '?table=$tableId';
+      }
+      debugPrint('🌐 API URL: ${url.toString()}');
       final response = await http.get(
-        Uri.parse(APPUrl.listSavedOrders),
+        Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -1030,8 +1042,10 @@ class CartProvider with ChangeNotifier {
       };
     }
     try {
+      final url = Uri.parse(APPUrl.getListOrderDetails);
+      debugPrint('🌐 API URL: ${url.toString()}');
       final response = await http.post(
-        Uri.parse(APPUrl.getListOrderDetails),
+        url,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
