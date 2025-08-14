@@ -4524,7 +4524,7 @@ class BillingPageState extends State<BillingPage>
     return GestureDetector(
       onTap: onTap,
       child: BuildBoxShadowContainer(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
         blurRadius: 4,
         circleRadius: 5,
         child: Row(

@@ -38,15 +38,12 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
     return Consumer<LocalProductProvider>(
       builder: (context, provider, child) {
         return Container(
-          height: 300, // Fixed height for the container
+          // Remove fixed height and let it expand naturally
           padding: const EdgeInsets.all(8),
           child: Column(
             children: [
-              // New Order Button at the top
               _buildNewOrderButton(context, provider),
               const SizedBox(height: 12),
-
-              // Saved Orders Grid
               Expanded(
                 child: provider.savedOrders.isEmpty
                     ? _buildEmptyState()
@@ -55,20 +52,16 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                           dragDevices: {
                             PointerDeviceKind.mouse,
                             PointerDeviceKind.touch,
-                            PointerDeviceKind.stylus,
-                            PointerDeviceKind.trackpad,
                           },
                         ),
                         child: GridView.builder(
                           controller: _scrollController,
                           physics: const BouncingScrollPhysics(),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2, // 2 cards per row
+                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 250, // Maximum card width
                             crossAxisSpacing: 10,
                             mainAxisSpacing: 10,
-                            childAspectRatio:
-                                1.6, // Reduced for more height to prevent overflow
+                            childAspectRatio: 1.5, // Width/height ratio
                           ),
                           itemCount: provider.savedOrders.length,
                           itemBuilder: (context, index) {
@@ -191,7 +184,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
             debugPrint("===== NEW ORDER (+) BUTTON COMPLETE =====");
           },
           child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -222,116 +215,106 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
     String time = _formatTimeWith12Hour(order.createdAt);
     bool isSelected = provider.currentOrder?.id == order.id;
 
-    return BuildBoxShadowContainer(
-      circleRadius: 8,
-      color: isSelected ? Colors.white : Colors.white,
-      border: isSelected
-          ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
-          : Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
-      child: InkWell(
-        onTap: () => widget.onOrderSelected(order.id),
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(5),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Header row with order number and time
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      order.orderNumber,
-                      style: TextStyle(
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minWidth: 200, // Minimum card width
+        maxWidth: 250, // Maximum card width
+      ),
+      child: BuildBoxShadowContainer(
+        circleRadius: 8,
+        color: isSelected ? Colors.white : Colors.white,
+        border: isSelected
+            ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
+            : Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
+        child: InkWell(
+          onTap: () => widget.onOrderSelected(order.id),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Header row with order number and time
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        order.orderNumber,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: isSelected
+                              ? ColorManager.kPrimaryColor
+                              : Colors.black87,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Text(
+                      time,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Amount and items count row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "₹${order.total.toStringAsFixed(2)}",
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                        color: isSelected
-                            ? ColorManager.kPrimaryColor
-                            : Colors.black87,
+                        fontSize: 14,
+                        color: Colors.green,
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Text(
-                    time,
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: Colors.grey,
+                    Text(
+                      "${order.items.length} items",
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
 
-              // Amount and items count row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "₹${order.total.toStringAsFixed(2)}",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color: Colors.green,
+                // Action buttons row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        if (context.findAncestorStateOfType<BillingPageState>() !=
+                            null) {
+                          context
+                              .findAncestorStateOfType<BillingPageState>()!
+                              .printFromSavedOrder(order);
+                        }
+                      },
+                      icon: const Icon(Icons.print, size: 20),
+                      color: Colors.blue,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
-                  ),
-                  Text(
-                    "${order.items.length} items",
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey,
+                    IconButton(
+                      onPressed: () {
+                        _showDeleteConfirmationDialog(context, provider, order);
+                      },
+                      icon: const Icon(Icons.delete_outline, size: 20),
+                      color: ColorManager.kButtonRed,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
-                  ),
-                ],
-              ),
-
-              // Action buttons row - spread across the card
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      if (context.findAncestorStateOfType<BillingPageState>() !=
-                          null) {
-                        context
-                            .findAncestorStateOfType<BillingPageState>()!
-                            .printFromSavedOrder(order);
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      child: const Icon(
-                        Icons.print,
-                        size: 14,
-                        color: Colors.blue,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      _showDeleteConfirmationDialog(context, provider, order);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: ColorManager.kButtonRed.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      child: const Icon(
-                        Icons.delete_outline,
-                        size: 14,
-                        color: ColorManager.kButtonRed,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
