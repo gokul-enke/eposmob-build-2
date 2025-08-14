@@ -345,12 +345,15 @@ class _SignInScreenState extends State<SignInScreen> {
                                                     .adaptive(),
                                               );
                                             });
-                                        await AuthenticationProvider()
-                                            .login(
-                                                _emailController.text,
-                                                _passwordTextController.text,
-                                                context)
-                                            .then((value) async {
+                                        // Save remember me state when login button is pressed
+                                        _handleRememberMe(_rememberMe);
+                                        try {
+                                          final value = await AuthenticationProvider()
+                                              .login(
+                                                  _emailController.text,
+                                                  _passwordTextController.text,
+                                                  context);
+
                                           if (value["status"] == "success") {
                                             ExecutiveModel executiveModel =
                                                 ExecutiveModel.fromJson(value);
@@ -474,7 +477,13 @@ class _SignInScreenState extends State<SignInScreen> {
                                               message: '${value["message"]}',
                                             );
                                           }
-                                        });
+                                        } catch (e) {
+                                          Navigator.pop(context); // Dismiss loading dialog
+                                          showScaffoldError(
+                                            context: context,
+                                            message: 'Login failed: ${e.toString()}',
+                                          );
+                                        }
                                       } else {
                                         showScaffoldError(
                                             context: context,

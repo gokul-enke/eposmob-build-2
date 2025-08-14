@@ -7,7 +7,7 @@ import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:pdf_render/pdf_render_widgets.dart';
+// import 'package:pdf_render/pdf_render_widgets.dart';
 import 'package:provider/provider.dart';
 
 class InvoiceScreen extends StatefulWidget {
@@ -288,11 +288,11 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       appBar: AppBar(title: const Text('Order Details PDF')),
       body: Column(
         children: [
-          Expanded(
-            child: _pdfFile == null
-                ? Center(child: Text(_status))
-                : PdfViewer.openFile(_pdfFile!.path),
-          ),
+          // Expanded(
+          //   child: _pdfFile == null
+          //       ? Center(child: Text(_status))
+          //       : PdfViewer.openFile(_pdfFile!.path),
+          // ),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
