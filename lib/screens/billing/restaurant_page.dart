@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -374,7 +375,7 @@ class _TablesPanel extends StatelessWidget {
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () => tableProvider.refreshTables(),
-                  child: _buildTablesView(tables),
+                  child: _buildTablesView(tables, context), // Pass context here
                 ),
               ),
             ],
@@ -384,7 +385,7 @@ class _TablesPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildTablesView(List<TableModel> tables) {
+  Widget _buildTablesView(List<TableModel> tables, BuildContext context) {
     if (tables.isEmpty) {
       return Center(
         child: Column(
@@ -408,116 +409,130 @@ class _TablesPanel extends StatelessWidget {
 
     // Determine layout based on screen size and compact mode
     if (isCompact) {
-      return _buildCompactTablesList(tables);
+      return _buildCompactTablesList(tables, context); // Pass context here
     } else {
-      return _buildTableGrid(tables);
+      return _buildTableGrid(tables, context); // Pass context here
     }
   }
 
-  Widget _buildCompactTablesList(List<TableModel> tables) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: tables.length,
-      itemBuilder: (context, index) {
-        final table = tables[index];
-        final isActive = table.id == activeTableId;
+  Widget _buildCompactTablesList(List<TableModel> tables, BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.grab,
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(
+          dragDevices: {
+            PointerDeviceKind.mouse,
+            PointerDeviceKind.touch,
+            PointerDeviceKind.stylus,
+            PointerDeviceKind.trackpad,
+          },
+        ),
+        child: ListView.builder(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.all(12),
+          itemCount: tables.length,
+          itemBuilder: (context, index) {
+            final table = tables[index];
+            final isActive = table.id == activeTableId;
 
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => onSelect(table.id),
-              borderRadius: BorderRadius.circular(12),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? const Color(0xFF2563EB).withOpacity(0.08)
-                      : _getTableBackgroundColor(table.status),
-                  border: Border.all(
-                    color:
-                        isActive ? const Color(0xFF2563EB) : Colors.transparent,
-                    width: 2,
-                  ),
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => onSelect(table.id),
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: isActive
-                      ? [
-                          BoxShadow(
-                            color: const Color(0xFF2563EB).withOpacity(0.2),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : [],
-                ),
-                child: Row(
-                  children: [
-                    // Table icon and name
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: _tableColor(table.status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? const Color(0xFF2563EB).withOpacity(0.08)
+                          : _getTableBackgroundColor(table.status),
+                      border: Border.all(
+                        color:
+                            isActive ? const Color(0xFF2563EB) : Colors.transparent,
+                        width: 2,
                       ),
-                      child: Icon(
-                        Icons.table_restaurant,
-                        color: _tableColor(table.status),
-                        size: 16,
-                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: isActive
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF2563EB).withOpacity(0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : [],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            table.name,
-                            style: buildCustomStyle(FontWeightManager.bold,
-                                FontSize.s14, 0.21, const Color(0xFF1E293B)),
+                    child: Row(
+                      children: [
+                        // Table icon and name
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: _tableColor(table.status).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _getStatusText(table.status),
-                            style: buildCustomStyle(FontWeightManager.medium,
-                                FontSize.s11, 0.21, _tableColor(table.status)),
+                          child: Icon(
+                            Icons.table_restaurant,
+                            color: _tableColor(table.status),
+                            size: 16,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                table.name,
+                                style: buildCustomStyle(FontWeightManager.bold,
+                                    FontSize.s14, 0.21, const Color(0xFF1E293B)),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _getStatusText(table.status),
+                                style: buildCustomStyle(FontWeightManager.medium,
+                                    FontSize.s11, 0.21, _tableColor(table.status)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Status indicator with pulse animation
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: _tableColor(table.status),
+                            shape: BoxShape.circle,
+                            boxShadow: table.status == TableStatus.occupied
+                                ? [
+                                    BoxShadow(
+                                      color: _tableColor(table.status)
+                                          .withOpacity(0.4),
+                                      blurRadius: 4,
+                                      spreadRadius: 1,
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                        ),
+                      ],
                     ),
-                    // Status indicator with pulse animation
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: _tableColor(table.status),
-                        shape: BoxShape.circle,
-                        boxShadow: table.status == TableStatus.occupied
-                            ? [
-                                BoxShadow(
-                                  color: _tableColor(table.status)
-                                      .withOpacity(0.4),
-                                  blurRadius: 4,
-                                  spreadRadius: 1,
-                                ),
-                              ]
-                            : [],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        );
-      },
+            );
+          },
+        ),
+      ),
     );
   }
 
-  Widget _buildTableGrid(List<TableModel> tables) {
+  Widget _buildTableGrid(List<TableModel> tables, BuildContext context) {
     // Calculate responsive grid columns
     int crossAxisCount;
     double childAspectRatio;
@@ -533,108 +548,122 @@ class _TablesPanel extends StatelessWidget {
       childAspectRatio = 1.0;
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(12),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: childAspectRatio,
-      ),
-      itemCount: tables.length,
-      itemBuilder: (context, index) {
-        final table = tables[index];
-        final isActive = table.id == activeTableId;
+    return MouseRegion(
+      cursor: SystemMouseCursors.grab,
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(
+          dragDevices: {
+            PointerDeviceKind.mouse,
+            PointerDeviceKind.touch,
+            PointerDeviceKind.stylus,
+            PointerDeviceKind.trackpad,
+          },
+        ),
+        child: GridView.builder(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.all(12),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: childAspectRatio,
+          ),
+          itemCount: tables.length,
+          itemBuilder: (context, index) {
+            final table = tables[index];
+            final isActive = table.id == activeTableId;
 
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => onSelect(table.id),
-            borderRadius: BorderRadius.circular(16),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                color: isActive
-                    ? const Color(0xFF2563EB).withOpacity(0.08)
-                    : _getTableBackgroundColor(table.status),
-                border: isActive
-                    ? Border.all(color: const Color(0xFF2563EB), width: 3)
-                    : Border.all(color: Colors.grey.shade200, width: 1),
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => onSelect(table.id),
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
                     color: isActive
-                        ? const Color(0xFF2563EB).withOpacity(0.15)
-                        : Colors.black.withOpacity(0.04),
-                    blurRadius: isActive ? 12 : 8,
-                    offset: const Offset(0, 4),
+                        ? const Color(0xFF2563EB).withOpacity(0.08)
+                        : _getTableBackgroundColor(table.status),
+                    border: isActive
+                        ? Border.all(color: const Color(0xFF2563EB), width: 3)
+                        : Border.all(color: Colors.grey.shade200, width: 1),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isActive
+                            ? const Color(0xFF2563EB).withOpacity(0.15)
+                            : Colors.black.withOpacity(0.04),
+                        blurRadius: isActive ? 12 : 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(6.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Table icon - even smaller
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: _tableColor(table.status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Icon(
-                        Icons.table_restaurant,
-                        color: _tableColor(table.status),
-                        size: 10,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    // Table name - smaller font
-                    Text(
-                      table.name,
-                      style: buildCustomStyle(FontWeightManager.bold,
-                          FontSize.s12, 0.21, const Color(0xFF1E293B)),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 3),
-                    // Status indicator - minimal
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: _tableColor(table.status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 3,
-                            height: 3,
-                            decoration: BoxDecoration(
-                              color: _tableColor(table.status),
-                              shape: BoxShape.circle,
-                            ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(6.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Table icon - even smaller
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: _tableColor(table.status).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                          const SizedBox(width: 3),
-                          Text(
-                            _getStatusText(table.status),
-                            style: buildCustomStyle(FontWeightManager.semiBold,
-                                FontSize.s6, 0.14, _tableColor(table.status)),
+                          child: Icon(
+                            Icons.table_restaurant,
+                            color: _tableColor(table.status),
+                            size: 10,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 4),
+                        // Table name - smaller font
+                        Text(
+                          table.name,
+                          style: buildCustomStyle(FontWeightManager.bold,
+                              FontSize.s12, 0.21, const Color(0xFF1E293B)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        // Status indicator - minimal
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _tableColor(table.status).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 3,
+                                height: 3,
+                                decoration: BoxDecoration(
+                                  color: _tableColor(table.status),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                _getStatusText(table.status),
+                                style: buildCustomStyle(FontWeightManager.semiBold,
+                                    FontSize.s6, 0.14, _tableColor(table.status)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        );
-      },
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -843,77 +872,91 @@ class _MenuPanel extends StatelessWidget {
                 Container(
                   height: isCompact ? 56 : 64,
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: ListView.separated(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16),
-                    scrollDirection: Axis.horizontal,
-                    itemBuilder: (_, idx) {
-                      final c = categories[idx];
-                      final active = c.categoryId == selectedCategoryId;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () {
-                              onCategoryChanged(c.categoryId);
-                              // Update products for selected category
-                              if (c.categoryId == 0) {
-                                // "ALL" category
-                                productProvider.refreshProducts();
-                              } else {
-                                // Specific category
-                                productProvider.listAllProducts(
-                                    categoryId: c.categoryId);
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(24),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: isCompact ? 16 : 20,
-                                  vertical: isCompact ? 8 : 10),
-                              decoration: BoxDecoration(
-                                color: active
-                                    ? const Color(0xFF2563EB)
-                                    : Colors.grey.shade50,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.grab,
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.mouse,
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.stylus,
+                          PointerDeviceKind.trackpad,
+                        },
+                      ),
+                      child: ListView.separated(
+                        physics: const BouncingScrollPhysics(),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16),
+                        scrollDirection: Axis.horizontal,
+                        itemBuilder: (_, idx) {
+                          final c = categories[idx];
+                          final active = c.categoryId == selectedCategoryId;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  onCategoryChanged(c.categoryId);
+                                  // Update products for selected category
+                                  if (c.categoryId == 0) {
+                                    // "ALL" category
+                                    productProvider.refreshProducts();
+                                  } else {
+                                    // Specific category
+                                    productProvider.listAllProducts(
+                                        categoryId: c.categoryId);
+                                  }
+                                },
                                 borderRadius: BorderRadius.circular(24),
-                                border: Border.all(
-                                  color: active
-                                      ? const Color(0xFF2563EB)
-                                      : Colors.grey.shade200,
-                                  width: 1,
-                                ),
-                                boxShadow: active
-                                    ? [
-                                        BoxShadow(
-                                          color: const Color(0xFF2563EB)
-                                              .withOpacity(0.3),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ]
-                                    : [],
-                              ),
-                              child: Center(
-                                child: Text(
-                                  c.categoryName ?? 'Unknown',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      isCompact ? FontSize.s12 : FontSize.s13,
-                                      0.21,
-                                      active
-                                          ? Colors.white
-                                          : const Color(0xFF64748B)),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: isCompact ? 16 : 20,
+                                      vertical: isCompact ? 8 : 10),
+                                  decoration: BoxDecoration(
+                                    color: active
+                                        ? const Color(0xFF2563EB)
+                                        : Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(24),
+                                    border: Border.all(
+                                      color: active
+                                          ? const Color(0xFF2563EB)
+                                          : Colors.grey.shade200,
+                                      width: 1,
+                                    ),
+                                    boxShadow: active
+                                        ? [
+                                            BoxShadow(
+                                              color: const Color(0xFF2563EB)
+                                                  .withOpacity(0.3),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ]
+                                        : [],
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      c.categoryName ?? 'Unknown',
+                                      style: buildCustomStyle(
+                                          FontWeightManager.semiBold,
+                                          isCompact ? FontSize.s12 : FontSize.s13,
+                                          0.21,
+                                          active
+                                              ? Colors.white
+                                              : const Color(0xFF64748B)),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
-                      );
-                    },
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemCount: categories.length,
+                          );
+                        },
+                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        itemCount: categories.length,
+                      ),
+                    ),
                   ),
                 ),
               // Menu items
@@ -940,19 +983,33 @@ class _MenuPanel extends StatelessWidget {
                           ],
                         ),
                       )
-                    : GridView.builder(
-                        padding: EdgeInsets.all(isCompact ? 6 : 8),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          mainAxisSpacing: isCompact ? 6 : 8,
-                          crossAxisSpacing: isCompact ? 6 : 8,
-                          childAspectRatio: childAspectRatio,
+                    : MouseRegion(
+                        cursor: SystemMouseCursors.grab,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(
+                            dragDevices: {
+                              PointerDeviceKind.mouse,
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.stylus,
+                              PointerDeviceKind.trackpad,
+                            },
+                          ),
+                          child: GridView.builder(
+                            padding: EdgeInsets.all(isCompact ? 6 : 8),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              mainAxisSpacing: isCompact ? 6 : 8,
+                              crossAxisSpacing: isCompact ? 6 : 8,
+                              childAspectRatio: childAspectRatio,
+                            ),
+                            itemCount: items.length,
+                            itemBuilder: (_, idx) {
+                              final item = items[idx];
+                              return _buildMenuItem(item, isCompact, context);
+                            },
+                            physics: const BouncingScrollPhysics(),
+                          ),
                         ),
-                        itemCount: items.length,
-                        itemBuilder: (_, idx) {
-                          final item = items[idx];
-                          return _buildMenuItem(item, isCompact, context);
-                        },
                       ),
               ),
             ],
@@ -1454,19 +1511,33 @@ class _OrderPanel extends StatelessWidget {
                           ],
                         ),
                       )
-                    : ListView.separated(
-                        padding: EdgeInsets.all(isCompact ? 12 : 16),
-                        itemCount: cartItems.length,
-                        separatorBuilder: (_, __) => Container(
-                          height: 1,
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          color: Colors.grey.shade100,
+                    : MouseRegion(
+                        cursor: SystemMouseCursors.grab,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(
+                            dragDevices: {
+                              PointerDeviceKind.mouse,
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.stylus,
+                              PointerDeviceKind.trackpad,
+                            },
+                          ),
+                          child: ListView.separated(
+                            physics: const BouncingScrollPhysics(),
+                            padding: EdgeInsets.all(isCompact ? 12 : 16),
+                            itemCount: cartItems.length,
+                            separatorBuilder: (_, __) => Container(
+                              height: 1,
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              color: Colors.grey.shade100,
+                            ),
+                            itemBuilder: (_, idx) {
+                              final item = cartItems[idx];
+                              return _buildOrderItem(
+                                  item, idx, productProvider, isCompact);
+                            },
+                          ),
                         ),
-                        itemBuilder: (_, idx) {
-                          final item = cartItems[idx];
-                          return _buildOrderItem(
-                              item, idx, productProvider, isCompact);
-                        },
                       ),
               ),
               // Enhanced action buttons
