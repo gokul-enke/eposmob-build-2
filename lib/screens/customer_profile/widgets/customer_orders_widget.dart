@@ -102,15 +102,15 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
           const SizedBox(height: 20),
           Text(
             'No Orders Found',
-            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s18,
-                0, ColorManager.kTitleTextColor),
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s18, 0,
+                ColorManager.kTitleTextColor),
           ),
           const SizedBox(height: 8),
           Text(
             'This customer has not placed any orders yet.',
             textAlign: TextAlign.center,
-            style: buildCustomStyle(
-                FontWeightManager.regular, FontSize.s14, 0, ColorManager.kGreyColor),
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0,
+                ColorManager.kGreyColor),
           ),
         ],
       ),
@@ -137,8 +137,8 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
           ),
           subtitle: Text(
             _formatDate(order.orderDate),
-            style: buildCustomStyle(
-                FontWeightManager.regular, FontSize.s12, 0, ColorManager.kGreyColor),
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s12, 0,
+                ColorManager.kGreyColor),
           ),
           trailing: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -146,8 +146,8 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
             children: [
               Text(
                 '₹${order.grandTotal ?? '0.00'}',
-                style: buildCustomStyle(
-                    FontWeightManager.bold, FontSize.s14, 0, ColorManager.kSuccessColor),
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s14, 0,
+                    ColorManager.kSuccessColor),
               ),
               const SizedBox(height: 2),
               _buildStatusBadge(order.status),
@@ -265,8 +265,8 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
-                  0, ColorManager.kGreyColor)),
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12, 0,
+                  ColorManager.kGreyColor)),
           Text(value ?? 'N/A',
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s12,
                   0, valueColor ?? ColorManager.kTitleTextColor)),
@@ -295,8 +295,8 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
             style: isGrandTotal
                 ? buildCustomStyle(FontWeightManager.bold, FontSize.s14, 0,
                     color ?? ColorManager.kSuccessColor)
-                : buildCustomStyle(FontWeightManager.semiBold, FontSize.s12,
-                    0, color ?? ColorManager.kTitleTextColor),
+                : buildCustomStyle(FontWeightManager.semiBold, FontSize.s12, 0,
+                    color ?? ColorManager.kTitleTextColor),
           ),
         ],
       ),
@@ -318,9 +318,15 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
   }
 
   Color _getPaymentStatusColor(String? status) {
-    return status?.toLowerCase() == 'paid'
-        ? ColorManager.kSuccessColor
-        : ColorManager.kRed;
+    if (status == null) return ColorManager.grey; // Default color
+    switch (status.toLowerCase()) {
+      case 'paid':
+        return ColorManager.kSuccessColor;
+      case 'pending':
+        return ColorManager.kRed;
+      default:
+        return ColorManager.grey; // Default fallback color
+    }
   }
 
   String _formatDate(String? dateString) {
