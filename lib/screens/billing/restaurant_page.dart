@@ -4,10 +4,11 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/helpers/product_cart_helper.dart';
+
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/restaurant/table_model.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/cart_provider.dart'; // Import CartProvider
 
 import '../../components/build_container_box.dart';
 import '../../components/build_dialog_box.dart';
@@ -139,6 +140,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           child: _OrderPanel(
             tableId: _activeTableId,
             screenSize: screenSize,
+            onSendToKitchen: _sendOrderToKitchen, // Pass the new callback
           ),
         ),
       ],
@@ -174,6 +176,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   tableId: _activeTableId,
                   isCompact: true,
                   screenSize: screenSize,
+                  onSendToKitchen: _sendOrderToKitchen, // Pass the new callback
                 ),
               ),
             ],
@@ -195,28 +198,130 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   Future<void> _handleItemAdd(GetProduct product, int quantity) async {
     if (_activeTableId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Select a table first'),
-          duration: Duration(seconds: 2),
-        ),
+      showScaffoldError(
+        context: context,
+        message: 'Select a table first',
       );
       return;
     }
 
-    // Use the existing ProductCartHelper to handle the add to cart logic
-    await ProductCartHelper.handleProductSelection(
-      context: context,
-      product: product,
-      quantity: quantity,
-      addToCartDirectly: true,
-    );
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
-    // Show success message
-    if (mounted) {
-      showScaffold(
+      // Use cart API directly instead of ProductCartHelper
+      await cartProvider.addToCartAPI(
+        customerId: 1, // Use a default customer ID or get from auth
+        productId: product.productId!,
+        quantity: quantity,
+        accessToken: authModel.token ?? '',
+        unitPrice: product.price?.price?.toString(),
+      );
+
+      // Show success message
+      if (mounted) {
+        showScaffold(
+          context: context,
+          message: 'Added ${product.productName} to Table $_activeTableId',
+        );
+      }
+    } catch (e) {
+      showScaffoldError(
         context: context,
-        message: 'Added ${product.productName} to Table $_activeTableId',
+        message: 'Failed to add item: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<void> _sendOrderToKitchen() async {
+    if (_activeTableId == null) {
+      showScaffoldError(
+        context: context,
+        message: 'Select a table first to send the order to kitchen',
+      );
+      return;
+    }
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      // Get cart data from the provider instead of local product provider
+      final cartData = cartProvider.cartData;
+      if (cartData.isEmpty || cartData.first.cartItems?.isEmpty == true) {
+        showScaffoldError(
+          context: context,
+          message: 'No items in cart to send to kitchen',
+        );
+        return;
+      }
+
+      // Get cart items from the provider
+      final cartItems = cartData.first.cartItems!;
+      List<Map<String, dynamic>> items = [];
+      for (var item in cartItems) {
+        items.add({
+          'product_id': item.productId,
+          'quantity': item.quantity,
+          'price': item.unitPrice,
+          'mrp': item.mrp,
+          'stock_id': null, // Cart items don't have stock_id in this model
+        });
+      }
+
+      // Get cart total from price summary
+      final total = cartData.first.priceSummary?.netTotal ?? 0.0;
+
+      // Call the addToOrderAPI with status: "init"
+      final response = await cartProvider.addToOrderAPI(
+        items: items,
+        cartIds: cartData.first.id ?? 0,
+        accessToken: authModel.token ?? "",
+        transactionId: "", // Not applicable for initial kitchen order
+        totalPrice: total.toStringAsFixed(2),
+        customerId: cartData.first.customerId,
+        customerPhone: null, // Not applicable
+        paymentMethod: null, // Not applicable
+        paidAmount: null, // Not applicable
+        paymentMethods: [], // Not applicable
+        paidMethods: [], // Not applicable
+        balanceAmount: "0", // Not applicable
+        couponId: null, // Not applicable
+        comment: "Order for Table $_activeTableId", // Add a comment for context
+        deliveryMethodId: null, // Not applicable
+        carNumber: null, // Not applicable
+        status: "init", // Set status to "init"
+        deliveryDate: null, // Not applicable
+        deliveryTime: null, // Not applicable
+        tableId: _activeTableId,
+      );
+
+      if (response["order_id"] != null) {
+        showScaffold(
+          context: context,
+          message:
+              'Order for Table $_activeTableId sent to kitchen successfully! Order ID: ${response["order_id"]}',
+        );
+        
+        // Clear the cart after successful submission using cart API
+        if (cartItems.isNotEmpty) {
+          await cartProvider.clearCartAPI(
+            customerId: cartData.first.customerId ?? 1,
+            productId: cartItems.first.id ?? 0, // Just need any cart item ID for clear action
+            accessToken: authModel.token ?? "",
+          );
+        }
+      } else {
+        showScaffoldError(
+          context: context,
+          message:
+              'Failed to send order to kitchen: ${response["message"] ?? "Unknown error"}',
+        );
+      }
+    } catch (e) {
+      showScaffoldError(
+        context: context,
+        message: 'Failed to send order to kitchen: ${e.toString()}',
       );
     }
   }
@@ -1327,20 +1432,105 @@ class _MenuPanel extends StatelessWidget {
   }
 }
 
-class _OrderPanel extends StatelessWidget {
+class _OrderPanel extends StatefulWidget {
   final String? tableId;
   final bool isCompact;
   final Size screenSize;
+  final VoidCallback onSendToKitchen; // New callback for send to kitchen
 
   const _OrderPanel({
     required this.tableId,
     this.isCompact = false,
     required this.screenSize,
+    required this.onSendToKitchen, // Make it required
   });
 
   @override
+  State<_OrderPanel> createState() => _OrderPanelState();
+}
+
+class _OrderPanelState extends State<_OrderPanel> {
+  dynamic _selectedOrder;
+  List<dynamic> _savedOrders = [];
+  bool _isLoadingOrders = false;
+  bool _isLoadingOrderDetails = false;
+  String? _error;
+
+  @override
+  void didUpdateWidget(covariant _OrderPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.tableId != oldWidget.tableId && widget.tableId != null) {
+      _fetchSavedOrders();
+    } else if (widget.tableId == null) {
+      setState(() {
+        _savedOrders = [];
+        _selectedOrder = null;
+        _error = null;
+      });
+    }
+  }
+
+  Future<void> _fetchSavedOrders() async {
+    setState(() {
+      _isLoadingOrders = true;
+      _savedOrders = [];
+      _selectedOrder = null;
+      _error = null;
+    });
+
+    final authModel = Provider.of<AuthModel>(context, listen: false);
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+    try {
+      final response = await cartProvider.listSavedOrders(
+        accessToken: authModel.token ?? '',
+        tableId: widget.tableId,
+      );
+      if (response['status'] == 'success') {
+        setState(() {
+          _savedOrders = response['orders'];
+        });
+      } else {
+        setState(() {
+          _error = response['message'] ?? 'Failed to load saved orders';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Error fetching saved orders: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isLoadingOrders = false;
+      });
+    }
+  }
+
+  Future<void> _fetchOrderDetails(dynamic order) async {
+    setState(() {
+      _isLoadingOrderDetails = true;
+      _error = null;
+    });
+
+    try {
+      debugPrint('🔄 _fetchOrderDetails: Processing saved order data.');
+      _selectedOrder =
+          order; // Set the selected order directly - no need to modify local cart
+    } catch (e) {
+      debugPrint('❌ _fetchOrderDetails Exception: ${e.toString()}');
+      setState(() {
+        _error = 'Error processing order details: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isLoadingOrderDetails = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (tableId == null) {
+    if (widget.tableId == null) {
       return Container(
         margin: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -1366,7 +1556,7 @@ class _OrderPanel extends StatelessWidget {
                 ),
                 child: Icon(
                   Icons.table_restaurant,
-                  size: isCompact ? 48 : 64,
+                  size: widget.isCompact ? 48 : 64,
                   color: const Color(0xFF64748B),
                 ),
               ),
@@ -1376,7 +1566,7 @@ class _OrderPanel extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: buildCustomStyle(
                     FontWeightManager.semiBold,
-                    isCompact ? FontSize.s14 : FontSize.s16,
+                    widget.isCompact ? FontSize.s14 : FontSize.s16,
                     0.21,
                     const Color(0xFF64748B)),
               ),
@@ -1386,315 +1576,836 @@ class _OrderPanel extends StatelessWidget {
       );
     }
 
-    return Consumer<LocalProductProvider>(
-      builder: (context, productProvider, _) {
-        final cartItems = productProvider.cartItems;
-        final total = cartItems.fold<double>(
-          0.0,
-          (sum, item) => sum + ((item.price ?? 0) * item.quantity),
-        );
+    if (_isLoadingOrders || _isLoadingOrderDetails) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        return Container(
-          margin: const EdgeInsets.all(8),
+    if (_error != null) {
+      return Center(child: Text('Error: $_error'));
+    }
+
+    if (_selectedOrder != null) {
+      // Display order details (cart items)
+      return _buildOrderDetailsView();
+    } else {
+      // Display current cart or saved orders
+      return Consumer<CartProvider>(
+        builder: (context, cartProvider, _) {
+          final cartData = cartProvider.cartData;
+          final hasCurrentCart = cartData.isNotEmpty && 
+                                 cartData.first.cartItems?.isNotEmpty == true;
+          
+          if (hasCurrentCart) {
+            // Show current cart items
+            return _buildCurrentCartView(cartData.first);
+          } else {
+            // Display list of saved orders
+            return _buildSavedOrdersList();
+          }
+        },
+      );
+    }
+  }
+
+  Widget _buildCurrentCartView(dynamic cartData) {
+    final cartItems = cartData.cartItems as List<dynamic>;
+    final total = cartData.priceSummary?.netTotal ?? 0.0;
+    
+    return Container(
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildPanelHeader(
+            'Current Order',
+            Icons.shopping_cart,
+            const Color(0xFF059669),
+            totalPrice: total,
+          ),
+          Expanded(
+            child: cartItems.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF64748B).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Icon(
+                            Icons.shopping_cart_outlined,
+                            size: widget.isCompact ? 36 : 48,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No items in current order',
+                          style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              widget.isCompact ? FontSize.s14 : FontSize.s16,
+                              0.21,
+                              const Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  )
+                : MouseRegion(
+                    cursor: SystemMouseCursors.grab,
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.mouse,
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.stylus,
+                          PointerDeviceKind.trackpad,
+                        },
+                      ),
+                      child: ListView.separated(
+                        physics: const BouncingScrollPhysics(),
+                        padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                        itemCount: cartItems.length,
+                        separatorBuilder: (_, __) => Container(
+                          height: 1,
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          color: Colors.grey.shade100,
+                        ),
+                        itemBuilder: (_, idx) {
+                          final item = cartItems[idx];
+                          return _buildCurrentCartItem(item, idx);
+                        },
+                      ),
+                    ),
+                  ),
+          ),
+          _buildCurrentCartActionButtons(cartItems),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSavedOrdersList() {
+    return Container(
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildPanelHeader('Saved Orders', Icons.receipt, Colors.blue),
+          Expanded(
+            child: _savedOrders.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: widget.isCompact ? 36 : 48,
+                          color: const Color(0xFF64748B),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No saved orders for Table ${widget.tableId}',
+                          textAlign: TextAlign.center,
+                          style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              widget.isCompact ? FontSize.s14 : FontSize.s16,
+                              0.21,
+                              const Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                    itemCount: _savedOrders.length,
+                    separatorBuilder: (_, __) => Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      color: Colors.grey.shade100,
+                    ),
+                    itemBuilder: (context, index) {
+                      final order = _savedOrders[index];
+                      return _buildOrderListItem(order);
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderListItem(dynamic order) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _fetchOrderDetails(order), // Pass the entire order object
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.grey.shade200,
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${order['order_number']}',
+                    style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        widget.isCompact ? FontSize.s13 : FontSize.s15,
+                        0.21,
+                        const Color(0xFF1E293B)),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getOrderStatusColor(order['status'])
+                          .withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${order['status']}'.toUpperCase(),
+                      style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          widget.isCompact ? FontSize.s11 : FontSize.s13,
+                          0.21,
+                          _getOrderStatusColor(order['status'])),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (order['orderProps'] != null &&
+                      order['orderProps']['TABLE'] != null)
+                    Text(
+                      order['orderProps']['TABLE']
+                          .toString()
+                          .replaceAll('"', ''), // Remove quotes if present
+                      style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          widget.isCompact ? FontSize.s11 : FontSize.s13,
+                          0.21,
+                          const Color(0xFF64748B)),
+                    ),
+                  Builder(
+                    builder: (context) {
+                      int itemCount = 0;
+                      if (order['cart'] != null &&
+                          order['cart']['cart_items'] != null) {
+                        itemCount = order['cart']['cart_items'].length;
+                      } else if (order['cart_items'] != null &&
+                          order['cart_items']['cart_items'] != null) {
+                        itemCount = order['cart_items']['cart_items'].length;
+                      }
+
+                      return Text(
+                        'Items: $itemCount',
+                        style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            widget.isCompact ? FontSize.s11 : FontSize.s13,
+                            0.21,
+                            const Color(0xFF64748B)),
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),
-          child: Column(
-            children: [
-              // Enhanced header
-              Container(
-                padding: EdgeInsets.all(isCompact ? 16.0 : 20.0),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFFD97706).withOpacity(0.05),
-                      Colors.transparent,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+        ),
+      ),
+    );
+  }
+
+  Color _getOrderStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'init':
+        return Colors.orange;
+      case 'completed':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget _buildOrderDetailsView() {
+    // Get cart items from the saved order
+    List<dynamic> cartItems = [];
+    if (_selectedOrder['cart'] != null &&
+        _selectedOrder['cart']['cart_items'] != null) {
+      cartItems = _selectedOrder['cart']['cart_items'];
+    } else if (_selectedOrder['cart_items'] != null &&
+        _selectedOrder['cart_items']['cart_items'] != null) {
+      cartItems = _selectedOrder['cart_items']['cart_items'];
+    }
+
+    final total =
+        double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
+            0.0;
+
+    return Container(
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildPanelHeader(
+            'Order #${_selectedOrder['order_number']}',
+            Icons.shopping_cart,
+            const Color(0xFFD97706),
+            showBackButton: true,
+            onBackButtonPressed: () => setState(() => _selectedOrder = null),
+            totalPrice: total,
+          ),
+          Expanded(
+            child: cartItems.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF64748B).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Icon(
+                            Icons.shopping_cart_outlined,
+                            size: widget.isCompact ? 36 : 48,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No items in this order',
+                          style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              widget.isCompact ? FontSize.s14 : FontSize.s16,
+                              0.21,
+                              const Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  )
+                : MouseRegion(
+                    cursor: SystemMouseCursors.grab,
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.mouse,
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.stylus,
+                          PointerDeviceKind.trackpad,
+                        },
+                      ),
+                      child: ListView.separated(
+                        physics: const BouncingScrollPhysics(),
+                        padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                        itemCount: cartItems.length,
+                        separatorBuilder: (_, __) => Container(
+                          height: 1,
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          color: Colors.grey.shade100,
+                        ),
+                        itemBuilder: (_, idx) {
+                          final item = cartItems[idx];
+                          return _buildSavedOrderItem(item, idx);
+                        },
+                      ),
+                    ),
                   ),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Colors.grey.shade100,
-                      width: 1,
+          ),
+          _buildSavedOrderActionButtons(cartItems),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPanelHeader(String title, IconData icon, Color color,
+      {bool showBackButton = false,
+      VoidCallback? onBackButtonPressed,
+      double? totalPrice}) {
+    return Container(
+      padding: EdgeInsets.all(widget.isCompact ? 16.0 : 20.0),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withOpacity(0.05),
+            Colors.transparent,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.grey.shade100,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          if (showBackButton)
+            IconButton(
+              icon: Icon(Icons.arrow_back, color: Color(0xFF64748B)),
+              onPressed: onBackButtonPressed,
+              splashRadius: 20,
+            ),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: widget.isCompact ? 18 : 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      widget.isCompact ? FontSize.s16 : FontSize.s18,
+                      0.30,
+                      const Color(0xFF1E293B)),
+                ),
+                if (totalPrice == null)
+                  Text(
+                    '${widget.tableId}',
+                    style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        widget.isCompact ? FontSize.s12 : FontSize.s13,
+                        0.21,
+                        const Color(0xFF64748B)),
+                  ),
+              ],
+            ),
+          ),
+          if (totalPrice != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF059669).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '₹${totalPrice.toStringAsFixed(0)}',
+                style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    widget.isCompact ? FontSize.s14 : FontSize.s16,
+                    0.23,
+                    const Color(0xFF059669)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSavedOrderActionButtons(List<dynamic> cartItems) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: EdgeInsets.all(widget.isCompact ? 12.0 : 16.0),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          border: Border(
+            top: BorderSide(
+              color: Colors.grey.shade100,
+              width: 1,
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => setState(() => _selectedOrder = null),
+                  borderRadius: BorderRadius.circular(12),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: widget.isCompact ? 44 : 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(
+                        color: const Color(0xFF64748B),
+                        width: 1.5,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Back',
+                        style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            widget.isCompact ? FontSize.s13 : FontSize.s14,
+                            0.21,
+                            const Color(0xFF64748B)),
+                      ),
                     ),
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD97706).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.shopping_cart,
-                        color: const Color(0xFFD97706),
-                        size: isCompact ? 18 : 20,
-                      ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: cartItems.isEmpty ? null : () => _updateOrderStatus(),
+                  borderRadius: BorderRadius.circular(12),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: widget.isCompact ? 44 : 48,
+                    decoration: BoxDecoration(
+                      color: cartItems.isEmpty
+                          ? const Color(0xFF94A3B8)
+                          : const Color(0xFF059669),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: cartItems.isNotEmpty
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF059669).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : [],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            'Order',
-                            style: buildCustomStyle(
-                                FontWeightManager.bold,
-                                isCompact ? FontSize.s16 : FontSize.s18,
-                                0.30,
-                                const Color(0xFF1E293B)),
+                          Icon(
+                            Icons.update,
+                            color: Colors.white,
+                            size: widget.isCompact ? 16 : 18,
                           ),
+                          const SizedBox(width: 8),
                           Text(
-                            'Table $tableId',
+                            'Update Order',
                             style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                isCompact ? FontSize.s12 : FontSize.s13,
+                                FontWeightManager.semiBold,
+                                widget.isCompact ? FontSize.s13 : FontSize.s14,
                                 0.21,
-                                const Color(0xFF64748B)),
+                                Colors.white),
                           ),
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF059669).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '₹${total.toStringAsFixed(0)}',
-                        style: buildCustomStyle(
-                            FontWeightManager.bold,
-                            isCompact ? FontSize.s14 : FontSize.s16,
-                            0.23,
-                            const Color(0xFF059669)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Order items
-              Expanded(
-                child: cartItems.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF64748B).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Icon(
-                                Icons.shopping_cart_outlined,
-                                size: isCompact ? 36 : 48,
-                                color: const Color(0xFF64748B),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No items in order',
-                              style: buildCustomStyle(
-                                  FontWeightManager.semiBold,
-                                  isCompact ? FontSize.s14 : FontSize.s16,
-                                  0.21,
-                                  const Color(0xFF64748B)),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Add items from the menu to get started',
-                              style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  isCompact ? FontSize.s11 : FontSize.s12,
-                                  0.21,
-                                  const Color(0xFF94A3B8)),
-                            ),
-                          ],
-                        ),
-                      )
-                    : MouseRegion(
-                        cursor: SystemMouseCursors.grab,
-                        child: ScrollConfiguration(
-                          behavior: ScrollConfiguration.of(context).copyWith(
-                            dragDevices: {
-                              PointerDeviceKind.mouse,
-                              PointerDeviceKind.touch,
-                              PointerDeviceKind.stylus,
-                              PointerDeviceKind.trackpad,
-                            },
-                          ),
-                          child: ListView.separated(
-                            physics: const BouncingScrollPhysics(),
-                            padding: EdgeInsets.all(isCompact ? 12 : 16),
-                            itemCount: cartItems.length,
-                            separatorBuilder: (_, __) => Container(
-                              height: 1,
-                              margin: const EdgeInsets.symmetric(vertical: 8),
-                              color: Colors.grey.shade100,
-                            ),
-                            itemBuilder: (_, idx) {
-                              final item = cartItems[idx];
-                              return _buildOrderItem(
-                                  item, idx, productProvider, isCompact);
-                            },
-                          ),
-                        ),
-                      ),
-              ),
-              // Enhanced action buttons
-              SafeArea(
-                top: false,
-                child: Container(
-                  padding: EdgeInsets.all(isCompact ? 12.0 : 16.0),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    border: Border(
-                      top: BorderSide(
-                        color: Colors.grey.shade100,
-                        width: 1,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: cartItems.isEmpty
-                                ? null
-                                : () => productProvider.clearCart(),
-                            borderRadius: BorderRadius.circular(12),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              height: isCompact ? 44 : 48,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                border: Border.all(
-                                  color: const Color(0xFFDC2626),
-                                  width: 1.5,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  'Clear',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      isCompact ? FontSize.s13 : FontSize.s14,
-                                      0.21,
-                                      cartItems.isEmpty
-                                          ? const Color(0xFF94A3B8)
-                                          : const Color(0xFFDC2626)),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: cartItems.isEmpty
-                                ? null
-                                : () async {
-                                    // Here you can implement order submission logic
-                                    // For now, just show a success message
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                            'Order sent to kitchen for Table $tableId'),
-                                        backgroundColor:
-                                            const Color(0xFF059669),
-                                        duration: const Duration(seconds: 2),
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                      ),
-                                    );
-                                    // Clear the cart after successful submission
-                                    productProvider.clearCart();
-                                  },
-                            borderRadius: BorderRadius.circular(12),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              height: isCompact ? 44 : 48,
-                              decoration: BoxDecoration(
-                                color: cartItems.isEmpty
-                                    ? const Color(0xFF94A3B8)
-                                    : const Color(0xFF059669),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: cartItems.isNotEmpty
-                                    ? [
-                                        BoxShadow(
-                                          color: const Color(0xFF059669)
-                                              .withOpacity(0.3),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ]
-                                    : [],
-                              ),
-                              child: Center(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.send,
-                                      color: Colors.white,
-                                      size: isCompact ? 16 : 18,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Send to Kitchen',
-                                      style: buildCustomStyle(
-                                          FontWeightManager.semiBold,
-                                          isCompact
-                                              ? FontSize.s13
-                                              : FontSize.s14,
-                                          0.21,
-                                          Colors.white),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
-              )
-            ],
-          ),
-        );
-      },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildOrderItem(LocalCartItem cartItem, int index,
-      LocalProductProvider productProvider, bool compact) {
+  // Cart API methods for saved orders
+  Future<void> _updateCartItemQuantity(
+      dynamic cartItem, double newQuantity) async {
+    if (newQuantity <= 0) {
+      await _removeCartItem(cartItem);
+      return;
+    }
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      // Get customer ID from the order data
+      final customerId = _selectedOrder['cart']['customer_id'] ?? 1;
+      final cartId = int.tryParse(_selectedOrder['cart_id'].toString());
+      
+      // Determine the product ID to send to the API
+      final int productIdToSend;
+      if (cartItem['product_id'] != null) {
+        productIdToSend = int.parse(cartItem['product_id'].toString());
+      } else if (cartItem['product'] != null && cartItem['product']['id'] != null) {
+        productIdToSend = int.parse(cartItem['product']['id'].toString());
+      } else {
+        // Fallback: If product_id is not explicitly found, use the cart_item_id as product_id
+        // This might be the case if the API expects cart_item_id as productId in some scenarios
+        productIdToSend = int.parse(cartItem['id'].toString());
+        debugPrint('⚠️ Warning: Using cart_item_id as productId for update. Verify if this is correct.');
+      }
+
+      debugPrint('🔄 Updating cart item quantity:');
+      debugPrint('   Customer ID: $customerId');
+      debugPrint('   Cart ID: $cartId');
+      debugPrint('   Product ID (to send): $productIdToSend');
+      debugPrint('   Cart Item ID (original): ${cartItem['id']}');
+      debugPrint('   New Quantity: $newQuantity');
+
+      // Use the decrementCartItemQuantityAPI for quantity updates
+      final response = await cartProvider.decrementCartItemQuantityAPI(
+        customerId: int.parse(customerId.toString()),
+        productId: productIdToSend,
+        cartId: cartId,
+        quantity: newQuantity.toInt(),
+        accessToken: authModel.token ?? '',
+      );
+
+      debugPrint('🔄 Update response: $response');
+
+      // Update the UI optimistically first
+      setState(() {
+        // Find and update the cart item in the selected order
+        final cartItems = _selectedOrder['cart']['cart_items'] as List<dynamic>;
+        for (var item in cartItems) {
+          if (item['id'].toString() == cartItem['id'].toString()) {
+            item['quantity'] = newQuantity.toString();
+            item['total_price'] = (newQuantity * double.parse(item['unit_price'].toString())).toString();
+            break;
+          }
+        }
+      });
+
+      // Check if the response indicates success
+      if (response != null) {
+        // Try to refresh the order details, but don't fail if it doesn't work
+        try {
+          await _refreshOrderDetails();
+        } catch (e) {
+          debugPrint('⚠️ Could not refresh order details, but update was successful: $e');
+        }
+
+        showScaffold(
+          context: context,
+          message: 'Item quantity updated successfully',
+        );
+      } else {
+        // Revert the optimistic update
+        setState(() {
+          // Revert the change
+          final cartItems = _selectedOrder['cart']['cart_items'] as List<dynamic>;
+          for (var item in cartItems) {
+            if (item['id'].toString() == cartItem['id'].toString()) {
+              item['quantity'] = cartItem['quantity'].toString();
+              item['total_price'] = cartItem['total_price'].toString();
+              break;
+            }
+          }
+        });
+        
+        showScaffoldError(
+          context: context,
+          message: 'Failed to update quantity: Server returned empty response',
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error updating cart item quantity: ${e.toString()}');
+      showScaffoldError(
+        context: context,
+        message: 'Failed to update quantity: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<void> _removeCartItem(dynamic cartItem) async {
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      // Get customer ID from the order data
+      final customerId = _selectedOrder['cart']['customer_id'] ?? 1;
+      final cartId = int.tryParse(_selectedOrder['cart_id'].toString());
+
+      // Determine the product ID to send to the API
+      final int productIdToSend;
+      if (cartItem['product_id'] != null) {
+        productIdToSend = int.parse(cartItem['product_id'].toString());
+      } else if (cartItem['product'] != null && cartItem['product']['id'] != null) {
+        productIdToSend = int.parse(cartItem['product']['id'].toString());
+      } else {
+        // Fallback: If product_id is not explicitly found, use the cart_item_id as product_id
+        productIdToSend = int.parse(cartItem['id'].toString());
+        debugPrint('⚠️ Warning: Using cart_item_id as productId for removal. Verify if this is correct.');
+      }
+
+      debugPrint('🗑️ Removing cart item:');
+      debugPrint('   Customer ID: $customerId');
+      debugPrint('   Cart ID: $cartId');
+      debugPrint('   Product ID (to send): $productIdToSend');
+      debugPrint('   Cart Item ID (original): ${cartItem['id']}');
+
+      // Use the cart API to remove item with correct product_id
+      final response = await cartProvider.removeFromCartAPI(
+        customerId: int.parse(customerId.toString()),
+        productId: productIdToSend, // This should be product_id, not cart_item_id
+        accessToken: authModel.token ?? '',
+        cartId: cartId,
+      );
+
+      debugPrint('🗑️ Remove response: $response');
+
+      // Update the UI optimistically first
+      setState(() {
+        // Remove the cart item from the selected order
+        final cartItems = _selectedOrder['cart']['cart_items'] as List<dynamic>;
+        cartItems.removeWhere((item) => item['id'].toString() == cartItem['id'].toString());
+      });
+
+      // Check if the response indicates success
+      if (response != null) {
+        // Try to refresh the order details, but don't fail if it doesn't work
+        try {
+          await _refreshOrderDetails();
+        } catch (e) {
+          debugPrint('⚠️ Could not refresh order details, but removal was successful: $e');
+        }
+
+        showScaffold(
+          context: context,
+          message: 'Item removed successfully',
+        );
+      } else {
+        // Revert the optimistic update by refreshing saved orders
+        await _fetchSavedOrders();
+        
+        showScaffoldError(
+          context: context,
+          message: 'Failed to remove item: Server returned empty response',
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error removing cart item: ${e.toString()}');
+      showScaffoldError(
+        context: context,
+        message: 'Failed to remove item: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<void> _refreshOrderDetails() async {
+    try {
+      debugPrint('🔄 Refreshing order details by fetching saved orders...');
+      
+      // Instead of trying to fetch cart data directly, 
+      // refresh the saved orders list and find the current order
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      final response = await cartProvider.listSavedOrders(
+        accessToken: authModel.token ?? '',
+        tableId: widget.tableId,
+      );
+      
+      if (response['status'] == 'success') {
+        final orders = response['orders'] as List<dynamic>;
+        
+        // Find the current order in the updated list
+        final currentOrderId = _selectedOrder['id'] ?? _selectedOrder['order_id'];
+        final updatedOrder = orders.firstWhere(
+          (order) => order['id'] == currentOrderId || order['order_id'] == currentOrderId,
+          orElse: () => null,
+        );
+        
+        if (updatedOrder != null) {
+          setState(() {
+            _selectedOrder = updatedOrder;
+          });
+          debugPrint('✅ Order details refreshed successfully');
+        } else {
+          debugPrint('⚠️ Could not find updated order in the list');
+        }
+      } else {
+        debugPrint('⚠️ Failed to refresh saved orders: ${response['message']}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error refreshing order details: ${e.toString()}');
+      // As a fallback, try to refresh the saved orders list
+      try {
+        await _fetchSavedOrders();
+      } catch (fallbackError) {
+        debugPrint('❌ Fallback refresh also failed: ${fallbackError.toString()}');
+      }
+    }
+  }
+
+  Future<void> _updateOrderStatus() async {
+    try {
+      // Update order status or perform any other order update logic
+      showScaffold(
+        context: context,
+        message: 'Order updated successfully',
+      );
+
+      // Go back to orders list
+      setState(() => _selectedOrder = null);
+    } catch (e) {
+      showScaffoldError(
+        context: context,
+        message: 'Failed to update order: ${e.toString()}',
+      );
+    }
+  }
+
+  Widget _buildCurrentCartItem(dynamic cartItem, int index) {
+    final productName = cartItem.product?.name ?? 'Unknown Product';
+    final quantity = double.tryParse(cartItem.quantity.toString()) ?? 0.0;
+    final unitPrice = double.tryParse(cartItem.unitPrice.toString()) ?? 0.0;
+    final totalPrice = double.tryParse(cartItem.totalPrice.toString()) ?? (quantity * unitPrice);
+    
     return Container(
-      padding: EdgeInsets.all(compact ? 12 : 16),
+      padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
@@ -1712,10 +2423,10 @@ class _OrderPanel extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  cartItem.product.productName ?? 'Unknown Product',
+                  productName,
                   style: buildCustomStyle(
                       FontWeightManager.bold,
-                      compact ? FontSize.s13 : FontSize.s15,
+                      widget.isCompact ? FontSize.s13 : FontSize.s15,
                       0.21,
                       const Color(0xFF1E293B)),
                   maxLines: 2,
@@ -1730,10 +2441,10 @@ class _OrderPanel extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '₹${((cartItem.price ?? 0) * cartItem.quantity).toStringAsFixed(0)}',
+                  '₹${totalPrice.toStringAsFixed(0)}',
                   style: buildCustomStyle(
                       FontWeightManager.bold,
-                      compact ? FontSize.s12 : FontSize.s14,
+                      widget.isCompact ? FontSize.s12 : FontSize.s14,
                       0.21,
                       const Color(0xFF059669)),
                 ),
@@ -1741,9 +2452,25 @@ class _OrderPanel extends StatelessWidget {
             ],
           ),
 
+          const SizedBox(height: 8),
+          
+          // Unit price and quantity info
+          Row(
+            children: [
+              Text(
+                '₹${unitPrice.toStringAsFixed(0)} × ${quantity.toStringAsFixed(0)}',
+                style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    widget.isCompact ? FontSize.s11 : FontSize.s12,
+                    0.21,
+                    const Color(0xFF64748B)),
+              ),
+            ],
+          ),
+
           const SizedBox(height: 12),
 
-          // Quantity controls with modern styling
+          // Quantity controls with modern styling (for current cart, these will use cart API)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1762,40 +2489,26 @@ class _OrderPanel extends StatelessWidget {
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () {
-                          if (cartItem.quantity > 1) {
-                            productProvider.addToCart(
-                              product: cartItem.product,
-                              quantity: -1,
-                              selectedStock: cartItem.selectedStock,
-                              isIncreamentUsingCompactQuantityControl: true,
-                            );
-                          } else {
-                            productProvider.removeFromCart(
-                              cartItem.product.productId!,
-                              cartItem.selectedStock,
-                            );
-                          }
-                        },
+                        onTap: () => _updateCurrentCartItemQuantity(cartItem, quantity - 1),
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           child: Icon(
                             Icons.remove,
-                            size: compact ? 16 : 18,
+                            size: widget.isCompact ? 16 : 18,
                             color: const Color(0xFFDC2626),
                           ),
                         ),
                       ),
                     ),
                     Container(
-                      width: compact ? 32 : 40,
+                      width: widget.isCompact ? 32 : 40,
                       alignment: Alignment.center,
                       child: Text(
-                        cartItem.quantity.toString(),
+                        quantity.toStringAsFixed(0),
                         style: buildCustomStyle(
                             FontWeightManager.bold,
-                            compact ? FontSize.s14 : FontSize.s16,
+                            widget.isCompact ? FontSize.s14 : FontSize.s16,
                             0.21,
                             const Color(0xFF1E293B)),
                       ),
@@ -1803,20 +2516,13 @@ class _OrderPanel extends StatelessWidget {
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () {
-                          productProvider.addToCart(
-                            product: cartItem.product,
-                            quantity: 1,
-                            selectedStock: cartItem.selectedStock,
-                            isIncreamentUsingCompactQuantityControl: true,
-                          );
-                        },
+                        onTap: () => _updateCurrentCartItemQuantity(cartItem, quantity + 1),
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           child: Icon(
                             Icons.add,
-                            size: compact ? 16 : 18,
+                            size: widget.isCompact ? 16 : 18,
                             color: const Color(0xFF059669),
                           ),
                         ),
@@ -1829,10 +2535,7 @@ class _OrderPanel extends StatelessWidget {
               Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => productProvider.removeFromCart(
-                    cartItem.product.productId!,
-                    cartItem.selectedStock,
-                  ),
+                  onTap: () => _removeCurrentCartItem(cartItem),
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     padding: const EdgeInsets.all(8),
@@ -1842,7 +2545,361 @@ class _OrderPanel extends StatelessWidget {
                     ),
                     child: Icon(
                       Icons.delete_outline,
-                      size: compact ? 16 : 18,
+                      size: widget.isCompact ? 16 : 18,
+                      color: const Color(0xFFDC2626),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrentCartActionButtons(List<dynamic> cartItems) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: EdgeInsets.all(widget.isCompact ? 12.0 : 16.0),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          border: Border(
+            top: BorderSide(
+              color: Colors.grey.shade100,
+              width: 1,
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: cartItems.isEmpty ? null : () => _clearCurrentCart(),
+                  borderRadius: BorderRadius.circular(12),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: widget.isCompact ? 44 : 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(
+                        color: const Color(0xFFDC2626),
+                        width: 1.5,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Clear',
+                        style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            widget.isCompact ? FontSize.s13 : FontSize.s14,
+                            0.21,
+                            cartItems.isEmpty
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFFDC2626)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: cartItems.isEmpty ? null : () => widget.onSendToKitchen(),
+                  borderRadius: BorderRadius.circular(12),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: widget.isCompact ? 44 : 48,
+                    decoration: BoxDecoration(
+                      color: cartItems.isEmpty
+                          ? const Color(0xFF94A3B8)
+                          : const Color(0xFF059669),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: cartItems.isNotEmpty
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF059669).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : [],
+                    ),
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.send,
+                            color: Colors.white,
+                            size: widget.isCompact ? 16 : 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Send to Kitchen',
+                            style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                0.21,
+                                Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Methods for current cart operations
+  Future<void> _updateCurrentCartItemQuantity(dynamic cartItem, double newQuantity) async {
+    if (newQuantity <= 0) {
+      await _removeCurrentCartItem(cartItem);
+      return;
+    }
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      // Use the decrementCartItemQuantityAPI for quantity updates
+      await cartProvider.decrementCartItemQuantityAPI(
+        customerId: 1,
+        productId: cartItem.id, // Use cart_item_id
+        quantity: newQuantity.toInt(),
+        accessToken: authModel.token ?? '',
+      );
+
+      showScaffold(
+        context: context,
+        message: 'Item quantity updated successfully',
+      );
+    } catch (e) {
+      showScaffoldError(
+        context: context,
+        message: 'Failed to update quantity: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<void> _removeCurrentCartItem(dynamic cartItem) async {
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      // Use the cart API to remove item with correct cart_item_id
+      await cartProvider.removeFromCartAPI(
+        customerId: 1,
+        productId: cartItem.id, // This is cart_item_id
+        accessToken: authModel.token ?? '',
+      );
+
+      showScaffold(
+        context: context,
+        message: 'Item removed successfully',
+      );
+    } catch (e) {
+      showScaffoldError(
+        context: context,
+        message: 'Failed to remove item: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<void> _clearCurrentCart() async {
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final cartData = cartProvider.cartData;
+
+      if (cartData.isNotEmpty && cartData.first.cartItems?.isNotEmpty == true) {
+        // Use the clearCartAPI
+        await cartProvider.clearCartAPI(
+          customerId: 1,
+          productId: cartData.first.cartItems!.first.id ?? 0,
+          accessToken: authModel.token ?? '',
+        );
+
+        showScaffold(
+          context: context,
+          message: 'Cart cleared successfully',
+        );
+      }
+    } catch (e) {
+      showScaffoldError(
+        context: context,
+        message: 'Failed to clear cart: ${e.toString()}',
+      );
+    }
+  }
+
+  Widget _buildSavedOrderItem(dynamic cartItem, int index) {
+    final productName = cartItem['product']?['name'] ??
+        cartItem['product_name'] ??
+        cartItem['names']?[0]?['name'] ??
+        'Unknown Product';
+    final quantity = double.tryParse(cartItem['quantity'].toString()) ?? 0.0;
+    final unitPrice = double.tryParse(cartItem['unit_price'].toString()) ?? 0.0;
+    final totalPrice = double.tryParse(cartItem['total_price'].toString()) ??
+        (quantity * unitPrice);
+
+    return Container(
+      padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.shade200,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Item name and price
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  productName,
+                  style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      widget.isCompact ? FontSize.s13 : FontSize.s15,
+                      0.21,
+                      const Color(0xFF1E293B)),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '₹${totalPrice.toStringAsFixed(0)}',
+                  style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      widget.isCompact ? FontSize.s12 : FontSize.s14,
+                      0.21,
+                      const Color(0xFF059669)),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          // Unit price and quantity info
+          Row(
+            children: [
+              Text(
+                '₹${unitPrice.toStringAsFixed(0)} × ${quantity.toStringAsFixed(0)}',
+                style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    widget.isCompact ? FontSize.s11 : FontSize.s12,
+                    0.21,
+                    const Color(0xFF64748B)),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Quantity controls with modern styling (for saved orders, these will use cart API)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.grey.shade300,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () =>
+                            _updateCartItemQuantity(cartItem, quantity - 1),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.remove,
+                            size: widget.isCompact ? 16 : 18,
+                            color: const Color(0xFFDC2626),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: widget.isCompact ? 32 : 40,
+                      alignment: Alignment.center,
+                      child: Text(
+                        quantity.toStringAsFixed(0),
+                        style: buildCustomStyle(
+                            FontWeightManager.bold,
+                            widget.isCompact ? FontSize.s14 : FontSize.s16,
+                            0.21,
+                            const Color(0xFF1E293B)),
+                      ),
+                    ),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () =>
+                            _updateCartItemQuantity(cartItem, quantity + 1),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.add,
+                            size: widget.isCompact ? 16 : 18,
+                            color: const Color(0xFF059669),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Remove button with modern styling
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _removeCartItem(cartItem),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDC2626).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.delete_outline,
+                      size: widget.isCompact ? 16 : 18,
                       color: const Color(0xFFDC2626),
                     ),
                   ),

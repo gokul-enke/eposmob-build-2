@@ -455,7 +455,7 @@ class CartProvider with ChangeNotifier {
       'quantity': quantity,
       // 'action': "remove_item",
       // 'action': "clear_cart",
-      'customer_id': "1"
+      'customer_id': customerId.toString()
     };
     debugPrint("apiBodyData $apiBodyData");
     final url = Uri.parse(APPUrl
@@ -584,6 +584,7 @@ class CartProvider with ChangeNotifier {
     String? status,
     String? deliveryDate, // <-- add this
     String? deliveryTime, // <-- add this
+    String? tableId,
   }) async {
     debugPrint("📤 ADD TO ORDER API - Starting request");
     debugPrint("📦 Order items count: ${items?.length ?? 0}");
@@ -637,6 +638,7 @@ class CartProvider with ChangeNotifier {
         if (status != null) "status": status,
         if (deliveryDate != null) "delivery_date": deliveryDate,
         if (deliveryTime != null) "delivery_time": deliveryTime,
+        if (tableId != null) "table": tableId,
       };
     } else {
       // Fallback to single payment method format
@@ -656,6 +658,7 @@ class CartProvider with ChangeNotifier {
         if (status != null) "status": status,
         if (deliveryDate != null) "delivery_date": deliveryDate,
         if (deliveryTime != null) "delivery_time": deliveryTime,
+        if (tableId != null) "table": tableId,
       };
     }
 
@@ -971,6 +974,83 @@ class CartProvider with ChangeNotifier {
         'message': 'An error occurred: $e',
         'data': null,
       };
+    }
+  }
+
+  Future<Map<String, dynamic>> listSavedOrders({
+    required String accessToken,
+    required String? tableId,
+  }) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    if (apiKey == null || apiKey.isEmpty) {
+      debugPrint('CartProvider: API key not found. Please restart the app.');
+      return {
+        "status": "failure",
+        "message": "API key not found. Please restart the app."
+      };
+    }
+    try {
+      final response = await http.get(
+        Uri.parse(APPUrl.listSavedOrders),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      );
+      debugPrint(
+          'listSavedOrders API Response Status Code: ${response.statusCode}');
+      debugPrint('listSavedOrders API Response Body: ${response.body}');
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        return {'status': 'success', 'orders': jsonData['data']['data']};
+      } else {
+        final jsonData = json.decode(response.body);
+        return {
+          'status': 'failure',
+          'message': jsonData['message'] ?? 'Failed to fetch saved orders'
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> getListOrderDetails({
+    required String accessToken,
+    required String orderId,
+  }) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    if (apiKey == null || apiKey.isEmpty) {
+      return {
+        "status": "failure",
+        "message": "API key not found. Please restart the app."
+      };
+    }
+    try {
+      final response = await http.post(
+        Uri.parse(APPUrl.getListOrderDetails),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: json.encode({'order_id': orderId}),
+      );
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        return {'status': 'success', 'order_details': jsonData['order']};
+      } else {
+        final jsonData = json.decode(response.body);
+        return {
+          'status': 'failure',
+          'message': jsonData['message'] ?? 'Failed to fetch order details'
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': e.toString()};
     }
   }
 }

@@ -47,6 +47,8 @@ class APPUrl {
   static String completeSalesReturn =
       '$baseURL/api/v1/order/complete-return-order';
 
+  static String listSavedOrders = '$baseURL/api/v1/order/list-saved-orders';
+
   static String loginUrl = '$baseURL/api/v1/user/signin';
   static String forgotPasswordUrl = '$baseURL/api/v1/user/forgot';
   static String resetPasswordUrl = '$baseURL/api/v1/user/reset';
