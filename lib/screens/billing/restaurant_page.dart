@@ -415,7 +415,8 @@ class _TablesPanel extends StatelessWidget {
     }
   }
 
-  Widget _buildCompactTablesList(List<TableModel> tables, BuildContext context) {
+  Widget _buildCompactTablesList(
+      List<TableModel> tables, BuildContext context) {
     return MouseRegion(
       cursor: SystemMouseCursors.grab,
       child: ScrollConfiguration(
@@ -451,8 +452,9 @@ class _TablesPanel extends StatelessWidget {
                           ? const Color(0xFF2563EB).withOpacity(0.08)
                           : _getTableBackgroundColor(table.status),
                       border: Border.all(
-                        color:
-                            isActive ? const Color(0xFF2563EB) : Colors.transparent,
+                        color: isActive
+                            ? const Color(0xFF2563EB)
+                            : Colors.transparent,
                         width: 2,
                       ),
                       borderRadius: BorderRadius.circular(12),
@@ -488,14 +490,20 @@ class _TablesPanel extends StatelessWidget {
                             children: [
                               Text(
                                 table.name,
-                                style: buildCustomStyle(FontWeightManager.bold,
-                                    FontSize.s14, 0.21, const Color(0xFF1E293B)),
+                                style: buildCustomStyle(
+                                    FontWeightManager.bold,
+                                    FontSize.s14,
+                                    0.21,
+                                    const Color(0xFF1E293B)),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 _getStatusText(table.status),
-                                style: buildCustomStyle(FontWeightManager.medium,
-                                    FontSize.s11, 0.21, _tableColor(table.status)),
+                                style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s11,
+                                    0.21,
+                                    _tableColor(table.status)),
                               ),
                             ],
                           ),
@@ -649,8 +657,11 @@ class _TablesPanel extends StatelessWidget {
                               const SizedBox(width: 3),
                               Text(
                                 _getStatusText(table.status),
-                                style: buildCustomStyle(FontWeightManager.semiBold,
-                                    FontSize.s6, 0.14, _tableColor(table.status)),
+                                style: buildCustomStyle(
+                                    FontWeightManager.semiBold,
+                                    FontSize.s6,
+                                    0.14,
+                                    _tableColor(table.status)),
                               ),
                             ],
                           ),
@@ -885,8 +896,8 @@ class _MenuPanel extends StatelessWidget {
                       ),
                       child: ListView.separated(
                         physics: const BouncingScrollPhysics(),
-                        padding:
-                            EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: isCompact ? 12 : 16),
                         scrollDirection: Axis.horizontal,
                         itemBuilder: (_, idx) {
                           final c = categories[idx];
@@ -941,7 +952,9 @@ class _MenuPanel extends StatelessWidget {
                                       c.categoryName ?? 'Unknown',
                                       style: buildCustomStyle(
                                           FontWeightManager.semiBold,
-                                          isCompact ? FontSize.s12 : FontSize.s13,
+                                          isCompact
+                                              ? FontSize.s12
+                                              : FontSize.s13,
                                           0.21,
                                           active
                                               ? Colors.white
@@ -996,7 +1009,8 @@ class _MenuPanel extends StatelessWidget {
                           ),
                           child: GridView.builder(
                             padding: EdgeInsets.all(isCompact ? 6 : 8),
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: crossAxisCount,
                               mainAxisSpacing: isCompact ? 6 : 8,
                               crossAxisSpacing: isCompact ? 6 : 8,

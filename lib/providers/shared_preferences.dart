@@ -14,6 +14,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
     String accessToken,
     int customerId,
     String customerName,
+    String userRole,
   ) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     // debugPrint('inside shared ');
@@ -21,6 +22,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
     prefs.setString('access_token', accessToken);
     prefs.setInt('customerId', customerId);
     prefs.setString('customerName', customerName);
+    prefs.setString('userRole', userRole);
     // debugPrint('inside shared ,$customerName');
   }
 
@@ -38,6 +40,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
     prefs.remove('access_token');
     prefs.remove('customerId');
     prefs.remove('customerName');
+    prefs.remove('userRole');
   }
 
   Future<String?> getToken() async {
@@ -62,6 +65,12 @@ class SharedPreferenceProvider extends ChangeNotifier {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String? customerName = prefs.getString('customerName');
     return customerName ?? 'Default Name'; // Return a default value if null
+  }
+
+  Future<String> getUserRole() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? userRole = prefs.getString('userRole');
+    return userRole ?? 'user'; // Return a default value if null
   }
 
   // API Key management methods

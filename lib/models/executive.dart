@@ -40,12 +40,14 @@ class ExecutiveModelData {
   final String? tokenType;
   final int? userId;
   final String? userName;
+  final String? userRole;
 
   ExecutiveModelData({
     this.accessToken,
     this.tokenType,
     this.userId,
     this.userName,
+    this.userRole,
   });
 
   factory ExecutiveModelData.fromJson(Map<String, dynamic> json) =>
@@ -54,6 +56,7 @@ class ExecutiveModelData {
         tokenType: json["token_type"],
         userId: json["user_id"],
         userName: json["name"],
+        userRole: json["user_role"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -61,5 +64,6 @@ class ExecutiveModelData {
         "token_type": tokenType,
         "user_id": userId,
         "name": userName,
+        "user_role": userRole,
       };
 }

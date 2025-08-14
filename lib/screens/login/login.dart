@@ -377,6 +377,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                                         0,
                                                     executiveModelData
                                                             ?.userName ??
+                                                        "",
+                                                    executiveModelData
+                                                            ?.userRole ??
                                                         "");
                                             SalesProvider salesProvider =
                                                 Provider.of<SalesProvider>(
