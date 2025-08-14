@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/providers/auth_model.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
@@ -28,8 +29,9 @@ class _RestaurantStatePage extends State<RestaurantPage> {
   void initState() {
     super.initState();
     // Preload data
+    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     Future.microtask(() {
-      context.read<TableProvider>().loadTables();
+      context.read<TableProvider>().loadTables(accessToken: accessToken);
       context.read<MenuProvider>().loadMenu();
     });
   }
@@ -38,19 +40,19 @@ class _RestaurantStatePage extends State<RestaurantPage> {
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final screenWidth = screenSize.width;
-    
+
     // Better responsive breakpoints
     final isLargeScreen = screenWidth >= 1200;
     final isSmallScreen = screenWidth < 900;
-    
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC), // Modern light background
       body: SafeArea(
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
-          child: isSmallScreen 
-            ? _buildMobileLayout(screenSize) 
-            : _buildDesktopLayout(screenSize, isLargeScreen),
+          child: isSmallScreen
+              ? _buildMobileLayout(screenSize)
+              : _buildDesktopLayout(screenSize, isLargeScreen),
         ),
       ),
     );
@@ -59,12 +61,12 @@ class _RestaurantStatePage extends State<RestaurantPage> {
   Widget _buildDesktopLayout(Size screenSize, bool isLargeScreen) {
     // More responsive width calculations
     final screenWidth = screenSize.width;
-    
+
     // Calculate flexible widths based on screen size
     double tablesPanelFlex;
     double orderPanelFlex;
     double menuPanelFlex;
-    
+
     if (screenWidth >= 1400) {
       // Large screens: more space for menu
       tablesPanelFlex = 2.5;
@@ -86,7 +88,7 @@ class _RestaurantStatePage extends State<RestaurantPage> {
       menuPanelFlex = 3.5;
       orderPanelFlex = 2.2;
     }
-    
+
     return Row(
       children: [
         // Tables panel - flexible width
@@ -174,7 +176,8 @@ class _RestaurantStatePage extends State<RestaurantPage> {
     );
   }
 
-  void _handleItemAdd(MenuItemModel item, int quantity, Map<String, List<ModifierOption>> selectedModifiers, String? notes) {
+  void _handleItemAdd(MenuItemModel item, int quantity,
+      Map<String, List<ModifierOption>> selectedModifiers, String? notes) {
     if (_activeTableId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -185,12 +188,12 @@ class _RestaurantStatePage extends State<RestaurantPage> {
       return;
     }
     context.read<OrderProvider>().addItem(
-      _activeTableId!,
-      item,
-      quantity: quantity,
-      selectedModifiers: selectedModifiers,
-      notes: notes,
-    );
+          _activeTableId!,
+          item,
+          quantity: quantity,
+          selectedModifiers: selectedModifiers,
+          notes: notes,
+        );
   }
 
   void _handleOrderSubmitSuccess(String orderId) {
@@ -207,7 +210,7 @@ class _TablesPanel extends StatelessWidget {
   final Size screenSize;
 
   const _TablesPanel({
-    required this.activeTableId, 
+    required this.activeTableId,
     required this.onSelect,
     this.isCompact = false,
     required this.screenSize,
@@ -224,7 +227,52 @@ class _TablesPanel extends StatelessWidget {
             child: Center(child: CircularProgressIndicator()),
           );
         }
-        
+
+        if (provider.error != null && provider.tables.isEmpty) {
+          return BuildBoxShadowContainer(
+            circleRadius: 10,
+            margin: const EdgeInsets.all(8),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: Colors.red.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Failed to load tables',
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s16,
+                      0.21,
+                      Colors.red.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    provider.error!,
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s12,
+                      0.21,
+                      ColorManager.textColor.withOpacity(0.7),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => provider.refreshTables(),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         return Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -278,36 +326,35 @@ class _TablesPanel extends StatelessWidget {
                     Text(
                       'Tables',
                       style: buildCustomStyle(
-                        FontWeightManager.bold, 
-                        isCompact ? FontSize.s16 : FontSize.s18, 
-                        0.30, 
-                        const Color(0xFF1E293B)
-                      ),
+                          FontWeightManager.bold,
+                          isCompact ? FontSize.s16 : FontSize.s18,
+                          0.30,
+                          const Color(0xFF1E293B)),
                     ),
                     const Spacer(),
                     if (provider.tables.isNotEmpty)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFF059669).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           '${provider.tables.length}',
-                          style: buildCustomStyle(
-                            FontWeightManager.semiBold, 
-                            FontSize.s12, 
-                            0.21, 
-                            const Color(0xFF059669)
-                          ),
+                          style: buildCustomStyle(FontWeightManager.semiBold,
+                              FontSize.s12, 0.21, const Color(0xFF059669)),
                         ),
                       ),
                   ],
                 ),
               ),
-              // Tables list/grid
+              // Tables list/grid with refresh
               Expanded(
-                child: _buildTablesView(provider.tables),
+                child: RefreshIndicator(
+                  onRefresh: () => provider.refreshTables(),
+                  child: _buildTablesView(provider.tables),
+                ),
               ),
             ],
           ),
@@ -330,12 +377,8 @@ class _TablesPanel extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'No tables available',
-              style: buildCustomStyle(
-                FontWeightManager.medium, 
-                FontSize.s14, 
-                0.21, 
-                ColorManager.textColor.withOpacity(0.7)
-              ),
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
+                  0.21, ColorManager.textColor.withOpacity(0.7)),
             ),
           ],
         ),
@@ -357,7 +400,7 @@ class _TablesPanel extends StatelessWidget {
       itemBuilder: (context, index) {
         final table = tables[index];
         final isActive = table.id == activeTableId;
-        
+
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           margin: const EdgeInsets.only(bottom: 12),
@@ -370,23 +413,24 @@ class _TablesPanel extends StatelessWidget {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isActive 
-                    ? const Color(0xFF2563EB).withOpacity(0.08) 
-                    : _getTableBackgroundColor(table.status),
+                  color: isActive
+                      ? const Color(0xFF2563EB).withOpacity(0.08)
+                      : _getTableBackgroundColor(table.status),
                   border: Border.all(
-                    color: isActive 
-                      ? const Color(0xFF2563EB) 
-                      : Colors.transparent,
+                    color:
+                        isActive ? const Color(0xFF2563EB) : Colors.transparent,
                     width: 2,
                   ),
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: isActive ? [
-                    BoxShadow(
-                      color: const Color(0xFF2563EB).withOpacity(0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ] : [],
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF2563EB).withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : [],
                 ),
                 child: Row(
                   children: [
@@ -410,22 +454,14 @@ class _TablesPanel extends StatelessWidget {
                         children: [
                           Text(
                             table.name,
-                            style: buildCustomStyle(
-                              FontWeightManager.bold, 
-                              FontSize.s14, 
-                              0.21, 
-                              const Color(0xFF1E293B)
-                            ),
+                            style: buildCustomStyle(FontWeightManager.bold,
+                                FontSize.s14, 0.21, const Color(0xFF1E293B)),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             _getStatusText(table.status),
-                            style: buildCustomStyle(
-                              FontWeightManager.medium, 
-                              FontSize.s11, 
-                              0.21, 
-                              _tableColor(table.status)
-                            ),
+                            style: buildCustomStyle(FontWeightManager.medium,
+                                FontSize.s11, 0.21, _tableColor(table.status)),
                           ),
                         ],
                       ),
@@ -438,13 +474,16 @@ class _TablesPanel extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: _tableColor(table.status),
                         shape: BoxShape.circle,
-                        boxShadow: table.status == TableStatus.occupied ? [
-                          BoxShadow(
-                            color: _tableColor(table.status).withOpacity(0.4),
-                            blurRadius: 4,
-                            spreadRadius: 1,
-                          ),
-                        ] : [],
+                        boxShadow: table.status == TableStatus.occupied
+                            ? [
+                                BoxShadow(
+                                  color: _tableColor(table.status)
+                                      .withOpacity(0.4),
+                                  blurRadius: 4,
+                                  spreadRadius: 1,
+                                ),
+                              ]
+                            : [],
                       ),
                     ),
                   ],
@@ -461,7 +500,7 @@ class _TablesPanel extends StatelessWidget {
     // Calculate responsive grid columns
     int crossAxisCount;
     double childAspectRatio;
-    
+
     if (screenSize.width >= 1200) {
       crossAxisCount = 3;
       childAspectRatio = 1.0;
@@ -485,7 +524,7 @@ class _TablesPanel extends StatelessWidget {
       itemBuilder: (context, index) {
         final table = tables[index];
         final isActive = table.id == activeTableId;
-        
+
         return Material(
           color: Colors.transparent,
           child: InkWell(
@@ -494,18 +533,18 @@ class _TablesPanel extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               decoration: BoxDecoration(
-                color: isActive 
-                  ? const Color(0xFF2563EB).withOpacity(0.08) 
-                  : _getTableBackgroundColor(table.status),
-                border: isActive 
-                  ? Border.all(color: const Color(0xFF2563EB), width: 3)
-                  : Border.all(color: Colors.grey.shade200, width: 1),
+                color: isActive
+                    ? const Color(0xFF2563EB).withOpacity(0.08)
+                    : _getTableBackgroundColor(table.status),
+                border: isActive
+                    ? Border.all(color: const Color(0xFF2563EB), width: 3)
+                    : Border.all(color: Colors.grey.shade200, width: 1),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: isActive 
-                      ? const Color(0xFF2563EB).withOpacity(0.15)
-                      : Colors.black.withOpacity(0.04),
+                    color: isActive
+                        ? const Color(0xFF2563EB).withOpacity(0.15)
+                        : Colors.black.withOpacity(0.04),
                     blurRadius: isActive ? 12 : 8,
                     offset: const Offset(0, 4),
                   ),
@@ -534,19 +573,16 @@ class _TablesPanel extends StatelessWidget {
                     // Table name - smaller font
                     Text(
                       table.name,
-                      style: buildCustomStyle(
-                        FontWeightManager.bold, 
-                        FontSize.s12, 
-                        0.21, 
-                        const Color(0xFF1E293B)
-                      ),
+                      style: buildCustomStyle(FontWeightManager.bold,
+                          FontSize.s12, 0.21, const Color(0xFF1E293B)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 3),
                     // Status indicator - minimal
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: _tableColor(table.status).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -565,12 +601,8 @@ class _TablesPanel extends StatelessWidget {
                           const SizedBox(width: 3),
                           Text(
                             _getStatusText(table.status),
-                            style: buildCustomStyle(
-                              FontWeightManager.semiBold, 
-                              FontSize.s6, 
-                              0.14, 
-                              _tableColor(table.status)
-                            ),
+                            style: buildCustomStyle(FontWeightManager.semiBold,
+                                FontSize.s6, 0.14, _tableColor(table.status)),
                           ),
                         ],
                       ),
@@ -649,7 +681,11 @@ class _TablesPanel extends StatelessWidget {
 class _MenuPanel extends StatelessWidget {
   final ValueChanged<String?> onCategoryChanged;
   final String? activeCategoryId;
-  final Function(MenuItemModel item, int quantity, Map<String, List<ModifierOption>> selectedModifiers, String? notes) onItemAdd;
+  final Function(
+      MenuItemModel item,
+      int quantity,
+      Map<String, List<ModifierOption>> selectedModifiers,
+      String? notes) onItemAdd;
   final bool isCompact;
   final Size screenSize;
 
@@ -672,15 +708,18 @@ class _MenuPanel extends StatelessWidget {
             child: Center(child: CircularProgressIndicator()),
           );
         }
-        
+
         final categories = menu.categories;
-        final selectedCategoryId = activeCategoryId ?? (categories.isNotEmpty ? categories.first.id : null);
-        final items = selectedCategoryId != null ? menu.itemsByCategory(selectedCategoryId) : <MenuItemModel>[];
-        
+        final selectedCategoryId = activeCategoryId ??
+            (categories.isNotEmpty ? categories.first.id : null);
+        final items = selectedCategoryId != null
+            ? menu.itemsByCategory(selectedCategoryId)
+            : <MenuItemModel>[];
+
         // Calculate responsive grid columns with better aspect ratios
         int crossAxisCount;
         double childAspectRatio;
-        
+
         if (isCompact) {
           // Mobile/small tablet layout
           if (screenSize.width > 600) {
@@ -703,7 +742,7 @@ class _MenuPanel extends StatelessWidget {
             childAspectRatio = 1.1; // Reduced from 1.3
           }
         }
-        
+
         return Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -757,28 +796,24 @@ class _MenuPanel extends StatelessWidget {
                     Text(
                       'Menu',
                       style: buildCustomStyle(
-                        FontWeightManager.bold, 
-                        isCompact ? FontSize.s16 : FontSize.s18, 
-                        0.30, 
-                        const Color(0xFF1E293B)
-                      ),
+                          FontWeightManager.bold,
+                          isCompact ? FontSize.s16 : FontSize.s18,
+                          0.30,
+                          const Color(0xFF1E293B)),
                     ),
                     const Spacer(),
                     if (items.isNotEmpty)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFF059669).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           '${items.length} items',
-                          style: buildCustomStyle(
-                            FontWeightManager.semiBold, 
-                            FontSize.s12, 
-                            0.21, 
-                            const Color(0xFF059669)
-                          ),
+                          style: buildCustomStyle(FontWeightManager.semiBold,
+                              FontSize.s12, 0.21, const Color(0xFF059669)),
                         ),
                       ),
                   ],
@@ -790,7 +825,8 @@ class _MenuPanel extends StatelessWidget {
                   height: isCompact ? 56 : 64,
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: ListView.separated(
-                    padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16),
                     scrollDirection: Axis.horizontal,
                     itemBuilder: (_, idx) {
                       final c = categories[idx];
@@ -805,37 +841,40 @@ class _MenuPanel extends StatelessWidget {
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               padding: EdgeInsets.symmetric(
-                                horizontal: isCompact ? 16 : 20, 
-                                vertical: isCompact ? 8 : 10
-                              ),
+                                  horizontal: isCompact ? 16 : 20,
+                                  vertical: isCompact ? 8 : 10),
                               decoration: BoxDecoration(
-                                color: active 
-                                  ? const Color(0xFF2563EB) 
-                                  : Colors.grey.shade50,
+                                color: active
+                                    ? const Color(0xFF2563EB)
+                                    : Colors.grey.shade50,
                                 borderRadius: BorderRadius.circular(24),
                                 border: Border.all(
-                                  color: active 
-                                    ? const Color(0xFF2563EB) 
-                                    : Colors.grey.shade200,
+                                  color: active
+                                      ? const Color(0xFF2563EB)
+                                      : Colors.grey.shade200,
                                   width: 1,
                                 ),
-                                boxShadow: active ? [
-                                  BoxShadow(
-                                    color: const Color(0xFF2563EB).withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ] : [],
+                                boxShadow: active
+                                    ? [
+                                        BoxShadow(
+                                          color: const Color(0xFF2563EB)
+                                              .withOpacity(0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : [],
                               ),
                               child: Center(
                                 child: Text(
                                   c.name,
                                   style: buildCustomStyle(
-                                    FontWeightManager.semiBold, 
-                                    isCompact ? FontSize.s12 : FontSize.s13, 
-                                    0.21, 
-                                    active ? Colors.white : const Color(0xFF64748B)
-                                  ),
+                                      FontWeightManager.semiBold,
+                                      isCompact ? FontSize.s12 : FontSize.s13,
+                                      0.21,
+                                      active
+                                          ? Colors.white
+                                          : const Color(0xFF64748B)),
                                 ),
                               ),
                             ),
@@ -850,42 +889,41 @@ class _MenuPanel extends StatelessWidget {
               // Menu items
               Expanded(
                 child: items.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.restaurant_menu,
-                            size: 48,
-                            color: ColorManager.textColor.withOpacity(0.3),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No items in this category',
-                            style: buildCustomStyle(
-                              FontWeightManager.medium, 
-                              FontSize.s14, 
-                              0.21, 
-                              ColorManager.textColor.withOpacity(0.7)
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.restaurant_menu,
+                              size: 48,
+                              color: ColorManager.textColor.withOpacity(0.3),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 16),
+                            Text(
+                              'No items in this category',
+                              style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s14,
+                                  0.21,
+                                  ColorManager.textColor.withOpacity(0.7)),
+                            ),
+                          ],
+                        ),
+                      )
+                    : GridView.builder(
+                        padding: EdgeInsets.all(isCompact ? 8 : 12),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          mainAxisSpacing: isCompact ? 8 : 12,
+                          crossAxisSpacing: isCompact ? 8 : 12,
+                          childAspectRatio: childAspectRatio,
+                        ),
+                        itemCount: items.length,
+                        itemBuilder: (_, idx) {
+                          final item = items[idx];
+                          return _buildMenuItem(item, isCompact, context);
+                        },
                       ),
-                    )
-                  : GridView.builder(
-                      padding: EdgeInsets.all(isCompact ? 8 : 12),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        mainAxisSpacing: isCompact ? 8 : 12,
-                        crossAxisSpacing: isCompact ? 8 : 12,
-                        childAspectRatio: childAspectRatio,
-                      ),
-                      itemCount: items.length,
-                      itemBuilder: (_, idx) {
-                        final item = items[idx];
-                        return _buildMenuItem(item, isCompact, context);
-                      },
-                    ),
               ),
             ],
           ),
@@ -894,170 +932,168 @@ class _MenuPanel extends StatelessWidget {
     );
   }
 
-Widget _buildMenuItem(MenuItemModel item, bool compact, BuildContext context) {
-  return Material(
-    color: Colors.transparent,
-    child: InkWell(
-      onTap: item.isAvailable
-          ? () {
-              if (item.modifierGroups.isNotEmpty) {
-                showDialog(
-                  context: context,
-                  builder: (context) => ModifierSelectionModal(
-                    menuItem: item,
-                    onModifiersSelected: (selectedModifiers, notes) {
-                      onItemAdd(item, 1, selectedModifiers, notes);
-                    },
-                  ),
-                );
-              } else {
-                onItemAdd(item, 1, {}, null);
+  Widget _buildMenuItem(
+      MenuItemModel item, bool compact, BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: item.isAvailable
+            ? () {
+                if (item.modifierGroups.isNotEmpty) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => ModifierSelectionModal(
+                      menuItem: item,
+                      onModifiersSelected: (selectedModifiers, notes) {
+                        onItemAdd(item, 1, selectedModifiers, notes);
+                      },
+                    ),
+                  );
+                } else {
+                  onItemAdd(item, 1, {}, null);
+                }
               }
-            }
-          : null,
-      borderRadius: BorderRadius.circular(8),
-      child: Align(
-        alignment: Alignment.topCenter,
-        heightFactor: 1.0,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: item.isAvailable ? Colors.white : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.grey.shade200,
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+            : null,
+        borderRadius: BorderRadius.circular(8),
+        child: Align(
+          alignment: Alignment.topCenter,
+          heightFactor: 1.0,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: item.isAvailable ? Colors.white : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.grey.shade200,
+                width: 1,
               ),
-            ],
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(compact ? 8.0 : 12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min, // Shrink to fit content
-              children: [
-                // Header with name and price
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        item.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: buildCustomStyle(
-                          FontWeightManager.bold,
-                          compact ? FontSize.s10 : FontSize.s12,
-                          0.21,
-                          item.isAvailable
-                              ? const Color(0xFF1E293B)
-                              : const Color(0xFF64748B),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: compact ? 4 : 6,
-                        vertical: compact ? 2 : 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF059669).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '₹${item.price.toStringAsFixed(0)}',
-                        style: buildCustomStyle(
-                          FontWeightManager.bold,
-                          compact ? FontSize.s9 : FontSize.s11,
-                          0.23,
-                          item.isAvailable
-                              ? const Color(0xFF059669)
-                              : const Color(0xFF059669).withOpacity(0.5),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: compact ? 4 : 6),
-                // Description
-                Text(
-                  item.description,
-                  maxLines: compact ? 1 : 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: buildCustomStyle(
-                    FontWeightManager.regular,
-                    compact ? FontSize.s8 : FontSize.s10,
-                    0.21,
-                    const Color(0xFF64748B),
-                  ),
-                ),
-                SizedBox(height: compact ? 4 : 6),
-                // Tags
-                Row(
-                  children: [
-                    Expanded(
-                      child: Wrap(
-                        spacing: compact ? 3 : 4,
-                        runSpacing: 2,
-                        children: [
-                          if (item.isVegetarian)
-                            _buildCompactTag('VEG', const Color(0xFF059669), compact),
-                          if (!item.isVegetarian)
-                            _buildCompactTag('NON-VEG', const Color(0xFFDC2626), compact),
-                          if (!item.isAvailable)
-                            _buildCompactTag('OUT', const Color(0xFF6B7280), compact),
-                        ],
-                      ),
-                    ),
-                    if (item.isAvailable)
-                      Container(
-                        padding: EdgeInsets.all(compact ? 2 : 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2563EB).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Icon(
-                          Icons.add,
-                          color: const Color(0xFF2563EB),
-                          size: compact ? 12 : 14,
-                        ),
-                      ),
-                  ],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(compact ? 8.0 : 12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, // Shrink to fit content
+                children: [
+                  // Header with name and price
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: buildCustomStyle(
+                            FontWeightManager.bold,
+                            compact ? FontSize.s10 : FontSize.s12,
+                            0.21,
+                            item.isAvailable
+                                ? const Color(0xFF1E293B)
+                                : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: compact ? 4 : 6,
+                          vertical: compact ? 2 : 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '₹${item.price.toStringAsFixed(0)}',
+                          style: buildCustomStyle(
+                            FontWeightManager.bold,
+                            compact ? FontSize.s9 : FontSize.s11,
+                            0.23,
+                            item.isAvailable
+                                ? const Color(0xFF059669)
+                                : const Color(0xFF059669).withOpacity(0.5),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: compact ? 4 : 6),
+                  // Description
+                  Text(
+                    item.description,
+                    maxLines: compact ? 1 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      compact ? FontSize.s8 : FontSize.s10,
+                      0.21,
+                      const Color(0xFF64748B),
+                    ),
+                  ),
+                  SizedBox(height: compact ? 4 : 6),
+                  // Tags
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Wrap(
+                          spacing: compact ? 3 : 4,
+                          runSpacing: 2,
+                          children: [
+                            if (item.isVegetarian)
+                              _buildCompactTag(
+                                  'VEG', const Color(0xFF059669), compact),
+                            if (!item.isVegetarian)
+                              _buildCompactTag(
+                                  'NON-VEG', const Color(0xFFDC2626), compact),
+                            if (!item.isAvailable)
+                              _buildCompactTag(
+                                  'OUT', const Color(0xFF6B7280), compact),
+                          ],
+                        ),
+                      ),
+                      if (item.isAvailable)
+                        Container(
+                          padding: EdgeInsets.all(compact ? 2 : 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2563EB).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Icon(
+                            Icons.add,
+                            color: const Color(0xFF2563EB),
+                            size: compact ? 12 : 14,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildTag(String text, Color color, bool compact) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 4 : 6, 
-        vertical: compact ? 1 : 2
-      ),
+          horizontal: compact ? 4 : 6, vertical: compact ? 1 : 2),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         text,
-        style: buildCustomStyle(
-          FontWeightManager.medium, 
-          compact ? FontSize.s6 : FontSize.s8, 
-          0.14, 
-          color
-        ),
+        style: buildCustomStyle(FontWeightManager.medium,
+            compact ? FontSize.s6 : FontSize.s8, 0.14, color),
       ),
     );
   }
@@ -1065,9 +1101,7 @@ Widget _buildMenuItem(MenuItemModel item, bool compact, BuildContext context) {
   Widget _buildModernTag(String text, Color color, bool compact) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 6 : 8, 
-        vertical: compact ? 2 : 3
-      ),
+          horizontal: compact ? 6 : 8, vertical: compact ? 2 : 3),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -1090,12 +1124,8 @@ Widget _buildMenuItem(MenuItemModel item, bool compact, BuildContext context) {
           const SizedBox(width: 4),
           Text(
             text,
-            style: buildCustomStyle(
-              FontWeightManager.semiBold, 
-              compact ? FontSize.s8 : FontSize.s9, 
-              0.14, 
-              color
-            ),
+            style: buildCustomStyle(FontWeightManager.semiBold,
+                compact ? FontSize.s8 : FontSize.s9, 0.14, color),
           ),
         ],
       ),
@@ -1105,21 +1135,15 @@ Widget _buildMenuItem(MenuItemModel item, bool compact, BuildContext context) {
   Widget _buildCompactTag(String text, Color color, bool compact) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 3 : 4, 
-        vertical: compact ? 1 : 2
-      ),
+          horizontal: compact ? 3 : 4, vertical: compact ? 1 : 2),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         text,
-        style: buildCustomStyle(
-          FontWeightManager.semiBold, 
-          compact ? FontSize.s6 : FontSize.s8, 
-          0.14, 
-          color
-        ),
+        style: buildCustomStyle(FontWeightManager.semiBold,
+            compact ? FontSize.s6 : FontSize.s8, 0.14, color),
       ),
     );
   }
@@ -1132,7 +1156,7 @@ class _OrderPanel extends StatelessWidget {
   final Size screenSize;
 
   const _OrderPanel({
-    required this.tableId, 
+    required this.tableId,
     required this.onSubmitSuccess,
     this.isCompact = false,
     required this.screenSize,
@@ -1175,34 +1199,22 @@ class _OrderPanel extends StatelessWidget {
                 'Select a table to start order',
                 textAlign: TextAlign.center,
                 style: buildCustomStyle(
-                  FontWeightManager.semiBold, 
-                  isCompact ? FontSize.s14 : FontSize.s16, 
-                  0.21, 
-                  const Color(0xFF64748B)
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Choose from the tables panel to begin taking orders',
-                textAlign: TextAlign.center,
-                style: buildCustomStyle(
-                  FontWeightManager.regular, 
-                  isCompact ? FontSize.s11 : FontSize.s12, 
-                  0.21, 
-                  const Color(0xFF94A3B8)
-                ),
+                    FontWeightManager.semiBold,
+                    isCompact ? FontSize.s14 : FontSize.s16,
+                    0.21,
+                    const Color(0xFF64748B)),
               ),
             ],
           ),
         ),
       );
     }
-    
+
     return Consumer<OrderProvider>(
       builder: (context, order, _) {
         final items = order.getOrderForTable(tableId!);
         final total = order.getOrderTotal(tableId!);
-        
+
         return Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -1259,26 +1271,25 @@ class _OrderPanel extends StatelessWidget {
                           Text(
                             'Order',
                             style: buildCustomStyle(
-                              FontWeightManager.bold, 
-                              isCompact ? FontSize.s16 : FontSize.s18, 
-                              0.30, 
-                              const Color(0xFF1E293B)
-                            ),
+                                FontWeightManager.bold,
+                                isCompact ? FontSize.s16 : FontSize.s18,
+                                0.30,
+                                const Color(0xFF1E293B)),
                           ),
                           Text(
                             'Table $tableId',
                             style: buildCustomStyle(
-                              FontWeightManager.medium, 
-                              isCompact ? FontSize.s12 : FontSize.s13, 
-                              0.21, 
-                              const Color(0xFF64748B)
-                            ),
+                                FontWeightManager.medium,
+                                isCompact ? FontSize.s12 : FontSize.s13,
+                                0.21,
+                                const Color(0xFF64748B)),
                           ),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: const Color(0xFF059669).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
@@ -1286,11 +1297,10 @@ class _OrderPanel extends StatelessWidget {
                       child: Text(
                         '₹${total.toStringAsFixed(0)}',
                         style: buildCustomStyle(
-                          FontWeightManager.bold, 
-                          isCompact ? FontSize.s14 : FontSize.s16, 
-                          0.23, 
-                          const Color(0xFF059669)
-                        ),
+                            FontWeightManager.bold,
+                            isCompact ? FontSize.s14 : FontSize.s16,
+                            0.23,
+                            const Color(0xFF059669)),
                       ),
                     ),
                   ],
@@ -1319,21 +1329,19 @@ class _OrderPanel extends StatelessWidget {
                             Text(
                               'No items in order',
                               style: buildCustomStyle(
-                                FontWeightManager.semiBold, 
-                                isCompact ? FontSize.s14 : FontSize.s16, 
-                                0.21, 
-                                const Color(0xFF64748B)
-                              ),
+                                  FontWeightManager.semiBold,
+                                  isCompact ? FontSize.s14 : FontSize.s16,
+                                  0.21,
+                                  const Color(0xFF64748B)),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               'Add items from the menu to get started',
                               style: buildCustomStyle(
-                                FontWeightManager.regular, 
-                                isCompact ? FontSize.s11 : FontSize.s12, 
-                                0.21, 
-                                const Color(0xFF94A3B8)
-                              ),
+                                  FontWeightManager.regular,
+                                  isCompact ? FontSize.s11 : FontSize.s12,
+                                  0.21,
+                                  const Color(0xFF94A3B8)),
                             ),
                           ],
                         ),
@@ -1372,7 +1380,9 @@ class _OrderPanel extends StatelessWidget {
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: items.isEmpty ? null : () => order.clearOrder(tableId!),
+                            onTap: items.isEmpty
+                                ? null
+                                : () => order.clearOrder(tableId!),
                             borderRadius: BorderRadius.circular(12),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
@@ -1389,11 +1399,12 @@ class _OrderPanel extends StatelessWidget {
                                 child: Text(
                                   'Clear',
                                   style: buildCustomStyle(
-                                    FontWeightManager.semiBold, 
-                                    isCompact ? FontSize.s13 : FontSize.s14, 
-                                    0.21, 
-                                    items.isEmpty ? const Color(0xFF94A3B8) : const Color(0xFFDC2626)
-                                  ),
+                                      FontWeightManager.semiBold,
+                                      isCompact ? FontSize.s13 : FontSize.s14,
+                                      0.21,
+                                      items.isEmpty
+                                          ? const Color(0xFF94A3B8)
+                                          : const Color(0xFFDC2626)),
                                 ),
                               ),
                             ),
@@ -1409,29 +1420,37 @@ class _OrderPanel extends StatelessWidget {
                             onTap: items.isEmpty || order.isSubmitting
                                 ? null
                                 : () async {
-                                    final id = await order.submitOrder(tableId!);
+                                    final id =
+                                        await order.submitOrder(tableId!);
                                     if (id != null) {
                                       onSubmitSuccess(id);
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
                                         SnackBar(
                                           content: Text('Order submitted: $id'),
-                                          backgroundColor: const Color(0xFF059669),
+                                          backgroundColor:
+                                              const Color(0xFF059669),
                                           duration: const Duration(seconds: 2),
                                           behavior: SnackBarBehavior.floating,
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                           ),
                                         ),
                                       );
                                     } else if (order.error != null) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
                                         SnackBar(
-                                          content: Text('Failed: ${order.error}'),
-                                          backgroundColor: const Color(0xFFDC2626),
+                                          content:
+                                              Text('Failed: ${order.error}'),
+                                          backgroundColor:
+                                              const Color(0xFFDC2626),
                                           duration: const Duration(seconds: 3),
                                           behavior: SnackBarBehavior.floating,
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                           ),
                                         ),
                                       );
@@ -1442,48 +1461,56 @@ class _OrderPanel extends StatelessWidget {
                               duration: const Duration(milliseconds: 200),
                               height: isCompact ? 44 : 48,
                               decoration: BoxDecoration(
-                                color: items.isEmpty || order.isSubmitting 
-                                  ? const Color(0xFF94A3B8) 
-                                  : const Color(0xFF059669),
+                                color: items.isEmpty || order.isSubmitting
+                                    ? const Color(0xFF94A3B8)
+                                    : const Color(0xFF059669),
                                 borderRadius: BorderRadius.circular(12),
-                                boxShadow: items.isNotEmpty && !order.isSubmitting ? [
-                                  BoxShadow(
-                                    color: const Color(0xFF059669).withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ] : [],
+                                boxShadow:
+                                    items.isNotEmpty && !order.isSubmitting
+                                        ? [
+                                            BoxShadow(
+                                              color: const Color(0xFF059669)
+                                                  .withOpacity(0.3),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ]
+                                        : [],
                               ),
                               child: Center(
                                 child: order.isSubmitting
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.send,
-                                          color: Colors.white,
-                                          size: isCompact ? 16 : 18,
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                  Colors.white),
+                                          strokeWidth: 2,
                                         ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          'Send to Kitchen',
-                                          style: buildCustomStyle(
-                                            FontWeightManager.semiBold, 
-                                            isCompact ? FontSize.s13 : FontSize.s14, 
-                                            0.21, 
-                                            Colors.white
+                                      )
+                                    : Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.send,
+                                            color: Colors.white,
+                                            size: isCompact ? 16 : 18,
                                           ),
-                                        ),
-                                      ],
-                                    ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Send to Kitchen',
+                                            style: buildCustomStyle(
+                                                FontWeightManager.semiBold,
+                                                isCompact
+                                                    ? FontSize.s13
+                                                    : FontSize.s14,
+                                                0.21,
+                                                Colors.white),
+                                          ),
+                                        ],
+                                      ),
                               ),
                             ),
                           ),
@@ -1500,7 +1527,8 @@ class _OrderPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildOrderItem(dynamic orderItem, int index, OrderProvider order, bool compact) {
+  Widget _buildOrderItem(
+      dynamic orderItem, int index, OrderProvider order, bool compact) {
     return Container(
       padding: EdgeInsets.all(compact ? 12 : 16),
       decoration: BoxDecoration(
@@ -1522,11 +1550,10 @@ class _OrderPanel extends StatelessWidget {
                 child: Text(
                   orderItem.item.name,
                   style: buildCustomStyle(
-                    FontWeightManager.bold, 
-                    compact ? FontSize.s13 : FontSize.s15, 
-                    0.21, 
-                    const Color(0xFF1E293B)
-                  ),
+                      FontWeightManager.bold,
+                      compact ? FontSize.s13 : FontSize.s15,
+                      0.21,
+                      const Color(0xFF1E293B)),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1541,16 +1568,15 @@ class _OrderPanel extends StatelessWidget {
                 child: Text(
                   '₹${orderItem.totalPrice.toStringAsFixed(0)}',
                   style: buildCustomStyle(
-                    FontWeightManager.bold, 
-                    compact ? FontSize.s12 : FontSize.s14, 
-                    0.21, 
-                    const Color(0xFF059669)
-                  ),
+                      FontWeightManager.bold,
+                      compact ? FontSize.s12 : FontSize.s14,
+                      0.21,
+                      const Color(0xFF059669)),
                 ),
               ),
             ],
           ),
-          
+
           // Modifiers
           if (orderItem.selectedModifiers.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -1566,20 +1592,20 @@ class _OrderPanel extends StatelessWidget {
               ),
               child: Text(
                 orderItem.selectedModifiers.entries
-                    .map((e) => '${e.key.toUpperCase()}: ${e.value.map((o) => o.name).join(', ')}')
+                    .map((e) =>
+                        '${e.key.toUpperCase()}: ${e.value.map((o) => o.name).join(', ')}')
                     .join(' | '),
                 style: buildCustomStyle(
-                  FontWeightManager.medium, 
-                  compact ? FontSize.s10 : FontSize.s11, 
-                  0.21, 
-                  const Color(0xFF2563EB)
-                ),
+                    FontWeightManager.medium,
+                    compact ? FontSize.s10 : FontSize.s11,
+                    0.21,
+                    const Color(0xFF2563EB)),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
-          
+
           // Notes
           if (orderItem.notes != null && orderItem.notes!.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -1605,11 +1631,10 @@ class _OrderPanel extends StatelessWidget {
                     child: Text(
                       orderItem.notes!,
                       style: buildCustomStyle(
-                        FontWeightManager.medium, 
-                        compact ? FontSize.s10 : FontSize.s11, 
-                        0.21, 
-                        const Color(0xFFDC2626)
-                      ),
+                          FontWeightManager.medium,
+                          compact ? FontSize.s10 : FontSize.s11,
+                          0.21,
+                          const Color(0xFFDC2626)),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1618,9 +1643,9 @@ class _OrderPanel extends StatelessWidget {
               ),
             ),
           ],
-          
+
           const SizedBox(height: 12),
-          
+
           // Quantity controls with modern styling
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1642,7 +1667,11 @@ class _OrderPanel extends StatelessWidget {
                       child: InkWell(
                         onTap: () {
                           if (orderItem.quantity > 1) {
-                            order.updateItem(tableId!, index, orderItem.copyWith(quantity: orderItem.quantity - 1));
+                            order.updateItem(
+                                tableId!,
+                                index,
+                                orderItem.copyWith(
+                                    quantity: orderItem.quantity - 1));
                           } else {
                             order.removeItem(tableId!, index);
                           }
@@ -1664,18 +1693,21 @@ class _OrderPanel extends StatelessWidget {
                       child: Text(
                         orderItem.quantity.toString(),
                         style: buildCustomStyle(
-                          FontWeightManager.bold, 
-                          compact ? FontSize.s14 : FontSize.s16, 
-                          0.21, 
-                          const Color(0xFF1E293B)
-                        ),
+                            FontWeightManager.bold,
+                            compact ? FontSize.s14 : FontSize.s16,
+                            0.21,
+                            const Color(0xFF1E293B)),
                       ),
                     ),
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: () {
-                          order.updateItem(tableId!, index, orderItem.copyWith(quantity: orderItem.quantity + 1));
+                          order.updateItem(
+                              tableId!,
+                              index,
+                              orderItem.copyWith(
+                                  quantity: orderItem.quantity + 1));
                         },
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
