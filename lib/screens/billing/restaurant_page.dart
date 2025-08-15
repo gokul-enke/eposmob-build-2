@@ -235,20 +235,45 @@ class _RestaurantPageState extends State<RestaurantPage> {
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
       final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
 
-      // Determine the cartId to use for API calls
-      int? targetCartId;
-      bool isEditingExistingOrder = _selectedOrderFromOrderPanel != null;
-      
+      // Only call API when editing an existing saved order
+      final bool isEditingExistingOrder = _selectedOrderFromOrderPanel != null;
+
       if (isEditingExistingOrder) {
-        // If a saved order is open, use its cart_id
-        targetCartId = int.tryParse((_selectedOrderFromOrderPanel['cart']
-                        ?['id'] ??
-                    _selectedOrderFromOrderPanel['cart_id'])
+        // Use the cart_id from the selected saved order
+        int? targetCartId = int.tryParse((
+              _selectedOrderFromOrderPanel['cart']?['id'] ??
+              _selectedOrderFromOrderPanel['cart_id']
+            )
                 ?.toString() ??
             '');
         debugPrint('🔄 Editing existing order - Using cart_id from selected order: $targetCartId');
+
+        debugPrint('➡️ Calling CartProvider.addToCartAPI');
+        final addResponse = await cartProvider.addToCartAPI(
+          customerId: authModel.userId ?? 1,
+          productId: product.productId!,
+          quantity: quantity,
+          accessToken: authModel.token ?? '',
+          unitPrice: product.price?.price?.toString(),
+          cartId: targetCartId,
+        );
+        debugPrint('✅ addToCartAPI Response: $addResponse');
+
+        if (mounted) {
+          showScaffold(
+            context: context,
+            message: 'Added ${product.productName} to existing order',
+          );
+
+          // Wait for server update then refresh the selected order and list
+          await Future.delayed(const Duration(milliseconds: 1000));
+          setState(() {
+            _refreshCounter = (_refreshCounter ?? 0) + 1;
+          });
+          _orderPanelKey.currentState?.refreshSavedOrdersKeepingSelection();
+        }
       } else {
-        // If no saved order is open, add to local cart first (new order flow)
+        // New order: strictly local cart only (no API here)
         debugPrint('🛒 Adding product to local cart via LocalProductProvider (new order)');
         localProductProvider.addToCart(
           product: product,
@@ -256,57 +281,15 @@ class _RestaurantPageState extends State<RestaurantPage> {
           price: product.price?.price != null ? double.tryParse(product.price!.price!) : null,
           mrp: product.mrp != null ? double.tryParse(product.mrp!) : null,
         );
-      }
 
-      // Check if this is a new cart (no existing cart items) - only relevant for new orders
-      final isNewCart = !isEditingExistingOrder && (cartProvider.cartData.isEmpty ||
-          cartProvider.cartData.first.cartItems?.isEmpty == true);
-
-      // Use cart API directly
-      debugPrint(
-          '📦 addToCartAPI Request Body: {customerId: ${authModel.userId ?? 1}, productId: ${product.productId!}, quantity: $quantity, unitPrice: ${product.price?.price?.toString()}, cartId: $targetCartId}');
-      debugPrint('➡️ Calling CartProvider.addToCartAPI');
-      final addResponse = await cartProvider.addToCartAPI(
-        customerId: authModel.userId ?? 1,
-        productId: product.productId!,
-        quantity: quantity,
-        accessToken: authModel.token ?? '',
-        unitPrice: product.price?.price?.toString(),
-        cartId: targetCartId,
-      );
-      debugPrint('✅ addToCartAPI Response: $addResponse');
-
-      // If this is the first item in a new cart, automatically create an order with status "new"
-      if (isNewCart && !isEditingExistingOrder) {
-        debugPrint(
-            '🔄 First item added to new cart, creating initial order...');
-        // Wait a bit for cart data to be updated
-        await Future.delayed(const Duration(milliseconds: 500));
-        await _createInitialOrder();
-      }
-
-      // Show success message
-      if (mounted) {
-        final messageContext = isEditingExistingOrder ? 'existing order' : 'Table $_activeTableId';
-        showScaffold(
-          context: context,
-          message: 'Added ${product.productName} to $messageContext',
-        );
-
-        // If a saved order was active, trigger a refresh
-        if (isEditingExistingOrder) {
-          // Wait a bit for the cart to be updated on the server
-          await Future.delayed(const Duration(milliseconds: 1000));
-
-          // Use a more stable refresh mechanism
-          setState(() {
-            // Just increment a simple counter instead of creating new objects
-            _refreshCounter = (_refreshCounter ?? 0) + 1;
-          });
-          
-          // Also refresh the saved orders list to show updated totals (keeping current selection)
-          debugPrint('🔄 Refreshing saved orders after adding item to existing order');
-          _orderPanelKey.currentState?.refreshSavedOrdersKeepingSelection();
+        if (mounted) {
+          showScaffold(
+            context: context,
+            message: 'Added ${product.productName} to Table $_activeTableId',
+          );
+          // Ensure the OrderPanel shows Current Order immediately
+          setState(() {});
+          _orderPanelKey.currentState?.showCurrentOrderTab();
         }
       }
     } catch (e) {
@@ -314,80 +297,6 @@ class _RestaurantPageState extends State<RestaurantPage> {
         context: context,
         message: 'Failed to add item: ${e.toString()}',
       );
-    }
-  }
-
-  Future<void> _createInitialOrder() async {
-    try {
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      final cartProvider = Provider.of<CartProvider>(context, listen: false);
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
-
-      // Get cart data from local provider (same as billing page)
-      final cartItems = localProductProvider.getCartItems();
-      debugPrint('🔍 Cart data from local provider: ${cartItems.length} items');
-
-      if (cartItems.isEmpty) {
-        debugPrint('❌ No cart items found to create order from');
-        return; // No cart items to create order from
-      }
-
-      // Convert local cart items to API format (same as billing page)
-      List<Map<String, dynamic>> items = [];
-      for (var item in cartItems) {
-        items.add({
-          'product_id': item.product.productId,
-          'quantity': item.quantity,
-          'price': item.price?.toString() ?? '0',
-          'mrp': item.mrp?.toString() ?? '0',
-          'stock_id': item.selectedStock?.id, // Include stock_id if available
-        });
-      }
-
-      final total = localProductProvider.cartTotal;
-
-      // Create order with status "new" and table association
-      debugPrint(
-          '🔄 Creating order with ${items.length} items for Table $_activeTableId');
-      debugPrint('➡️ Calling CartProvider.addToOrderAPI');
-      final response = await cartProvider.addToOrderAPI(
-        items: items,
-        cartIds: 0, // Use 0 for new cart since we're creating a new order
-        accessToken: authModel.token ?? "",
-        transactionId: "",
-        totalPrice: total.toStringAsFixed(2),
-        customerId: authModel.userId ?? 1,
-        customerPhone: null,
-        paymentMethod: null,
-        paidAmount: null,
-        paymentMethods: [],
-        paidMethods: [],
-        balanceAmount: "0",
-        couponId: null,
-        comment: "Order for Table $_activeTableId", // Table context
-        deliveryMethodId: null,
-        carNumber: null,
-        status: "new", // Status for new restaurant orders
-        deliveryDate: null,
-        deliveryTime: null,
-        tableId: _activeTableId, // 🔧 KEY: Table association
-      );
-
-      debugPrint(
-          '✅ Initial order created with status "new" for Table $_activeTableId');
-      debugPrint('🔍 Order response: $response');
-
-      // Refresh saved orders to show the new order
-      if (mounted) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        // Trigger a refresh of saved orders in the order panel
-        debugPrint('🔄 Refreshing saved orders after creating initial order');
-        _orderPanelKey.currentState?.refreshSavedOrders();
-        setState(() {});
-      }
-    } catch (e) {
-      debugPrint('❌ Failed to create initial order: ${e.toString()}');
-      // Don't show error to user as this is background operation
     }
   }
 
@@ -2555,7 +2464,6 @@ class _OrderPanelState extends State<_OrderPanel> {
     );
   }
 
-  // Cart API methods for saved orders
   Future<void> _updateCartItemQuantity(
       dynamic cartItem, double newQuantity) async {
     final currentQuantity =
@@ -3500,5 +3408,15 @@ class _OrderPanelState extends State<_OrderPanel> {
         ],
       ),
     );
+  }
+
+  // Public method to force switch to Current Order tab
+  void showCurrentOrderTab() {
+    setState(() {
+      _selectedOrder = null;
+      _isLoadingOrders = false;
+      _isLoadingOrderDetails = false;
+      _error = null;
+    });
   }
 }
