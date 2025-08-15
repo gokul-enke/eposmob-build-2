@@ -353,7 +353,7 @@ class _SalesScreenState extends State<SalesScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
-          icon: Icon(Icons.visibility,
+          icon: const Icon(Icons.visibility,
               size: 18, color: ColorManager.kPrimaryColor),
           onPressed: () {
             Provider.of<SalesProvider>(context, listen: false)
@@ -361,21 +361,21 @@ class _SalesScreenState extends State<SalesScreen> {
             Get.find<SideBarController>().index.value = 11;
           },
         ),
-        if (order.status == "new")
-          IconButton(
-            icon: Icon(Icons.edit, size: 18, color: Colors.orange),
-            onPressed: () {
-              Provider.of<CartProvider>(context, listen: false)
-                  .setCartIDForOrder(int.parse(order.cartId.toString()));
-              Provider.of<SalesProvider>(context, listen: false)
-                  .setOrderNumber(order.orderNumber.toString());
-              Provider.of<SalesProvider>(context, listen: false)
-                  .setOrderId(order.id.toString());
-              Get.find<SideBarController>().index.value = 51;
-            },
-          ),
+        // if (order.status == "new")
+        //   IconButton(
+        //     icon: Icon(Icons.edit, size: 18, color: Colors.orange),
+        //     onPressed: () {
+        //       Provider.of<CartProvider>(context, listen: false)
+        //           .setCartIDForOrder(int.parse(order.cartId.toString()));
+        //       Provider.of<SalesProvider>(context, listen: false)
+        //           .setOrderNumber(order.orderNumber.toString());
+        //       Provider.of<SalesProvider>(context, listen: false)
+        //           .setOrderId(order.id.toString());
+        //       Get.find<SideBarController>().index.value = 51;
+        //     },
+        //   ),
         IconButton(
-          icon: Icon(Icons.print, size: 18, color: Colors.blue),
+          icon: const Icon(Icons.print, size: 18, color: Colors.blue),
           onPressed: () async {
             try {
               String ordersId = order.orderNumber.toString();
@@ -418,7 +418,7 @@ class _SalesScreenState extends State<SalesScreen> {
           },
         ),
         IconButton(
-          icon: Icon(Icons.share, size: 18, color: Colors.blue),
+          icon: const Icon(Icons.share, size: 18, color: Colors.blue),
           onPressed: () async {
             try {
               String? invoiceHash = order.invoiceHash; // Use the new invoiceHash field

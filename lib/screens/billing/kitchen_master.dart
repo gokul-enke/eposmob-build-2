@@ -155,24 +155,38 @@ class _KitchenMasterState extends State<KitchenMaster> {
   }
 
   Future<void> _fetchCartItemStatuses() async {
+    debugPrint('🚀 === FETCHING CART ITEM STATUSES ===');
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      
+      debugPrint('🔑 Auth Token: ${authModel.token?.substring(0, 20)}...');
+      debugPrint('🔄 Calling getCartItemStatuses API...');
+      
       final response = await cartProvider.getCartItemStatuses(
         accessToken: authModel.token ?? '',
       );
+
+      debugPrint('📥 API Response: $response');
 
       if ((response['status'] as String?)?.toLowerCase() == 'success') {
         final statusResponse = CartItemStatusResponse.fromJson(response);
         setState(() {
           _availableStatuses = statusResponse.data;
         });
-        debugPrint('✅ Fetched ${_availableStatuses.length} cart item statuses');
+        
+        debugPrint('✅ Fetched ${_availableStatuses.length} cart item statuses:');
+        for (var status in _availableStatuses) {
+          debugPrint('   📊 ID: ${status.id}, Value: "${status.value}", Description: "${status.description}"');
+        }
       } else {
         debugPrint('❌ Failed to fetch cart item statuses: ${response['message']}');
       }
     } catch (e) {
       debugPrint('❌ Exception fetching cart item statuses: $e');
+      debugPrint('❌ Stack trace: ${StackTrace.current}');
+    } finally {
+      debugPrint('🏁 === CART ITEM STATUSES FETCH COMPLETED ===');
     }
   }
 
@@ -190,11 +204,25 @@ class _KitchenMasterState extends State<KitchenMaster> {
       final String? notes = item['notes']?.toString();
       final int? cartItemId = _parseInt(item['id']);
       
+      final String? rawStatus = item['status']?.toString();
+      final ItemStatus mappedStatus = _mapItemStatus(rawStatus);
+      final String finalId = cartItemId != null ? '${cartItemId}_$name' : '${id}_$name';
+      
+      debugPrint('🔍 === CART ITEM MAPPING ===');
+      debugPrint('📦 Cart Item ID: $cartItemId');
+      debugPrint('🏷️ Item Name: $name');
+      debugPrint('📊 Raw Status: "$rawStatus"');
+      debugPrint('📊 Mapped Status: $mappedStatus');
+      debugPrint('🆔 Final ID: $finalId');
+      debugPrint('🔢 Quantity: $quantity');
+      debugPrint('💬 Notes: $notes');
+      debugPrint('========================');
+      
       return KitchenOrderItem(
-        id: cartItemId != null ? '${cartItemId}_$name' : '${id}_$name',
+        id: finalId,
         name: name,
         quantity: quantity,
-        status: _mapItemStatus(item['status']?.toString()),
+        status: mappedStatus,
         notes: notes,
         modifiers: _extractModifiers(item),
       );
@@ -214,13 +242,22 @@ class _KitchenMasterState extends State<KitchenMaster> {
 
   List<dynamic> _extractCartItems(dynamic order) {
     if (order == null) return [];
+    
+    // First try to get from cart.cart_items (nested structure)
     if (order['cart'] != null && order['cart']['cart_items'] != null) {
       return (order['cart']['cart_items'] as List<dynamic>);
     }
-    if (order['cart_items'] != null &&
-        order['cart_items']['cart_items'] != null) {
+    
+    // Then try cart_items.cart_items (alternative nested structure)
+    if (order['cart_items'] != null && order['cart_items']['cart_items'] != null) {
       return (order['cart_items']['cart_items'] as List<dynamic>);
     }
+    
+    // Finally try direct cart_items (flat structure)
+    if (order['cart_items'] != null && order['cart_items'] is List) {
+      return (order['cart_items'] as List<dynamic>);
+    }
+    
     return [];
   }
 
@@ -289,14 +326,16 @@ class _KitchenMasterState extends State<KitchenMaster> {
   }
 
   ItemStatus _mapItemStatus(String? status) {
-    switch ((status ?? '').toLowerCase()) {
-      case 'start':
-      case 'preparing':
+    if (status == null || status.isEmpty || status.toLowerCase() == 'null') {
+      return ItemStatus.pending;
+    }
+    
+    switch (status.toUpperCase()) {
+      case 'START':
         return ItemStatus.preparing;
-      case 'ready':
+      case 'READY':
         return ItemStatus.ready;
-      case 'served':
-      case 'completed':
+      case 'SERVED':
         return ItemStatus.served;
       default:
         return ItemStatus.pending;
@@ -509,11 +548,16 @@ class _KitchenMasterState extends State<KitchenMaster> {
   }
 
   Future<void> _updateCartItemStatusAPI(int cartItemId, int statusId) async {
+    debugPrint('🚀 === CART ITEM STATUS UPDATE STARTED ===');
+    debugPrint('📦 Cart Item ID: $cartItemId');
+    debugPrint('📊 Status ID: $statusId');
+    
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
       
-      debugPrint('🔄 Updating cart item $cartItemId to status $statusId');
+      debugPrint('🔑 Auth Token: ${authModel.token?.substring(0, 20)}...');
+      debugPrint('🔄 Calling updateCartItemStatus API...');
       
       final response = await cartProvider.updateCartItemStatus(
         cartItemId: cartItemId,
@@ -521,10 +565,18 @@ class _KitchenMasterState extends State<KitchenMaster> {
         accessToken: authModel.token ?? '',
       );
 
+      debugPrint('📥 API Response: $response');
+      debugPrint('📊 Response Status: ${response['status']}');
+      debugPrint('💬 Response Message: ${response['message']}');
+
       if ((response['status'] as String?)?.toLowerCase() == 'success') {
         debugPrint('✅ Cart item status updated successfully');
+        debugPrint('🔄 Refreshing order details...');
+        
         // Refresh the order details
         await _fetchAllSavedOrders();
+        
+        debugPrint('✅ Order details refreshed');
         
         // Show success message
         if (mounted) {
@@ -537,7 +589,8 @@ class _KitchenMasterState extends State<KitchenMaster> {
           );
         }
       } else {
-        debugPrint('❌ Failed to update cart item status: ${response['message']}');
+        debugPrint('❌ Failed to update cart item status');
+        debugPrint('❌ Error: ${response['message']}');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -550,6 +603,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
       }
     } catch (e) {
       debugPrint('❌ Exception updating cart item status: $e');
+      debugPrint('❌ Stack trace: ${StackTrace.current}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -559,6 +613,8 @@ class _KitchenMasterState extends State<KitchenMaster> {
           ),
         );
       }
+    } finally {
+      debugPrint('🏁 === CART ITEM STATUS UPDATE COMPLETED ===');
     }
   }
 }
@@ -1006,9 +1062,9 @@ class _OrderQueuePanel extends StatelessWidget {
   String _getItemStatusText(ItemStatus status) {
     switch (status) {
       case ItemStatus.pending:
-        return 'PENDING';
+        return 'NEW';
       case ItemStatus.preparing:
-        return 'COOKING';
+        return 'STARTED';
       case ItemStatus.ready:
         return 'READY';
       case ItemStatus.served:
@@ -1386,36 +1442,106 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
             ),
           ],
           const SizedBox(height: 12),
-          // Status control buttons from API
-          if (widget.availableStatuses.isNotEmpty) ...[
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: widget.availableStatuses.map((status) {
-                final isEnabled = _shouldEnableStatus(status.value, item.status);
-                final color = _getStatusButtonColor(status.value);
-                
-                return SizedBox(
-                  width: (MediaQuery.of(context).size.width - 100) / 3,
-                  child: _buildStatusButton(
-                    status.description,
-                    color,
-                    isEnabled,
-                    () {
-                      if (isEnabled) {
-                        // Extract cart item ID from the item ID (assuming format like "cartItemId_productName")
-                        final cartItemId = int.tryParse(item.id.split('_').first);
-                        if (cartItemId != null) {
-                          widget.onCartItemStatusChanged(cartItemId, status.id);
-                        } else {
-                          debugPrint('❌ Could not extract cart item ID from: ${item.id}');
-                        }
-                      }
-                    },
+          // Status control buttons from API or served indicator
+          if (item.status == ItemStatus.served) ...[
+            // Show served indicator instead of buttons
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF059669).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFF059669).withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.check_circle,
+                    color: Color(0xFF059669),
+                    size: 20,
                   ),
-                );
-              }).toList(),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Item Served',
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s14,
+                      0.21,
+                      const Color(0xFF059669),
+                    ),
+                  ),
+                ],
+              ),
             ),
+          ] else if (widget.availableStatuses.isNotEmpty) ...[
+            // Show only the next available action button
+            ...(() {
+              debugPrint('🎨 === RENDERING BUTTONS FOR ITEM ===');
+              debugPrint('📦 Item: ${item.name}');
+              debugPrint('📊 Current Status: ${item.status}');
+              debugPrint('🔢 Available Statuses Count: ${widget.availableStatuses.length}');
+              
+              final enabledStatuses = widget.availableStatuses.where((status) {
+                final isEnabled = _shouldEnableStatus(status.value, item.status);
+                debugPrint('   📊 Status "${status.value}" (${status.description}) enabled: $isEnabled');
+                return isEnabled;
+              }).toList();
+              
+              debugPrint('✅ Enabled Statuses Count: ${enabledStatuses.length}');
+              debugPrint('=====================================');
+              
+              return enabledStatuses;
+            })().map((status) {
+              final color = _getStatusButtonColor(status.value);
+              String buttonText = status.description;
+              
+              // Use more descriptive button text based on status
+              switch (status.value.toUpperCase()) {
+                case 'START':
+                  buttonText = 'Start Cooking';
+                  break;
+                case 'READY':
+                  buttonText = 'Mark Ready';
+                  break;
+                case 'SERVED':
+                  buttonText = 'Mark Served';
+                  break;
+              }
+              
+              return Container(
+                width: double.infinity,
+                child: _buildStatusButton(
+                  buttonText,
+                  color,
+                  true,
+                  () {
+                    debugPrint('🎯 === BUTTON CLICKED ===');
+                    debugPrint('🏷️ Button Text: $buttonText');
+                    debugPrint('📦 Item ID: ${item.id}');
+                    debugPrint('📊 Status Value: ${status.value}');
+                    debugPrint('🆔 Status ID: ${status.id}');
+                    debugPrint('🔍 Current Item Status: ${item.status}');
+                    
+                    // Extract cart item ID from the item ID (assuming format like "cartItemId_productName")
+                    final parts = item.id.split('_');
+                    debugPrint('🔧 ID Parts: $parts');
+                    
+                    final cartItemId = int.tryParse(parts.first);
+                    debugPrint('🔢 Parsed Cart Item ID: $cartItemId');
+                    
+                    if (cartItemId != null) {
+                      debugPrint('✅ Valid cart item ID found, calling API...');
+                      widget.onCartItemStatusChanged(cartItemId, status.id);
+                    } else {
+                      debugPrint('❌ Could not extract cart item ID from: ${item.id}');
+                      debugPrint('❌ First part was: "${parts.first}"');
+                    }
+                  },
+                ),
+              );
+            }).toList(),
           ] else ...[
             // Fallback to original buttons if API statuses not loaded
             Row(
@@ -1516,17 +1642,35 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
   }
 
   bool _shouldEnableStatus(String statusValue, ItemStatus currentStatus) {
-    // Enable status based on current item status and API status value
+    debugPrint('🔍 Checking if status "$statusValue" should be enabled for current status: $currentStatus');
+    
+    bool shouldEnable = false;
+    
+    // Enable only the next logical status based on current item status
     switch (statusValue.toUpperCase()) {
       case 'START':
-        return currentStatus == ItemStatus.pending;
+        // START button is enabled only when item is pending (null status)
+        shouldEnable = currentStatus == ItemStatus.pending;
+        debugPrint('   START: pending=${currentStatus == ItemStatus.pending} → $shouldEnable');
+        break;
       case 'READY':
-        return currentStatus == ItemStatus.preparing;
+        // READY button is enabled only when item is currently being prepared (START status)
+        shouldEnable = currentStatus == ItemStatus.preparing;
+        debugPrint('   READY: preparing=${currentStatus == ItemStatus.preparing} → $shouldEnable');
+        break;
       case 'SERVED':
-        return currentStatus == ItemStatus.ready;
+        // SERVED button is enabled only when item is ready
+        shouldEnable = currentStatus == ItemStatus.ready;
+        debugPrint('   SERVED: ready=${currentStatus == ItemStatus.ready} → $shouldEnable');
+        break;
       default:
-        return true; // Enable all unknown statuses
+        shouldEnable = false; // Disable unknown statuses
+        debugPrint('   UNKNOWN STATUS: $statusValue → $shouldEnable');
+        break;
     }
+    
+    debugPrint('🎯 Final decision: Status "$statusValue" enabled = $shouldEnable');
+    return shouldEnable;
   }
 
   Color _getStatusButtonColor(String statusValue) {
@@ -1539,6 +1683,19 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
         return const Color(0xFF6B7280);
       default:
         return const Color(0xFF64748B);
+    }
+  }
+
+  String _getNextActionText(ItemStatus currentStatus) {
+    switch (currentStatus) {
+      case ItemStatus.pending:
+        return 'Start Cooking';
+      case ItemStatus.preparing:
+        return 'Mark Ready';
+      case ItemStatus.ready:
+        return 'Mark Served';
+      case ItemStatus.served:
+        return 'Completed';
     }
   }
 }
