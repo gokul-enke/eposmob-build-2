@@ -136,15 +136,15 @@ class _KitchenMasterState extends State<KitchenMaster> {
       if ((response['status'] as String?)?.toLowerCase() == 'success') {
         final List<dynamic> orders =
             (response['orders'] as List<dynamic>?) ?? [];
-        
+
         debugPrint('📦 Found ${orders.length} orders');
-        
+
         final parsed =
             orders.map<KitchenOrder>(_mapSavedOrderToKitchenOrder).toList();
         setState(() {
           _orders = parsed;
         });
-        
+
         debugPrint('✅ Orders mapped and state updated');
       } else {
         setState(() {
@@ -171,10 +171,10 @@ class _KitchenMasterState extends State<KitchenMaster> {
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
-      
+
       debugPrint('🔑 Auth Token: ${authModel.token?.substring(0, 20)}...');
       debugPrint('🔄 Calling getCartItemStatuses API...');
-      
+
       final response = await cartProvider.getCartItemStatuses(
         accessToken: authModel.token ?? '',
       );
@@ -186,13 +186,16 @@ class _KitchenMasterState extends State<KitchenMaster> {
         setState(() {
           _availableStatuses = statusResponse.data;
         });
-        
-        debugPrint('✅ Fetched ${_availableStatuses.length} cart item statuses:');
+
+        debugPrint(
+            '✅ Fetched ${_availableStatuses.length} cart item statuses:');
         for (var status in _availableStatuses) {
-          debugPrint('   📊 ID: ${status.id}, Value: "${status.value}", Description: "${status.description}"');
+          debugPrint(
+              '   📊 ID: ${status.id}, Value: "${status.value}", Description: "${status.description}"');
         }
       } else {
-        debugPrint('❌ Failed to fetch cart item statuses: ${response['message']}');
+        debugPrint(
+            '❌ Failed to fetch cart item statuses: ${response['message']}');
       }
     } catch (e) {
       debugPrint('❌ Exception fetching cart item statuses: $e');
@@ -215,11 +218,12 @@ class _KitchenMasterState extends State<KitchenMaster> {
       final int quantity = _parseInt(item['quantity']) ?? 0;
       final String? notes = item['notes']?.toString();
       final int? cartItemId = _parseInt(item['id']);
-      
+
       final String? rawStatus = item['status']?.toString();
       final ItemStatus mappedStatus = _mapItemStatus(rawStatus);
-      final String finalId = cartItemId != null ? '${cartItemId}_$name' : '${id}_$name';
-      
+      final String finalId =
+          cartItemId != null ? '${cartItemId}_$name' : '${id}_$name';
+
       debugPrint('🔍 === CART ITEM MAPPING ===');
       debugPrint('📦 Cart Item ID: $cartItemId');
       debugPrint('🏷️ Item Name: $name');
@@ -229,7 +233,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
       debugPrint('🔢 Quantity: $quantity');
       debugPrint('💬 Notes: $notes');
       debugPrint('========================');
-      
+
       return KitchenOrderItem(
         id: finalId,
         name: name,
@@ -254,22 +258,23 @@ class _KitchenMasterState extends State<KitchenMaster> {
 
   List<dynamic> _extractCartItems(dynamic order) {
     if (order == null) return [];
-    
+
     // First try to get from cart.cart_items (nested structure)
     if (order['cart'] != null && order['cart']['cart_items'] != null) {
       return (order['cart']['cart_items'] as List<dynamic>);
     }
-    
+
     // Then try cart_items.cart_items (alternative nested structure)
-    if (order['cart_items'] != null && order['cart_items']['cart_items'] != null) {
+    if (order['cart_items'] != null &&
+        order['cart_items']['cart_items'] != null) {
       return (order['cart_items']['cart_items'] as List<dynamic>);
     }
-    
+
     // Finally try direct cart_items (flat structure)
     if (order['cart_items'] != null && order['cart_items'] is List) {
       return (order['cart_items'] as List<dynamic>);
     }
-    
+
     return [];
   }
 
@@ -339,12 +344,12 @@ class _KitchenMasterState extends State<KitchenMaster> {
 
   ItemStatus _mapItemStatus(String? status) {
     debugPrint('🔄 Mapping status: "$status"');
-    
+
     if (status == null || status.isEmpty || status.toLowerCase() == 'null') {
       debugPrint('   → ItemStatus.pending (null/empty)');
       return ItemStatus.pending;
     }
-    
+
     ItemStatus result;
     switch (status.toUpperCase()) {
       case 'START':
@@ -366,13 +371,17 @@ class _KitchenMasterState extends State<KitchenMaster> {
           debugPrint('   → Numeric status ID detected: $statusId');
           // Map based on the status IDs we know from the API
           // Based on your API response: {"id": 49,"value": "START","description": "Start"}
-          if (statusId == 49) { // START status ID - but this means it's already started!
+          if (statusId == 49) {
+            // START status ID - but this means it's already started!
             result = ItemStatus.preparing;
-            debugPrint('   → ItemStatus.preparing (ID 49 = START - already started)');
-          } else if (statusId == 50) { // READY status ID  
+            debugPrint(
+                '   → ItemStatus.preparing (ID 49 = START - already started)');
+          } else if (statusId == 50) {
+            // READY status ID
             result = ItemStatus.ready;
             debugPrint('   → ItemStatus.ready (ID 50 = READY)');
-          } else if (statusId == 51) { // SERVED status ID
+          } else if (statusId == 51) {
+            // SERVED status ID
             result = ItemStatus.served;
             debugPrint('   → ItemStatus.served (ID 51 = SERVED)');
           } else {
@@ -385,13 +394,13 @@ class _KitchenMasterState extends State<KitchenMaster> {
         }
         break;
     }
-    
+
     return result;
   }
 
   Map<String, List<String>> _extractModifiers(dynamic item) {
     Map<String, List<String>> modifiers = {};
-    
+
     try {
       // Check if item has modifiers or customizations
       if (item['modifiers'] != null) {
@@ -399,20 +408,24 @@ class _KitchenMasterState extends State<KitchenMaster> {
         if (mods is Map) {
           mods.forEach((key, value) {
             if (value is List) {
-              modifiers[key.toString()] = value.map((v) => v.toString()).toList();
+              modifiers[key.toString()] =
+                  value.map((v) => v.toString()).toList();
             } else {
               modifiers[key.toString()] = [value.toString()];
             }
           });
         }
       }
-      
+
       // Check for customizations in product details
-      if (item['product'] != null && item['product']['customizations'] != null) {
+      if (item['product'] != null &&
+          item['product']['customizations'] != null) {
         final customizations = item['product']['customizations'];
         if (customizations is List) {
           for (var custom in customizations) {
-            if (custom is Map && custom['name'] != null && custom['value'] != null) {
+            if (custom is Map &&
+                custom['name'] != null &&
+                custom['value'] != null) {
               final key = custom['name'].toString();
               final value = custom['value'].toString();
               if (modifiers.containsKey(key)) {
@@ -427,7 +440,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
     } catch (e) {
       debugPrint('Error extracting modifiers: $e');
     }
-    
+
     return modifiers;
   }
 
@@ -444,38 +457,9 @@ class _KitchenMasterState extends State<KitchenMaster> {
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : _errorMessage != null
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _errorMessage!,
-                          style: buildCustomStyle(
-                            FontWeightManager.medium,
-                            FontSize.s14,
-                            0.21,
-                            const Color(0xFFDC2626),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 12),
-                        CustomRoundButton(
-                          title: 'Retry',
-                          fct: () {
-                            _fetchAllSavedOrders();
-                            _fetchCartItemStatuses();
-                          },
-                          height: 40,
-                          width: 120,
-                          fontSize: 14,
-                        ),
-                      ],
-                    ),
-                  )
-                : isSmallScreen
-                    ? _buildMobileLayout(screenSize)
-                    : _buildDesktopLayout(screenSize, isLargeScreen),
+            : isSmallScreen
+                ? _buildMobileLayout(screenSize)
+                : _buildDesktopLayout(screenSize, isLargeScreen),
       ),
     );
   }
@@ -493,6 +477,11 @@ class _KitchenMasterState extends State<KitchenMaster> {
                 setState(() => _selectedFilter = filter),
             onOrderStatusChanged: _updateOrderStatus,
             screenSize: screenSize,
+            errorMessage: _errorMessage,
+            onRetry: () {
+              _fetchAllSavedOrders();
+              _fetchCartItemStatuses();
+            },
           ),
         ),
         // Order Details Panel
@@ -504,6 +493,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
             availableStatuses: _availableStatuses,
             onCartItemStatusChanged: _updateCartItemStatusAPI,
             screenSize: screenSize,
+            errorMessage: _errorMessage,
           ),
         ),
         // Kitchen Stats Panel
@@ -550,6 +540,11 @@ class _KitchenMasterState extends State<KitchenMaster> {
             screenSize: screenSize,
             availableStatuses: _availableStatuses,
             onCartItemStatusChanged: _updateCartItemStatusAPI,
+            errorMessage: _errorMessage,
+            onRetry: () {
+              _fetchAllSavedOrders();
+              _fetchCartItemStatuses();
+            },
           ),
         ),
       ],
@@ -557,7 +552,8 @@ class _KitchenMasterState extends State<KitchenMaster> {
   }
 
   List<KitchenOrder> _getFilteredOrders() {
-    final filtered = _orders.where((order) => order.status == _selectedFilter).toList();
+    final filtered =
+        _orders.where((order) => order.status == _selectedFilter).toList();
     filtered.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return filtered;
   }
@@ -598,14 +594,14 @@ class _KitchenMasterState extends State<KitchenMaster> {
     debugPrint('🚀 === CART ITEM STATUS UPDATE STARTED ===');
     debugPrint('📦 Cart Item ID: $cartItemId');
     debugPrint('📊 Status ID: $statusId');
-    
+
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
-      
+
       debugPrint('🔑 Auth Token: ${authModel.token?.substring(0, 20)}...');
       debugPrint('🔄 Calling updateCartItemStatus API...');
-      
+
       final response = await cartProvider.updateCartItemStatus(
         cartItemId: cartItemId,
         statusId: statusId,
@@ -618,29 +614,30 @@ class _KitchenMasterState extends State<KitchenMaster> {
 
       if ((response['status'] as String?)?.toLowerCase() == 'success') {
         debugPrint('✅ Cart item status updated successfully');
-        
+
         // Check if status actually changed
         final data = response['data'];
         final oldStatus = data?['old_status']?.toString();
         final newStatus = data?['new_status']?.toString();
         final statusValue = data?['status_value']?.toString();
-        
+
         debugPrint('📊 Status Change Details:');
         debugPrint('   Old Status ID: $oldStatus');
         debugPrint('   New Status ID: $newStatus');
         debugPrint('   Status Value: $statusValue');
-        
+
         if (oldStatus == newStatus) {
-          debugPrint('⚠️ WARNING: Status did not change! Item might already be in this status.');
+          debugPrint(
+              '⚠️ WARNING: Status did not change! Item might already be in this status.');
         }
-        
+
         debugPrint('🔄 Refreshing order details...');
-        
+
         // Refresh the order details
         await _fetchAllSavedOrders();
-        
+
         debugPrint('✅ Order details refreshed');
-        
+
         // Show success message using custom dialog
         if (mounted) {
           showScaffold(
@@ -682,6 +679,8 @@ class _OrderQueuePanel extends StatelessWidget {
   final Size screenSize;
   final List<CartItemStatus>? availableStatuses;
   final Function(int, int)? onCartItemStatusChanged;
+  final String? errorMessage;
+  final VoidCallback? onRetry;
 
   const _OrderQueuePanel({
     required this.orders,
@@ -692,6 +691,8 @@ class _OrderQueuePanel extends StatelessWidget {
     required this.screenSize,
     this.availableStatuses,
     this.onCartItemStatusChanged,
+    this.errorMessage,
+    this.onRetry,
   });
 
   @override
@@ -843,7 +844,7 @@ class _OrderQueuePanel extends StatelessWidget {
           ),
           // Orders list
           Expanded(
-            child: orders.isEmpty
+            child: errorMessage != null
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -851,49 +852,100 @@ class _OrderQueuePanel extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF64748B).withOpacity(0.1),
+                            color: const Color(0xFFDC2626).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Icon(
-                            Icons.check_circle_outline,
+                            Icons.error_outline,
                             size: isCompact ? 48 : 64,
-                            color: const Color(0xFF64748B),
+                            color: const Color(0xFFDC2626),
                           ),
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'No ${_getStatusText(selectedFilter).toLowerCase()} orders',
+                          "No Orders Found",
                           style: buildCustomStyle(
                               FontWeightManager.semiBold,
-                              isCompact ? FontSize.s14 : FontSize.s16,
+                              isCompact ? FontSize.s12 : FontSize.s14,
                               0.21,
-                              const Color(0xFF64748B)),
+                              const Color(0xFFDC2626)),
+                          textAlign: TextAlign.center,
                         ),
+                        if (onRetry != null) ...[
+                          const SizedBox(height: 16),
+                          CustomRoundButton(
+                            title: 'Retry',
+                            fct: onRetry!,
+                            height: 36,
+                            width: 100,
+                            fontSize: 12,
+                          ),
+                        ],
                       ],
                     ),
                   )
-                : MouseRegion(
-                    cursor: SystemMouseCursors.grab,
-                    child: ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(context).copyWith(
-                        dragDevices: {
-                          PointerDeviceKind.mouse,
-                          PointerDeviceKind.touch,
-                          PointerDeviceKind.stylus,
-                          PointerDeviceKind.trackpad,
-                        },
+                : orders.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF64748B).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Icon(
+                                Icons.restaurant_menu,
+                                size: isCompact ? 48 : 64,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              'No ${_getStatusText(selectedFilter).toLowerCase()} orders',
+                              style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  isCompact ? FontSize.s14 : FontSize.s16,
+                                  0.21,
+                                  const Color(0xFF64748B)),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Orders will appear here when they match this status',
+                              style: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  isCompact ? FontSize.s11 : FontSize.s12,
+                                  0.21,
+                                  const Color(0xFF94A3B8)),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      )
+                    : MouseRegion(
+                        cursor: SystemMouseCursors.grab,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(
+                            dragDevices: {
+                              PointerDeviceKind.mouse,
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.stylus,
+                              PointerDeviceKind.trackpad,
+                            },
+                          ),
+                          child: ListView.separated(
+                            padding: EdgeInsets.all(isCompact ? 12 : 16),
+                            itemCount: orders.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (_, index) {
+                              final order = orders[index];
+                              return _buildOrderCard(order, isCompact);
+                            },
+                          ),
+                        ),
                       ),
-                      child: ListView.separated(
-                        padding: EdgeInsets.all(isCompact ? 12 : 16),
-                        itemCount: orders.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (_, index) {
-                          final order = orders[index];
-                          return _buildOrderCard(order, isCompact);
-                        },
-                      ),
-                    ),
-                  ),
           ),
         ],
       ),
@@ -1133,6 +1185,7 @@ class _OrderDetailsPanel extends StatefulWidget {
   final List<CartItemStatus> availableStatuses;
   final Function(int, int) onCartItemStatusChanged;
   final Size screenSize;
+  final String? errorMessage;
 
   const _OrderDetailsPanel({
     required this.orders,
@@ -1140,6 +1193,7 @@ class _OrderDetailsPanel extends StatefulWidget {
     required this.availableStatuses,
     required this.onCartItemStatusChanged,
     required this.screenSize,
+    this.errorMessage,
   });
 
   @override
@@ -1232,7 +1286,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
           ),
           // Order details list
           Expanded(
-            child: activeOrders.isEmpty
+            child: widget.errorMessage != null
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1240,146 +1294,199 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF64748B).withOpacity(0.1),
+                            color: const Color(0xFFDC2626).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Icon(
-                            Icons.kitchen,
+                            Icons.error_outline,
                             size: 64,
-                            color: Color(0xFF64748B),
+                            color: Color(0xFFDC2626),
                           ),
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'No active orders',
+                          'No Orders Found',
                           style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s16, 0.21, const Color(0xFF64748B)),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Orders will appear here when they need preparation',
-                          style: buildCustomStyle(FontWeightManager.regular,
-                              FontSize.s12, 0.21, const Color(0xFF94A3B8)),
+                              FontSize.s16, 0.21, const Color(0xFFDC2626)),
                         ),
                       ],
                     ),
                   )
-                : MouseRegion(
-                    cursor: SystemMouseCursors.grab,
-                    child: ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(context).copyWith(
-                        dragDevices: {
-                          PointerDeviceKind.mouse,
-                          PointerDeviceKind.touch,
-                          PointerDeviceKind.stylus,
-                          PointerDeviceKind.trackpad,
-                        },
-                      ),
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: activeOrders.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 16),
-                        itemBuilder: (_, index) {
-                          final order = activeOrders[index];
-                          final timeSinceOrder = DateTime.now().difference(order.timestamp);
-                          final isUrgent = timeSinceOrder.inMinutes > 15;
-
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: isUrgent ? const Color(0xFFDC2626).withOpacity(0.05) : Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isUrgent ? const Color(0xFFDC2626).withOpacity(0.3) : Colors.grey.shade200,
-                                width: isUrgent ? 2 : 1,
+                : activeOrders.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF64748B).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Icon(
+                                Icons.kitchen,
+                                size: 64,
+                                color: Color(0xFF64748B),
                               ),
                             ),
-                            child: Theme(
-                              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                              child: ExpansionTile(
-                                tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                childrenPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                                initiallyExpanded: _expandedOrderId == null ? index == 0 : _expandedOrderId == order.id,
-                                onExpansionChanged: (expanded) {
-                                  setState(() {
-                                    _expandedOrderId = expanded ? order.id : null;
-                                  });
-                                },
-                                title: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: _getStatusColor(order.status).withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        '${order.id} - ${order.tableId}',
-                                        style: buildCustomStyle(
-                                          FontWeightManager.bold, 
-                                          FontSize.s14, 
-                                          0.21, 
-                                          _getStatusColor(order.status)
-                                        ),
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    Text(
-                                      '${timeSinceOrder.inMinutes}m ago',
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium, 
-                                        FontSize.s12, 
-                                        0.21, 
-                                        isUrgent ? const Color(0xFFDC2626) : const Color(0xFF64748B)
-                                      ),
-                                    ),
-                                  ],
+                            const SizedBox(height: 20),
+                            Text(
+                              'No active orders',
+                              style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s16,
+                                  0.21,
+                                  const Color(0xFF64748B)),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Orders will appear here when they need preparation',
+                              style: buildCustomStyle(FontWeightManager.regular,
+                                  FontSize.s12, 0.21, const Color(0xFF94A3B8)),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      )
+                    : MouseRegion(
+                        cursor: SystemMouseCursors.grab,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(
+                            dragDevices: {
+                              PointerDeviceKind.mouse,
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.stylus,
+                              PointerDeviceKind.trackpad,
+                            },
+                          ),
+                          child: ListView.separated(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: activeOrders.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 16),
+                            itemBuilder: (_, index) {
+                              final order = activeOrders[index];
+                              final timeSinceOrder =
+                                  DateTime.now().difference(order.timestamp);
+                              final isUrgent = timeSinceOrder.inMinutes > 15;
+
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: isUrgent
+                                      ? const Color(0xFFDC2626)
+                                          .withOpacity(0.05)
+                                      : Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isUrgent
+                                        ? const Color(0xFFDC2626)
+                                            .withOpacity(0.3)
+                                        : Colors.grey.shade200,
+                                    width: isUrgent ? 2 : 1,
+                                  ),
                                 ),
-                                children: [
-                                  // Order items
-                                  ...order.items.map((item) => _buildItemCard(order.id, item)).toList(),
-                                  // Order notes
-                                  if (order.notes != null && order.notes!.isNotEmpty) ...[
-                                    const SizedBox(height: 12),
-                                    Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFD97706).withOpacity(0.05),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: const Color(0xFFD97706).withOpacity(0.2),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.note,
-                                            color: Color(0xFFD97706),
-                                            size: 16,
+                                child: Theme(
+                                  data: Theme.of(context).copyWith(
+                                      dividerColor: Colors.transparent),
+                                  child: ExpansionTile(
+                                    tilePadding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    childrenPadding: const EdgeInsets.fromLTRB(
+                                        16, 8, 16, 16),
+                                    initiallyExpanded: _expandedOrderId == null
+                                        ? index == 0
+                                        : _expandedOrderId == order.id,
+                                    onExpansionChanged: (expanded) {
+                                      setState(() {
+                                        _expandedOrderId =
+                                            expanded ? order.id : null;
+                                      });
+                                    },
+                                    title: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: _getStatusColor(order.status)
+                                                .withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                           ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              'Order Notes: ${order.notes}',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium, 
-                                                FontSize.s12, 
-                                                0.21, 
-                                                const Color(0xFFD97706)
-                                              ),
+                                          child: Text(
+                                            '${order.id} - ${order.tableId}',
+                                            style: buildCustomStyle(
+                                                FontWeightManager.bold,
+                                                FontSize.s14,
+                                                0.21,
+                                                _getStatusColor(order.status)),
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          '${timeSinceOrder.inMinutes}m ago',
+                                          style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s12,
+                                              0.21,
+                                              isUrgent
+                                                  ? const Color(0xFFDC2626)
+                                                  : const Color(0xFF64748B)),
+                                        ),
+                                      ],
+                                    ),
+                                    children: [
+                                      // Order items
+                                      ...order.items
+                                          .map((item) =>
+                                              _buildItemCard(order.id, item))
+                                          .toList(),
+                                      // Order notes
+                                      if (order.notes != null &&
+                                          order.notes!.isNotEmpty) ...[
+                                        const SizedBox(height: 12),
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFD97706)
+                                                .withOpacity(0.05),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: const Color(0xFFD97706)
+                                                  .withOpacity(0.2),
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          );
-                        },
+                                          child: Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.note,
+                                                color: Color(0xFFD97706),
+                                                size: 16,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  'Order Notes: ${order.notes}',
+                                                  style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s12,
+                                                      0.21,
+                                                      const Color(0xFFD97706)),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
           ),
         ],
       ),
@@ -1536,30 +1643,36 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
               debugPrint('📦 Item: ${item.name}');
               debugPrint('🆔 Item ID: ${item.id}');
               debugPrint('📊 Current Status: ${item.status}');
-              debugPrint('🔢 Available Statuses Count: ${widget.availableStatuses.length}');
-              
+              debugPrint(
+                  '🔢 Available Statuses Count: ${widget.availableStatuses.length}');
+
               // Show all available statuses
               for (var status in widget.availableStatuses) {
-                debugPrint('   Available: ID=${status.id}, Value="${status.value}", Desc="${status.description}"');
+                debugPrint(
+                    '   Available: ID=${status.id}, Value="${status.value}", Desc="${status.description}"');
               }
-              
+
               final enabledStatuses = widget.availableStatuses.where((status) {
-                final isEnabled = _shouldEnableStatus(status.value, item.status);
-                debugPrint('   📊 Status "${status.value}" (ID: ${status.id}, ${status.description}) enabled: $isEnabled');
+                final isEnabled =
+                    _shouldEnableStatus(status.value, item.status);
+                debugPrint(
+                    '   📊 Status "${status.value}" (ID: ${status.id}, ${status.description}) enabled: $isEnabled');
                 return isEnabled;
               }).toList();
-              
+
               debugPrint('✅ Enabled Statuses Count: ${enabledStatuses.length}');
               for (var status in enabledStatuses) {
-                debugPrint('   Will show button: "${status.description}" (${status.value})');
+                debugPrint(
+                    '   Will show button: "${status.description}" (${status.value})');
               }
               debugPrint('=====================================');
-              
+
               return enabledStatuses;
-            })().map((status) {
+            })()
+                .map((status) {
               final color = _getStatusButtonColor(status.value);
               String buttonText = status.description;
-              
+
               // Use more descriptive button text based on status
               switch (status.value.toUpperCase()) {
                 case 'START':
@@ -1572,7 +1685,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                   buttonText = 'Mark Served';
                   break;
               }
-              
+
               return Container(
                 width: double.infinity,
                 child: _buildStatusButton(
@@ -1586,19 +1699,20 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                     debugPrint('📊 Status Value: ${status.value}');
                     debugPrint('🆔 Status ID: ${status.id}');
                     debugPrint('🔍 Current Item Status: ${item.status}');
-                    
+
                     // Extract cart item ID from the item ID (assuming format like "cartItemId_productName")
                     final parts = item.id.split('_');
                     debugPrint('🔧 ID Parts: $parts');
-                    
+
                     final cartItemId = int.tryParse(parts.first);
                     debugPrint('🔢 Parsed Cart Item ID: $cartItemId');
-                    
+
                     if (cartItemId != null) {
                       debugPrint('✅ Valid cart item ID found, calling API...');
                       widget.onCartItemStatusChanged(cartItemId, status.id);
                     } else {
-                      debugPrint('❌ Could not extract cart item ID from: ${item.id}');
+                      debugPrint(
+                          '❌ Could not extract cart item ID from: ${item.id}');
                       debugPrint('❌ First part was: "${parts.first}"');
                     }
                   },
@@ -1614,7 +1728,8 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                     'Start',
                     const Color(0xFF2563EB),
                     item.status == ItemStatus.pending,
-                    () => widget.onItemStatusChanged(orderId, item.id, ItemStatus.preparing),
+                    () => widget.onItemStatusChanged(
+                        orderId, item.id, ItemStatus.preparing),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1623,7 +1738,8 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                     'Ready',
                     const Color(0xFF059669),
                     item.status == ItemStatus.preparing,
-                    () => widget.onItemStatusChanged(orderId, item.id, ItemStatus.ready),
+                    () => widget.onItemStatusChanged(
+                        orderId, item.id, ItemStatus.ready),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1632,7 +1748,8 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                     'Served',
                     const Color(0xFF6B7280),
                     item.status == ItemStatus.ready,
-                    () => widget.onItemStatusChanged(orderId, item.id, ItemStatus.served),
+                    () => widget.onItemStatusChanged(
+                        orderId, item.id, ItemStatus.served),
                   ),
                 ),
               ],
@@ -1705,34 +1822,39 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
   }
 
   bool _shouldEnableStatus(String statusValue, ItemStatus currentStatus) {
-    debugPrint('🔍 Checking if status "$statusValue" should be enabled for current status: $currentStatus');
-    
+    debugPrint(
+        '🔍 Checking if status "$statusValue" should be enabled for current status: $currentStatus');
+
     bool shouldEnable = false;
-    
+
     // Enable only the next logical status based on current item status
     switch (statusValue.toUpperCase()) {
       case 'START':
         // START button is enabled only when item is pending (null status)
         shouldEnable = currentStatus == ItemStatus.pending;
-        debugPrint('   START: pending=${currentStatus == ItemStatus.pending} → $shouldEnable');
+        debugPrint(
+            '   START: pending=${currentStatus == ItemStatus.pending} → $shouldEnable');
         break;
       case 'READY':
         // READY button is enabled only when item is currently being prepared (START status)
         shouldEnable = currentStatus == ItemStatus.preparing;
-        debugPrint('   READY: preparing=${currentStatus == ItemStatus.preparing} → $shouldEnable');
+        debugPrint(
+            '   READY: preparing=${currentStatus == ItemStatus.preparing} → $shouldEnable');
         break;
       case 'SERVED':
         // SERVED button is enabled only when item is ready
         shouldEnable = currentStatus == ItemStatus.ready;
-        debugPrint('   SERVED: ready=${currentStatus == ItemStatus.ready} → $shouldEnable');
+        debugPrint(
+            '   SERVED: ready=${currentStatus == ItemStatus.ready} → $shouldEnable');
         break;
       default:
         shouldEnable = false; // Disable unknown statuses
         debugPrint('   UNKNOWN STATUS: $statusValue → $shouldEnable');
         break;
     }
-    
-    debugPrint('🎯 Final decision: Status "$statusValue" enabled = $shouldEnable');
+
+    debugPrint(
+        '🎯 Final decision: Status "$statusValue" enabled = $shouldEnable');
     return shouldEnable;
   }
 
