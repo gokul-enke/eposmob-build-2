@@ -2126,12 +2126,14 @@ class _OrderPanelState extends State<_OrderPanel> {
   Widget _buildOrderDetailsView() {
     // Get cart items from the saved order
     List<dynamic> cartItems = [];
-    if (_selectedOrder['cart'] != null &&
-        _selectedOrder['cart']['cart_items'] != null) {
-      cartItems = _selectedOrder['cart']['cart_items'];
-    } else if (_selectedOrder['cart_items'] != null &&
-        _selectedOrder['cart_items']['cart_items'] != null) {
+    if (_selectedOrder['cart_items'] != null &&
+        _selectedOrder['cart_items']['cart_items'] is List) {
       cartItems = _selectedOrder['cart_items']['cart_items'];
+    } else if (_selectedOrder['cart_items'] is List) {
+      cartItems = _selectedOrder['cart_items'];
+    } else if (_selectedOrder['cart'] != null &&
+        _selectedOrder['cart']['cart_items'] is List) {
+      cartItems = _selectedOrder['cart']['cart_items'];
     }
 
     final total =
@@ -2336,6 +2338,15 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   Widget _buildSavedOrderActionButtons(List<dynamic> cartItems) {
+    final allItemsReadyOrServed = cartItems.isNotEmpty &&
+        cartItems.every((item) {
+          if (item is Map<String, dynamic> && item['status'] != null) {
+            final status = item['status'].toString().toLowerCase();
+            return status == 'ready' || status == 'served';
+          }
+          return false;
+        });
+
     return SafeArea(
       top: false,
       child: Container(
@@ -2358,17 +2369,17 @@ class _OrderPanelState extends State<_OrderPanel> {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: cartItems.isEmpty ? null : () => _confirmOrder(),
+                  onTap: allItemsReadyOrServed ? () => _confirmOrder() : null,
                   borderRadius: BorderRadius.circular(12),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     height: widget.isCompact ? 44 : 48,
                     decoration: BoxDecoration(
-                      color: cartItems.isEmpty
+                      color: !allItemsReadyOrServed
                           ? const Color(0xFF94A3B8)
                           : const Color(0xFF2563EB),
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: cartItems.isNotEmpty
+                      boxShadow: allItemsReadyOrServed
                           ? [
                               BoxShadow(
                                 color: const Color(0xFF2563EB).withOpacity(0.3),
@@ -3291,6 +3302,9 @@ class _OrderPanelState extends State<_OrderPanel> {
     final totalPrice = double.tryParse(cartItem['total_price'].toString()) ??
         (quantity * unitPrice);
 
+    final status = cartItem['status']?.toString().toLowerCase();
+    final isRemovable = status != 'ready' && status != 'served';
+
     return Container(
       padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
       decoration: BoxDecoration(
@@ -3421,25 +3435,26 @@ class _OrderPanelState extends State<_OrderPanel> {
                 ),
               ),
               // Remove button with modern styling
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => _removeCartItem(cartItem),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDC2626).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.delete_outline,
-                      size: widget.isCompact ? 16 : 18,
-                      color: const Color(0xFFDC2626),
+              if (isRemovable)
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _removeCartItem(cartItem),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDC2626).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.delete_outline,
+                        size: widget.isCompact ? 16 : 18,
+                        color: const Color(0xFFDC2626),
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ],
