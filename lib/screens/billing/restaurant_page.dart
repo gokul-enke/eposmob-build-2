@@ -2408,46 +2408,16 @@ class _OrderPanelState extends State<_OrderPanel> {
             ),
           ),
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
+            // First row: Confirm Order button
+            SizedBox(
+              width: double.infinity,
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => setState(() => _selectedOrder = null),
-                  borderRadius: BorderRadius.circular(12),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: widget.isCompact ? 44 : 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(
-                        color: const Color(0xFF64748B),
-                        width: 1.5,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Back',
-                        style: buildCustomStyle(
-                            FontWeightManager.semiBold,
-                            widget.isCompact ? FontSize.s13 : FontSize.s14,
-                            0.21,
-                            const Color(0xFF64748B)),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 2,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: cartItems.isEmpty ? null : () => _updateOrderStatus(),
+                  onTap: cartItems.isEmpty ? null : () => _confirmOrder(),
                   borderRadius: BorderRadius.circular(12),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
@@ -2455,12 +2425,12 @@ class _OrderPanelState extends State<_OrderPanel> {
                     decoration: BoxDecoration(
                       color: cartItems.isEmpty
                           ? const Color(0xFF94A3B8)
-                          : const Color(0xFF059669),
+                          : const Color(0xFF2563EB),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: cartItems.isNotEmpty
                           ? [
                               BoxShadow(
-                                color: const Color(0xFF059669).withOpacity(0.3),
+                                color: const Color(0xFF2563EB).withOpacity(0.3),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -2472,13 +2442,13 @@ class _OrderPanelState extends State<_OrderPanel> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.update,
+                            Icons.check_circle,
                             color: Colors.white,
                             size: widget.isCompact ? 16 : 18,
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Update Order',
+                            'Confirm Order',
                             style: buildCustomStyle(
                                 FontWeightManager.semiBold,
                                 widget.isCompact ? FontSize.s13 : FontSize.s14,
@@ -2491,6 +2461,93 @@ class _OrderPanelState extends State<_OrderPanel> {
                   ),
                 ),
               ),
+            ),
+            const SizedBox(height: 12),
+            // Second row: Back and Update Order buttons
+            Row(
+              children: [
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => setState(() => _selectedOrder = null),
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(
+                            color: const Color(0xFF64748B),
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Back',
+                            style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                0.21,
+                                const Color(0xFF64748B)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: cartItems.isEmpty ? null : () => _updateOrderStatus(),
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: cartItems.isEmpty
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF059669),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: cartItems.isNotEmpty
+                              ? [
+                                  BoxShadow(
+                                    color: const Color(0xFF059669).withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : [],
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.update,
+                                color: Colors.white,
+                                size: widget.isCompact ? 16 : 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Update Order',
+                                style: buildCustomStyle(
+                                    FontWeightManager.semiBold,
+                                    widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                    0.21,
+                                    Colors.white),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -2829,6 +2886,82 @@ class _OrderPanelState extends State<_OrderPanel> {
     } catch (e) {
       debugPrint(
           '❌ Error refreshing selected order after cart update: ${e.toString()}');
+    }
+  }
+
+  Future<void> _confirmOrder() async {
+    if (_selectedOrder == null) {
+      showScaffoldError(
+        context: context,
+        message: 'No order selected to confirm',
+      );
+      return;
+    }
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+      // Get order details
+      final orderId = _selectedOrder['id'] ?? _selectedOrder['order_id'];
+      final orderNumber = _selectedOrder['order_number'];
+
+      debugPrint('🔄 Confirming order: $orderNumber (ID: $orderId)');
+
+      // Get order details for API call
+      final customerId = _selectedOrder['customer_id'] ?? authModel.userId ?? 1;
+      final customerPhone = _selectedOrder['customer_phone'] ?? '';
+      final totalPrice = _selectedOrder['grand_total']?.toString() ?? '0';
+      final transactionId = _selectedOrder['transaction_number'] ?? '';
+      final comment = _selectedOrder['comment'] ?? 'Order confirmed from restaurant';
+
+      debugPrint('📦 Order details for confirmation:');
+      debugPrint('   - Customer ID: $customerId');
+      debugPrint('   - Customer Phone: $customerPhone');
+      debugPrint('   - Total Price: $totalPrice');
+      debugPrint('   - Transaction ID: $transactionId');
+
+      // Call update order API with status "confirmed"
+      final response = await cartProvider.updateOrderAPI(
+        orderId: orderId.toString(),
+        accessToken: authModel.token ?? '',
+        transactionId: transactionId,
+        totalPrice: totalPrice,
+        customerId: int.tryParse(customerId.toString()),
+        customerPhone: customerPhone,
+        status: 'confirmed',
+        comment: comment,
+      );
+
+      debugPrint('✅ Confirm order response: $response');
+
+      if (response != null && 
+          (response['status']?.toLowerCase() == 'success' || 
+           response['status']?.toLowerCase() == 'sucesss')) {
+        showScaffold(
+          context: context,
+          message: 'Order $orderNumber confirmed successfully!',
+        );
+
+        // Refresh saved orders to show updated status
+        debugPrint('🔄 Refreshing saved orders after confirming order');
+        await Future.delayed(const Duration(milliseconds: 500));
+        await _fetchSavedOrders();
+
+        // Go back to orders list
+        setState(() => _selectedOrder = null);
+      } else {
+        showScaffoldError(
+          context: context,
+          message: 'Failed to confirm order: ${response?['message'] ?? 'Unknown error'}',
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error confirming order: ${e.toString()}');
+      showScaffoldError(
+        context: context,
+        message: 'Failed to confirm order: ${e.toString()}',
+      );
     }
   }
 

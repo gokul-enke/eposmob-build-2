@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../components/build_round_button.dart';
+import '../../components/build_dialog_box.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import '../../providers/cart_provider.dart';
@@ -116,6 +117,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
   }
 
   Future<void> _fetchAllSavedOrders() async {
+    debugPrint('🔄 === FETCHING SAVED ORDERS ===');
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -129,28 +131,38 @@ class _KitchenMasterState extends State<KitchenMaster> {
         tableId: null, // null => fetch for all tables
       );
 
+      debugPrint('📥 Saved Orders Response Status: ${response['status']}');
+
       if ((response['status'] as String?)?.toLowerCase() == 'success') {
         final List<dynamic> orders =
             (response['orders'] as List<dynamic>?) ?? [];
+        
+        debugPrint('📦 Found ${orders.length} orders');
+        
         final parsed =
             orders.map<KitchenOrder>(_mapSavedOrderToKitchenOrder).toList();
         setState(() {
           _orders = parsed;
         });
+        
+        debugPrint('✅ Orders mapped and state updated');
       } else {
         setState(() {
           _errorMessage =
               response['message']?.toString() ?? 'Failed to load saved orders';
         });
+        debugPrint('❌ Failed to load saved orders: $_errorMessage');
       }
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();
       });
+      debugPrint('❌ Exception fetching saved orders: $e');
     } finally {
       setState(() {
         _isLoading = false;
       });
+      debugPrint('🏁 === SAVED ORDERS FETCH COMPLETED ===');
     }
   }
 
@@ -326,20 +338,55 @@ class _KitchenMasterState extends State<KitchenMaster> {
   }
 
   ItemStatus _mapItemStatus(String? status) {
+    debugPrint('🔄 Mapping status: "$status"');
+    
     if (status == null || status.isEmpty || status.toLowerCase() == 'null') {
+      debugPrint('   → ItemStatus.pending (null/empty)');
       return ItemStatus.pending;
     }
     
+    ItemStatus result;
     switch (status.toUpperCase()) {
       case 'START':
-        return ItemStatus.preparing;
+        result = ItemStatus.preparing;
+        debugPrint('   → ItemStatus.preparing (START)');
+        break;
       case 'READY':
-        return ItemStatus.ready;
+        result = ItemStatus.ready;
+        debugPrint('   → ItemStatus.ready (READY)');
+        break;
       case 'SERVED':
-        return ItemStatus.served;
+        result = ItemStatus.served;
+        debugPrint('   → ItemStatus.served (SERVED)');
+        break;
       default:
-        return ItemStatus.pending;
+        // Check if it's a numeric status ID
+        final statusId = int.tryParse(status);
+        if (statusId != null) {
+          debugPrint('   → Numeric status ID detected: $statusId');
+          // Map based on the status IDs we know from the API
+          // Based on your API response: {"id": 49,"value": "START","description": "Start"}
+          if (statusId == 49) { // START status ID - but this means it's already started!
+            result = ItemStatus.preparing;
+            debugPrint('   → ItemStatus.preparing (ID 49 = START - already started)');
+          } else if (statusId == 50) { // READY status ID  
+            result = ItemStatus.ready;
+            debugPrint('   → ItemStatus.ready (ID 50 = READY)');
+          } else if (statusId == 51) { // SERVED status ID
+            result = ItemStatus.served;
+            debugPrint('   → ItemStatus.served (ID 51 = SERVED)');
+          } else {
+            result = ItemStatus.pending;
+            debugPrint('   → ItemStatus.pending (unknown ID: $statusId)');
+          }
+        } else {
+          result = ItemStatus.pending;
+          debugPrint('   → ItemStatus.pending (unknown status: "$status")');
+        }
+        break;
     }
+    
+    return result;
   }
 
   Map<String, List<String>> _extractModifiers(dynamic item) {
@@ -571,6 +618,22 @@ class _KitchenMasterState extends State<KitchenMaster> {
 
       if ((response['status'] as String?)?.toLowerCase() == 'success') {
         debugPrint('✅ Cart item status updated successfully');
+        
+        // Check if status actually changed
+        final data = response['data'];
+        final oldStatus = data?['old_status']?.toString();
+        final newStatus = data?['new_status']?.toString();
+        final statusValue = data?['status_value']?.toString();
+        
+        debugPrint('📊 Status Change Details:');
+        debugPrint('   Old Status ID: $oldStatus');
+        debugPrint('   New Status ID: $newStatus');
+        debugPrint('   Status Value: $statusValue');
+        
+        if (oldStatus == newStatus) {
+          debugPrint('⚠️ WARNING: Status did not change! Item might already be in this status.');
+        }
+        
         debugPrint('🔄 Refreshing order details...');
         
         // Refresh the order details
@@ -578,26 +641,20 @@ class _KitchenMasterState extends State<KitchenMaster> {
         
         debugPrint('✅ Order details refreshed');
         
-        // Show success message
+        // Show success message using custom dialog
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Item status updated successfully'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
+          showScaffold(
+            context: context,
+            message: 'Item status updated to ${statusValue ?? 'new status'}',
           );
         }
       } else {
         debugPrint('❌ Failed to update cart item status');
         debugPrint('❌ Error: ${response['message']}');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to update item status: ${response['message']}'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 3),
-            ),
+          showScaffoldError(
+            context: context,
+            message: 'Failed to update item status: ${response['message']}',
           );
         }
       }
@@ -605,12 +662,9 @@ class _KitchenMasterState extends State<KitchenMaster> {
       debugPrint('❌ Exception updating cart item status: $e');
       debugPrint('❌ Stack trace: ${StackTrace.current}');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating item status: $e'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
-          ),
+        showScaffoldError(
+          context: context,
+          message: 'Error updating item status: $e',
         );
       }
     } finally {
@@ -1480,16 +1534,25 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
             ...(() {
               debugPrint('🎨 === RENDERING BUTTONS FOR ITEM ===');
               debugPrint('📦 Item: ${item.name}');
+              debugPrint('🆔 Item ID: ${item.id}');
               debugPrint('📊 Current Status: ${item.status}');
               debugPrint('🔢 Available Statuses Count: ${widget.availableStatuses.length}');
               
+              // Show all available statuses
+              for (var status in widget.availableStatuses) {
+                debugPrint('   Available: ID=${status.id}, Value="${status.value}", Desc="${status.description}"');
+              }
+              
               final enabledStatuses = widget.availableStatuses.where((status) {
                 final isEnabled = _shouldEnableStatus(status.value, item.status);
-                debugPrint('   📊 Status "${status.value}" (${status.description}) enabled: $isEnabled');
+                debugPrint('   📊 Status "${status.value}" (ID: ${status.id}, ${status.description}) enabled: $isEnabled');
                 return isEnabled;
               }).toList();
               
               debugPrint('✅ Enabled Statuses Count: ${enabledStatuses.length}');
+              for (var status in enabledStatuses) {
+                debugPrint('   Will show button: "${status.description}" (${status.value})');
+              }
               debugPrint('=====================================');
               
               return enabledStatuses;
