@@ -148,8 +148,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
             onSendToKitchen: _sendOrderToKitchen, // Pass the new callback
             onNewOrder: _handleNewOrder, // Pass the new callback
             onOrderSelected: (order) {
-              setState(() {
-                _selectedOrderFromOrderPanel = order;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _selectedOrderFromOrderPanel = order;
+                  });
+                }
               });
             }, // Pass callback to update selected order
             selectedOrderFromParent:
@@ -194,8 +198,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   onSendToKitchen: _sendOrderToKitchen, // Pass the new callback
                   onNewOrder: _handleNewOrder, // Pass the new callback
                   onOrderSelected: (order) {
-                    setState(() {
-                      _selectedOrderFromOrderPanel = order;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        setState(() {
+                          _selectedOrderFromOrderPanel = order;
+                        });
+                      }
                     });
                   },
                   selectedOrderFromParent:
@@ -1584,6 +1592,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         _selectedOrder = null;
         _error = null;
       });
+      widget.onOrderSelected(null);
     }
 
     // Check if refresh counter has changed (indicating a refresh is needed)
@@ -1602,6 +1611,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       _selectedOrder = null;
       _error = null;
     });
+    widget.onOrderSelected(null);
 
     final authModel = Provider.of<AuthModel>(context, listen: false);
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
@@ -2129,7 +2139,10 @@ class _OrderPanelState extends State<_OrderPanel> {
             Icons.shopping_cart,
             const Color(0xFFD97706),
             showBackButton: true,
-            onBackButtonPressed: () => setState(() => _selectedOrder = null),
+            onBackButtonPressed: () {
+              setState(() => _selectedOrder = null);
+              widget.onOrderSelected(null);
+            },
             totalPrice: total,
             subtitle: '${_selectedOrder['order_number']}',
           ),
@@ -2379,7 +2392,10 @@ class _OrderPanelState extends State<_OrderPanel> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () => setState(() => _selectedOrder = null),
+                      onTap: () {
+                        setState(() => _selectedOrder = null);
+                        widget.onOrderSelected(null);
+                      },
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
@@ -2858,6 +2874,7 @@ class _OrderPanelState extends State<_OrderPanel> {
 
         // Go back to orders list
         setState(() => _selectedOrder = null);
+        widget.onOrderSelected(null);
       } else {
         showScaffoldError(
           context: context,
@@ -2888,6 +2905,7 @@ class _OrderPanelState extends State<_OrderPanel> {
 
       // Go back to orders list
       setState(() => _selectedOrder = null);
+      widget.onOrderSelected(null);
     } catch (e) {
       showScaffoldError(
         context: context,

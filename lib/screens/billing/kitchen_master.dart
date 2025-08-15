@@ -552,8 +552,27 @@ class _KitchenMasterState extends State<KitchenMaster> {
   }
 
   List<KitchenOrder> _getFilteredOrders() {
-    final filtered =
-        _orders.where((order) => order.status == _selectedFilter).toList();
+    final filtered = _orders.where((order) {
+      if (order.items.isEmpty) {
+        return false;
+      }
+
+      final itemStatuses = order.items.map((item) => item.status).toList();
+
+      switch (_selectedFilter) {
+        case OrderStatus.pending:
+          return itemStatuses.every((s) => s == ItemStatus.pending);
+        case OrderStatus.served:
+          return itemStatuses.every((s) => s == ItemStatus.served);
+        case OrderStatus.ready:
+          return itemStatuses.every((s) => s == ItemStatus.ready);
+        case OrderStatus.preparing:
+          final isPending = itemStatuses.every((s) => s == ItemStatus.pending);
+          final isServed = itemStatuses.every((s) => s == ItemStatus.served);
+          final isReady = itemStatuses.every((s) => s == ItemStatus.ready);
+          return !isPending && !isServed && !isReady;
+      }
+    }).toList();
     filtered.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return filtered;
   }
@@ -941,7 +960,7 @@ class _OrderQueuePanel extends StatelessWidget {
                                 const SizedBox(height: 12),
                             itemBuilder: (_, index) {
                               final order = orders[index];
-                              return _buildOrderCard(order, isCompact);
+                              return _buildOrderCard(order, isCompact, selectedFilter);
                             },
                           ),
                         ),
@@ -952,7 +971,7 @@ class _OrderQueuePanel extends StatelessWidget {
     );
   }
 
-  Widget _buildOrderCard(KitchenOrder order, bool compact) {
+  Widget _buildOrderCard(KitchenOrder order, bool compact, OrderStatus selectedFilter) {
     final timeSinceOrder = DateTime.now().difference(order.timestamp);
     final isUrgent = timeSinceOrder.inMinutes > 15;
 
@@ -1069,30 +1088,6 @@ class _OrderQueuePanel extends StatelessWidget {
                         ),
                       ))
                   .toList(),
-              const SizedBox(height: 12),
-              // Action buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildActionButton(
-                      'Start All',
-                      const Color(0xFF2563EB),
-                      () =>
-                          onOrderStatusChanged(order.id, OrderStatus.preparing),
-                      compact,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildActionButton(
-                      'Mark Ready',
-                      const Color(0xFF059669),
-                      () => onOrderStatusChanged(order.id, OrderStatus.ready),
-                      compact,
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -2238,14 +2233,28 @@ class _KitchenStatsPanel extends StatelessWidget {
   }
 
   Map<String, dynamic> _calculateStats() {
-    final pending = orders.where((o) => o.status == OrderStatus.pending).length;
-    final preparing =
-        orders.where((o) => o.status == OrderStatus.preparing).length;
-    final ready = orders.where((o) => o.status == OrderStatus.ready).length;
-    final served = orders.where((o) => o.status == OrderStatus.served).length;
+    int pending = 0;
+    int preparing = 0;
+    int ready = 0;
+    int served = 0;
 
-    final totalItems =
-        orders.fold<int>(0, (sum, order) => sum + order.items.length);
+    for (final order in orders) {
+      if (order.items.isEmpty) continue;
+
+      final itemStatuses = order.items.map((item) => item.status).toList();
+
+      if (itemStatuses.every((s) => s == ItemStatus.pending)) {
+        pending++;
+      } else if (itemStatuses.every((s) => s == ItemStatus.served)) {
+        served++;
+      } else if (itemStatuses.every((s) => s == ItemStatus.ready)) {
+        ready++;
+      } else {
+        preparing++;
+      }
+    }
+
+    final totalItems = orders.fold<int>(0, (sum, order) => sum + order.items.length);
 
     final urgentOrders = orders.where((order) {
       final timeSinceOrder = DateTime.now().difference(order.timestamp);
@@ -2253,8 +2262,23 @@ class _KitchenStatsPanel extends StatelessWidget {
           order.status != OrderStatus.served;
     }).length;
 
-    // Calculate average prep time (mock calculation)
-    final avgPrepTime = 12; // This would be calculated from actual data
+    // Calculate average prep time
+    int totalPrepTimeMinutes = 0;
+    int itemsWithPrepTime = 0;
+
+    for (var order in orders) {
+      for (var item in order.items) {
+        if (item.startTime != null && item.readyTime != null) {
+          final prepDuration = item.readyTime!.difference(item.startTime!);
+          totalPrepTimeMinutes += prepDuration.inMinutes;
+          itemsWithPrepTime++;
+        }
+      }
+    }
+
+    final avgPrepTime = itemsWithPrepTime > 0
+        ? (totalPrepTimeMinutes / itemsWithPrepTime).round()
+        : 0;
 
     return {
       'pending': pending,
