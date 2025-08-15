@@ -1997,6 +1997,26 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   Widget _buildOrderListItem(dynamic order) {
+    // Calculate cart item statuses
+    List<dynamic> cartItems = [];
+    if (order['cart_items'] != null &&
+        order['cart_items']['cart_items'] is List) {
+      cartItems = order['cart_items']['cart_items'];
+    } else if (order['cart_items'] is List) {
+      cartItems = order['cart_items'];
+    } else if (order['cart'] != null && order['cart']['cart_items'] is List) {
+      cartItems = order['cart']['cart_items'];
+    }
+
+    int totalItems = cartItems.length;
+    int readyItems = cartItems.where((item) {
+      if (item is Map<String, dynamic> && item['status'] != null) {
+        final status = item['status'].toString().toLowerCase();
+        return status == 'ready' || status == 'served';
+      }
+      return false;
+    }).length;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -2030,17 +2050,16 @@ class _OrderPanelState extends State<_OrderPanel> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _getOrderStatusColor(order['status'])
-                          .withOpacity(0.1),
+                      color: const Color(0xFF059669).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '${order['status']}'.toUpperCase(),
+                      '$readyItems/$totalItems',
                       style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           widget.isCompact ? FontSize.s11 : FontSize.s13,
                           0.21,
-                          _getOrderStatusColor(order['status'])),
+                          const Color(0xFF059669)),
                     ),
                   ),
                 ],
