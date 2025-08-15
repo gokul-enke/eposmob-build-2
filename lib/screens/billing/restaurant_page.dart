@@ -235,41 +235,39 @@ class _RestaurantPageState extends State<RestaurantPage> {
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
       final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
 
-      // First, add the product to the local cart using LocalProductProvider (same as billing page)
-      debugPrint('🛒 Adding product to local cart via LocalProductProvider');
-      localProductProvider.addToCart(
-        product: product,
-        quantity: quantity,
-        price: product.price?.price != null ? double.tryParse(product.price!.price!) : null,
-        mrp: product.mrp != null ? double.tryParse(product.mrp!) : null,
-      );
-
       // Determine the cartId to use for API calls
       int? targetCartId;
-      if (_selectedOrderFromOrderPanel != null) {
+      bool isEditingExistingOrder = _selectedOrderFromOrderPanel != null;
+      
+      if (isEditingExistingOrder) {
         // If a saved order is open, use its cart_id
         targetCartId = int.tryParse((_selectedOrderFromOrderPanel['cart']
                         ?['id'] ??
                     _selectedOrderFromOrderPanel['cart_id'])
                 ?.toString() ??
             '');
-        debugPrint('Using cart_id from selected order: $targetCartId');
+        debugPrint('🔄 Editing existing order - Using cart_id from selected order: $targetCartId');
       } else {
-        // If no saved order is open, proceed with default logic (new cart or existing current cart)
-        // This part remains mostly the same as original logic for addToCartAPI
+        // If no saved order is open, add to local cart first (new order flow)
+        debugPrint('🛒 Adding product to local cart via LocalProductProvider (new order)');
+        localProductProvider.addToCart(
+          product: product,
+          quantity: quantity,
+          price: product.price?.price != null ? double.tryParse(product.price!.price!) : null,
+          mrp: product.mrp != null ? double.tryParse(product.mrp!) : null,
+        );
       }
 
-      // Check if this is a new cart (no existing cart items)
-      final isNewCart = cartProvider.cartData.isEmpty ||
-          cartProvider.cartData.first.cartItems?.isEmpty == true;
+      // Check if this is a new cart (no existing cart items) - only relevant for new orders
+      final isNewCart = !isEditingExistingOrder && (cartProvider.cartData.isEmpty ||
+          cartProvider.cartData.first.cartItems?.isEmpty == true);
 
-      // Use cart API directly instead of ProductCartHelper
+      // Use cart API directly
       debugPrint(
           '📦 addToCartAPI Request Body: {customerId: ${authModel.userId ?? 1}, productId: ${product.productId!}, quantity: $quantity, unitPrice: ${product.price?.price?.toString()}, cartId: $targetCartId}');
       debugPrint('➡️ Calling CartProvider.addToCartAPI');
       final addResponse = await cartProvider.addToCartAPI(
-        customerId: authModel.userId ??
-            1, // Use authModel.userId instead of hardcoded 1
+        customerId: authModel.userId ?? 1,
         productId: product.productId!,
         quantity: quantity,
         accessToken: authModel.token ?? '',
@@ -279,7 +277,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       debugPrint('✅ addToCartAPI Response: $addResponse');
 
       // If this is the first item in a new cart, automatically create an order with status "new"
-      if (isNewCart && _selectedOrderFromOrderPanel == null) {
+      if (isNewCart && !isEditingExistingOrder) {
         debugPrint(
             '🔄 First item added to new cart, creating initial order...');
         // Wait a bit for cart data to be updated
@@ -289,13 +287,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
       // Show success message
       if (mounted) {
+        final messageContext = isEditingExistingOrder ? 'existing order' : 'Table $_activeTableId';
         showScaffold(
           context: context,
-          message: 'Added ${product.productName} to Table $_activeTableId',
+          message: 'Added ${product.productName} to $messageContext',
         );
 
         // If a saved order was active, trigger a refresh
-        if (_selectedOrderFromOrderPanel != null) {
+        if (isEditingExistingOrder) {
           // Wait a bit for the cart to be updated on the server
           await Future.delayed(const Duration(milliseconds: 1000));
 
@@ -305,9 +304,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
             _refreshCounter = (_refreshCounter ?? 0) + 1;
           });
           
-          // Also refresh the saved orders list to show updated totals
+          // Also refresh the saved orders list to show updated totals (keeping current selection)
           debugPrint('🔄 Refreshing saved orders after adding item to existing order');
-          _orderPanelKey.currentState?.refreshSavedOrders();
+          _orderPanelKey.currentState?.refreshSavedOrdersKeepingSelection();
         }
       }
     } catch (e) {
@@ -1736,7 +1735,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   // Method to refresh saved orders without clearing the selected order (for when editing)
-  Future<void> _refreshSavedOrdersKeepingSelection() async {
+  Future<void> refreshSavedOrdersKeepingSelection() async {
     final currentSelectedOrder = _selectedOrder; // Store current selection
     
     setState(() {
@@ -1775,9 +1774,10 @@ class _OrderPanelState extends State<_OrderPanel> {
               _selectedOrder = updatedOrder; // Update with fresh data
               debugPrint('✅ Updated selected order with fresh data');
             } else {
-              // Order might have been deleted or changed, go back to list
-              _selectedOrder = null;
-              debugPrint('⚠️ Selected order not found in updated list, returning to orders list');
+              // Keep the current selection - don't clear it immediately
+              // The order might just be processing on the server
+              debugPrint('⚠️ Selected order not found in updated list, keeping current selection');
+              // Only clear if we're sure the order is gone (you can add more logic here if needed)
             }
           }
         });
@@ -2611,7 +2611,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         // Also refresh the saved orders list to show updated totals (keeping current selection)
         debugPrint('🔄 Refreshing saved orders after updating cart item quantity');
         await Future.delayed(const Duration(milliseconds: 500));
-        await _refreshSavedOrdersKeepingSelection();
+        await refreshSavedOrdersKeepingSelection();
 
         showScaffold(
           context: context,
@@ -2701,7 +2701,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         // Also refresh the saved orders list to show updated totals (keeping current selection)
         debugPrint('🔄 Refreshing saved orders after removing cart item');
         await Future.delayed(const Duration(milliseconds: 500));
-        await _refreshSavedOrdersKeepingSelection();
+        await refreshSavedOrdersKeepingSelection();
 
         showScaffold(
           context: context,
@@ -2709,7 +2709,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         );
       } else {
         // Revert the optimistic update by refreshing saved orders (keeping current selection)
-        await _refreshSavedOrdersKeepingSelection();
+        await refreshSavedOrdersKeepingSelection();
 
         showScaffoldError(
           context: context,

@@ -323,7 +323,7 @@ class CartProvider with ChangeNotifier {
       // 'quantity': 1,
       'action': "remove_item",
       // 'action': "clear_cart",
-      'customer_id': "1"
+      // 'customer_id': customerId.toString()
     };
     // debugPrint("productId $productId");
     final url = Uri.parse(APPUrl
@@ -343,31 +343,34 @@ class CartProvider with ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      // debugPrint('inside ${response.statusCode}');
+      
+      debugPrint('🔍 Remove API Response Status Code: ${response.statusCode}');
+      debugPrint('🔍 Remove API Response Body: ${response.body}');
+      debugPrint('🔍 Remove API Request Body: ${json.encode(apiBodyData)}');
+      
       if (response.statusCode == 200) {
-        // debugPrint('inside');
-
-        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
+        debugPrint('🔍 Parsed JSON Response: $jsonData');
+        
         AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
+        debugPrint('🔍 AddToCartModel Status: ${addToCartModel.status}');
+        
         await fetchCartDataFromApi(
           customerId: customerId,
           accessToken: accessToken,
           cartId: cartId,
         );
-        // customerId: customerId, accessToken: accessToken);
-        // debugPrint(addToCartModel.status);
+        
         if (addToCartModel.status == 'success') {
-          // debugPrint("  if (addToCartModel.status == 'success') {");
-          // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
-
-          // setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
+          debugPrint('✅ Remove from cart successful');
+        } else {
+          debugPrint('⚠️ Remove from cart status not success: ${addToCartModel.status}');
         }
-
-        // debugPrint("Removed from cart successfully");
 
         return jsonData; // Return response data or success status
       } else {
+        debugPrint('❌ Remove API failed with status ${response.statusCode}');
+        debugPrint('❌ Error response body: ${response.body}');
         return false;
       }
     } finally {}
@@ -494,7 +497,10 @@ class CartProvider with ChangeNotifier {
           // debugPrint("  if (addToCartModel.status == 'success') {");
           // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
 
-          setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
+          // Check if cartItem list is not empty before accessing first element
+          if (addToCartModel.cart!.cartItem!.isNotEmpty) {
+            setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
+          }
         }
 
         // debugPrint("Removed from cart successfully");
