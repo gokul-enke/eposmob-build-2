@@ -156,4 +156,6 @@ class APPUrl {
   static String supplierTransactions =
       '$baseURL/api/v1/suppliers/list-transactions';
   static String calculateTax = '$baseURL/api/v1/calculate-tax';
+  static String getCartItemStatuses = '$baseURL/api/v1/cart/cart-item-statuses';
+  static String updateCartItemStatus = '$baseURL/api/v1/cart/update-cart-item-status';
 }

@@ -506,6 +506,98 @@ class CartProvider with ChangeNotifier {
     } finally {}
   }
 
+  //          *********************** GET CART ITEM STATUSES API ***************************************************
+
+  Future<Map<String, dynamic>> getCartItemStatuses({
+    required String accessToken,
+  }) async {
+    debugPrint("📤 GET CART ITEM STATUSES API - Starting request");
+    
+    final url = Uri.parse(APPUrl.getCartItemStatuses);
+    debugPrint('🌐 API URL: ${url.toString()}');
+    
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+    
+    try {
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      });
+      
+      debugPrint('📥 Response status code: ${response.statusCode}');
+      debugPrint('📥 Response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        debugPrint('✅ Cart item statuses fetched successfully');
+        return jsonData;
+      } else {
+        debugPrint('❌ Failed to fetch cart item statuses (status ${response.statusCode})');
+        return {"status": "error", "message": "Failed to fetch cart item statuses"};
+      }
+    } catch (e) {
+      debugPrint('❌ Exception during API call: $e');
+      return {"status": "error", "message": e.toString()};
+    }
+  }
+
+  //          *********************** UPDATE CART ITEM STATUS API ***************************************************
+
+  Future<Map<String, dynamic>> updateCartItemStatus({
+    required int cartItemId,
+    required int statusId,
+    required String accessToken,
+  }) async {
+    debugPrint("📤 UPDATE CART ITEM STATUS API - Starting request");
+    debugPrint("🛒 Cart Item ID: $cartItemId");
+    debugPrint("📊 Status ID: $statusId");
+    
+    final url = Uri.parse(APPUrl.updateCartItemStatus).replace(queryParameters: {
+      'cart_item_id': cartItemId.toString(),
+      'status_id': statusId.toString(),
+    });
+    debugPrint('🌐 API URL: ${url.toString()}');
+    
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+    
+    try {
+      final response = await http.post(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      });
+      
+      debugPrint('📥 Response status code: ${response.statusCode}');
+      debugPrint('📥 Response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        debugPrint('✅ Cart item status updated successfully');
+        return jsonData;
+      } else {
+        debugPrint('❌ Failed to update cart item status (status ${response.statusCode})');
+        final jsonData = json.decode(response.body);
+        return jsonData;
+      }
+    } catch (e) {
+      debugPrint('❌ Exception during API call: $e');
+      return {"status": "error", "message": e.toString()};
+    }
+  }
+
   //          *********************** Change Cart Item Price API ***************************************************
 
   Future<dynamic> updateCartItemPrice({

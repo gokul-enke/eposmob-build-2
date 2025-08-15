@@ -27,6 +27,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
   String? _activeTableId;
   int? _activeCategoryId;
   dynamic _selectedOrderFromOrderPanel; // New state to hold selected order
+  int? _refreshCounter; // Counter to trigger refreshes without creating new objects
+  final GlobalKey<_OrderPanelState> _orderPanelKey = GlobalKey<_OrderPanelState>(); // Key to access OrderPanel methods
 
   @override
   void initState() {
@@ -90,12 +92,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
     if (screenWidth >= 1400) {
       // Large screens: more space for menu
-      tablesPanelFlex = 2.5;
+      tablesPanelFlex = 2;
       menuPanelFlex = 5.0;
       orderPanelFlex = 3.0;
     } else if (screenWidth >= 1200) {
       // Medium-large screens: balanced
-      tablesPanelFlex = 2.5;
+      tablesPanelFlex = 2;
       menuPanelFlex = 4.5;
       orderPanelFlex = 3.0;
     } else if (screenWidth >= 1000) {
@@ -140,6 +142,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         Expanded(
           flex: orderPanelFlex.round(),
           child: _OrderPanel(
+            key: _orderPanelKey, // Add key to access methods
             tableId: _activeTableId,
             screenSize: screenSize,
             onSendToKitchen: _sendOrderToKitchen, // Pass the new callback
@@ -151,6 +154,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             }, // Pass callback to update selected order
             selectedOrderFromParent:
                 _selectedOrderFromOrderPanel, // Pass the selected order
+            refreshCounter: _refreshCounter, // Pass refresh counter
           ),
         ),
       ],
@@ -183,6 +187,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
               Expanded(
                 flex: 2,
                 child: _OrderPanel(
+                  key: _orderPanelKey, // Add key to access methods
                   tableId: _activeTableId,
                   isCompact: true,
                   screenSize: screenSize,
@@ -195,6 +200,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   },
                   selectedOrderFromParent:
                       _selectedOrderFromOrderPanel, // Pass the selected order
+                  refreshCounter: _refreshCounter, // Pass refresh counter
                 ),
               ),
             ],
@@ -227,8 +233,18 @@ class _RestaurantPageState extends State<RestaurantPage> {
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
 
-      // Determine the cartId to use
+      // First, add the product to the local cart using LocalProductProvider (same as billing page)
+      debugPrint('🛒 Adding product to local cart via LocalProductProvider');
+      localProductProvider.addToCart(
+        product: product,
+        quantity: quantity,
+        price: product.price?.price != null ? double.tryParse(product.price!.price!) : null,
+        mrp: product.mrp != null ? double.tryParse(product.mrp!) : null,
+      );
+
+      // Determine the cartId to use for API calls
       int? targetCartId;
       if (_selectedOrderFromOrderPanel != null) {
         // If a saved order is open, use its cart_id
@@ -262,7 +278,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       );
       debugPrint('✅ addToCartAPI Response: $addResponse');
 
-      // If this is the first item in a new cart, automatically create an order with status "init"
+      // If this is the first item in a new cart, automatically create an order with status "new"
       if (isNewCart && _selectedOrderFromOrderPanel == null) {
         debugPrint(
             '🔄 First item added to new cart, creating initial order...');
@@ -283,13 +299,15 @@ class _RestaurantPageState extends State<RestaurantPage> {
           // Wait a bit for the cart to be updated on the server
           await Future.delayed(const Duration(milliseconds: 1000));
 
-          // Create a new map to trigger didUpdateWidget in the order panel
+          // Use a more stable refresh mechanism
           setState(() {
-            _selectedOrderFromOrderPanel = {
-              ..._selectedOrderFromOrderPanel,
-              '_refresh_trigger': DateTime.now().millisecondsSinceEpoch,
-            };
+            // Just increment a simple counter instead of creating new objects
+            _refreshCounter = (_refreshCounter ?? 0) + 1;
           });
+          
+          // Also refresh the saved orders list to show updated totals
+          debugPrint('🔄 Refreshing saved orders after adding item to existing order');
+          _orderPanelKey.currentState?.refreshSavedOrders();
         }
       }
     } catch (e) {
@@ -304,52 +322,42 @@ class _RestaurantPageState extends State<RestaurantPage> {
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
 
-      // Refresh cart data to get the latest items
-      debugPrint('➡️ Calling CartProvider.fetchCartDataFromApi');
-      await cartProvider.fetchCartDataFromApi(
-        customerId: authModel.userId ?? 1,
-        accessToken: authModel.token ?? '',
-      );
+      // Get cart data from local provider (same as billing page)
+      final cartItems = localProductProvider.getCartItems();
+      debugPrint('🔍 Cart data from local provider: ${cartItems.length} items');
 
-      // Get the updated cart data
-      final cartData = cartProvider.cartData;
-      debugPrint('🔍 Cart data after refresh: ${cartData.length} carts');
-      if (cartData.isNotEmpty) {
-        debugPrint(
-            '🔍 First cart items: ${cartData.first.cartItems?.length ?? 0} items');
-      }
-
-      if (cartData.isEmpty || cartData.first.cartItems?.isEmpty == true) {
+      if (cartItems.isEmpty) {
         debugPrint('❌ No cart items found to create order from');
         return; // No cart items to create order from
       }
 
-      final cartItems = cartData.first.cartItems!;
+      // Convert local cart items to API format (same as billing page)
       List<Map<String, dynamic>> items = [];
       for (var item in cartItems) {
         items.add({
-          'product_id': item.productId,
+          'product_id': item.product.productId,
           'quantity': item.quantity,
-          'price': item.unitPrice,
-          'mrp': item.mrp,
-          'stock_id': null,
+          'price': item.price?.toString() ?? '0',
+          'mrp': item.mrp?.toString() ?? '0',
+          'stock_id': item.selectedStock?.id, // Include stock_id if available
         });
       }
 
-      final total = cartData.first.priceSummary?.netTotal ?? 0.0;
+      final total = localProductProvider.cartTotal;
 
-      // Create order with status "init"
+      // Create order with status "new" and table association
       debugPrint(
           '🔄 Creating order with ${items.length} items for Table $_activeTableId');
       debugPrint('➡️ Calling CartProvider.addToOrderAPI');
       final response = await cartProvider.addToOrderAPI(
         items: items,
-        cartIds: cartData.first.id ?? 0,
+        cartIds: 0, // Use 0 for new cart since we're creating a new order
         accessToken: authModel.token ?? "",
         transactionId: "",
         totalPrice: total.toStringAsFixed(2),
-        customerId: cartData.first.customerId,
+        customerId: authModel.userId ?? 1,
         customerPhone: null,
         paymentMethod: null,
         paidAmount: null,
@@ -357,23 +365,25 @@ class _RestaurantPageState extends State<RestaurantPage> {
         paidMethods: [],
         balanceAmount: "0",
         couponId: null,
-        comment: "Order for Table $_activeTableId",
+        comment: "Order for Table $_activeTableId", // Table context
         deliveryMethodId: null,
         carNumber: null,
-        status: "init", // Set status to "init"
+        status: "new", // Status for new restaurant orders
         deliveryDate: null,
         deliveryTime: null,
-        tableId: _activeTableId,
+        tableId: _activeTableId, // 🔧 KEY: Table association
       );
 
       debugPrint(
-          '✅ Initial order created with status "init" for Table $_activeTableId');
+          '✅ Initial order created with status "new" for Table $_activeTableId');
       debugPrint('🔍 Order response: $response');
 
       // Refresh saved orders to show the new order
       if (mounted) {
         await Future.delayed(const Duration(milliseconds: 500));
         // Trigger a refresh of saved orders in the order panel
+        debugPrint('🔄 Refreshing saved orders after creating initial order');
+        _orderPanelKey.currentState?.refreshSavedOrders();
         setState(() {});
       }
     } catch (e) {
@@ -394,10 +404,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
 
-      // Get cart data from the provider instead of local product provider
-      final cartData = cartProvider.cartData;
-      if (cartData.isEmpty || cartData.first.cartItems?.isEmpty == true) {
+      // Get cart data from the local provider instead of cart provider
+      final cartItems = localProductProvider.getCartItems();
+      if (cartItems.isEmpty) {
         showScaffoldError(
           context: context,
           message: 'No items in cart to send to kitchen',
@@ -405,31 +416,30 @@ class _RestaurantPageState extends State<RestaurantPage> {
         return;
       }
 
-      // Get cart items from the provider
-      final cartItems = cartData.first.cartItems!;
+      // Convert local cart items to API format
       List<Map<String, dynamic>> items = [];
       for (var item in cartItems) {
         items.add({
-          'product_id': item.productId,
+          'product_id': item.product.productId,
           'quantity': item.quantity,
-          'price': item.unitPrice,
-          'mrp': item.mrp,
-          'stock_id': null, // Cart items don't have stock_id in this model
+          'price': item.price?.toString() ?? '0',
+          'mrp': item.mrp?.toString() ?? '0',
+          'stock_id': item.selectedStock?.id, // Include stock_id if available
         });
       }
 
-      // Get cart total from price summary
-      final total = cartData.first.priceSummary?.netTotal ?? 0.0;
+      // Get cart total from local provider
+      final total = localProductProvider.cartTotal;
 
-      // Call the addToOrderAPI with status: "init"
+      // Call the addToOrderAPI with status: "new"
       debugPrint('➡️ Calling CartProvider.addToOrderAPI');
       final response = await cartProvider.addToOrderAPI(
         items: items,
-        cartIds: cartData.first.id ?? 0,
+        cartIds: 0, // Use 0 for new cart since we're creating a new order
         accessToken: authModel.token ?? "",
         transactionId: "", // Not applicable for initial kitchen order
         totalPrice: total.toStringAsFixed(2),
-        customerId: cartData.first.customerId,
+        customerId: authModel.userId ?? 1,
         customerPhone: null, // Not applicable
         paymentMethod: null, // Not applicable
         paidAmount: null, // Not applicable
@@ -440,7 +450,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         comment: "Order for Table $_activeTableId", // Add a comment for context
         deliveryMethodId: null, // Not applicable
         carNumber: null, // Not applicable
-        status: "init", // Set status to "init"
+        status: "new", // Set status to "new"
         deliveryDate: null, // Not applicable
         deliveryTime: null, // Not applicable
         tableId: _activeTableId,
@@ -453,15 +463,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
               'Order for Table $_activeTableId sent to kitchen successfully! Order ID: ${response["order_id"]}',
         );
 
-        // Clear the cart after successful submission using cart API
+        // Clear the local cart after successful submission
         if (cartItems.isNotEmpty) {
-          debugPrint('➡️ Calling CartProvider.clearCartAPI');
-          await cartProvider.clearCartAPI(
-            customerId: cartData.first.customerId ?? 1,
-            productId: cartItems.first.id ??
-                0, // Just need any cart item ID for clear action
-            accessToken: authModel.token ?? "",
-          );
+          debugPrint('🗑️ Clearing local cart after successful kitchen order');
+          localProductProvider.clearCart();
+        }
+
+        // Refresh saved orders for the currently opened table
+        if (mounted && _activeTableId != null) {
+          debugPrint('🔄 Refreshing saved orders after sending order to kitchen');
+          await Future.delayed(const Duration(milliseconds: 1000)); // Wait for server to process
+          _orderPanelKey.currentState?.refreshSavedOrders();
         }
       } else {
         showScaffoldError(
@@ -480,8 +492,15 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   Future<void> _handleNewOrder() async {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
 
-    // Clear the cart
+    // Clear the local cart first
+    if (localProductProvider.cartItems.isNotEmpty) {
+      debugPrint('🗑️ Clearing local cart via LocalProductProvider');
+      localProductProvider.clearCart();
+    }
+
+    // Clear the cart from API if it exists
     if (cartProvider.cartData.isNotEmpty &&
         cartProvider.cartData.first.cartItems?.isNotEmpty == true) {
       debugPrint('➡️ Calling CartProvider.clearCartAPI');
@@ -829,7 +848,7 @@ class _TablesPanel extends StatelessWidget {
     double childAspectRatio;
 
     if (screenSize.width >= 1200) {
-      crossAxisCount = 3;
+      crossAxisCount = 2;
       childAspectRatio = 1.0;
     } else if (screenSize.width >= 900) {
       crossAxisCount = 2;
@@ -872,9 +891,7 @@ class _TablesPanel extends StatelessWidget {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   decoration: BoxDecoration(
-                    color: isActive
-                        ? const Color(0xFF2563EB).withOpacity(0.08)
-                        : _getTableBackgroundColor(table.status),
+                    color:_getTableBackgroundColor(table.status),
                     border: isActive
                         ? Border.all(color: const Color(0xFF2563EB), width: 3)
                         : Border.all(color: Colors.grey.shade200, width: 1),
@@ -1481,7 +1498,7 @@ class _MenuPanel extends StatelessWidget {
                                 _buildCompactTag('Available',
                                     const Color(0xFF059669), compact),
                               if (!isAvailable)
-                                _buildCompactTag('OUT OF STOCK',
+                                _buildCompactTag('No Stock',
                                     const Color(0xFF6B7280), compact),
                             ],
                           ),
@@ -1623,8 +1640,10 @@ class _OrderPanel extends StatefulWidget {
       onOrderSelected; // New callback to update selected order
   final dynamic
       selectedOrderFromParent; // Add this to track parent's selected order
+  final int? refreshCounter; // Add refresh counter
 
   const _OrderPanel({
+    super.key, // Add key parameter
     required this.tableId,
     this.isCompact = false,
     required this.screenSize,
@@ -1632,6 +1651,7 @@ class _OrderPanel extends StatefulWidget {
     required this.onNewOrder, // Make it required
     required this.onOrderSelected, // Make it required
     this.selectedOrderFromParent, // Add this parameter
+    this.refreshCounter, // Add refresh counter parameter
   });
 
   @override
@@ -1658,9 +1678,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       });
     }
 
-    // Check if the selected order from parent has changed (indicating a refresh is needed)
-    if (widget.selectedOrderFromParent != oldWidget.selectedOrderFromParent &&
-        widget.selectedOrderFromParent != null &&
+    // Check if refresh counter has changed (indicating a refresh is needed)
+    if (widget.refreshCounter != oldWidget.refreshCounter &&
+        widget.refreshCounter != null &&
         _selectedOrder != null) {
       // Refresh the selected order details
       _refreshSelectedOrderAfterCartUpdate();
@@ -1690,6 +1710,76 @@ class _OrderPanelState extends State<_OrderPanel> {
       if (response['status'] == 'success') {
         setState(() {
           _savedOrders = response['orders'];
+        });
+      } else {
+        setState(() {
+          _error = response['message'] ?? 'Failed to load saved orders';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Error fetching saved orders: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isLoadingOrders = false;
+      });
+    }
+  }
+
+  // Public method to refresh saved orders from external calls
+  void refreshSavedOrders() {
+    if (widget.tableId != null) {
+      debugPrint('🔄 External refresh of saved orders triggered for table: ${widget.tableId}');
+      _fetchSavedOrders();
+    }
+  }
+
+  // Method to refresh saved orders without clearing the selected order (for when editing)
+  Future<void> _refreshSavedOrdersKeepingSelection() async {
+    final currentSelectedOrder = _selectedOrder; // Store current selection
+    
+    setState(() {
+      _isLoadingOrders = true;
+      _error = null;
+      // Don't clear _selectedOrder and _savedOrders here
+    });
+
+    final authModel = Provider.of<AuthModel>(context, listen: false);
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+    debugPrint(
+        '🔄 _refreshSavedOrdersKeepingSelection: Sending request with tableId: ${widget.tableId}');
+    try {
+      debugPrint('➡️ Calling CartProvider.listSavedOrders');
+      final response = await cartProvider.listSavedOrders(
+        accessToken: authModel.token ?? '',
+        tableId: widget.tableId,
+      );
+      debugPrint('✅ listSavedOrders Response: $response');
+      if (response['status'] == 'success') {
+        final newOrders = response['orders'] as List<dynamic>;
+        
+        setState(() {
+          _savedOrders = newOrders;
+          
+          // If we had a selected order, try to find and update it with fresh data
+          if (currentSelectedOrder != null) {
+            final currentOrderId = currentSelectedOrder['id'] ?? currentSelectedOrder['order_id'];
+            final updatedOrder = newOrders.firstWhere(
+              (order) => order['id'] == currentOrderId || order['order_id'] == currentOrderId,
+              orElse: () => null,
+            );
+            
+            if (updatedOrder != null) {
+              _selectedOrder = updatedOrder; // Update with fresh data
+              debugPrint('✅ Updated selected order with fresh data');
+            } else {
+              // Order might have been deleted or changed, go back to list
+              _selectedOrder = null;
+              debugPrint('⚠️ Selected order not found in updated list, returning to orders list');
+            }
+          }
         });
       } else {
         setState(() {
@@ -1800,15 +1890,14 @@ class _OrderPanelState extends State<_OrderPanel> {
       return _buildOrderDetailsView();
     } else {
       // Display current cart or saved orders
-      return Consumer<CartProvider>(
-        builder: (context, cartProvider, _) {
-          final cartData = cartProvider.cartData;
-          final hasCurrentCart = cartData.isNotEmpty &&
-              cartData.first.cartItems?.isNotEmpty == true;
+      return Consumer<LocalProductProvider>(
+        builder: (context, localProductProvider, _) {
+          final cartItems = localProductProvider.getCartItems();
+          final hasCurrentCart = cartItems.isNotEmpty;
 
           if (hasCurrentCart) {
             // Show current cart items
-            return _buildCurrentCartView(cartData.first);
+            return _buildCurrentCartView(cartItems);
           } else {
             // Display list of saved orders
             return _buildSavedOrdersList();
@@ -1818,9 +1907,10 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
   }
 
-  Widget _buildCurrentCartView(dynamic cartData) {
-    final cartItems = cartData.cartItems as List<dynamic>;
-    final total = cartData.priceSummary?.netTotal ?? 0.0;
+  Widget _buildCurrentCartView(List<LocalCartItem> cartItems) {
+    // Use LocalProductProvider instead of CartProvider for current cart display
+    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+    final total = localProductProvider.cartTotal;
 
     return Container(
       margin: const EdgeInsets.all(8),
@@ -2518,6 +2608,11 @@ class _OrderPanelState extends State<_OrderPanel> {
               '⚠️ Could not refresh order details, but update was successful: $e');
         }
 
+        // Also refresh the saved orders list to show updated totals (keeping current selection)
+        debugPrint('🔄 Refreshing saved orders after updating cart item quantity');
+        await Future.delayed(const Duration(milliseconds: 500));
+        await _refreshSavedOrdersKeepingSelection();
+
         showScaffold(
           context: context,
           message: 'Item quantity updated successfully',
@@ -2603,13 +2698,18 @@ class _OrderPanelState extends State<_OrderPanel> {
               '⚠️ Could not refresh order details, but removal was successful: $e');
         }
 
+        // Also refresh the saved orders list to show updated totals (keeping current selection)
+        debugPrint('🔄 Refreshing saved orders after removing cart item');
+        await Future.delayed(const Duration(milliseconds: 500));
+        await _refreshSavedOrdersKeepingSelection();
+
         showScaffold(
           context: context,
           message: 'Item removed successfully',
         );
       } else {
-        // Revert the optimistic update by refreshing saved orders
-        await _fetchSavedOrders();
+        // Revert the optimistic update by refreshing saved orders (keeping current selection)
+        await _refreshSavedOrdersKeepingSelection();
 
         showScaffoldError(
           context: context,
@@ -2713,8 +2813,8 @@ class _OrderPanelState extends State<_OrderPanel> {
             _selectedOrder = updatedOrder;
           });
 
-          // Also update the parent widget's selected order
-          widget.onOrderSelected(updatedOrder);
+          // Don't update parent to prevent loop - parent already knows about the refresh
+          // widget.onOrderSelected(updatedOrder); // Commented out to prevent loop
 
           debugPrint(
               '✅ Selected order refreshed successfully after cart update');
@@ -2740,6 +2840,11 @@ class _OrderPanelState extends State<_OrderPanel> {
         message: 'Order updated successfully',
       );
 
+      // Refresh saved orders to show updated status
+      debugPrint('🔄 Refreshing saved orders after updating order status');
+      await Future.delayed(const Duration(milliseconds: 500));
+      await _fetchSavedOrders();
+
       // Go back to orders list
       setState(() => _selectedOrder = null);
     } catch (e) {
@@ -2750,12 +2855,11 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
   }
 
-  Widget _buildCurrentCartItem(dynamic cartItem, int index) {
-    final productName = cartItem.product?.name ?? 'Unknown Product';
-    final quantity = double.tryParse(cartItem.quantity.toString()) ?? 0.0;
-    final unitPrice = double.tryParse(cartItem.unitPrice.toString()) ?? 0.0;
-    final totalPrice = double.tryParse(cartItem.totalPrice.toString()) ??
-        (quantity * unitPrice);
+  Widget _buildCurrentCartItem(LocalCartItem cartItem, int index) {
+    final productName = cartItem.product.productName ?? 'Unknown Product';
+    final quantity = cartItem.quantity;
+    final unitPrice = cartItem.price ?? 0.0;
+    final totalPrice = quantity * unitPrice;
 
     return Container(
       padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
@@ -2797,7 +2901,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                   '₹${totalPrice.toStringAsFixed(0)}',
                   style: buildCustomStyle(
                       FontWeightManager.bold,
-                      widget.isCompact ? FontSize.s12 : FontSize.s14,
+                      FontSize.s12,
                       0.21,
                       const Color(0xFF059669)),
                 ),
@@ -2823,7 +2927,7 @@ class _OrderPanelState extends State<_OrderPanel> {
 
           const SizedBox(height: 12),
 
-          // Quantity controls with modern styling (for current cart, these will use cart API)
+          // Quantity controls with modern styling (for current cart, these will use local provider)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -2862,7 +2966,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                         quantity.toStringAsFixed(0),
                         style: buildCustomStyle(
                             FontWeightManager.bold,
-                            widget.isCompact ? FontSize.s14 : FontSize.s16,
+                            FontSize.s14,
                             0.21,
                             const Color(0xFF1E293B)),
                       ),
@@ -2913,7 +3017,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     );
   }
 
-  Widget _buildCurrentCartActionButtons(List<dynamic> cartItems) {
+  Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
     return SafeArea(
       top: false,
       child: Container(
@@ -3020,26 +3124,24 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   // Methods for current cart operations
   Future<void> _updateCurrentCartItemQuantity(
-      dynamic cartItem, double newQuantity) async {
+      LocalCartItem cartItem, double newQuantity) async {
     if (newQuantity <= 0) {
       await _removeCurrentCartItem(cartItem);
       return;
     }
 
     try {
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
 
       debugPrint(
-          '🔄 _updateCurrentCartItemQuantity: Sending request with customerId: 1, cartItemId: ${cartItem.id}, quantity: ${newQuantity.toInt()}');
-      // Use the decrementCartItemQuantityAPI for quantity updates
-      await cartProvider.decrementCartItemQuantityAPI(
-        customerId: 1,
-        productId: cartItem.id, // Use cart_item_id
-        quantity: newQuantity.toInt(),
-        accessToken: authModel.token ?? '',
+          '🔄 _updateCurrentCartItemQuantity: Updating quantity for ${cartItem.product.productName} to ${newQuantity.toInt()}');
+      
+      // Use LocalProductProvider to set the exact quantity
+      localProductProvider.setCartItemQuantity(
+        cartItem.product.productId!,
+        cartItem.selectedStock,
+        newQuantity,
       );
-      debugPrint('✅ decrementCartItemQuantityAPI Response: Success');
 
       showScaffold(
         context: context,
@@ -3053,20 +3155,18 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
   }
 
-  Future<void> _removeCurrentCartItem(dynamic cartItem) async {
+  Future<void> _removeCurrentCartItem(LocalCartItem cartItem) async {
     try {
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
 
       debugPrint(
-          '🗑️ _removeCurrentCartItem: Sending request with customerId: 1, cartItemId: ${cartItem.id}');
-      // Use the cart API to remove item with correct cart_item_id
-      await cartProvider.removeFromCartAPI(
-        customerId: 1,
-        productId: cartItem.id, // This is cart_item_id
-        accessToken: authModel.token ?? '',
+          '🗑️ _removeCurrentCartItem: Removing ${cartItem.product.productName} from cart');
+      
+      // Use LocalProductProvider to remove the item
+      localProductProvider.removeFromCart(
+        cartItem.product.productId!,
+        cartItem.selectedStock,
       );
-      debugPrint('✅ removeFromCartAPI Response: Success');
 
       showScaffold(
         context: context,
@@ -3082,20 +3182,13 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   Future<void> _clearCurrentCart() async {
     try {
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      final cartProvider = Provider.of<CartProvider>(context, listen: false);
-      final cartData = cartProvider.cartData;
+      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
 
-      if (cartData.isNotEmpty && cartData.first.cartItems?.isNotEmpty == true) {
-        debugPrint(
-            '🗑️ _clearCurrentCart: Sending request with customerId: 1, productId: ${cartData.first.cartItems!.first.id ?? 0}');
-        // Use the clearCartAPI
-        await cartProvider.clearCartAPI(
-          customerId: 1,
-          productId: cartData.first.cartItems!.first.id ?? 0,
-          accessToken: authModel.token ?? '',
-        );
-        debugPrint('✅ clearCartAPI Response: Success');
+      if (localProductProvider.cartItems.isNotEmpty) {
+        debugPrint('🗑️ _clearCurrentCart: Clearing local cart');
+        
+        // Use LocalProductProvider to clear the cart
+        localProductProvider.clearCart();
 
         showScaffold(
           context: context,
