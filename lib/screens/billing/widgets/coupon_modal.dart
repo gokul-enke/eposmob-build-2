@@ -28,6 +28,7 @@ class _CouponModalState extends State<CouponModal> {
   late bool isCouponApplied;
 
   @override
+
   void initState() {
     super.initState();
     couponController = TextEditingController(text: widget.initialCouponCode);

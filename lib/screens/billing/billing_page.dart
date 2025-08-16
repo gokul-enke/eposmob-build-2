@@ -31,6 +31,7 @@ import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/screens/billing/mobile_screen/billing_page_mobile.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
@@ -580,6 +581,7 @@ class BillingPageState extends State<BillingPage>
 
   @override
   Widget build(BuildContext context) {
+
     super.build(context); // Required for AutomaticKeepAliveClientMixin
 
     debugPrint("🔨 BillingPage build() called");
@@ -626,6 +628,7 @@ class BillingPageState extends State<BillingPage>
                                       selectedProductIdController,
                                   productProvider: productProvider,
                                 ),
+                                _buildTestMobileButton(),
                                 Expanded(
                                   child: Column(
                                     children: [
@@ -1729,6 +1732,64 @@ class BillingPageState extends State<BillingPage>
       },
     );
   }
+  
+  
+  //Texting mobile screen
+  Widget _buildTestMobileButton() {
+  return Positioned(
+    bottom: 20,
+    right: 20,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Text label
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.black54,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Text(
+            'Test Mobile UI',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Button
+        FloatingActionButton(
+          backgroundColor: Colors.blue,
+          mini: true,
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => Scaffold(
+                  body: MultiProvider(
+                    providers: [
+                      ChangeNotifierProvider.value(
+                        value: Provider.of<CartProvider>(context, listen: false),
+                      ),
+                      ChangeNotifierProvider.value(
+                        value: Provider.of<LocalProductProvider>(context, listen: false),
+                      ),
+                      // Add other providers as needed...
+                    ],
+                    child: BillingPageMobile(),
+                  ),
+                ),
+              ),
+            );
+          },
+          child: const Icon(Icons.phone_android, size: 20),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildHeaderCell(String text,
       {required int flex, required Alignment alignment}) {
