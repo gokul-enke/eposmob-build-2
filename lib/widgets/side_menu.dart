@@ -213,7 +213,8 @@ class _SideMenuState extends State<SideMenu> {
                 selected: sideBarController.index.value == 46,
               ),
             ),
-          if (_hasRole('attender') || _hasRole('sales_executive'))
+          // if (_hasAnyRole(['attender', 'sales_executive']))
+          if (_hasRole('attender'))
             Obx(
               () => DrawerListTile(
                 iconPath: ImageAssets.barcodeIcon,
@@ -224,8 +225,8 @@ class _SideMenuState extends State<SideMenu> {
                 selected: sideBarController.index.value == 55,
               ),
             ),
-          // Only show Kitchen Master for kitchen_master role
-          if (_hasRole('kitchen_master') || _hasRole('sales_executive'))
+          // if (_hasAnyRole(['kitchen_master', 'sales_executive']))
+          if (_hasRole('kitchen_master'))
             Obx(
               () => DrawerListTile(
                 iconPath: ImageAssets.barcodeIcon,
@@ -302,7 +303,7 @@ class _SideMenuState extends State<SideMenu> {
                     sideBarController.index.value == 34,
               ),
             ),
-          if (_hasAnyRole(['kitchen_master', 'sales_executive', 'admin']))
+          if (_hasAnyRole(['kitchen_master', 'sales_executive']))
             Obx(
               () => DrawerListTileExpandableColumn(
                   onTapTitle1: () {
