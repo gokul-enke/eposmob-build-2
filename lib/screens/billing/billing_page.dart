@@ -48,6 +48,7 @@ import 'package:pos_machine/screens/billing/widgets/delivery_method_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/price_fields.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
+import 'package:pos_machine/screens/customers/add_customer_modal.dart';
 
 class BillingPage extends StatefulWidget {
   const BillingPage({super.key});
@@ -168,7 +169,7 @@ class BillingPageState extends State<BillingPage>
     _focusNode.addListener(_handleFocusChange);
     _paidAmountFocusNode
         .addListener(_handlePaidAmountFocusChange); // Add this line
-    
+
     // Initialize with dynamic default delivery method
     _initializeDeliveryMethod();
 
@@ -553,7 +554,8 @@ class BillingPageState extends State<BillingPage>
         // Set dialog state to open
         await showDialog(
           context: context,
-          builder: (context) => AddProductWithBarcodeModal(barcode: query, isAddToCart: true),
+          builder: (context) =>
+              AddProductWithBarcodeModal(barcode: query, isAddToCart: true),
         );
         // Reset dialog state
 
@@ -2400,66 +2402,89 @@ class BillingPageState extends State<BillingPage>
                     ),
                   ),
             const SizedBox(width: 10),
-            BuildBoxShadowContainer(
-              height: size.height * .07,
-              width: 50,
-              circleRadius: 5,
-              child: InkWell(
-                onTap: () => {
-                  debugPrint("❌ CLEAR CUSTOMER BUTTON PRESSED"),
-                  debugPrint("  - Before clear:"),
-                  debugPrint(
-                      "    - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'"),
-                  debugPrint("    - mobileNumberText: '$mobileNumberText'"),
-                  debugPrint(
-                      "    - mobileNumberTextController.text: '${mobileNumberTextController.text}'"),
-
-                  // Clear the global customer selection provider
-                  Provider.of<CustomerSelectionProvider>(context, listen: false)
-                      .clearSelectedCustomer(),
-
-                  setState(() {
-                    _autocompletePhoneKey = GlobalKey();
-                    mobileNumberTextController.clear();
-                    mobileNumberText = "";
-                    selectedCustomerID = null;
-                    selectedCustomerPhone = null;
-                    selectedCustomer = null;
-                    isCustomerFound = false;
-                    salesExecutivemobileNumberText = "";
-                    _isCustomerManuallySelected = false; // Reset the flag
-                    debugPrint(
-                        "  - Reset manual selection (clear button pressed)");
-                  }),
-
-                  debugPrint("  - After clear:"),
-                  debugPrint(
-                      "    - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'"),
-                  debugPrint("    - mobileNumberText: '$mobileNumberText'"),
-                  debugPrint(
-                      "    - mobileNumberTextController.text: '${mobileNumberTextController.text}'"),
-
-                  showScaffold(
-                    context: context,
-                    message: 'Customer Details Cleared Successfully',
-                  )
-                },
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Center(
-                        child: WebsafeSvg.asset(
-                          ImageAssets.oderlistCloseIcon,
-                          width: 27,
-                          color: ColorManager.kButtonRed,
+            Row(
+              children: [
+                // Plus button - only show when no customer is selected
+                if (selectedCustomerID == null && !isCustomerFound) ...[
+                  BuildBoxShadowContainer(
+                    height: size.height * .07,
+                    width: 50,
+                    circleRadius: 5,
+                    child: InkWell(
+                      onTap: () => {
+                        debugPrint("ADD NEW CUSTOMER BUTTON PRESSED"),
+                        showAddCustomerModal(context, size,
+                            mobileNumber: mobileNumberTextController.text),
+                      },
+                      child: const Center(
+                        child: Icon(
+                          Icons.add,
+                          size: 27,
+                          color: ColorManager.kButtonGreen,
                         ),
                       ),
-                    ],
+                    ),
+                  ),
+                  const SizedBox(
+                      width: 10), // Spacing between plus and close buttons
+                ],
+
+                // Close button - always show
+                BuildBoxShadowContainer(
+                  height: size.height * .07,
+                  width: 50,
+                  circleRadius: 5,
+                  child: InkWell(
+                    onTap: () => {
+                      debugPrint("❌ CLEAR CUSTOMER BUTTON PRESSED"),
+                      debugPrint("  - Before clear:"),
+                      debugPrint(
+                          "    - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'"),
+                      debugPrint("    - mobileNumberText: '$mobileNumberText'"),
+                      debugPrint(
+                          "    - mobileNumberTextController.text: '${mobileNumberTextController.text}'"),
+
+                      // Clear the global customer selection provider
+                      Provider.of<CustomerSelectionProvider>(context,
+                              listen: false)
+                          .clearSelectedCustomer(),
+
+                      setState(() {
+                        _autocompletePhoneKey = GlobalKey();
+                        mobileNumberTextController.clear();
+                        mobileNumberText = "";
+                        selectedCustomerID = null;
+                        selectedCustomerPhone = null;
+                        selectedCustomer = null;
+                        isCustomerFound = false;
+                        salesExecutivemobileNumberText = "";
+                        _isCustomerManuallySelected = false;
+                        debugPrint(
+                            "  - Reset manual selection (clear button pressed)");
+                      }),
+
+                      debugPrint("  - After clear:"),
+                      debugPrint(
+                          "    - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'"),
+                      debugPrint("    - mobileNumberText: '$mobileNumberText'"),
+                      debugPrint(
+                          "    - mobileNumberTextController.text: '${mobileNumberTextController.text}'"),
+
+                      showScaffold(
+                        context: context,
+                        message: 'Customer Details Cleared Successfully',
+                      )
+                    },
+                    child: Center(
+                      child: WebsafeSvg.asset(
+                        ImageAssets.oderlistCloseIcon,
+                        width: 27,
+                        color: ColorManager.kButtonRed,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
             // if (selectedCustomerID == null || !isCustomerFound) ...[
             //   const SizedBox(width: 10),
@@ -2860,12 +2885,15 @@ class BillingPageState extends State<BillingPage>
           _balanceAmount = 0;
           _carNumberController.clear();
           _commentController.clear();
-          _isCustomerManuallySelected = false; // Reset manual selection after save
+          _isCustomerManuallySelected =
+              false; // Reset manual selection after save
           deliveryDate = null;
           deliveryTime = null;
         });
 
-        resetAutocomplete(shouldFetchCustomers: false); // Preserve customer selection after saving
+        resetAutocomplete(
+            shouldFetchCustomers:
+                false); // Preserve customer selection after saving
         _focusTextField();
 
         // Reset to default sales executive after saving only if no manual customer was selected
@@ -2989,12 +3017,15 @@ class BillingPageState extends State<BillingPage>
           _balanceAmount = 0;
           _carNumberController.clear();
           _commentController.clear();
-          _isCustomerManuallySelected = false; // Reset manual selection after save
+          _isCustomerManuallySelected =
+              false; // Reset manual selection after save
           deliveryDate = null;
           deliveryTime = null;
         });
 
-        resetAutocomplete(shouldFetchCustomers: false); // Preserve customer selection after saving
+        resetAutocomplete(
+            shouldFetchCustomers:
+                false); // Preserve customer selection after saving
         _focusTextField();
 
         // Reset to default sales executive after saving only if no manual customer was selected
@@ -3757,7 +3788,8 @@ class BillingPageState extends State<BillingPage>
           // Restore delivery method
           if (currentOrder.deliveryMethod != null) {
             deliveryMethod = currentOrder.deliveryMethod!;
-            deliveryMethodId = currentOrder.deliveryMethodId ?? _getDefaultDeliveryMethodId();
+            deliveryMethodId =
+                currentOrder.deliveryMethodId ?? _getDefaultDeliveryMethodId();
           } else {
             deliveryMethod = "Store Takeaway";
             deliveryMethodId = _getDefaultDeliveryMethodId();
@@ -4964,32 +4996,37 @@ class BillingPageState extends State<BillingPage>
     // Set initial default values
     deliveryMethod = "Store Takeaway";
     deliveryMethodId = "11"; // Updated to match API response
-    
+
     // Listen for delivery methods to be loaded and update default
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final deliveryMethodsProvider = Provider.of<DeliveryMethodsProvider>(context, listen: false);
-      
+      final deliveryMethodsProvider =
+          Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
       // Add listener to update default when delivery methods are loaded
       deliveryMethodsProvider.addListener(() {
-        if (!deliveryMethodsProvider.isLoading && deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
+        if (!deliveryMethodsProvider.isLoading &&
+            deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
           final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
           if (defaultMethod != null) {
             setState(() {
               deliveryMethod = defaultMethod.name;
               deliveryMethodId = defaultMethod.id;
             });
-            debugPrint("🚚 Updated default delivery method: ${defaultMethod.name} (ID: ${defaultMethod.id})");
+            debugPrint(
+                "🚚 Updated default delivery method: ${defaultMethod.name} (ID: ${defaultMethod.id})");
           }
         }
       });
-      
+
       // If delivery methods are already loaded, set the default immediately
-      if (!deliveryMethodsProvider.isLoading && deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
+      if (!deliveryMethodsProvider.isLoading &&
+          deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
         final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
         if (defaultMethod != null) {
           deliveryMethod = defaultMethod.name;
           deliveryMethodId = defaultMethod.id;
-          debugPrint("🚚 Set initial default delivery method: ${defaultMethod.name} (ID: ${defaultMethod.id})");
+          debugPrint(
+              "🚚 Set initial default delivery method: ${defaultMethod.name} (ID: ${defaultMethod.id})");
         }
       }
     });
@@ -4997,9 +5034,11 @@ class BillingPageState extends State<BillingPage>
 
   String _getDefaultDeliveryMethodId() {
     try {
-      final deliveryMethodsProvider = Provider.of<DeliveryMethodsProvider>(context, listen: false);
+      final deliveryMethodsProvider =
+          Provider.of<DeliveryMethodsProvider>(context, listen: false);
       final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
-      return defaultMethod?.id ?? "11"; // Fallback to Store Takeaway ID from API
+      return defaultMethod?.id ??
+          "11"; // Fallback to Store Takeaway ID from API
     } catch (e) {
       return "11"; // Fallback to Store Takeaway ID from API
     }

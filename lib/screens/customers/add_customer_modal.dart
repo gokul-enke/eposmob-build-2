@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
@@ -20,14 +21,26 @@ void showAddCustomerModal(BuildContext context, Size size,
     {required String mobileNumber}) {
   showDialog(
     context: context,
+    barrierDismissible: true,
     builder: (BuildContext context) {
       return Dialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
+        backgroundColor: Colors.transparent,
         child: Container(
-          color: Colors.white,
-          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(20),
           child: AddCustomersModal(
               mobileNumber: mobileNumber), // Pass mobile number
         ),
@@ -55,6 +68,8 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
   final addressTextController = TextEditingController();
   final countryTextController = TextEditingController();
   final pincodeTextController = TextEditingController();
+  final stateSearchController = TextEditingController();
+  final districtSearchController = TextEditingController();
 
   String? selectedStateId;
   String? selectedDistrictId;
@@ -82,101 +97,125 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     Get.put(SideBarController());
 
-    return SafeArea(
-      child: Scaffold(
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 20.0),
-            child: Form(
-              // Wrap with Form widget
-              key: _formKey, // Assign the key
+    return SingleChildScrollView(
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 10.0, bottom: 20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(left: 10.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // CustomBackButton(
-                        //   onPressed: () {
-                        //     sideBarController.index.value = 5;
-                        //   },
-                        //   text: 'All Customers',
-                        // ),
-                        Text(
-                          'Add New Customer',
-                          style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s20, 0.30, ColorManager.textColor),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              "First Name",
-                              firstNameTextController,
-                              TextInputType.text,
-                              size,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _buildTextField(
-                              "Last Name",
-                              lastNameTextController,
-                              TextInputType.text,
-                              size,
-                            ),
-                          ),
-                        ],
-                      ),
-                      _buildTextField("Email Address", emailTextController,
-                          TextInputType.emailAddress, size,
-                          validator: validateEmail),
-                      _buildTextField("Phone Number", phoneNumberController,
-                          TextInputType.number, size,
-                          inputFormatter: PhoneNumberFormatter(),
-                          validator: validatePhoneNumber), // Add validator here
-                      _buildTextField("Address", addressTextController,
-                          TextInputType.text, size),
-                      _buildCountryStateDistrictFields(
-                          size, locationProvider, accessToken),
-                      const SizedBox(height: 20),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 20.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _buildDistrictDropdown(size, locationProvider),
-                            buildColumnWidgetForTextFields(
-                              controller: pincodeTextController,
-                              height: size.height * .07,
-                              width: size.width / 3.05,
-                              size: size,
-                              isLeft: false,
-                              readOnly: false,
-                              title: "Pincode",
-                              onchanged: (value) {},
-                              hintText: "",
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 25),
-                      _buildSubmitButton(size, locationProvider, accessToken),
-                      const SizedBox(height: 25),
-                    ],
+                  Text(
+                    'Add New Customer',
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s20, 0.30, ColorManager.textColor),
                   ),
                 ],
               ),
             ),
-          ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Row 1: First Name, Last Name, Email
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        "First Name",
+                        firstNameTextController,
+                        TextInputType.text,
+                        size,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildTextField(
+                        "Last Name",
+                        lastNameTextController,
+                        TextInputType.text,
+                        size,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildTextField(
+                        "Email Address",
+                        emailTextController,
+                        TextInputType.emailAddress,
+                        size,
+                        validator: validateEmail,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 15),
+
+                // Row 2: Phone, Address, Country
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        "Phone Number",
+                        phoneNumberController,
+                        TextInputType.number,
+                        size,
+                        inputFormatter: PhoneNumberFormatter(),
+                        validator: validatePhoneNumber,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildTextField(
+                        "Address",
+                        addressTextController,
+                        TextInputType.text,
+                        size,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildTextField(
+                        "Country",
+                        countryTextController,
+                        TextInputType.text,
+                        size,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 15),
+
+                // Row 3: State, District, Pincode
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStateDropdown(
+                          size, locationProvider, accessToken),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildDistrictDropdown(size, locationProvider),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildTextField(
+                        "Pincode",
+                        pincodeTextController,
+                        TextInputType.text,
+                        size,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 25),
+                _buildSubmitButton(size, locationProvider, accessToken),
+                const SizedBox(height: 25),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -216,70 +255,36 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
     );
   }
 
-  Widget _buildCountryStateDistrictFields(
-      Size size, LocationProvider locationProvider, String? accessToken) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        buildColumnWidgetForTextFields(
-          controller: countryTextController,
-          height: size.height * .07,
-          width: size.width / 3.05,
-          size: size,
-          isLeft: false,
-          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          readOnly: false,
-          title: "Country",
-          onchanged: (value) {},
-          hintText: "",
-        ),
-        Padding(
-          padding: const EdgeInsets.only(right: 20.0),
-          child: _buildStateDropdown(size, locationProvider, accessToken),
-        ),
-      ],
-    );
-  }
-
   Widget _buildStateDropdown(
       Size size, LocationProvider locationProvider, String? accessToken) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BuildTextTile(
+        BuildDropDownWithSearch<String>(
+          key: stateDropdownKey,
           title: "State",
-          textStyle: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-              0.27, Colors.black.withOpacity(0.6)),
-        ),
-        BuildBoxShadowContainer(
-          circleRadius: 7,
-          alignment: Alignment.centerLeft,
-          margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-          padding: const EdgeInsets.only(left: 15),
-          height: size.height * .07,
-          width: size.width / 3,
-          child: DropdownButton<String>(
-            key: stateDropdownKey,
-            isExpanded: true,
-            value: selectedStateId,
-            hint: const Text("Select State"),
-            items: locationProvider.stateList.map((state) {
-              return DropdownMenuItem<String>(
-                value: state.key,
-                child: Text(state.value),
-              );
-            }).toList(),
-            onChanged: (String? newValue) async {
-              setState(() {
-                selectedStateId = newValue;
-                selectedDistrictId = null;
-              });
-              if (newValue != null) {
-                await locationProvider.listAllDistricts(
-                    stateId: newValue, accessToken: accessToken!);
-              }
-            },
-          ),
+          hintText: "Select State",
+          value: selectedStateId,
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+          items: locationProvider.stateList.map((state) => state.key).toList(),
+          onChanged: (String? newValue) async {
+            setState(() {
+              selectedStateId = newValue;
+              selectedDistrictId = null;
+            });
+            if (newValue != null) {
+              await locationProvider.listAllDistricts(
+                  stateId: newValue, accessToken: accessToken!);
+            }
+          },
+          displayText: (String stateId) {
+            final state = locationProvider.stateList.firstWhere(
+                (state) => state.key == stateId,
+                orElse: () => const MapEntry("", "Unknown"));
+            return state.value;
+          },
+          searchController: stateSearchController,
+          searchHintText: "Search State...",
         ),
       ],
     );
@@ -289,39 +294,28 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BuildTextTile(
+        BuildDropDownWithSearch<String>(
+          key: districtDropdownKey,
           title: "District",
-          textStyle: buildCustomStyle(
-            FontWeightManager.regular,
-            FontSize.s14,
-            0.27,
-            Colors.black.withOpacity(0.6),
-          ),
-        ),
-        BuildBoxShadowContainer(
-          circleRadius: 7,
-          alignment: Alignment.centerLeft,
-          margin: const EdgeInsets.only(left: 20),
-          padding: const EdgeInsets.only(left: 15),
-          height: size.height * .07,
-          width: size.width / 3,
-          child: DropdownButton<String>(
-            key: districtDropdownKey,
-            isExpanded: true,
-            value: selectedDistrictId,
-            hint: const Text("Select District"),
-            items: locationProvider.districtList.map((district) {
-              return DropdownMenuItem<String>(
-                value: district.key,
-                child: Text(district.value),
-              );
-            }).toList(),
-            onChanged: (String? newValue) {
-              setState(() {
-                selectedDistrictId = newValue;
-              });
-            },
-          ),
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+          hintText: "Select District",
+          value: selectedDistrictId,
+          items: locationProvider.districtList
+              .map((district) => district.key)
+              .toList(),
+          onChanged: (String? newValue) {
+            setState(() {
+              selectedDistrictId = newValue;
+            });
+          },
+          displayText: (String districtId) {
+            final district = locationProvider.districtList.firstWhere(
+                (district) => district.key == districtId,
+                orElse: () => const MapEntry("", "Unknown"));
+            return district.value;
+          },
+          searchController: districtSearchController,
+          searchHintText: "Search District...",
         ),
       ],
     );
@@ -415,6 +409,8 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
         firstNameTextController.clear();
         addressTextController.clear();
         countryTextController.clear();
+        stateSearchController.clear();
+        districtSearchController.clear();
         selectedDistrictId = null;
         selectedStateId = null;
         districtDropdownKey = GlobalKey();
