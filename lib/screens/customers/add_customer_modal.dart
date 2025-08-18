@@ -164,6 +164,7 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
                         size,
                         inputFormatter: PhoneNumberFormatter(),
                         validator: validatePhoneNumber,
+                        isRequired: true,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -224,14 +225,25 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
   Widget _buildTextField(String title, TextEditingController controller,
       TextInputType keyboardType, Size size,
       {FormFieldValidator<String>? validator,
-      TextInputFormatter? inputFormatter}) {
+      TextInputFormatter? inputFormatter,
+      bool isRequired = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BuildTextTile(
-          title: title,
-          textStyle: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-              0.27, Colors.black.withOpacity(0.6)),
+        Row(
+          children: [
+            BuildTextTile(
+              title: title,
+              textStyle: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                  0.27, Colors.black.withOpacity(0.6)),
+            ),
+            if (isRequired)
+              Text(
+                ' *',
+                style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                    0.27, Colors.red),
+              ),
+          ],
         ),
         BuildBoxShadowContainer(
           circleRadius: 7,
@@ -325,76 +337,96 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
       Size size, LocationProvider locationProvider, String? accessToken) {
     return Padding(
       padding: const EdgeInsets.only(left: 10.0),
-      child: CustomRoundButton(
-        title: "Submit",
-        fct: () async {
-          // debugPrint("Add New Customer");
-          if (_formKey.currentState!.validate()) {
-            // Validate the form
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) =>
-                  const Center(child: CircularProgressIndicator.adaptive()),
-            );
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // Close Button
+          CustomRoundButton(
+            title: "Close",
+            fct: () {
+              Navigator.pop(context);
+            },
+            height: 50,
+            width: 120,
+            fontSize: FontSize.s12,
+            textColor: Colors.blue,
+            borderColor: Colors.blue,
+            boxColor: Colors.white,
+          ),
+          const SizedBox(width: 10),
+          // Submit Button
+          CustomRoundButton(
+            title: "Submit",
+            fct: () async {
+              // debugPrint("Add New Customer");
+              if (_formKey.currentState!.validate()) {
+                // Validate the form
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) =>
+                      const Center(child: CircularProgressIndicator.adaptive()),
+                );
 
-            try {
-              String stateName = locationProvider.stateList
-                  .firstWhere(
-                    (state) => state.key == selectedStateId,
-                    orElse: () => const MapEntry("unknown", "Unknown State"),
+                try {
+                  String stateName = locationProvider.stateList
+                      .firstWhere(
+                        (state) => state.key == selectedStateId,
+                        orElse: () => const MapEntry("unknown", "Unknown State"),
+                      )
+                      .value;
+
+                  String districtName = locationProvider.districtList
+                      .firstWhere(
+                        (district) => district.key == selectedDistrictId,
+                        orElse: () => const MapEntry("unknown", "Unknown District"),
+                      )
+                      .value;
+
+                  await CustomerProvider()
+                      .addCustomer(
+                    accessToken ?? "",
+                    phoneNumberController.text.replaceAll("-", ""),
+                    "1",
+                    "${firstNameTextController.text} ${lastNameTextController.text}",
+                    emailTextController.text,
+                    addressTextController.text,
+                    pincodeTextController.text,
+                    stateName,
+                    districtName,
+                    countryTextController.text,
+                    context,
                   )
-                  .value;
-
-              String districtName = locationProvider.districtList
-                  .firstWhere(
-                    (district) => district.key == selectedDistrictId,
-                    orElse: () => const MapEntry("unknown", "Unknown District"),
-                  )
-                  .value;
-
-              await CustomerProvider()
-                  .addCustomer(
-                accessToken ?? "",
-                phoneNumberController.text.replaceAll("-", ""),
-                "1",
-                "${firstNameTextController.text} ${lastNameTextController.text}",
-                emailTextController.text,
-                addressTextController.text,
-                pincodeTextController.text,
-                stateName,
-                districtName,
-                countryTextController.text,
-                context,
-              )
-                  .then((value) {
-                if (value["status"] == "success") {
-                  showScaffold(
-                      context: context, message: '${value["message"]}');
-                  Navigator.pop(context);
-                  Navigator.pop(context);
-                  _clearFields();
-                } else {
-                  Map<String, dynamic> errorResponse = value['errors'];
-                  debugPrint(
-                      errorResponse.values.map((e) => e.join('')).join('\n'));
-                  showScaffold(
-                      context: context,
-                      message: errorResponse.values
-                          .map((e) => e.join(''))
-                          .join('\n'));
+                      .then((value) {
+                    if (value["status"] == "success") {
+                      showScaffold(
+                          context: context, message: '${value["message"]}');
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                      _clearFields();
+                    } else {
+                      Map<String, dynamic> errorResponse = value['errors'];
+                      debugPrint(
+                          errorResponse.values.map((e) => e.join('')).join('\n'));
+                      showScaffoldError(
+                          context: context,
+                          message: errorResponse.values
+                              .map((e) => e.join(''))
+                              .join('\n'));
+                      Navigator.pop(context);
+                    }
+                  });
+                } catch (error) {
+                  // debugPrint("Error: $error");
                   Navigator.pop(context);
                 }
-              });
-            } catch (error) {
-              // debugPrint("Error: $error");
-              Navigator.pop(context);
-            }
-          }
-        },
-        height: 50,
-        width: size.width * 0.19,
-        fontSize: FontSize.s12,
+              }
+            },
+            height: 50,
+            width: 120,
+            fontSize: FontSize.s12,
+          ),
+        ],
       ),
     );
   }
