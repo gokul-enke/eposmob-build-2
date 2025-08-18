@@ -33,6 +33,10 @@ class StandardPrinter {
     required DocumentConfig? billDocumentConfig,
     required String customerCareNumber,
     required String customerCareEmail,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? customerAddress,
   }) async {
     try {
       // Ensure billDocumentConfig is loaded before printing
@@ -309,6 +313,20 @@ class StandardPrinter {
 
                 // Date and Time Row - minimal design
                 _buildDateTimeRowPDF(selectedPaperSize, orderDate),
+
+                // Customer Information Section - if available
+                if (customerName != null ||
+                    customerPhone != null ||
+                    customerEmail != null)
+                  _buildCustomerDetailsPDF(
+                    selectedPaperSize,
+                    customerName,
+                    customerPhone,
+                    customerEmail,
+                    customerAddress,
+                    subheaderStyle,
+                    bodyStyle,
+                  ),
 
                 // Items table - minimal design without borders
                 if ((updatedSettings?['showSLNumber']?.visible == true) ||
@@ -949,5 +967,33 @@ class StandardPrinter {
     displayConfig.forEach((key, value) {
       debugPrint("- $key: visible=${value.visible}, value=${value.value}");
     });
+  }
+
+  // Customer Details Section for PDF - compact design
+  pw.Widget _buildCustomerDetailsPDF(
+    String selectedPaperSize,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? customerAddress,
+    pw.TextStyle headerStyle,
+    pw.TextStyle bodyStyle,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          if (customerName != null && customerName.isNotEmpty)
+            pw.Text('Name: $customerName', style: bodyStyle),
+          if (customerPhone != null && customerPhone.isNotEmpty)
+            pw.Text('Phone: $customerPhone', style: bodyStyle),
+          if (customerEmail != null && customerEmail.isNotEmpty)
+            pw.Text('Email: $customerEmail', style: bodyStyle),
+          if (customerAddress != null && customerAddress.isNotEmpty)
+            pw.Text('Address: $customerAddress', style: bodyStyle),
+        ],
+      ),
+    );
   }
 }

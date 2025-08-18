@@ -25,6 +25,10 @@ class PrintPage extends StatefulWidget {
   final String orderDate;
   final String orderNumber;
   final bool isFromLocalStorage;
+  final String? customerName;
+  final String? customerPhone;
+  final String? customerEmail;
+  final String? customerAddress;
 
   const PrintPage({
     Key? key,
@@ -35,6 +39,10 @@ class PrintPage extends StatefulWidget {
     required this.orderDate,
     required this.orderNumber,
     this.isFromLocalStorage = false,
+    this.customerName,
+    this.customerPhone,
+    this.customerEmail,
+    this.customerAddress,
   }) : super(key: key);
 
   @override
@@ -334,6 +342,10 @@ class _PrintPageState extends State<PrintPage> {
       billDocumentConfig: _billDocumentConfig,
       customerCareNumber: customerCareNumber,
       customerCareEmail: customerCareEmail,
+      customerName: widget.customerName,
+      customerPhone: widget.customerPhone,
+      customerEmail: widget.customerEmail,
+      customerAddress: widget.customerAddress,
     );
   }
 
@@ -353,6 +365,10 @@ class _PrintPageState extends State<PrintPage> {
       billDocumentConfig: _billDocumentConfig,
       customerCareNumber: customerCareNumber,
       customerCareEmail: customerCareEmail,
+      customerName: widget.customerName,
+      customerPhone: widget.customerPhone,
+      customerEmail: widget.customerEmail,
+      customerAddress: widget.customerAddress,
     );
   }
 

@@ -238,12 +238,11 @@ class _SalesScreenState extends State<SalesScreen> {
         filterStore: filters['filterStore'],
         page: int.tryParse(filters['page'] ?? '1') ?? 1,
       );
-      
+
       debugPrint('=== SEARCH ORDERS COMPLETED ===');
       debugPrint('Current Page: ${orderProvider.currentPage}');
       debugPrint('Total Pages: ${orderProvider.totalPages}');
       debugPrint('Orders Count: ${orderProvider.orders.length}');
-      
     } catch (error, stackTrace) {
       debugPrint('Search error: $error');
       debugPrint('Stack trace: $stackTrace');
@@ -397,6 +396,12 @@ class _SalesScreenState extends State<SalesScreen> {
 
                 String storeName = orderDetails.data!.cart!.storeName ?? "";
                 String orderDate = orderDetails.data!.orderDate ?? "";
+                
+                // Extract customer details
+                String? customerName = orderDetails.data?.customerDetails?.name;
+                String? customerPhone = orderDetails.data?.customerDetails?.phone;
+                String? customerEmail = orderDetails.data?.customerDetails?.email;
+                String? customerAddress = orderDetails.data?.customerDetails?.address?.join(', ');
 
                 Navigator.push(
                   context,
@@ -408,6 +413,10 @@ class _SalesScreenState extends State<SalesScreen> {
                       savedTotal: savedTotal!,
                       orderDate: orderDate,
                       orderNumber: orderDetails.data!.orderNumber.toString(),
+                      customerName: customerName,
+                      customerPhone: customerPhone,
+                      customerEmail: customerEmail,
+                      customerAddress: customerAddress,
                     ),
                   ),
                 );
@@ -421,7 +430,8 @@ class _SalesScreenState extends State<SalesScreen> {
           icon: const Icon(Icons.share, size: 18, color: Colors.blue),
           onPressed: () async {
             try {
-              String? invoiceHash = order.invoiceHash; // Use the new invoiceHash field
+              String? invoiceHash =
+                  order.invoiceHash; // Use the new invoiceHash field
               if (invoiceHash == null) {
                 if (context.mounted) {
                   showScaffoldError(
@@ -431,22 +441,26 @@ class _SalesScreenState extends State<SalesScreen> {
                 }
                 return;
               }
-              String invoiceUrl = "${APPUrl.baseURL}/invoice-download/$invoiceHash";
-              String message = "Here is the link for your invoice :- $invoiceUrl";
-              
+              String invoiceUrl =
+                  "${APPUrl.baseURL}/invoice-download/$invoiceHash";
+              String message =
+                  "Here is the link for your invoice :- $invoiceUrl";
+
               // Encode the message for WhatsApp
               String encodedMessage = Uri.encodeComponent(message);
               String whatsappUrl = "https://wa.me/?text=$encodedMessage";
-              
+
               // Launch WhatsApp
               if (await canLaunchUrl(Uri.parse(whatsappUrl))) {
-                await launchUrl(Uri.parse(whatsappUrl), mode: LaunchMode.externalApplication);
+                await launchUrl(Uri.parse(whatsappUrl),
+                    mode: LaunchMode.externalApplication);
               } else {
                 // Fallback: show error message
                 if (context.mounted) {
                   showScaffoldError(
                     context: context,
-                    message: 'Could not open WhatsApp. Please make sure WhatsApp is installed.',
+                    message:
+                        'Could not open WhatsApp. Please make sure WhatsApp is installed.',
                   );
                 }
               }
@@ -950,7 +964,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                               storeSelected = storeModelData;
                                               if (storeModelData != null) {
                                                 storeController.text =
-                                                    storeModelData.id.toString();
+                                                    storeModelData.id
+                                                        .toString();
                                               } else {
                                                 storeController.clear();
                                               }
@@ -1004,8 +1019,10 @@ class _SalesScreenState extends State<SalesScreen> {
                             onPageChanged: (int page) {
                               debugPrint('=== PAGINATION CLICKED ===');
                               debugPrint('User clicked page: $page');
-                              debugPrint('Current provider page: ${orderProvider.currentPage}');
-                              debugPrint('Total pages: ${orderProvider.totalPages}');
+                              debugPrint(
+                                  'Current provider page: ${orderProvider.currentPage}');
+                              debugPrint(
+                                  'Total pages: ${orderProvider.totalPages}');
                               searchOrders(page);
                             },
                           ),
