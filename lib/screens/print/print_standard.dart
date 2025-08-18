@@ -140,36 +140,63 @@ class StandardPrinter {
       PdfPageFormat pageFormat =
           selectedPaperSize == 'A4' ? PdfPageFormat.a4 : PdfPageFormat.a5;
 
-      // Define styles with adjustments for A5 vs A4
+      // Define styles with adjustments for A5 vs A4 - optimized for space and professional look
       final headerStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 16.0 : 18.0,
+        fontSize: selectedPaperSize == 'A5'
+            ? 16.0
+            : 18.0, // Increased for better hierarchy
         fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
       );
       final subheaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 12.0 : 14.0,
+        fontSize: selectedPaperSize == 'A5'
+            ? 9.0
+            : 11.0, // Reduced for better proportion
         fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
       );
       final bodyStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 7.0 : 11.0,
+        fontSize: selectedPaperSize == 'A5'
+            ? 6.0
+            : 8.0, // Reduced for smaller table text
+        color: PdfColors.black,
       );
       final smallStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 7.0 : 9.0,
+        fontSize: selectedPaperSize == 'A5' ? 5.0 : 7.0, // Reduced further
+        color: PdfColors.black,
       );
       final tableHeaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 6.0 : 8.0,
+        fontSize: selectedPaperSize == 'A5'
+            ? 6.0
+            : 8.0, // Reduced for smaller table headers
         fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
+      );
+      final summaryStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5'
+            ? 8.0
+            : 10.0, // Reduced for better proportion
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
+      );
+      final netTotalStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5'
+            ? 9.0
+            : 11.0, // Reduced for better proportion
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
       );
 
-      // Add content to a multi-page PDF so overflow flows to new pages
+      // Add content to a multi-page PDF with minimal margins and optimized spacing
       pdf.addPage(
         pw.MultiPage(
           pageFormat: pageFormat,
-          margin: const pw.EdgeInsets.all(30),
+          margin: const pw.EdgeInsets.all(15), // Reduced from 30
           footer: (context) => pw.Padding(
-            padding: const pw.EdgeInsets.only(top: 10),
+            padding: const pw.EdgeInsets.only(top: 5), // Reduced from 10
             child: pw.Text(
               'Page ${context.pageNumber} of ${context.pagesCount}',
-              style: pw.TextStyle(fontSize: 8),
+              style: pw.TextStyle(fontSize: 6), // Reduced from 8
               textAlign: pw.TextAlign.center,
             ),
           ),
@@ -178,7 +205,7 @@ class StandardPrinter {
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                // Header with store information
+                // Header with store information - compact design
                 pw.Center(
                   child: pw.Column(
                     children: [
@@ -191,20 +218,20 @@ class StandardPrinter {
                           style: headerStyle,
                         ),
 
-                      // Store description (subheader from DocumentConfig or value from displayConfig)
+                      // Store description
                       if (updatedSettings?['showDescription']?.visible == true)
                         pw.Text(
                           updatedSettings?['showDescription']?.value
                                   as String? ??
                               billDocumentConfig.subheader ??
-                              'Mini Supermarket',
+                              '',
                           style: pw.TextStyle(
-                            fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                            fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
                             fontStyle: pw.FontStyle.italic,
                           ),
                         ),
 
-                      // Store address - Only show if data is available
+                      // Store address - compact display
                       if (updatedSettings?['showStoreAddress']?.visible ==
                           true) ...[
                         if ((updatedSettings?['showStoreAddress']?.value
@@ -218,7 +245,7 @@ class StandardPrinter {
                           ),
                       ],
 
-                      // FSSAI info - Only show if data is available
+                      // FSSAI info - compact display
                       if (updatedSettings?['showFssaiInfo']?.visible ==
                           true) ...[
                         if ((updatedSettings?['showFssaiInfo']?.value
@@ -231,7 +258,7 @@ class StandardPrinter {
                           ),
                       ],
 
-                      // Contact information (Tel and Email)
+                      // Contact information - compact display
                       if (updatedSettings?['showTel']?.visible == true)
                         pw.Text(
                           updatedSettings?['showTel']?.value as String? ??
@@ -249,74 +276,42 @@ class StandardPrinter {
                   ),
                 ),
 
-                pw.SizedBox(height: 20),
+                pw.SizedBox(height: 5), // Reduced from 10
 
-                // Invoice information in a framed box
+                // Invoice information - minimal design without borders
                 if ((updatedSettings?['showInvoiceTitle']?.visible == true) ||
                     (updatedSettings?['showInvoiceNumber']?.visible == true))
                   pw.Container(
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(width: 1, color: PdfColors.grey300),
-                      borderRadius:
-                          const pw.BorderRadius.all(pw.Radius.circular(5)),
-                    ),
-                    padding: const pw.EdgeInsets.all(10),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    padding: const pw.EdgeInsets.symmetric(
+                        vertical: 0, horizontal: 8), // Reduced padding
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
-                        pw.Row(
-                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                          children: [
-                            if (updatedSettings?['showInvoiceTitle']?.visible ==
-                                true)
-                              pw.Text(
-                                  updatedSettings?['showInvoiceTitle']?.value
-                                          as String? ??
-                                      billDocumentConfig.header ??
-                                      'INVOICE',
-                                  style: subheaderStyle),
-                            if (updatedSettings?['showInvoiceNumber']
-                                    ?.visible ==
-                                true)
-                              // Use numberPrefix from DocumentConfig if available
-                              pw.Text(
-                                  (billDocumentConfig.numberPrefix != null &&
-                                          billDocumentConfig
-                                              .numberPrefix!.isNotEmpty)
-                                      ? '${billDocumentConfig.numberPrefix}$orderNumber'
-                                      : 'No: $orderNumber',
-                                  style: subheaderStyle),
-                          ],
-                        ),
-                        if (updatedSettings?['showDateHeader']?.visible ==
-                            true) ...[
-                          // Assuming showDateHeader controls date in PDF header box
-                          pw.SizedBox(height: 5),
-                          pw.Row(
-                            mainAxisAlignment:
-                                pw.MainAxisAlignment.spaceBetween,
-                            children: [
-                              pw.Text(
-                                  'Date: ${DateHelper.formatISODate(orderDate)}',
-                                  style: bodyStyle),
-                              pw.Text(
-                                  'Time: ${DateHelper.formatISODateToIST(orderDate)}',
-                                  style: bodyStyle),
-                            ],
-                          ),
-                        ],
+                        if (updatedSettings?['showInvoiceTitle']?.visible ==
+                            true)
+                          pw.Text(
+                              updatedSettings?['showInvoiceTitle']?.value
+                                      as String? ??
+                                  billDocumentConfig.header ??
+                                  'INVOICE',
+                              style: subheaderStyle),
+                        if (updatedSettings?['showInvoiceNumber']?.visible ==
+                            true)
+                          pw.Text(
+                              (billDocumentConfig.numberPrefix != null &&
+                                      billDocumentConfig
+                                          .numberPrefix!.isNotEmpty)
+                                  ? '${billDocumentConfig.numberPrefix}$orderNumber'
+                                  : 'No: $orderNumber',
+                              style: subheaderStyle),
                       ],
                     ),
                   ),
 
-                pw.SizedBox(height: 15),
-
-                // Date and Time Row (above items table)
+                // Date and Time Row - minimal design
                 _buildDateTimeRowPDF(selectedPaperSize, orderDate),
 
-                pw.SizedBox(height: 15),
-
-                // Items table in a framed box
+                // Items table - minimal design without borders
                 if ((updatedSettings?['showSLNumber']?.visible == true) ||
                     (updatedSettings?['showParticulars']?.visible == true) ||
                     (updatedSettings?['showMRP']?.visible == true) ||
@@ -324,17 +319,11 @@ class StandardPrinter {
                     (updatedSettings?['showRate']?.visible == true) ||
                     (updatedSettings?['showTotal']?.visible == true))
                   pw.Container(
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(width: 1, color: PdfColors.grey300),
-                      borderRadius:
-                          const pw.BorderRadius.all(pw.Radius.circular(5)),
-                    ),
-                    padding: const pw.EdgeInsets.all(10),
+                    padding: const pw.EdgeInsets.symmetric(
+                        vertical: 5, horizontal: 8), // Reduced padding
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('ITEM DETAILS', style: subheaderStyle),
-                        pw.SizedBox(height: 10),
                         _buildPdfItemsTable(
                             tableHeaderStyle,
                             bodyStyle,
@@ -346,28 +335,25 @@ class StandardPrinter {
                     ),
                   ),
 
-                pw.SizedBox(height: 15),
+                pw.SizedBox(height: 5), // Reduced from 8
 
-                // Summary in a framed box
+                // Summary - minimal design without borders
                 if ((updatedSettings?['showItemsCount']?.visible == true) ||
                     (updatedSettings?['showMRPTotal']?.visible == true) ||
                     (updatedSettings?['showSaved']?.visible == true) ||
                     (updatedSettings?['showDiscount']?.visible == true) ||
                     (updatedSettings?['showNetAmount']?.visible == true))
                   pw.Container(
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(width: 1, color: PdfColors.grey300),
-                      borderRadius:
-                          const pw.BorderRadius.all(pw.Radius.circular(5)),
-                    ),
-                    padding: const pw.EdgeInsets.all(10),
+                    padding: const pw.EdgeInsets.symmetric(
+                        vertical: 5, horizontal: 8), // Reduced padding
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text('ORDER SUMMARY', style: subheaderStyle),
-                        pw.SizedBox(height: 10),
+                        pw.SizedBox(height: 5), // Reduced from 10
                         _buildPdfSummary(
-                            bodyStyle,
+                            summaryStyle,
+                            netTotalStyle,
                             updatedSettings,
                             formattedTotal,
                             savedTotal,
@@ -377,47 +363,35 @@ class StandardPrinter {
                     ),
                   ),
 
-                pw.SizedBox(height: 10),
-
-                // Amount in words
+                // Amount in words - consistent with summary layout
                 if (updatedSettings?['showAmountInWords']?.visible == true)
                   pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 10),
-                    decoration: const pw.BoxDecoration(
-                      border: pw.Border(
-                        top: pw.BorderSide(color: PdfColors.grey300),
-                        bottom: pw.BorderSide(color: PdfColors.grey300),
-                      ),
-                    ),
-                    child: pw.Text(
-                      'Amount in words: ${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
-                      style: pw.TextStyle(
-                        fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                        fontStyle: pw.FontStyle.italic,
-                      ),
+                    padding: const pw.EdgeInsets.symmetric(
+                        vertical: 0, horizontal: 8), // Same padding as summary
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text(
+                          'Amount in words:',
+                          style:
+                              summaryStyle, // Same style as other summary items
+                        ),
+                        pw.Text(
+                          '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
+                          style:
+                              summaryStyle, // Same style as other summary items
+                          textAlign: pw.TextAlign.right,
+                        ),
+                      ],
                     ),
                   ),
 
-                pw.SizedBox(height: 10),
+                pw.SizedBox(height: 5), // Reduced from 10
 
-                // Footer section
+                // Footer section - compact design
                 pw.Column(
                   children: [
-                    // Thank You message
-                    if (updatedSettings?['showThankYouMessage']?.visible ==
-                        true)
-                      pw.Center(
-                        child: pw.Text(
-                          updatedSettings?['showThankYouMessage']?.value
-                                  as String? ??
-                              'Thank You... Visit Again',
-                          style: subheaderStyle,
-                        ),
-                      ),
-
-                    pw.SizedBox(height: 10),
-
-                    // QR Code for payment - Only show if enabled in settings
+                    // QR Code for payment - compact size
                     if (updatedSettings?['showQRCode']?.visible == true) ...[
                       pw.Center(
                         child: pw.Column(
@@ -428,38 +402,57 @@ class StandardPrinter {
                                   .replaceAll(
                                       '{formattedTotal}', formattedTotal)
                                   .replaceAll('{orderNumber}', orderNumber),
-                              width: selectedPaperSize == 'A5' ? 100 : 120,
-                              height: selectedPaperSize == 'A5' ? 100 : 120,
+                              width: selectedPaperSize == 'A5'
+                                  ? 80
+                                  : 100, // Reduced size
+                              height: selectedPaperSize == 'A5'
+                                  ? 80
+                                  : 100, // Reduced size
                             ),
-                            pw.SizedBox(height: 5),
+                            pw.SizedBox(height: 3), // Reduced from 5
                             pw.Text(
                               updatedSettings?['showQRCode']?.value
                                       as String? ??
                                   'Scan to Pay',
                               style: pw.TextStyle(
-                                fontSize:
-                                    selectedPaperSize == 'A5' ? 9.0 : 11.0,
+                                fontSize: selectedPaperSize == 'A5' ? 7.0 : 9.0,
                                 fontWeight: pw.FontWeight.bold,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      pw.SizedBox(height: 10),
+                      pw.SizedBox(height: 5), // Reduced from 10
                     ],
 
-                    // Order ID Barcode (just before Terms & Conditions)
+                    // Order ID Barcode - compact size
                     _buildOrderBarcodePDF(selectedPaperSize, orderNumber),
 
-                    // Terms & Conditions - Only show if enabled and data is available
+                    // Thank You message - reduced font size
+                    if (updatedSettings?['showThankYouMessage']?.visible ==
+                        true)
+                      pw.Center(
+                        child: pw.Text(
+                          updatedSettings?['showThankYouMessage']?.value
+                                  as String? ??
+                              'Thank You... Visit Again',
+                          style: pw.TextStyle(
+                            fontSize: selectedPaperSize == 'A5'
+                                ? 8.0
+                                : 10.0, // Reduced from subheaderStyle
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.black,
+                          ),
+                        ),
+                      ),
+
+                    // Terms & Conditions - compact design
                     if (updatedSettings?['showTermsConditions']?.visible ==
                         true) ...[
-                      // Get terms from displayConfig value first, then fallback to billDocumentConfig
                       if (_hasTermsData(
                           updatedSettings, billDocumentConfig)) ...[
                         _buildTermsConditionsBoxPDF(selectedPaperSize,
                             updatedSettings, billDocumentConfig),
-                        pw.SizedBox(height: 10),
                       ],
                     ],
                   ],
@@ -624,50 +617,57 @@ class StandardPrinter {
     int visibleColIndex = 0;
 
     if (displayConfig?['showSLNumber']?.visible == true) {
-      final slLabel = (displayConfig?['showSLNumber']?.value as String?)?.isNotEmpty == true 
-          ? displayConfig!['showSLNumber']!.value as String
-          : 'SL#';
+      final slLabel =
+          (displayConfig?['showSLNumber']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showSLNumber']!.value as String
+              : 'SL#';
       tableHeaders.add(slLabel);
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
       columnWidths.add(1); // Smaller width for serial number
     }
     if (displayConfig?['showParticulars']?.visible == true) {
-      final label = (displayConfig?['showParticulars']?.value as String?)?.isNotEmpty == true 
-          ? displayConfig!['showParticulars']!.value as String
-          : 'PARTICULARS';
+      final label =
+          (displayConfig?['showParticulars']?.value as String?)?.isNotEmpty ==
+                  true
+              ? displayConfig!['showParticulars']!.value as String
+              : 'PARTICULARS';
       tableHeaders.add(label.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
       columnWidths.add(
           5); // Much larger width for product names to accommodate long names
     }
     if (displayConfig?['showMRP']?.visible == true) {
-      final mrpLabel = (displayConfig?['showMRP']?.value as String?)?.isNotEmpty == true 
-          ? displayConfig!['showMRP']!.value as String
-          : 'MRP';
+      final mrpLabel =
+          (displayConfig?['showMRP']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showMRP']!.value as String
+              : 'MRP';
       tableHeaders.add(mrpLabel.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
       columnWidths.add(1.5); // Slightly larger for price values
     }
     if (displayConfig?['showQty']?.visible == true) {
-      final label = (displayConfig?['showQty']?.value as String?)?.isNotEmpty == true 
-          ? displayConfig!['showQty']!.value as String
-          : 'QTY';
+      final label =
+          (displayConfig?['showQty']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showQty']!.value as String
+              : 'QTY';
       tableHeaders.add(label.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
       columnWidths.add(1.5); // Compact for quantity
     }
     if (displayConfig?['showRate']?.visible == true) {
-      final label = (displayConfig?['showRate']?.value as String?)?.isNotEmpty == true 
-          ? displayConfig!['showRate']!.value as String
-          : 'RATE';
+      final label =
+          (displayConfig?['showRate']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showRate']!.value as String
+              : 'RATE';
       tableHeaders.add(label.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
       columnWidths.add(1.5); // Slightly larger for price values
     }
     if (displayConfig?['showTotal']?.visible == true) {
-      final label = (displayConfig?['showTotal']?.value as String?)?.isNotEmpty == true 
-          ? displayConfig!['showTotal']!.value as String
-          : 'TOTAL';
+      final label =
+          (displayConfig?['showTotal']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showTotal']!.value as String
+              : 'TOTAL';
       tableHeaders.add(label.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
       columnWidths.add(1.5); // Slightly larger for total values
@@ -711,10 +711,12 @@ class StandardPrinter {
       String displayProductName = productName;
 
       List<String> rowData = [];
-      if (displayConfig?['showSLNumber']?.visible == true)
+      if (displayConfig?['showSLNumber']?.visible == true) {
         rowData.add((i + 1).toString());
-      if (displayConfig?['showParticulars']?.visible == true)
+      }
+      if (displayConfig?['showParticulars']?.visible == true) {
         rowData.add(displayProductName);
+      }
       if (displayConfig?['showMRP']?.visible == true) rowData.add(mrp);
       if (displayConfig?['showQty']?.visible == true) rowData.add(quantity);
       if (displayConfig?['showRate']?.visible == true) rowData.add(unitPrice);
@@ -730,22 +732,29 @@ class StandardPrinter {
       headerDecoration: const pw.BoxDecoration(
         color: PdfColors.grey200,
       ),
-      headerHeight: 25,
+      headerHeight: 20, // Reduced from 25
       cellStyle: contentStyle,
-      cellHeight: 25,
+      cellHeight: 18, // Reduced from 25
       cellAlignments: cellAlignmentsMap,
-      cellPadding: const pw.EdgeInsets.all(5),
+      cellPadding: const pw.EdgeInsets.all(3), // Reduced from 5
       border: const pw.TableBorder(
-        horizontalInside: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
-        verticalInside: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+        top: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+        bottom: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+        left: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+        right: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+        horizontalInside: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+        verticalInside: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
       ),
-      columnWidths: Map.fromIterable(columnWidths.asMap().keys,
-          key: (i) => i, value: (i) => pw.FlexColumnWidth(columnWidths[i])),
+      columnWidths: {
+        for (var i in columnWidths.asMap().keys)
+          i: pw.FlexColumnWidth(columnWidths[i])
+      },
     );
   }
 
   pw.Widget _buildPdfSummary(
       pw.TextStyle style,
+      pw.TextStyle netTotalStyle,
       Map<String, DisplayOption>? displayConfig,
       String formattedTotal,
       String? savedTotal,
@@ -768,7 +777,7 @@ class StandardPrinter {
           ],
         ),
       );
-      summaryWidgets.add(pw.SizedBox(height: 5));
+      summaryWidgets.add(pw.SizedBox(height: 3)); // Reduced from 5
     }
 
     // Display Total MRP
@@ -782,7 +791,7 @@ class StandardPrinter {
           ],
         ),
       );
-      summaryWidgets.add(pw.SizedBox(height: 5));
+      summaryWidgets.add(pw.SizedBox(height: 3)); // Reduced from 5
     }
 
     // Display You Saved / Discount
@@ -796,7 +805,7 @@ class StandardPrinter {
           ],
         ),
       );
-      summaryWidgets.add(pw.SizedBox(height: 5));
+      summaryWidgets.add(pw.SizedBox(height: 3)); // Reduced from 5
     } else if (displayConfig?['showDiscount']?.visible == true) {
       summaryWidgets.add(
         pw.Row(
@@ -807,28 +816,20 @@ class StandardPrinter {
           ],
         ),
       );
-      summaryWidgets.add(pw.SizedBox(height: 5));
+      summaryWidgets.add(pw.SizedBox(height: 3)); // Reduced from 5
     }
 
     // Display Net Total (Amount)
     if (displayConfig?['showNetAmount']?.visible == true) {
       const label = 'Net Total';
-      summaryWidgets.add(pw.Divider(color: PdfColors.grey300));
-      summaryWidgets.add(pw.SizedBox(height: 5));
+      summaryWidgets.add(pw.Divider(color: PdfColors.black));
       summaryWidgets.add(
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('$label:',
-                style: pw.TextStyle(
-                  fontSize: 12.0,
-                  fontWeight: pw.FontWeight.bold,
-                )),
+            pw.Text('$label:', style: netTotalStyle),
             pw.Text(formattedTotalValue.toStringAsFixed(2),
-                style: pw.TextStyle(
-                  fontSize: 12.0,
-                  fontWeight: pw.FontWeight.bold,
-                )),
+                style: netTotalStyle),
           ],
         ),
       );
@@ -837,50 +838,27 @@ class StandardPrinter {
     return pw.Column(children: summaryWidgets);
   }
 
-  List<pw.Widget> _buildTermsConditionsList(
-      String termsText, pw.TextStyle style) {
-    List<String> terms = termsText.split('\n');
-    List<pw.Widget> termWidgets = [];
-
-    for (int i = 0; i < terms.length; i++) {
-      termWidgets.add(
-        pw.Text(
-          terms[i],
-          style: style,
-        ),
-      );
-
-      if (i < terms.length - 1) {
-        termWidgets.add(pw.SizedBox(height: 2));
-      }
-    }
-
-    return termWidgets;
-  }
-
-  // Date and Time Row for PDF
+  // Date and Time Row for PDF - minimal design
   pw.Widget _buildDateTimeRowPDF(String selectedPaperSize, String orderDate) {
     return pw.Container(
-      decoration: pw.BoxDecoration(
-        border: pw.Border.symmetric(
-          horizontal: pw.BorderSide(color: PdfColors.grey300, width: 1),
-        ),
-      ),
-      padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+      padding: const pw.EdgeInsets.symmetric(
+          vertical: 5, horizontal: 8), // Reduced padding
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(
             'Date: ${DateHelper.formatISODate(orderDate)}',
             style: pw.TextStyle(
-              fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+              fontSize:
+                  selectedPaperSize == 'A5' ? 7.0 : 9.0, // Reduced font size
               fontWeight: pw.FontWeight.bold,
             ),
           ),
           pw.Text(
             'Time: ${DateHelper.formatISODateToIST(orderDate)}',
             style: pw.TextStyle(
-              fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+              fontSize:
+                  selectedPaperSize == 'A5' ? 7.0 : 9.0, // Reduced font size
               fontWeight: pw.FontWeight.bold,
             ),
           ),
@@ -889,28 +867,24 @@ class StandardPrinter {
     );
   }
 
-  // Order ID Barcode for PDF
+  // Order ID Barcode for PDF - compact design with vertical padding
   pw.Widget _buildOrderBarcodePDF(
       String selectedPaperSize, String orderNumber) {
     return pw.Center(
-      child: pw.Column(
-        children: [
-          pw.Text(
-            'Order ID:',
-            style: pw.TextStyle(
-              fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
-              fontWeight: pw.FontWeight.bold,
+      child: pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(
+            vertical: 5), // Added vertical padding
+        child: pw.Column(
+          children: [
+            pw.BarcodeWidget(textPadding: 2,
+              barcode: pw.Barcode.code128(),
+              data: orderNumber,
+              width: selectedPaperSize == 'A5' ? 100 : 120, // Smaller size
+              height: selectedPaperSize == 'A5' ? 25 : 30, // Smaller height
             ),
-          ),
-          pw.SizedBox(height: 5),
-          pw.BarcodeWidget(
-            barcode: pw.Barcode.code128(),
-            data: orderNumber,
-            width: selectedPaperSize == 'A5' ? 120 : 150, // Smaller size
-            height: selectedPaperSize == 'A5' ? 30 : 40, // Smaller height
-          ),
-          pw.SizedBox(height: 10),
-        ],
+            pw.SizedBox(height: 5), // Reduced from 10
+          ],
+        ),
       ),
     );
   }
@@ -927,7 +901,7 @@ class StandardPrinter {
     return terms != null && terms.trim().isNotEmpty;
   }
 
-  // Terms & Conditions in a Box for PDF
+  // Terms & Conditions in a Box for PDF - minimal design
   pw.Widget _buildTermsConditionsBoxPDF(
       String selectedPaperSize,
       Map<String, DisplayOption>? displayConfig,
@@ -939,34 +913,23 @@ class StandardPrinter {
     }
 
     return pw.Container(
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey400, width: 2),
-        borderRadius: pw.BorderRadius.circular(8),
-      ),
-      padding: const pw.EdgeInsets.all(15),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 5), // Reduced padding
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Center(
-            child: pw.Text(
-              'Terms & Conditions',
-              style: pw.TextStyle(
-                fontSize: selectedPaperSize == 'A5' ? 9.0 : 12.0,
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
-          ),
-          pw.SizedBox(height: 8),
-          pw.Divider(color: PdfColors.grey300),
-          pw.SizedBox(height: 5),
+          pw.Divider(color: PdfColors.black),
           ...terms!.split('\n').map((term) {
-            if (term.trim().isEmpty) return pw.SizedBox(height: 2);
+            if (term.trim().isEmpty) {
+              return pw.SizedBox(height: 1); // Reduced from 2
+            }
             return pw.Padding(
-              padding: const pw.EdgeInsets.only(bottom: 3),
+              padding: const pw.EdgeInsets.only(bottom: 2), // Reduced from 3
               child: pw.Text(
-                '• $term',
+                term,
                 style: pw.TextStyle(
-                  fontSize: selectedPaperSize == 'A5' ? 7.0 : 9.0,
+                  fontSize: selectedPaperSize == 'A5'
+                      ? 7.0
+                      : 7.0, // Reduced font size
                 ),
               ),
             );
