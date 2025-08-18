@@ -196,7 +196,7 @@ class StandardPrinter {
             padding: const pw.EdgeInsets.only(top: 5), // Reduced from 10
             child: pw.Text(
               'Page ${context.pageNumber} of ${context.pagesCount}',
-              style: pw.TextStyle(fontSize: 6), // Reduced from 8
+              style: const pw.TextStyle(fontSize: 6), // Reduced from 8
               textAlign: pw.TextAlign.center,
             ),
           ),
@@ -227,7 +227,6 @@ class StandardPrinter {
                               '',
                           style: pw.TextStyle(
                             fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                            fontStyle: pw.FontStyle.italic,
                           ),
                         ),
 
@@ -842,7 +841,7 @@ class StandardPrinter {
   pw.Widget _buildDateTimeRowPDF(String selectedPaperSize, String orderDate) {
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(
-          vertical: 5, horizontal: 8), // Reduced padding
+          vertical: 0, horizontal: 8), // Reduced padding
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
@@ -876,7 +875,8 @@ class StandardPrinter {
             vertical: 5), // Added vertical padding
         child: pw.Column(
           children: [
-            pw.BarcodeWidget(textPadding: 2,
+            pw.BarcodeWidget(
+              textPadding: 2,
               barcode: pw.Barcode.code128(),
               data: orderNumber,
               width: selectedPaperSize == 'A5' ? 100 : 120, // Smaller size
