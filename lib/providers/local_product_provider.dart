@@ -53,6 +53,8 @@ class SavedOrder {
   final String? status;
   final String? deliveryDate; // Added for local persistence
   final String? deliveryTime; // Added for local persistence
+  final double? flatDiscount;
+  final double? percentageDiscount;
 
   SavedOrder({
     required this.id,
@@ -76,6 +78,8 @@ class SavedOrder {
     this.status,
     this.deliveryDate, // Added to constructor
     this.deliveryTime, // Added to constructor
+    this.flatDiscount,
+    this.percentageDiscount,
   });
 }
 
@@ -85,6 +89,9 @@ class PriceSummary {
   double subTotal;
   double totalTax;
   double netTotal;
+  double flatDiscount;
+  double percentageDiscount;
+  double originalSubTotal;
 
   PriceSummary({
     required this.discount,
@@ -92,6 +99,9 @@ class PriceSummary {
     required this.subTotal,
     required this.totalTax,
     required this.netTotal,
+    this.flatDiscount = 0.0,
+    this.percentageDiscount = 0.0,
+    this.originalSubTotal = 0.0,
   });
 }
 
@@ -162,6 +172,10 @@ class LocalProductProvider extends ChangeNotifier {
   // Stock management settings - need to be injected from outside since this provider
   // doesn't have access to GeneralSettingsProvider directly
   bool? _stockEnabled;
+
+  // Discount management
+  double _flatDiscount = 0.0;
+  double _percentageDiscount = 0.0;
 
   /// Sets the stock enabled status from the GeneralSettingsProvider
   void setStockEnabled(bool enabled) {
@@ -249,6 +263,8 @@ class LocalProductProvider extends ChangeNotifier {
           status: hiveSavedOrder.status,
           deliveryDate: hiveSavedOrder.deliveryDate, // Restore delivery date
           deliveryTime: hiveSavedOrder.deliveryTime, // Restore delivery time
+          flatDiscount: hiveSavedOrder.flatDiscount,
+          percentageDiscount: hiveSavedOrder.percentageDiscount,
         ));
       }
       notifyListeners();
@@ -311,6 +327,8 @@ class LocalProductProvider extends ChangeNotifier {
           status: order.status,
           deliveryDate: order.deliveryDate,
           deliveryTime: order.deliveryTime,
+          flatDiscount: order.flatDiscount,
+          percentageDiscount: order.percentageDiscount,
         );
 
         _confirmedOrdersBox.add(hiveSavedOrder);
@@ -405,6 +423,8 @@ class LocalProductProvider extends ChangeNotifier {
         status: hiveSavedOrder.status,
         deliveryDate: hiveSavedOrder.deliveryDate, // Restore delivery date
         deliveryTime: hiveSavedOrder.deliveryTime, // Restore delivery time
+        flatDiscount: hiveSavedOrder.flatDiscount,
+        percentageDiscount: hiveSavedOrder.percentageDiscount,
       ));
     }
     notifyListeners();
@@ -494,6 +514,8 @@ class LocalProductProvider extends ChangeNotifier {
         status: order.status,
         deliveryDate: order.deliveryDate,
         deliveryTime: order.deliveryTime,
+        flatDiscount: order.flatDiscount,
+        percentageDiscount: order.percentageDiscount,
       );
 
       _savedOrdersBox.add(hiveSavedOrder);
@@ -501,25 +523,40 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   double get cartTotal {
-    double total = 0.0;
+    double subTotal = 0.0;
     double totalTax = 0.0; // Assuming you have a way to calculate tax
-    double discount = 0.0; // Assuming you have a way to calculate discount
-
+    
+    // Calculate subtotal from all cart items
     for (var item in _cartItems) {
-      total += (item.price ?? 0) * item.quantity; // Calculate total price
+      subTotal += (item.price ?? 0) * item.quantity;
     }
+    
+    // Calculate discount amounts
+    double flatDiscountAmount = _flatDiscount;
+    double percentageDiscountAmount = (subTotal * _percentageDiscount / 100);
+    double totalDiscount = flatDiscountAmount + percentageDiscountAmount;
+    
+    // Ensure discount doesn't exceed subtotal
+    if (totalDiscount > subTotal) {
+      totalDiscount = subTotal;
+    }
+    
+    double netPayable = subTotal - totalDiscount;
+    double netTotal = netPayable + totalTax;
 
-    // Create a PriceSummary instance
+    // Create a PriceSummary instance with discount details
     priceSummary = PriceSummary(
-      discount: discount,
-      netPayable:
-          total - discount, // Assuming net payable is total minus discount
-      subTotal: total,
+      discount: totalDiscount,
+      netPayable: netPayable,
+      subTotal: subTotal,
       totalTax: totalTax,
-      netTotal: total - discount + totalTax, // Assuming net total includes tax
+      netTotal: netTotal,
+      flatDiscount: flatDiscountAmount,
+      percentageDiscount: percentageDiscountAmount,
+      originalSubTotal: subTotal,
     );
 
-    return total;
+    return netTotal; // Return the final total after discount
   }
 
   /// Sets the selected product and optionally the selected stock for product details.
@@ -1130,6 +1167,7 @@ class LocalProductProvider extends ChangeNotifier {
 
     _cartItems.clear();
     _cartItemsBox.clear();
+    clearDiscount(); // Also clear discounts when cart is cleared
     notifyListeners();
 
     debugPrint("✅ CLEAR CART COMPLETED");
@@ -1437,6 +1475,8 @@ class LocalProductProvider extends ChangeNotifier {
       status: status ?? "confirmed", // Default to "confirmed" if not provided
       deliveryDate: deliveryDate, // Pass deliveryDate
       deliveryTime: deliveryTime, // Pass deliveryTime
+      flatDiscount: _flatDiscount,
+      percentageDiscount: _percentageDiscount,
     );
 
     // Add to confirmed orders list
@@ -1480,6 +1520,8 @@ class LocalProductProvider extends ChangeNotifier {
           status: order.status ?? "confirmed",
           deliveryDate: order.deliveryDate, // Store deliveryDate in Hive
           deliveryTime: order.deliveryTime, // Store deliveryTime in Hive
+          flatDiscount: order.flatDiscount,
+          percentageDiscount: order.percentageDiscount,
         );
 
         // Add to confirmed orders
@@ -1610,6 +1652,8 @@ class LocalProductProvider extends ChangeNotifier {
       status: status ?? "saved", // Default to "saved" for regular orders
       deliveryDate: deliveryDate, // Pass deliveryDate
       deliveryTime: deliveryTime, // Pass deliveryTime
+      flatDiscount: _flatDiscount,
+      percentageDiscount: _percentageDiscount,
     );
 
     // Add to saved orders list
@@ -1659,6 +1703,10 @@ class LocalProductProvider extends ChangeNotifier {
     try {
       // Find the order
       final SavedOrder order = _savedOrders.firstWhere((o) => o.id == orderId);
+
+      // Restore discounts
+      _flatDiscount = order.flatDiscount ?? 0.0;
+      _percentageDiscount = order.percentageDiscount ?? 0.0;
 
       // Clear current cart
       _cartItems.clear();
@@ -1757,6 +1805,8 @@ class LocalProductProvider extends ChangeNotifier {
             _savedOrders[index].deliveryDate, // Update deliveryDate
         deliveryTime: deliveryTime ??
             _savedOrders[index].deliveryTime, // Update deliveryTime
+        flatDiscount: _flatDiscount,
+        percentageDiscount: _percentageDiscount,
       );
 
       // Update in list
@@ -1947,6 +1997,49 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     return originalTotal;
+  }
+
+  /// Applies discount to the cart
+  void applyDiscount({
+    required double flatDiscount,
+    required double percentageDiscount,
+  }) {
+    debugPrint("🏷️ APPLYING DISCOUNT");
+    debugPrint("  - Flat Discount: $flatDiscount");
+    debugPrint("  - Percentage Discount: $percentageDiscount%");
+    
+    _flatDiscount = flatDiscount;
+    _percentageDiscount = percentageDiscount;
+    
+    // Recalculate totals by calling cartTotal getter
+    cartTotal;
+    
+    notifyListeners();
+    
+    debugPrint("✅ DISCOUNT APPLIED SUCCESSFULLY");
+  }
+
+  /// Clears all applied discounts
+  void clearDiscount() {
+    debugPrint("🧹 CLEARING DISCOUNT");
+    
+    _flatDiscount = 0.0;
+    _percentageDiscount = 0.0;
+    
+    // Recalculate totals by calling cartTotal getter
+    cartTotal;
+    
+    notifyListeners();
+    
+    debugPrint("✅ DISCOUNT CLEARED SUCCESSFULLY");
+  }
+
+  /// Gets current discount values
+  Map<String, double> getCurrentDiscount() {
+    return {
+      'flatDiscount': _flatDiscount,
+      'percentageDiscount': _percentageDiscount,
+    };
   }
 
   // End of LocalProductProvider

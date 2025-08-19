@@ -107,6 +107,12 @@ class HiveSavedOrder extends HiveObject {
   @HiveField(19)
   final String? deliveryTime;
 
+  @HiveField(20)
+  final double? flatDiscount;
+
+  @HiveField(21)
+  final double? percentageDiscount;
+
   HiveSavedOrder({
     required this.id,
     required this.orderNumber,
@@ -129,6 +135,8 @@ class HiveSavedOrder extends HiveObject {
     this.status,
     this.deliveryDate,
     this.deliveryTime,
+    this.flatDiscount,
+    this.percentageDiscount,
   });
 }
 
@@ -202,6 +210,9 @@ class HiveGetProduct extends HiveObject {
   final List<HiveAttachment>? attachment;
 
   @HiveField(13)
+  final String? sku;
+
+  @HiveField(14)
   bool isSelected = false;
 
   HiveGetProduct({
@@ -218,6 +229,7 @@ class HiveGetProduct extends HiveObject {
     this.currency,
     this.description,
     this.attachment,
+    this.sku,
     this.isSelected = false,
   });
 
@@ -243,6 +255,7 @@ class HiveGetProduct extends HiveObject {
       attachment: product.attachment
           ?.map((e) => HiveAttachment.fromAttachment(e))
           .toList(),
+      sku: product.sku,
       isSelected: product.isSelected,
     );
   }
@@ -263,6 +276,7 @@ class HiveGetProduct extends HiveObject {
       description: description,
       price: price?.toProductPrice(),
       attachment: attachment?.map((e) => e.toAttachment()).toList(),
+      sku: sku,
     )..isSelected = isSelected;
   }
 }

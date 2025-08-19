@@ -1804,15 +1804,15 @@ class BillingPageState extends State<BillingPage>
                   true)
               ? BuildPaymentRow(
                   amount:
-                      "INR ${AmountHelper.roundOffAmount(localProductProvider.priceSummary!.discount)}",
+                      "INR ${AmountHelper.roundOffAmount(localProductProvider.priceSummary!.discount)} (${((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100).toStringAsFixed(1)}%)",
                   title: "Discount",
-                  color: ColorManager.textColor,
+                  color: ColorManager.kButtonGreen,
                 )
               : BuildPaymentRow(
                   amount:
-                      "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)}",
+                      "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100).toStringAsFixed(1)}%)",
                   title: "Discount",
-                  color: ColorManager.textColor,
+                  color: ColorManager.kButtonGreen,
                 ),
           const Divider(thickness: 2),
           BuildPaymentRow(
@@ -1823,7 +1823,7 @@ class BillingPageState extends State<BillingPage>
               FontWeightManager.bold,
               FontSize.s15,
               0.23,
-              ColorManager.textColor,
+              ColorManager.kPrimaryColor,
             ),
             firstRowTextStyle: buildCustomStyle(
               FontWeightManager.bold,
@@ -1869,7 +1869,7 @@ class BillingPageState extends State<BillingPage>
         ),
         BuildPaymentRow(
           amount:
-              "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)}",
+              "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100).toStringAsFixed(1)}%)",
           title: "Discount",
           color: ColorManager.textColor,
         ),
@@ -2667,7 +2667,13 @@ class BillingPageState extends State<BillingPage>
       isLoadingClearCart = true; // Indicate that loading has started
     });
     try {
-      Provider.of<LocalProductProvider>(context, listen: false).clearCart();
+      // Clear local cart
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      localProductProvider.clearCart();
+      localProductProvider.clearCurrentOrder();
+
+      // Clear UI state
       setState(() {
         coupenCodeTextController.clear();
         _transactionNumberController.clear();
@@ -3804,9 +3810,13 @@ class BillingPageState extends State<BillingPage>
           deliveryTime = currentOrder.deliveryTime;
 
           // Restore coupon if any
-          if (currentOrder.couponId != null &&
-              currentOrder.couponId!.isNotEmpty) {
-            coupenCodeTextController.text = currentOrder.couponId!;
+          if ((currentOrder.couponId != null &&
+                  currentOrder.couponId!.isNotEmpty) ||
+              (currentOrder.flatDiscount != null &&
+                  currentOrder.flatDiscount! > 0) ||
+              (currentOrder.percentageDiscount != null &&
+                  currentOrder.percentageDiscount! > 0)) {
+            coupenCodeTextController.text = currentOrder.couponId ?? "";
             isCouponApplied = true;
           } else {
             coupenCodeTextController.clear();
@@ -4648,11 +4658,33 @@ class BillingPageState extends State<BillingPage>
       builder: (context) => CouponModal(
         initialCouponCode: coupenCodeTextController.text,
         isCouponApplied: isCouponApplied,
-        onCouponAction: (couponCode, shouldApply) async {
+        onCouponAction: (couponCode, shouldApply,
+            {double? flatDiscount, double? percentageDiscount}) async {
           if (shouldApply) {
             coupenCodeTextController.text = couponCode;
-            await _applyCoupon();
+
+            // Apply manual discounts to local product provider
+            final localProductProvider =
+                Provider.of<LocalProductProvider>(context, listen: false);
+            localProductProvider.applyDiscount(
+              flatDiscount: flatDiscount ?? 0.0,
+              percentageDiscount: percentageDiscount ?? 0.0,
+            );
+
+            // Apply coupon if provided
+            if (couponCode.isNotEmpty) {
+              await _applyCoupon();
+            }
+
+            setState(() {
+              isCouponApplied = true;
+            });
           } else {
+            // Clear all discounts
+            final localProductProvider =
+                Provider.of<LocalProductProvider>(context, listen: false);
+            localProductProvider.clearDiscount();
+
             setState(() {
               isCouponApplied = false;
               coupenCodeTextController.clear();
