@@ -360,8 +360,8 @@ class OrderDetailsModelDataPriceSummary {
         totalTax: json["total_tax"] is num ? json["total_tax"] : null,
         netTotal: json["net_total"] is num ? json["net_total"] : null,
         savedTotal: json["total_saved"] is num ? json["total_saved"] : null,
-        discount: json["discount"] is num ? json["discount"] : null,
-        netPayable: json["net_payable"] is num ? json["net_payable"] : null,
+        discount: num.tryParse(json["discount"]?.toString() ?? ""),
+        netPayable: num.tryParse(json["net_payable"]?.toString() ?? ""),
       );
 
   Map<String, dynamic> toJson() => {
