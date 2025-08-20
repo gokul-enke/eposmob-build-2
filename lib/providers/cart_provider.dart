@@ -686,9 +686,13 @@ class CartProvider with ChangeNotifier {
     String? deliveryMethodId,
     String? carNumber,
     String? status,
-    String? deliveryDate, // <-- add this
-    String? deliveryTime, // <-- add this
+    String? deliveryDate,
+    String? deliveryTime,
     String? tableId,
+    // Add discount parameters
+    double? flatDiscount,
+    double? percentageDiscount,
+    double? discountAmount,
   }) async {
     debugPrint("📤 ADD TO ORDER API - Starting request");
     debugPrint("📦 Order items count: ${items?.length ?? 0}");
@@ -707,6 +711,9 @@ class CartProvider with ChangeNotifier {
     debugPrint("🚚 Delivery Method ID: $deliveryMethodId");
     debugPrint("🚗 Car Number: $carNumber");
     debugPrint("📊 Status: $status");
+    debugPrint("🏷️ Flat Discount: $flatDiscount");
+    debugPrint("📊 Percentage Discount: $percentageDiscount");
+    debugPrint("💰 Discount Amount: $discountAmount");
 
     DateTime now = DateTime.now();
 
@@ -743,6 +750,10 @@ class CartProvider with ChangeNotifier {
         if (deliveryDate != null) "delivery_date": deliveryDate,
         if (deliveryTime != null) "delivery_time": deliveryTime,
         if (tableId != null) "table": tableId,
+        // Include discount data
+        if (flatDiscount != null) "flat_discount": flatDiscount,
+        if (percentageDiscount != null) "percentage_discount": percentageDiscount,
+        if (discountAmount != null) "discount_amount": discountAmount,
       };
     } else {
       // Fallback to single payment method format
@@ -763,6 +774,10 @@ class CartProvider with ChangeNotifier {
         if (deliveryDate != null) "delivery_date": deliveryDate,
         if (deliveryTime != null) "delivery_time": deliveryTime,
         if (tableId != null) "table": tableId,
+        // Include discount data
+        if (flatDiscount != null) "flat_discount": flatDiscount,
+        if (percentageDiscount != null) "percentage_discount": percentageDiscount,
+        if (discountAmount != null) "discount_amount": discountAmount,
       };
     }
 
@@ -834,6 +849,10 @@ class CartProvider with ChangeNotifier {
     String? deliveryMethodId,
     String? carNumber,
     String? status,
+    // Add discount parameters
+    double? flatDiscount,
+    double? percentageDiscount,
+    double? discountAmount,
   }) async {
     debugPrint("📤 UPDATE ORDER API - Starting request");
     DateTime now = DateTime.now();
@@ -859,6 +878,10 @@ class CartProvider with ChangeNotifier {
         if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
         if (carNumber != null) "car_number": carNumber,
         if (status != null) "status": status,
+        // Include discount data
+        if (flatDiscount != null) "flat_discount": flatDiscount,
+        if (percentageDiscount != null) "percentage_discount": percentageDiscount,
+        if (discountAmount != null) "discount_amount": discountAmount,
       };
     } else {
       // Fallback to single payment method format
@@ -875,6 +898,10 @@ class CartProvider with ChangeNotifier {
         if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
         if (carNumber != null) "car_number": carNumber,
         if (status != null) "status": status,
+        // Include discount data
+        if (flatDiscount != null) "flat_discount": flatDiscount,
+        if (percentageDiscount != null) "percentage_discount": percentageDiscount,
+        if (discountAmount != null) "discount_amount": discountAmount,
       };
     }
 

@@ -127,8 +127,50 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                   color: Colors.green,
                                   fontWeight: FontWeight.w600,
                                 )),
+                            // Display Discount Information
+                            if ((order.flatDiscount != null && order.flatDiscount! > 0) ||
+                                (order.percentageDiscount != null && order.percentageDiscount! > 0)) ...[
+                              const SizedBox(height: 8),
+                              const Divider(),
+                              const SizedBox(height: 8),
+                              const Text(
+                                "Applied Discounts",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (order.flatDiscount != null && order.flatDiscount! > 0)
+                                _buildInfoRow("Flat Discount",
+                                    "₹${order.flatDiscount!.toStringAsFixed(2)}",
+                                    valueStyle: const TextStyle(
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.w600,
+                                    )),
+                              if (order.percentageDiscount != null && order.percentageDiscount! > 0) ...[
+                                const SizedBox(height: 4),
+                                _buildInfoRow("Percentage Discount",
+                                    "${order.percentageDiscount!.toStringAsFixed(1)}%",
+                                    valueStyle: const TextStyle(
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.w600,
+                                    )),
+                              ],
+                              if (order.couponId != null && order.couponId!.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                _buildInfoRow("Coupon Code", order.couponId!,
+                                    valueStyle: const TextStyle(
+                                      color: Colors.blue,
+                                      fontWeight: FontWeight.w600,
+                                    )),
+                              ],
+                            ],
                             // Display Payment Method(s)
                             if (order.paymentMethod != null) ...[
+                              const SizedBox(height: 8),
+                              const Divider(),
                               const SizedBox(height: 8),
                               ConfirmedOrderDetailModal._buildPaymentMethodInfo(order.paymentMethod!),
                             ],
@@ -418,19 +460,48 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
               Map<String, dynamic>.from(multiPaymentData['amounts'] ?? {});
           
           List<Widget> methodWidgets = [];
+          double totalPaid = 0.0;
+          
           amounts.forEach((method, amount) {
-            methodWidgets.add(
-              _buildInfoRow(
-                "$method",
-                "₹${double.tryParse(amount.toString())?.toStringAsFixed(2) ?? "0.00"}",
-              ),
-            );
+            double amountValue = double.tryParse(amount.toString()) ?? 0.0;
+            if (amountValue > 0) {
+              totalPaid += amountValue;
+              methodWidgets.add(
+                Padding(
+                  padding: const EdgeInsets.only(left: 16.0, top: 4.0),
+                  child: _buildInfoRow(
+                    "$method Payment",
+                    "₹${amountValue.toStringAsFixed(2)}",
+                    valueStyle: const TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              );
+            }
           });
+          
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildInfoRow("Payment Method(s)", ""), // Main label for multi-payment
+              const Text(
+                "Payment Methods",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 8),
               ...methodWidgets,
+              const SizedBox(height: 8),
+              _buildInfoRow("Total Paid", "₹${totalPaid.toStringAsFixed(2)}",
+                  valueStyle: const TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  )),
             ],
           );
         }
@@ -439,6 +510,24 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
       debugPrint("Error parsing payment method JSON: $e");
     }
     // Fallback for single payment method or parsing error
-    return _buildInfoRow("Payment Method", paymentMethodJsonOrString);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Payment Method",
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildInfoRow("Method", paymentMethodJsonOrString,
+            valueStyle: const TextStyle(
+              color: Colors.green,
+              fontWeight: FontWeight.w600,
+            )),
+      ],
+    );
   }
 }

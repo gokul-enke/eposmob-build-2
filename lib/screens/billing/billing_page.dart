@@ -1810,13 +1810,13 @@ class BillingPageState extends State<BillingPage>
                   true)
               ? BuildPaymentRow(
                   amount:
-                      "INR ${AmountHelper.roundOffAmount(localProductProvider.priceSummary!.discount)} (${((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100).toStringAsFixed(1)}%)",
+                      "INR ${AmountHelper.roundOffAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
                   title: "Discount",
                   color: ColorManager.kButtonGreen,
                 )
               : BuildPaymentRow(
                   amount:
-                      "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100).toStringAsFixed(1)}%)",
+                      "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
                   title: "Discount",
                   color: ColorManager.kButtonGreen,
                 ),
@@ -1875,7 +1875,7 @@ class BillingPageState extends State<BillingPage>
         ),
         BuildPaymentRow(
           amount:
-              "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100).toStringAsFixed(1)}%)",
+              "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
           title: "Discount",
           color: ColorManager.textColor,
         ),
@@ -2685,8 +2685,8 @@ class BillingPageState extends State<BillingPage>
         _transactionNumberController.clear();
         _paidAmountController.clear();
         _balanceAmount = 0;
-        // Reset multi-payment fields
-        _isCashSelected = true;
+        // Reset all payment methods to none
+        _isCashSelected = false;
         _isCardSelected = false;
         _isUpiSelected = false;
         _isDebitSelected = false;
@@ -3573,15 +3573,15 @@ class BillingPageState extends State<BillingPage>
                     _debitAmountController.text = amounts['DEBIT'] ?? "0";
                   }
                 } else {
-                  // If it's a JSON string but not marked as multiPayment, treat as single
-                  _isCashSelected = true;
+                  // If it's a JSON string but not marked as multiPayment, default to no payment method
+                  _isCashSelected = false;
                   _isCardSelected = false;
                   _isUpiSelected = false;
                   _isDebitSelected = false;
                 }
               } catch (e) {
                 debugPrint("Error parsing multi-payment data: $e");
-                // Fall back to single payment method if parsing fails
+                // Fall back to no payment method if parsing fails
                 switch (currentOrder.paymentMethod?.toUpperCase()) {
                   case "CASH":
                     _isCashSelected = true;
@@ -3614,7 +3614,7 @@ class BillingPageState extends State<BillingPage>
                     _isDebitSelected = false;
                     break;
                   default:
-                    _isCashSelected = true;
+                    _isCashSelected = false;
                     _isCardSelected = false;
                     _isUpiSelected = false;
                     _isDebitSelected = false;
@@ -3654,7 +3654,7 @@ class BillingPageState extends State<BillingPage>
                   _isDebitSelected = false;
                   break;
                 default:
-                  _isCashSelected = true;
+                  _isCashSelected = false;
                   _isCardSelected = false;
                   _isUpiSelected = false;
                   _isDebitSelected = false;
@@ -3887,16 +3887,16 @@ class BillingPageState extends State<BillingPage>
           "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
       debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
 
+      final priceSummary = localProductProvider.priceSummary!;
+      debugPrint("🏷️ Discount Data - Flat: ${priceSummary.flatDiscount}, Percentage: ${priceSummary.percentageDiscount}, Total: ${priceSummary.discount}");
+
       await Provider.of<CartProvider>(context, listen: false)
           .addToOrderAPI(
         items: items,
         cartIds: cartId ?? 0,
         accessToken: accessToken ?? "",
         transactionId: _transactionNumberController.text,
-        totalPrice: Provider.of<LocalProductProvider>(context, listen: false)
-            .priceSummary!
-            .netTotal
-            .toString(),
+        totalPrice: priceSummary.netTotal.toString(),
         customerId: selectedCustomerID,
         customerPhone: selectedCustomerPhone ?? mobileNumberText,
         // Always use multi-payment format
@@ -3912,6 +3912,10 @@ class BillingPageState extends State<BillingPage>
         status: "confirmed",
         deliveryDate: deliveryDate,
         deliveryTime: deliveryTime,
+        // Include discount data
+        flatDiscount: priceSummary.flatDiscount,
+        percentageDiscount: priceSummary.percentageDiscount,
+        discountAmount: priceSummary.discount,
       )
           .then((response) async {
         debugPrint(
@@ -4149,10 +4153,7 @@ class BillingPageState extends State<BillingPage>
         cartIds: cartId ?? 0,
         accessToken: accessToken ?? "",
         transactionId: _transactionNumberController.text,
-        totalPrice: Provider.of<LocalProductProvider>(context, listen: false)
-            .priceSummary!
-            .netTotal
-            .toString(),
+        totalPrice: localProductProvider.priceSummary!.netTotal.toString(),
         customerId: selectedCustomerID,
         customerPhone: selectedCustomerPhone ?? mobileNumberText,
         // Always use multi-payment format
@@ -4168,6 +4169,10 @@ class BillingPageState extends State<BillingPage>
         status: "confirmed",
         deliveryDate: deliveryDate,
         deliveryTime: deliveryTime,
+        // Include discount data
+        flatDiscount: localProductProvider.priceSummary!.flatDiscount,
+        percentageDiscount: localProductProvider.priceSummary!.percentageDiscount,
+        discountAmount: localProductProvider.priceSummary!.discount,
       )
           .then((response) {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");

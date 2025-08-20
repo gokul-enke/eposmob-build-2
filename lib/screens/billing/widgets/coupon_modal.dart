@@ -115,39 +115,6 @@ class _CouponModalState extends State<CouponModal> {
                 ),
                 const SizedBox(height: 20),
 
-                // Current Total Display
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Net Total:',
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s14,
-                          0.21,
-                          ColorManager.textColor,
-                        ),
-                      ),
-                      Text(
-                        'INR ${AmountHelper.formatAmount(originalSubTotal)}',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s14,
-                          0.21,
-                          ColorManager.kPrimaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
                 // Discount Fields
                 Row(
                   children: [
@@ -399,7 +366,7 @@ class _CouponModalState extends State<CouponModal> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '(${((totalDiscount / originalSubTotal) * 100).toStringAsFixed(1)}%)',
+                                '(${(originalSubTotal > 0 ? ((totalDiscount / originalSubTotal) * 100) : 0.0).toStringAsFixed(1)}%)',
                                 style: buildCustomStyle(
                                   FontWeightManager.medium,
                                   FontSize.s12,
