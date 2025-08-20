@@ -92,14 +92,17 @@ class BillingPageState extends State<BillingPage>
   final TextEditingController _cashAmountController = TextEditingController();
   final TextEditingController _cardAmountController = TextEditingController();
   final TextEditingController _upiAmountController = TextEditingController();
+  final TextEditingController _debitAmountController = TextEditingController();
   final FocusNode _cashAmountFocusNode = FocusNode();
   final FocusNode _cardAmountFocusNode = FocusNode();
   final FocusNode _upiAmountFocusNode = FocusNode();
+  final FocusNode _debitAmountFocusNode = FocusNode();
 
   // Payment method selection states
-  bool _isCashSelected = true;
+  bool _isCashSelected = false;
   bool _isCardSelected = false;
   bool _isUpiSelected = false;
+  bool _isDebitSelected = false;
   bool isInitLoading = false;
   List<CustomerListModelData>? customerList = [];
   CustomerListModelData? selectedCustomer;
@@ -173,10 +176,11 @@ class BillingPageState extends State<BillingPage>
     // Initialize with dynamic default delivery method
     _initializeDeliveryMethod();
 
-    // Initialize multi-payment with cash selected by default
-    _isCashSelected = true;
+    // Initialize multi-payment with no defaults - let user select manually
+    _isCashSelected = false;
     _isCardSelected = false;
     _isUpiSelected = false;
+    _isDebitSelected = false;
 
     _fetchCustomers();
 
@@ -254,9 +258,11 @@ class BillingPageState extends State<BillingPage>
     _cashAmountController.dispose();
     _cardAmountController.dispose();
     _upiAmountController.dispose();
+    _debitAmountController.dispose();
     _cashAmountFocusNode.dispose();
     _cardAmountFocusNode.dispose();
     _upiAmountFocusNode.dispose();
+    _debitAmountFocusNode.dispose();
 
     _debounce?.cancel();
     _debounceTimer?.cancel();
@@ -2683,9 +2689,11 @@ class BillingPageState extends State<BillingPage>
         _isCashSelected = true;
         _isCardSelected = false;
         _isUpiSelected = false;
+        _isDebitSelected = false;
         _cashAmountController.clear();
         _cardAmountController.clear();
         _upiAmountController.clear();
+        _debitAmountController.clear();
         _autocompleteProductKey = GlobalKey();
         quantityController.clear();
         barcodeController.clear();
@@ -2772,46 +2780,9 @@ class BillingPageState extends State<BillingPage>
         debugPrint("💾 Updating existing order: ${currentOrder.orderNumber}");
 
         // Get payment method and data using multi-payment system
-        String paymentMethod = "";
-        String paidAmount = "";
-
-        List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-        if (selectedPaymentMethods.length > 1) {
-          // Multi-payment: store as JSON
-          Map<String, dynamic> multiPaymentData = {
-            "methods": selectedPaymentMethods,
-            "amounts": {
-              "CASH": _cashAmountController.text.isNotEmpty
-                  ? _cashAmountController.text
-                  : "0",
-              "CARD": _cardAmountController.text.isNotEmpty
-                  ? _cardAmountController.text
-                  : "0",
-              "UPI": _upiAmountController.text.isNotEmpty
-                  ? _upiAmountController.text
-                  : "0",
-            },
-            "isMultiPayment": true
-          };
-          paymentMethod = json.encode(multiPaymentData);
-          paidAmount = _getTotalPaidAmount().toString();
-        } else {
-          // Single payment method
-          if (selectedPaymentMethods.isNotEmpty) {
-            paymentMethod = selectedPaymentMethods.first;
-            if (paymentMethod == "CASH") {
-              paidAmount = _cashAmountController.text;
-            } else if (paymentMethod == "CARD") {
-              paidAmount = _cardAmountController.text;
-            } else if (paymentMethod == "UPI") {
-              paidAmount = _upiAmountController.text;
-            }
-          } else {
-            // Default to cash if no payment method selected
-            paymentMethod = "CASH";
-            paidAmount = "0";
-          }
-        }
+        Map<String, String> paymentData = _getPaymentMethodData();
+        String paymentMethod = paymentData["paymentMethod"]!;
+        String paidAmount = paymentData["paidAmount"]!;
 
         // Debug customer info being saved
         debugPrint("📝 UPDATING ORDER - Customer info:");
@@ -2941,47 +2912,9 @@ class BillingPageState extends State<BillingPage>
         }
 
         // Determine payment method and data
-        String paymentMethod = "";
-        String paidAmount = "";
-
-        // Check if multi-payment is being used
-        List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-        if (selectedPaymentMethods.length > 1) {
-          // Multi-payment: store as JSON
-          Map<String, dynamic> multiPaymentData = {
-            "methods": selectedPaymentMethods,
-            "amounts": {
-              "CASH": _cashAmountController.text.isNotEmpty
-                  ? _cashAmountController.text
-                  : "0",
-              "CARD": _cardAmountController.text.isNotEmpty
-                  ? _cardAmountController.text
-                  : "0",
-              "UPI": _upiAmountController.text.isNotEmpty
-                  ? _upiAmountController.text
-                  : "0",
-            },
-            "isMultiPayment": true
-          };
-          paymentMethod = json.encode(multiPaymentData);
-          paidAmount = _getTotalPaidAmount().toString();
-        } else {
-          // Single payment method
-          if (selectedPaymentMethods.isNotEmpty) {
-            paymentMethod = selectedPaymentMethods.first;
-            if (paymentMethod == "CASH") {
-              paidAmount = _cashAmountController.text;
-            } else if (paymentMethod == "CARD") {
-              paidAmount = _cardAmountController.text;
-            } else if (paymentMethod == "UPI") {
-              paidAmount = _upiAmountController.text;
-            }
-          } else {
-            // Default to cash if no payment method selected
-            paymentMethod = "CASH";
-            paidAmount = "0";
-          }
-        }
+        Map<String, String> paymentData = _getPaymentMethodData();
+        String paymentMethod = paymentData["paymentMethod"]!;
+        String paidAmount = paymentData["paidAmount"]!;
 
         localProductProvider.saveCurrentCartAsOrder(
           customerName: customerNameToSave,
@@ -3135,47 +3068,9 @@ class BillingPageState extends State<BillingPage>
           }
 
           // Determine payment method and data
-          String paymentMethod = "";
-          String paidAmount = "";
-
-          // Check if multi-payment is being used
-          List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-          if (selectedPaymentMethods.length > 1) {
-            // Multi-payment: store as JSON
-            Map<String, dynamic> multiPaymentData = {
-              "methods": selectedPaymentMethods,
-              "amounts": {
-                "CASH": _cashAmountController.text.isNotEmpty
-                    ? _cashAmountController.text
-                    : "0",
-                "CARD": _cardAmountController.text.isNotEmpty
-                    ? _cardAmountController.text
-                    : "0",
-                "UPI": _upiAmountController.text.isNotEmpty
-                    ? _upiAmountController.text
-                    : "0",
-              },
-              "isMultiPayment": true
-            };
-            paymentMethod = json.encode(multiPaymentData);
-            paidAmount = _getTotalPaidAmount().toString();
-          } else {
-            // Single payment method
-            if (selectedPaymentMethods.isNotEmpty) {
-              paymentMethod = selectedPaymentMethods.first;
-              if (paymentMethod == "CASH") {
-                paidAmount = _cashAmountController.text;
-              } else if (paymentMethod == "CARD") {
-                paidAmount = _cardAmountController.text;
-              } else if (paymentMethod == "UPI") {
-                paidAmount = _upiAmountController.text;
-              }
-            } else {
-              // Default to cash if no payment method selected
-              paymentMethod = "CASH";
-              paidAmount = "0";
-            }
-          }
+          Map<String, String> paymentData = _getPaymentMethodData();
+          String paymentMethod = paymentData["paymentMethod"]!;
+          String paidAmount = paymentData["paidAmount"]!;
 
           orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
             customerName: customerNameToSave,
@@ -3226,47 +3121,9 @@ class BillingPageState extends State<BillingPage>
         }
 
         // Determine payment method and data
-        String paymentMethod = "";
-        String paidAmount = "";
-
-        // Check if multi-payment is being used
-        List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-        if (selectedPaymentMethods.length > 1) {
-          // Multi-payment: store as JSON
-          Map<String, dynamic> multiPaymentData = {
-            "methods": selectedPaymentMethods,
-            "amounts": {
-              "CASH": _cashAmountController.text.isNotEmpty
-                  ? _cashAmountController.text
-                  : "0",
-              "CARD": _cardAmountController.text.isNotEmpty
-                  ? _cardAmountController.text
-                  : "0",
-              "UPI": _upiAmountController.text.isNotEmpty
-                  ? _upiAmountController.text
-                  : "0",
-            },
-            "isMultiPayment": true
-          };
-          paymentMethod = json.encode(multiPaymentData);
-          paidAmount = _getTotalPaidAmount().toString();
-        } else {
-          // Single payment method
-          if (selectedPaymentMethods.isNotEmpty) {
-            paymentMethod = selectedPaymentMethods.first;
-            if (paymentMethod == "CASH") {
-              paidAmount = _cashAmountController.text;
-            } else if (paymentMethod == "CARD") {
-              paidAmount = _cardAmountController.text;
-            } else if (paymentMethod == "UPI") {
-              paidAmount = _upiAmountController.text;
-            }
-          } else {
-            // Default to cash if no payment method selected
-            paymentMethod = "CASH";
-            paidAmount = "0";
-          }
-        }
+        Map<String, String> paymentData = _getPaymentMethodData();
+        String paymentMethod = paymentData["paymentMethod"]!;
+        String paidAmount = paymentData["paidAmount"]!;
 
         orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
           customerName: customerNameToSave,
@@ -3297,7 +3154,7 @@ class BillingPageState extends State<BillingPage>
         // Print the order that was just confirmed
         printFromSavedOrder(orderToUse);
       } catch (error) {
-        debugPrint(error.toString());
+        debugPrint("Error printing saved order: ${error.toString()}");
       }
 
       localProductProvider.clearCart();
@@ -3692,9 +3549,11 @@ class BillingPageState extends State<BillingPage>
                   _isCashSelected = false;
                   _isCardSelected = false;
                   _isUpiSelected = false;
+                  _isDebitSelected = false;
                   _cashAmountController.clear();
                   _cardAmountController.clear();
                   _upiAmountController.clear();
+                  _debitAmountController.clear();
 
                   // Restore multi-payment selections and amounts
                   if (methods.contains("CASH")) {
@@ -3709,11 +3568,16 @@ class BillingPageState extends State<BillingPage>
                     _isUpiSelected = true;
                     _upiAmountController.text = amounts['UPI'] ?? "0";
                   }
+                  if (methods.contains("DEBIT")) {
+                    _isDebitSelected = true;
+                    _debitAmountController.text = amounts['DEBIT'] ?? "0";
+                  }
                 } else {
                   // If it's a JSON string but not marked as multiPayment, treat as single
                   _isCashSelected = true;
                   _isCardSelected = false;
                   _isUpiSelected = false;
+                  _isDebitSelected = false;
                 }
               } catch (e) {
                 debugPrint("Error parsing multi-payment data: $e");
@@ -3723,21 +3587,37 @@ class BillingPageState extends State<BillingPage>
                     _isCashSelected = true;
                     _isCardSelected = false;
                     _isUpiSelected = false;
+                    _isDebitSelected = false;
                     break;
                   case "CARD":
                     _isCashSelected = false;
                     _isCardSelected = true;
                     _isUpiSelected = false;
+                    _isDebitSelected = false;
                     break;
                   case "UPI":
                     _isCashSelected = false;
                     _isCardSelected = false;
                     _isUpiSelected = true;
+                    _isDebitSelected = false;
+                    break;
+                  case "DEBIT":
+                    _isCashSelected = false;
+                    _isCardSelected = false;
+                    _isUpiSelected = false;
+                    _isDebitSelected = true;
+                    break;
+                  case "BALANCE":
+                    _isCashSelected = false;
+                    _isCardSelected = false;
+                    _isUpiSelected = false;
+                    _isDebitSelected = false;
                     break;
                   default:
                     _isCashSelected = true;
                     _isCardSelected = false;
                     _isUpiSelected = false;
+                    _isDebitSelected = false;
                 }
               }
             } else {
@@ -3747,28 +3627,45 @@ class BillingPageState extends State<BillingPage>
                   _isCashSelected = true;
                   _isCardSelected = false;
                   _isUpiSelected = false;
+                  _isDebitSelected = false;
                   break;
                 case "CARD":
                   _isCashSelected = false;
                   _isCardSelected = true;
                   _isUpiSelected = false;
+                  _isDebitSelected = false;
                   break;
                 case "UPI":
                   _isCashSelected = false;
                   _isCardSelected = false;
                   _isUpiSelected = true;
+                  _isDebitSelected = false;
+                  break;
+                case "DEBIT":
+                  _isCashSelected = false;
+                  _isCardSelected = false;
+                  _isUpiSelected = false;
+                  _isDebitSelected = true;
+                  break;
+                case "BALANCE":
+                  _isCashSelected = false;
+                  _isCardSelected = false;
+                  _isUpiSelected = false;
+                  _isDebitSelected = false;
                   break;
                 default:
                   _isCashSelected = true;
                   _isCardSelected = false;
                   _isUpiSelected = false;
+                  _isDebitSelected = false;
               }
             }
           } else {
-            // Default to cash if no payment method
-            _isCashSelected = true;
+            // No payment method stored - leave all unselected
+            _isCashSelected = false;
             _isCardSelected = false;
             _isUpiSelected = false;
+            _isDebitSelected = false;
           }
 
           // Restore payment amounts (for single payment, this will set the primary controller)
@@ -3785,6 +3682,8 @@ class BillingPageState extends State<BillingPage>
               _cardAmountController.text = paidAmount;
             } else if (_isUpiSelected) {
               _upiAmountController.text = paidAmount;
+            } else if (_isDebitSelected) {
+              _debitAmountController.text = paidAmount;
             }
           }
 
@@ -3923,6 +3822,10 @@ class BillingPageState extends State<BillingPage>
         paymentMethod = "CARD";
       } else if (selectedPaymentMethods.contains("UPI")) {
         paymentMethod = "UPI";
+      } else if (selectedPaymentMethods.contains("DEBIT")) {
+        paymentMethod = "DEBIT";
+      } else if (selectedPaymentMethods.contains("BALANCE")) {
+        paymentMethod = "BALANCE";
       }
       debugPrint("💰 Payment Method: $paymentMethod");
 
@@ -4176,6 +4079,10 @@ class BillingPageState extends State<BillingPage>
         paymentMethod = "CARD";
       } else if (selectedPaymentMethods.contains("UPI")) {
         paymentMethod = "UPI";
+      } else if (selectedPaymentMethods.contains("DEBIT")) {
+        paymentMethod = "DEBIT";
+      } else if (selectedPaymentMethods.contains("BALANCE")) {
+        paymentMethod = "BALANCE";
       }
       debugPrint("💰 Payment Method: $paymentMethod");
 
@@ -4329,13 +4236,71 @@ class BillingPageState extends State<BillingPage>
   }
 
   // Multi-payment helper methods
+  Map<String, String> _getPaymentMethodData() {
+    List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
+    String paymentMethod = "";
+    String paidAmount = "";
+
+    if (selectedPaymentMethods.length > 1) {
+      // Multi-payment: store as JSON
+      Map<String, dynamic> multiPaymentData = {
+        "methods": selectedPaymentMethods,
+        "amounts": {
+          "CASH": _cashAmountController.text.isNotEmpty
+              ? _cashAmountController.text
+              : "0",
+          "CARD": _cardAmountController.text.isNotEmpty
+              ? _cardAmountController.text
+              : "0",
+          "UPI": _upiAmountController.text.isNotEmpty
+              ? _upiAmountController.text
+              : "0",
+          "DEBIT": _debitAmountController.text.isNotEmpty
+              ? _debitAmountController.text
+              : "0",
+        },
+        "isMultiPayment": true
+      };
+      paymentMethod = json.encode(multiPaymentData);
+      paidAmount = _getTotalPaidAmount().toString();
+    } else {
+      // Single payment method
+      if (selectedPaymentMethods.isNotEmpty) {
+        paymentMethod = selectedPaymentMethods.first;
+        if (paymentMethod == "CASH") {
+          paidAmount = _cashAmountController.text;
+        } else if (paymentMethod == "CARD") {
+          paidAmount = _cardAmountController.text;
+        } else if (paymentMethod == "UPI") {
+          paidAmount = _upiAmountController.text;
+        } else if (paymentMethod == "DEBIT") {
+          paidAmount = _debitAmountController.text;
+        }
+      } else {
+        // No payment method selected - leave empty
+        paymentMethod = "";
+        paidAmount = "0";
+      }
+    }
+
+    return {
+      "paymentMethod": paymentMethod,
+      "paidAmount": paidAmount,
+    };
+  }
+
   void _updateBalanceAmount() {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     double cartTotal = localProductProvider.cartTotal;
 
-    double totalPaid = _getTotalPaidAmount();
-    double balance = totalPaid - cartTotal;
+    // For balance calculation, only include actual cash payments (not debit/store credit)
+    double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
+    double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
+    double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
+    double actualCashPaid = cashAmount + cardAmount + upiAmount;
+    
+    double balance = actualCashPaid - cartTotal;
 
     if (balance < 0) {
       balance = 0.0;
@@ -4350,7 +4315,10 @@ class BillingPageState extends State<BillingPage>
     double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
-    return cashAmount + cardAmount + upiAmount;
+    double debitAmount = double.tryParse(_debitAmountController.text) ?? 0.0;
+    // Include debit amount in total paid for display purposes (total transaction value)
+    // Note: Balance calculation uses separate logic excluding debit
+    return cashAmount + cardAmount + upiAmount + debitAmount;
   }
 
   List<String> _getSelectedPaymentMethods() {
@@ -4365,6 +4333,10 @@ class BillingPageState extends State<BillingPage>
     if (_isUpiSelected &&
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
       methods.add("UPI");
+    }
+    if (_isDebitSelected &&
+        (double.tryParse(_debitAmountController.text) ?? 0) > 0) {
+      methods.add("DEBIT");
     }
     return methods;
   }
@@ -4395,6 +4367,13 @@ class BillingPageState extends State<BillingPage>
       });
     }
 
+    if (_isDebitSelected &&
+        (double.tryParse(_debitAmountController.text) ?? 0) > 0) {
+      paidMethods.add({
+        "method": "DEBIT",
+        "amount": double.tryParse(_debitAmountController.text) ?? 0,
+      });
+    }
     return paidMethods;
   }
 
@@ -4403,7 +4382,12 @@ class BillingPageState extends State<BillingPage>
       builder: (context, localProductProvider, child) {
         double totalPaid = _getTotalPaidAmount();
         double cartTotal = localProductProvider.cartTotal;
-        double balance = totalPaid - cartTotal;
+        // For balance calculation, only include actual cash payments (not debit/store credit)
+        double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
+        double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
+        double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
+        double actualCashPaid = cashAmount + cardAmount + upiAmount;
+        double balance = actualCashPaid - cartTotal;
         if (balance < 0) balance = 0.0;
 
         return Column(
@@ -4605,20 +4589,24 @@ class BillingPageState extends State<BillingPage>
         initialIsCashSelected: _isCashSelected,
         initialIsCardSelected: _isCardSelected,
         initialIsUpiSelected: _isUpiSelected,
+        initialIsDebitSelected: _isDebitSelected,
         initialCashAmount: _cashAmountController.text,
         initialCardAmount: _cardAmountController.text,
         initialUpiAmount: _upiAmountController.text,
+        initialDebitAmount: _debitAmountController.text,
         initialTransactionNumber: _transactionNumberController.text,
         cartTotal: localProductProvider.cartTotal,
-        onPaymentMethodSelected: (isCash, isCard, isUpi, cashAmount, cardAmount,
-            upiAmount, transactionNumber) {
+        onPaymentMethodSelected: (isCash, isCard, isUpi, isDebit, 
+            cashAmount, cardAmount, upiAmount, debitAmount, transactionNumber) {
           setState(() {
             _isCashSelected = isCash;
             _isCardSelected = isCard;
             _isUpiSelected = isUpi;
+            _isDebitSelected = isDebit;
             _cashAmountController.text = cashAmount;
             _cardAmountController.text = cardAmount;
             _upiAmountController.text = upiAmount;
+            _debitAmountController.text = debitAmount;
             _transactionNumberController.text = transactionNumber;
             _updateBalanceAmount();
           });

@@ -15,12 +15,14 @@ class PaymentMethodModal extends StatefulWidget {
   final bool initialIsCashSelected;
   final bool initialIsCardSelected;
   final bool initialIsUpiSelected;
+  final bool initialIsDebitSelected;
   final String initialCashAmount;
   final String initialCardAmount;
   final String initialUpiAmount;
+  final String initialDebitAmount;
   final String initialTransactionNumber;
   final double cartTotal;
-  final Function(bool, bool, bool, String, String, String, String)
+  final Function(bool, bool, bool, bool, String, String, String, String, String)
       onPaymentMethodSelected;
 
   const PaymentMethodModal({
@@ -28,9 +30,11 @@ class PaymentMethodModal extends StatefulWidget {
     required this.initialIsCashSelected,
     required this.initialIsCardSelected,
     required this.initialIsUpiSelected,
+    required this.initialIsDebitSelected,
     required this.initialCashAmount,
     required this.initialCardAmount,
     required this.initialUpiAmount,
+    required this.initialDebitAmount,
     required this.initialTransactionNumber,
     required this.cartTotal,
     required this.onPaymentMethodSelected,
@@ -44,35 +48,27 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   late bool isCashSelected;
   late bool isCardSelected;
   late bool isUpiSelected;
+  late bool isDebitSelected;
   late TextEditingController cashAmountController;
   late TextEditingController cardAmountController;
   late TextEditingController upiAmountController;
+  late TextEditingController debitAmountController;
   late TextEditingController transactionNumberController;
   late FocusNode cashAmountFocusNode;
   late FocusNode cardAmountFocusNode;
   late FocusNode upiAmountFocusNode;
+  late FocusNode debitAmountFocusNode;
   double balanceAmount = 0;
 
   @override
   void initState() {
     super.initState();
 
-    // Always preselect cash as default if no payment methods are currently selected
-    bool hasAnySelection = widget.initialIsCashSelected ||
-        widget.initialIsCardSelected ||
-        widget.initialIsUpiSelected;
-
-    if (!hasAnySelection) {
-      // No payment method selected, default to cash
-      isCashSelected = true;
-      isCardSelected = false;
-      isUpiSelected = false;
-    } else {
-      // Use existing selections
-      isCashSelected = widget.initialIsCashSelected;
-      isCardSelected = widget.initialIsCardSelected;
-      isUpiSelected = widget.initialIsUpiSelected;
-    }
+    // Use existing selections without any defaults - let user select manually
+    isCashSelected = widget.initialIsCashSelected;
+    isCardSelected = widget.initialIsCardSelected;
+    isUpiSelected = widget.initialIsUpiSelected;
+    isDebitSelected = widget.initialIsDebitSelected;
 
     // Initialize controllers - don't fill with "0", use existing values or empty
     cashAmountController = TextEditingController(
@@ -89,6 +85,12 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         text: widget.initialUpiAmount.isEmpty || widget.initialUpiAmount == "0"
             ? ""
             : widget.initialUpiAmount);
+    debitAmountController = TextEditingController(
+        text:
+            widget.initialDebitAmount.isEmpty || widget.initialDebitAmount == "0"
+                ? ""
+                : widget.initialDebitAmount);
+    
     transactionNumberController =
         TextEditingController(text: widget.initialTransactionNumber);
 
@@ -96,6 +98,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     cashAmountFocusNode = FocusNode();
     cardAmountFocusNode = FocusNode();
     upiAmountFocusNode = FocusNode();
+    debitAmountFocusNode = FocusNode();
 
     // Calculate initial balance
     _calculateBalance();
@@ -130,6 +133,15 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       }
     });
 
+    debitAmountFocusNode.addListener(() {
+      if (debitAmountFocusNode.hasFocus && debitAmountController.text.isNotEmpty) {
+        debitAmountController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: debitAmountController.text.length,
+        );
+      }
+    });
+
     // Listen for text changes to capture virtual keyboard input
     cashAmountController.addListener(
         () => _handleAmountControllerChange('cash', cashAmountController));
@@ -137,6 +149,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         () => _handleAmountControllerChange('card', cardAmountController));
     upiAmountController.addListener(
         () => _handleAmountControllerChange('upi', upiAmountController));
+    debitAmountController.addListener(
+        () => _handleAmountControllerChange('debit', debitAmountController));
   }
 
   @override
@@ -147,24 +161,34 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         () => _handleAmountControllerChange('card', cardAmountController));
     upiAmountController.removeListener(
         () => _handleAmountControllerChange('upi', upiAmountController));
+    debitAmountController.removeListener(
+        () => _handleAmountControllerChange('debit', debitAmountController));
     cashAmountController.dispose();
     cardAmountController.dispose();
     upiAmountController.dispose();
+    debitAmountController.dispose();
     transactionNumberController.dispose();
     cashAmountFocusNode.dispose();
     cardAmountFocusNode.dispose();
     upiAmountFocusNode.dispose();
+    debitAmountFocusNode.dispose();
     super.dispose();
   }
 
   void _calculateBalance() {
-    double totalPaid = _getTotalPaidAmount();
-    double balance = totalPaid - widget.cartTotal;
+    // For balance calculation, only include actual cash payments (not debit/store credit)
+    double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
+    double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
+    double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
+    double actualCashPaid = cashAmount + cardAmount + upiAmount;
+    
+    double balance = actualCashPaid - widget.cartTotal;
     if (balance < 0) {
       balance = 0.0;
     }
     setState(() {
       balanceAmount = balance;
+      // Update the balance field to match the calculated balance
     });
   }
 
@@ -172,30 +196,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-    return cashAmount + cardAmount + upiAmount;
-  }
-
-  void _autoFillPaymentAmount() {
-    double totalPaid = _getTotalPaidAmount();
-    double remaining = widget.cartTotal - totalPaid;
-
-    if (remaining > 0) {
-      // Find the first selected payment method that has no amount and fill it
-      if (isCashSelected &&
-          (cashAmountController.text.isEmpty ||
-              cashAmountController.text == "0")) {
-        cashAmountController.text = remaining.toStringAsFixed(2);
-      } else if (isCardSelected &&
-          (cardAmountController.text.isEmpty ||
-              cardAmountController.text == "0")) {
-        cardAmountController.text = remaining.toStringAsFixed(2);
-      } else if (isUpiSelected &&
-          (upiAmountController.text.isEmpty ||
-              upiAmountController.text == "0")) {
-        upiAmountController.text = remaining.toStringAsFixed(2);
-      }
-    }
-    _calculateBalance();
+    double debitAmount = double.tryParse(debitAmountController.text) ?? 0.0;
+    // Include debit amount in total paid for display purposes (total transaction value)
+    // Note: Balance calculation uses separate logic excluding debit
+    return cashAmount + cardAmount + upiAmount + debitAmount;
   }
 
   void _togglePaymentMethod(String paymentType) {
@@ -217,6 +221,12 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           isUpiSelected = !isUpiSelected;
           if (!isUpiSelected) {
             upiAmountController.clear();
+          }
+          break;
+        case 'debit':
+          isDebitSelected = !isDebitSelected;
+          if (!isDebitSelected) {
+            debitAmountController.clear();
           }
           break;
       }
@@ -241,6 +251,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           case 'upi':
             isUpiSelected = true;
             break;
+          case 'debit':
+            isDebitSelected = true;
+            break;
         }
       } else if (amount == 0 && controller.text.isEmpty) {
         switch (label) {
@@ -253,11 +266,17 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           case 'upi':
             isUpiSelected = false;
             break;
+          case 'debit':
+            isDebitSelected = false;
+            break;
         }
       }
     });
 
-    _calculateBalance();
+    // Don't recalculate if this is the balance field being updated by calculation
+    if (label != 'balance') {
+      _calculateBalance();
+    }
   }
 
   @override
@@ -331,38 +350,23 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               onToggle: () => _togglePaymentMethod('upi'),
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 15),
 
-            // Credit payment (cash = 0)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: CustomRoundButton(
-                title: "Credit",
-                fct: () {
-                  setState(() {
-                    // Credit implies cash selected with zero amount
-                    isCashSelected = true;
-                    isCardSelected = false;
-                    isUpiSelected = false;
-                    cashAmountController.text = "0";
-                    cardAmountController.clear();
-                    upiAmountController.clear();
-                    _calculateBalance();
-                  });
-                },
-                fontSize: FontSize.s13,
-                height: 38,
-                width: 120,
-                boxColor: ColorManager.kPrimaryColor,
-                borderColor: ColorManager.kPrimaryColor,
-                textColor: Colors.white,
-              ),
+            // Debit Payment
+            _buildModalPaymentRow(
+              isSelected: isDebitSelected,
+              icon: ImageAssets.creditCardIcon,
+              label: 'Debit',
+              controller: debitAmountController,
+              focusNode: debitAmountFocusNode,
+              size: size,
+              onToggle: () => _togglePaymentMethod('debit'),
             ),
 
             const SizedBox(height: 15),
 
-            // Transaction Reference Field - Show only if Card or UPI is selected
-            if (isCardSelected || isUpiSelected) ...[
+            // Transaction Reference Field - Show only if Card, UPI, or Debit is selected
+            if (isCardSelected || isUpiSelected || isDebitSelected) ...[
               Text(
                 'Transaction Reference',
                 style: buildCustomStyle(
@@ -449,9 +453,11 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   isCashSelected,
                   isCardSelected,
                   isUpiSelected,
+                  isDebitSelected,
                   cashAmountController.text,
                   cardAmountController.text,
                   upiAmountController.text,
+                  debitAmountController.text,
                   transactionNumberController.text,
                 );
                 Navigator.of(context).pop();
@@ -484,20 +490,22 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             border: isSelected
                 ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
                 : Border.all(color: Colors.grey.shade300),
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             blurRadius: 4,
             circleRadius: 5,
-            width: 90,
-            child: Column(
+            height: size.height * .06, // Match text field height
+            width: 100, // Fixed width for alignment
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 WebsafeSvg.asset(
                   icon,
-                  width: 18,
-                  height: 18,
+                  width: 14,
+                  height: 14,
                   color: isSelected ? ColorManager.kPrimaryColor : Colors.grey,
                   fit: BoxFit.none,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(width: 6),
                 Text(
                   label,
                   style: buildCustomStyle(
@@ -520,10 +528,11 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             controller: controller,
             size: size,
             height: size.height * .06,
-            hintText: 'Enter $label amount',
+            hintText: label == 'Balance' ? 'Auto-calculated' : 'Enter $label amount',
             keyboardType: TextInputType.number,
             focusNode: focusNode,
-            onTap: () {
+            readOnly: label == 'Balance', // Make balance field read-only
+            onTap: label == 'Balance' ? null : () {
               // Ensure full selection when tapping inside the field
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (controller.text.isNotEmpty && focusNode.hasFocus) {

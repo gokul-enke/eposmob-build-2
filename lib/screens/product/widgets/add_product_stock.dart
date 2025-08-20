@@ -315,7 +315,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         debugPrint('   - Purchase Rate: ${item.purchaseRate}');
         debugPrint('   - MRP: ${item.mrp}');
         debugPrint('   - Wholesale: ${item.wholesale}');
-        debugPrint('   - Unit: ${item.unit}');
+        debugPrint('   - Unit ID: ${item.selectedUnit}');
+        debugPrint('   - Unit Name: ${item.unit}');
         debugPrint('   - Rack: ${item.rack}');
         debugPrint('   - Barcode: ${item.barcode}');
         debugPrint('   - Batch Number: ${item.batchNumber}');
@@ -340,7 +341,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               purchaseRate: item.purchaseRate,
               mrp: item.mrp,
               wholesalePrice: item.wholesale,
-              unit: item.unit,
+              unit:
+                  item.selectedUnit ?? '', // Send unit ID instead of unit name
               supplierId: selectedSupplier?.id?.toString() ??
                   item.supplierId.toString(),
               storeId: selectedStore!.id.toString(),
@@ -487,6 +489,140 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     }
   }
 
+  Future<void> _addStockForSingleItem(int index) async {
+    debugPrint(
+        '🔄 SINGLE STOCK ADDITION PROCESS STARTED FOR ITEM ${index + 1}');
+
+    if (selectedStore == null) {
+      debugPrint('❌ STORE VALIDATION FAILED: No store selected');
+      showScaffoldError(context: context, message: 'Please select a store');
+      return;
+    }
+
+    if (selectedSupplier == null || selectedSupplier!.id == 0) {
+      debugPrint('❌ SUPPLIER VALIDATION FAILED: No supplier selected');
+      showScaffoldError(context: context, message: 'Please select a supplier');
+      return;
+    }
+
+    final item = stockItems[index];
+
+    // Validate the specific item
+    if (item.productData == null ||
+        item.categoryData == null ||
+        item.product.isEmpty ||
+        item.category.isEmpty) {
+      debugPrint('❌ ITEM VALIDATION FAILED: Incomplete stock item data');
+      showScaffoldError(
+          context: context,
+          message: 'Please complete all required fields for this stock item');
+      return;
+    }
+
+    if (item.isSuccessfullyAdded) {
+      debugPrint(
+          '❌ ITEM ALREADY ADDED: Stock item ${index + 1} is already successfully added');
+      showScaffoldError(
+          context: context,
+          message: 'This stock item has already been added successfully');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      if (accessToken == null) {
+        throw Exception('Access token not found');
+      }
+
+      debugPrint('🌐 MAKING API CALL FOR SINGLE ITEM ${index + 1}...');
+
+      var apiResponse = await Provider.of<StockProvider>(context, listen: false)
+          .addProductStockAPI(
+        accessToken: accessToken,
+        productId: item.productData!.productId.toString(),
+        categoryId: item.categoryData!.categoryId.toString(),
+        quantity: item.quantity,
+        retailPrice: item.salePrice,
+        purchaseRate: item.purchaseRate,
+        mrp: item.mrp,
+        wholesalePrice: item.wholesale,
+        unit: item.selectedUnit ?? '',
+        supplierId:
+            selectedSupplier?.id?.toString() ?? item.supplierId.toString(),
+        storeId: selectedStore!.id.toString(),
+        expiryDate: DateFormat('yyyy-MM-dd').format(item.expDate),
+        userId: '1',
+        purchaseVoucherId: null,
+        purchaseId: null,
+        taxAmountRetail: null,
+        taxAmountWholesale: null,
+        wholesaleMinUnit: item.batchNumber,
+        rack: item.rack,
+        barcode: item.barcode,
+        batchNumber: item.batchNumber,
+        date: DateFormat('yyyy-MM-dd').format(selectedDate),
+        purchaseDate: DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
+        purchaseNumber: null,
+        taxInclude: item.taxInclude,
+        initialRetailPrice: item.salePrice,
+        initialWholesalePrice: item.wholesale,
+        retailPriceTax: null,
+        wholesalePriceTax: null,
+        context: context,
+      );
+
+      // Store the response in the stock item
+      stockItems[index].apiResponse = apiResponse;
+
+      if (apiResponse is Map<String, dynamic> &&
+          apiResponse['status'] == 'success') {
+        setState(() {
+          stockItems[index].isSuccessfullyAdded = true;
+        });
+        showScaffold(
+            context: context, message: 'Stock item added successfully');
+        debugPrint('✅ SINGLE STOCK ITEM ADDED SUCCESSFULLY');
+      } else {
+        String errorMessage = 'Failed to add stock';
+        if (apiResponse is Map<String, dynamic> &&
+            apiResponse['message'] != null) {
+          try {
+            final decodedRootMessage = json.decode(apiResponse['message']);
+            if (decodedRootMessage is Map<String, dynamic> &&
+                decodedRootMessage['message'] != null) {
+              final actualMessage = decodedRootMessage['message'];
+              if (actualMessage is String) {
+                errorMessage = actualMessage;
+              } else if (actualMessage is Map<String, dynamic>) {
+                errorMessage =
+                    actualMessage.values.expand((e) => e as List).join(', ');
+              }
+            } else if (decodedRootMessage is String) {
+              errorMessage = decodedRootMessage;
+            }
+          } catch (e) {
+            errorMessage = apiResponse['message'].toString();
+          }
+        }
+        showScaffoldError(context: context, message: errorMessage);
+        debugPrint('❌ SINGLE STOCK ITEM ADDITION FAILED: $errorMessage');
+      }
+    } catch (e) {
+      showScaffoldError(context: context, message: 'Error: ${e.toString()}');
+      debugPrint('💥 ERROR IN SINGLE STOCK ADDITION: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+      debugPrint('🏁 SINGLE STOCK ADDITION PROCESS ENDED');
+    }
+  }
+
   void _resetFormFields() {
     debugPrint('🔄 RESETTING FORM FIELDS STARTED');
 
@@ -585,7 +721,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             purchaseRate: item.purchaseRate,
             mrp: item.mrp,
             wholesalePrice: item.wholesale,
-            unit: item.unit,
+            unit: item.selectedUnit ?? '', // Send unit ID instead of unit name
             supplierId:
                 selectedSupplier?.id?.toString() ?? item.supplierId.toString(),
             storeId: selectedStore!.id.toString(),
@@ -1152,8 +1288,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 )
                 .key;
             if (matchingUnitKey.isNotEmpty) {
-              stockItems[index].selectedUnit = matchingUnitKey;
-              debugPrint('   - Unit Key: $matchingUnitKey');
+              stockItems[index].selectedUnit = matchingUnitKey; // Store unit ID
+              stockItems[index].unit =
+                  localProduct.unit!; // Store unit name for display
+              debugPrint('   - Unit Key (ID): $matchingUnitKey');
+              debugPrint('   - Unit Name: ${localProduct.unit}');
             }
           }
         }
@@ -1542,8 +1681,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               items: unitKeys,
               onChanged: (String? newValue) {
                 setState(() {
-                  stockItems[index].selectedUnit = newValue;
-                  stockItems[index].unit = newValue ?? '';
+                  stockItems[index].selectedUnit = newValue; // Store unit ID
+                  stockItems[index].unit =
+                      unitList?[newValue] ?? ''; // Store unit name for display
                 });
               },
               displayText: (unitKey) => unitList?[unitKey] ?? unitKey,
@@ -1576,15 +1716,6 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     FontSize.s11,
                     0.27,
                     Colors.black.withOpacity(0.6),
-                  ),
-                ),
-                Text(
-                  ' *',
-                  style: buildCustomStyle(
-                    FontWeightManager.regular,
-                    FontSize.s11,
-                    0.27,
-                    Colors.red,
                   ),
                 ),
               ],
@@ -1650,7 +1781,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       },
                       activeColor: ColorManager.kPrimaryColor,
                       inactiveThumbColor: Colors.white,
-                      inactiveTrackColor: Colors.grey.shade300, // Set inactive track color to a more visible light grey
+                      inactiveTrackColor: Colors.grey
+                          .shade300, // Set inactive track color to a more visible light grey
                     ),
                     Text(
                       "Including Tax",
@@ -1725,6 +1857,22 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     ),
                   ],
                 ),
+              ),
+              // Add Stock Button
+              const SizedBox(width: 12),
+              CustomRoundButton(
+                title: item.isSuccessfullyAdded
+                    ? "Added"
+                    : (_isLoading ? "Adding..." : "Add Stock"),
+                fct: item.isSuccessfullyAdded || _isLoading
+                    ? () {}
+                    : () => _addStockForSingleItem(index),
+                height: 40,
+                width: 100,
+                fontSize: FontSize.s12,
+                boxColor: item.isSuccessfullyAdded
+                    ? Colors.green
+                    : (_isLoading ? Colors.grey : ColorManager.kPrimaryColor),
               ),
             ],
           ),
@@ -1854,15 +2002,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   Widget _buildActionButtons(Size size) {
     return Row(
       children: [
-        CustomRoundButton(
-          title: _isLoading ? "Adding..." : "Add Stock",
-          fct: _isLoading ? () {} : _addNewStockRow,
-          height: 50,
-          width: size.width * 0.12,
-          fontSize: FontSize.s14,
-          boxColor: _isLoading ? Colors.grey : ColorManager.kPrimaryColor,
-        ),
-        const SizedBox(width: 15),
+        // CustomRoundButton(
+        //   title: "Add New Row",
+        //   fct: () {
+        //     setState(() {
+        //       stockItems.add(StockItem());
+        //     });
+        //   },
+        //   height: 50,
+        //   width: size.width * 0.12,
+        //   fontSize: FontSize.s14,
+        //   boxColor: ColorManager.kPrimaryColor,
+        // ),
+        // const SizedBox(width: 15),
         CustomRoundButton(
           title: "Finish",
           fct: () async {
@@ -1954,9 +2106,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           height: 50,
           width: size.width * 0.15,
           fontSize: FontSize.s14,
-          boxColor: Colors.white,
-          borderColor: ColorManager.kPrimaryColor,
-          textColor: ColorManager.kPrimaryColor,
+          boxColor: ColorManager.kPrimaryColor,
+          textColor: Colors.white,
         ),
         const SizedBox(width: 15),
         CustomRoundButton(
