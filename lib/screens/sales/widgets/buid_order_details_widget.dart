@@ -78,7 +78,7 @@ class OrderDetailWidget extends StatelessWidget {
                         RichText(
                           text: TextSpan(
                             text:
-                                '${customerDetails!.name ?? "NA"} - ${customerDetails!.phone ?? ""} \n',
+                                '${customerDetails?.name ?? "NA"} - ${customerDetails?.phone ?? ""} \n',
                             style: ResponsiveWidget.isMobile(context)
                                 ? buildCustomStyle(FontWeightManager.semiBold,
                                     FontSize.s12, 0.30, ColorManager.textColor)
@@ -87,7 +87,7 @@ class OrderDetailWidget extends StatelessWidget {
                             children: <TextSpan>[
                               TextSpan(
                                 text: DateHelper.formatISODate(
-                                    orderDetailsModelData!.orderDate.toString()),
+                                    orderDetailsModelData?.orderDate?.toString() ?? ''),
                                 style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s13,
@@ -103,7 +103,7 @@ class OrderDetailWidget extends StatelessWidget {
                     // Cart Items List
                     ListView.builder(
                       padding: const EdgeInsets.all(20),
-                      itemCount: cartItem!.length,
+                      itemCount: cartItem?.length ?? 0,
                       shrinkWrap: true,
                       physics:
                           const NeverScrollableScrollPhysics(), // Prevent scrolling
@@ -126,13 +126,13 @@ class OrderDetailWidget extends StatelessWidget {
                                 flex: 3,
                                 child: RichText(
                                   text: TextSpan(
-                                    text: '${cartItem![index].productName}\n',
+                                    text: '${cartItem?[index]?.productName ?? ''}\n',
                                     style: buildCustomStyle(FontWeightManager.regular,
                                         FontSize.s13, 0.20, Colors.black),
                                     children: <TextSpan>[
                                       TextSpan(
                                         text:
-                                            '${cartItem![index].quantity} * ${cartItem![index].unitPrice}',
+                                            '${cartItem?[index]?.quantity ?? 0} * ${cartItem?[index]?.unitPrice ?? 0}',
                                         style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s9,
@@ -149,7 +149,7 @@ class OrderDetailWidget extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      'MRP: ${cartItem![index].currency} ${cartItem![index].mrp}',
+                                      'MRP: ${cartItem?[index]?.currency ?? ''} ${cartItem?[index]?.mrp ?? ''}',
                                       style: buildCustomStyle(
                                           FontWeightManager.regular,
                                           FontSize.s11,
@@ -157,7 +157,7 @@ class OrderDetailWidget extends StatelessWidget {
                                           ColorManager.blackWithOpacity50),
                                     ),
                                     Text(
-                                      '${cartItem![index].currency} ${cartItem![index].totalPrice}',
+                                      '${cartItem?[index]?.currency ?? ''} ${cartItem?[index]?.totalPrice ?? ''}',
                                       style: buildCustomStyle(
                                           FontWeightManager.semiBold,
                                           FontSize.s14,
@@ -185,13 +185,13 @@ class OrderDetailWidget extends StatelessWidget {
                               color: ColorManager.textColor,
                             ),
                             BuildPaymentRow(
-                              amount: priceSummary!.netTotal!.toStringAsFixed(2),
+                              amount: "${priceSummary?.netTotal?.toStringAsFixed(2) ?? '0.00'}",
                               title: "Net amount",
                               color: ColorManager.textColor,
                             ),
-                            if (priceSummary!.savedTotal != null && priceSummary!.savedTotal! > 0)
+                            if ((priceSummary?.savedTotal ?? 0) > 0)
                               BuildPaymentRow(
-                                amount: "INR ${priceSummary!.savedTotal!.toStringAsFixed(2)}",
+                                amount: "INR ${priceSummary?.savedTotal?.toStringAsFixed(2) ?? '0.00'}",
                                 title: "You saved",
                                 color: ColorManager.kButtonGreen,
                                 firstRowTextStyle: buildCustomStyle(
@@ -208,18 +208,18 @@ class OrderDetailWidget extends StatelessWidget {
                                 ),
                               ),
                             BuildPaymentRow(
-                              amount: "${priceSummary!.discount ?? 0.00}",
+                              amount: "${priceSummary?.discount?.toStringAsFixed(2) ?? '0.00'}",
                               title: "Discount",
                               color: ColorManager.textColor,
                             ),
                             BuildPaymentRow(
-                              amount: "${priceSummary!.totalTax ?? 0}.00",
+                              amount: "${priceSummary?.totalTax?.toStringAsFixed(2) ?? '0.00'}",
                               title: "Tax Amount",
                               color: ColorManager.textColor,
                             ),
                             const Divider(thickness: 2),
                             BuildPaymentRow(
-                              amount: priceSummary!.netPayable!.toStringAsFixed(2),
+                              amount: "${priceSummary?.netPayable?.toStringAsFixed(2) ?? '0.00'}",
                               title: "Payable",
                               secondRowTextStyle: buildCustomStyle(
                                 FontWeightManager.bold,
@@ -284,13 +284,13 @@ class OrderDetailWidget extends StatelessWidget {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          _buildStatusChip(orderDetailsModelData!.orderStatus!),
+                          _buildStatusChip(orderDetailsModelData?.orderStatus ?? ''),
                           const SizedBox(width: 12),
                           if (orderDetailsModelData?.paymentStatus != null)
-                            _buildStatusChip(orderDetailsModelData!.paymentStatus!),
+                            _buildStatusChip(orderDetailsModelData?.paymentStatus ?? ''),
                           if (orderDetailsModelData?.deliveryStatus != null) ...[
                             const SizedBox(width: 12),
-                            _buildStatusChip(orderDetailsModelData!.deliveryStatus!),
+                            _buildStatusChip(orderDetailsModelData?.deliveryStatus ?? ''),
                           ],
                         ],
                       ),
@@ -319,9 +319,9 @@ class OrderDetailWidget extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       if (orderDetailsModelData?.storeName != null)
-                        _buildInfoRow('Store', orderDetailsModelData!.storeName!),
+                        _buildInfoRow('Store', orderDetailsModelData?.storeName ?? ''),
                       if (orderDetailsModelData?.deliveryMethodName != null)
-                        _buildInfoRow('Delivery Method', orderDetailsModelData!.deliveryMethodName!),
+                        _buildInfoRow('Delivery Method', orderDetailsModelData?.deliveryMethodName ?? ''),
                     ],
                   ),
                 ),
@@ -348,13 +348,13 @@ class OrderDetailWidget extends StatelessWidget {
                       const SizedBox(height: 8),
                       if (orderDetailsModelData?.paymentDetails?.paymentMethod != null)
                         _buildInfoRow('Payment Method', 
-                          orderDetailsModelData!.paymentDetails!.paymentMethod!
+                          orderDetailsModelData?.paymentDetails?.paymentMethod ?? ''
                         ),
                       if (orderDetailsModelData?.paymentDetails?.transactionId != null)
-                        _buildInfoRow('Transaction ID', orderDetailsModelData!.paymentDetails!.transactionId.toString()),
+                        _buildInfoRow('Transaction ID', orderDetailsModelData?.paymentDetails?.transactionId?.toString() ?? ''),
                       
                       // Add payment breakdown
-                      if (orderDetailsModelData?.payments != null && orderDetailsModelData!.payments!.isNotEmpty) ...[
+                      if (orderDetailsModelData?.payments != null && (orderDetailsModelData?.payments?.isNotEmpty ?? false)) ...[
                         const SizedBox(height: 8),
                         Text(
                           'Payment Breakdown:',
@@ -366,7 +366,7 @@ class OrderDetailWidget extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        ...orderDetailsModelData!.payments!.entries.map((entry) => 
+                        ...(orderDetailsModelData?.payments?.entries.map((entry) => 
                           Padding(
                             padding: const EdgeInsets.only(bottom: 2),
                             child: Row(
@@ -393,10 +393,10 @@ class OrderDetailWidget extends StatelessWidget {
                               ],
                             ),
                           ),
-                        ).toList(),
+                        )?.toList() ?? []),
                         
                         // Add total payment amount
-                        if (orderDetailsModelData!.payments!.isNotEmpty) ...[
+                        if ((orderDetailsModelData?.payments?.isNotEmpty ?? false)) ...[
                           const Divider(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -411,7 +411,7 @@ class OrderDetailWidget extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                'Rs ${_calculateTotalPayments(orderDetailsModelData!.payments!)}',
+                                'Rs ${_calculateTotalPayments(orderDetailsModelData?.payments ?? {})}',
                                 style: buildCustomStyle(
                                   FontWeightManager.bold,
                                   FontSize.s12,
@@ -428,7 +428,7 @@ class OrderDetailWidget extends StatelessWidget {
                 ),
 
               // Customer Extended Info Section
-              if (customerDetails?.email != null || (customerDetails?.address != null && customerDetails!.address!.isNotEmpty))
+              if (customerDetails?.email != null || (customerDetails?.address != null && (customerDetails?.address?.isNotEmpty ?? false)))
                 BuildBoxShadowContainer(
                   circleRadius: 7,
                   padding: const EdgeInsets.all(16),
@@ -448,15 +448,15 @@ class OrderDetailWidget extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       if (customerDetails?.email != null)
-                        _buildInfoRow('Email', customerDetails!.email!),
-                      if (customerDetails?.address != null && customerDetails!.address!.isNotEmpty)
-                        _buildInfoRow('Address', customerDetails!.address!.join(', ')),
+                        _buildInfoRow('Email', customerDetails?.email ?? ''),
+                      if (customerDetails?.address != null && (customerDetails?.address?.isNotEmpty ?? false))
+                        _buildInfoRow('Address', customerDetails?.address?.join(', ') ?? ''),
                     ],
                   ),
                 ),
 
               // Order Properties Section (Custom Fields)
-              if (orderDetailsModelData?.orderProps != null && orderDetailsModelData!.orderProps!.isNotEmpty)
+              if (orderDetailsModelData?.orderProps != null && (orderDetailsModelData?.orderProps?.isNotEmpty ?? false))
                 BuildBoxShadowContainer(
                   circleRadius: 7,
                   padding: const EdgeInsets.all(16),
@@ -475,9 +475,9 @@ class OrderDetailWidget extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      ...orderDetailsModelData!.orderProps!.map((prop) => 
+                      ...(orderDetailsModelData?.orderProps?.map((prop) => 
                         _buildInfoRow(prop.propsCode ?? '', prop.propsValue ?? '')
-                      ).toList(),
+                      )?.toList() ?? []),
                     ],
                   ),
                 ),
