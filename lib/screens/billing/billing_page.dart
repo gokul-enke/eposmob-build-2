@@ -177,6 +177,18 @@ class BillingPageState extends State<BillingPage>
     _paidAmountFocusNode
         .addListener(_handlePaidAmountFocusChange); // Add this line
 
+    // Debug logging for AppSettings
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+      debugPrint('🎫 APP SETTINGS INIT DEBUG:');
+      debugPrint('  - appSettingsProvider: $appSettingsProvider');
+      debugPrint('  - appSettings: ${appSettingsProvider.appSettings}');
+      if (appSettingsProvider.appSettings != null) {
+        debugPrint('  - discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
+        debugPrint('  - All settings: ${appSettingsProvider.appSettings.toString()}');
+      }
+    });
+
     // Initialize with dynamic default delivery method
     _initializeDeliveryMethod();
 
@@ -233,6 +245,16 @@ class BillingPageState extends State<BillingPage>
       // Also listen for auth changes (more direct indicator of user switch)
       final authModel = Provider.of<AuthModel>(context, listen: false);
       authModel.addListener(_onUserSwitched);
+
+      // Listen for app settings changes
+      final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+      appSettingsProvider.addListener(() {
+        debugPrint('🎫 APP SETTINGS CHANGED:');
+        debugPrint('  - New appSettings: ${appSettingsProvider.appSettings}');
+        if (appSettingsProvider.appSettings != null) {
+          debugPrint('  - New discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
+        }
+      });
     });
 
     // Ensure UI updates when virtual keyboard edits the customer phone field
@@ -821,6 +843,14 @@ class BillingPageState extends State<BillingPage>
     debugPrint("🔨 BillingPage build() called");
     debugPrint(
         "  - Current salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
+    
+    // Debug AppSettings during build
+    final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+    debugPrint("🎫 BUILD TIME APP SETTINGS:");
+    debugPrint("  - appSettings: ${appSettingsProvider.appSettings}");
+    if (appSettingsProvider.appSettings != null) {
+      debugPrint("  - discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}");
+    }
 
     Size size = MediaQuery.of(context).size;
     final productProvider =
@@ -3952,7 +3982,7 @@ class BillingPageState extends State<BillingPage>
 
   void _updateBalanceAmount() {
     double balance = _calculateBalanceAmount();
-    
+
     setState(() {
       _balanceAmount = balance;
     });
@@ -4069,10 +4099,37 @@ class BillingPageState extends State<BillingPage>
                 // Coupon Icon
                 Consumer<AppSettingsProvider>(
                     builder: (context, appSettingsProvider, child) {
+                  // Debug logging for coupon button visibility
+                  debugPrint('🎫 COUPON BUTTON DEBUG:');
+                  debugPrint('  - appSettingsProvider.appSettings: ${appSettingsProvider.appSettings}');
+                  if (appSettingsProvider.appSettings != null) {
+                    debugPrint('  - discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
+                    debugPrint('  - All app settings: ${appSettingsProvider.appSettings.toString()}');
+                    
+                    // More detailed debugging
+                    debugPrint('  - AppSettings runtimeType: ${appSettingsProvider.appSettings.runtimeType}');
+                    debugPrint('  - AppSettings properties:');
+                    try {
+                      // Use reflection to see all properties
+                      final settings = appSettingsProvider.appSettings!;
+                      debugPrint('    - barcodeSales: ${settings.barcodeSales}');
+                      debugPrint('    - discountAndCoupon: ${settings.discountAndCoupon}');
+                      debugPrint('    - priceRoundOff: ${settings.priceRoundOff}');
+                      // Add other properties you know exist
+                    } catch (e) {
+                      debugPrint('    - Error accessing properties: $e');
+                    }
+                  } else {
+                    debugPrint('  - appSettings is NULL');
+                  }
+                  
                   if (appSettingsProvider.appSettings == null ||
                       !appSettingsProvider.appSettings!.discountAndCoupon) {
+                    debugPrint('  - ❌ Hiding coupon button (settings null or discountAndCoupon disabled)');
                     return Container();
                   }
+                  
+                  debugPrint('  - ✅ Showing coupon button');
                   return _buildQuickAccessIcon(
                     icon: isCouponApplied
                         ? Icons.discount
@@ -4298,6 +4355,10 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _showCouponModal() {
+    debugPrint('🎫 _showCouponModal called');
+    debugPrint('  - Current app settings: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings}');
+    debugPrint('  - discountAndCoupon enabled: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.discountAndCoupon}');
+    
     showDialog(
       context: context,
       builder: (context) => CouponModal(
