@@ -161,6 +161,9 @@ class BillingPageState extends State<BillingPage>
   String? deliveryDate;
   String? deliveryTime;
 
+  // Track last rehydrated order to avoid losing state on navigation
+  String? _lastRehydratedOrderId;
+
   @override
   void initState() {
     super.initState();
@@ -327,6 +330,13 @@ class BillingPageState extends State<BillingPage>
 
   // Rehydrate all UI state from the provider's current order
   void _rehydrateFromProvider() {
+    // Prevent default customer from overriding when editing an order
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final SavedOrder? currentOrder = localProductProvider.currentOrder;
+    if (currentOrder != null) {
+      _lastRehydratedOrderId = currentOrder.id;
+    }
     try {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -515,6 +525,12 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> _fetchCustomers() async {
+    // Early guard: if editing a saved order, do not override customer with defaults
+    final currentOrder = Provider.of<LocalProductProvider>(context, listen: false).currentOrder;
+    if (currentOrder != null) {
+      debugPrint("🛡️ Skipping default customer fetch because a saved order is being edited");
+      return;
+    }
     debugPrint("🔍 _fetchCustomers() called");
     debugPrint("  - _isCustomerManuallySelected: $_isCustomerManuallySelected");
     debugPrint("  - selectedCustomerID: $selectedCustomerID");
@@ -785,6 +801,17 @@ class BillingPageState extends State<BillingPage>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+
+    // Quick fix: if we are editing an order and it hasn't been rehydrated after navigation, rehydrate now
+    final currentOrder = Provider.of<LocalProductProvider>(context, listen: true).currentOrder;
+    if (currentOrder != null && currentOrder.id != _lastRehydratedOrderId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _rehydrateFromProvider();
+        }
+      });
+    }
     super.build(context); // Required for AutomaticKeepAliveClientMixin
 
     debugPrint("🔨 BillingPage build() called");
