@@ -290,44 +290,44 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   }
 
   void _calculateBalance() {
-    print('🧮 === CALCULATE BALANCE START ===');
+    debugPrint('🧮 === CALCULATE BALANCE START ===');
     
     final baseBalance = _computeBaseBalance();
-    print('📊 Base balance calculated: ₹${baseBalance.toStringAsFixed(2)}');
+    debugPrint('📊 Base balance calculated: ₹${baseBalance.toStringAsFixed(2)}');
     
     double toCredit = 0.0;
     if (toCustomerCreditEnabled) {
-      print('🔛 Toggle is ON - Processing customer credit');
-      print('  - Raw toCustomerCredit input: ₹${toCustomerCredit.toStringAsFixed(2)}');
+      debugPrint('🔛 Toggle is ON - Processing customer credit');
+      debugPrint('  - Raw toCustomerCredit input: ₹${toCustomerCredit.toStringAsFixed(2)}');
       
       // Apply clamping for calculation only, don't modify the input field
       double clampedCredit = toCustomerCredit;
       if (clampedCredit < 0) {
         clampedCredit = 0.0;
-        print('  - Clamped negative value to 0');
+        debugPrint('  - Clamped negative value to 0');
       }
       if (clampedCredit > baseBalance) {
         clampedCredit = baseBalance;
-        print('  - Clamped to available balance: ₹${clampedCredit.toStringAsFixed(2)}');
+        debugPrint('  - Clamped to available balance: ₹${clampedCredit.toStringAsFixed(2)}');
       }
       toCredit = clampedCredit;
-      print('  - Final customer credit amount: ₹${toCredit.toStringAsFixed(2)}');
+      debugPrint('  - Final customer credit amount: ₹${toCredit.toStringAsFixed(2)}');
     } else {
-      print('🔴 Toggle is OFF - No customer credit');
+      debugPrint('🔴 Toggle is OFF - No customer credit');
       toCredit = 0.0;
     }
     
     final cashBal = baseBalance - toCredit;
-    print('💵 Final calculations:');
-    print('  - Base Balance: ₹${baseBalance.toStringAsFixed(2)}');
-    print('  - To Customer Credit: ₹${toCredit.toStringAsFixed(2)}');
-    print('  - Resulting Cash Balance: ₹${cashBal.toStringAsFixed(2)}');
+    debugPrint('💵 Final calculations:');
+    debugPrint('  - Base Balance: ₹${baseBalance.toStringAsFixed(2)}');
+    debugPrint('  - To Customer Credit: ₹${toCredit.toStringAsFixed(2)}');
+    debugPrint('  - Resulting Cash Balance: ₹${cashBal.toStringAsFixed(2)}');
     
     setState(() {
       balanceAmount = cashBal;
     });
     
-    print('🧮 === CALCULATE BALANCE END ===\n');
+    debugPrint('🧮 === CALCULATE BALANCE END ===\n');
   }
 
   double _getTotalPaidAmount() {
@@ -598,12 +598,12 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   activeColor: ColorManager.kPrimaryColor,
                   onChanged: (value) {
                     setState(() {
-                      print('=== TOGGLE TO CUSTOMER CREDIT ===');
-                      print('Toggle value changed to: $value');
+                      debugPrint('=== TOGGLE TO CUSTOMER CREDIT ===');
+                      debugPrint('Toggle value changed to: $value');
                       
                       toCustomerCreditEnabled = value;
                       if (toCustomerCreditEnabled) {
-                        print('📈 TOGGLE ON - Enabling customer credit functionality');
+                        debugPrint('📈 TOGGLE ON - Enabling customer credit functionality');
                         
                         // Calculate current state
                         final currentBaseBalance = _computeBaseBalance();
@@ -614,43 +614,43 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                         final netDueWithToggle = widget.cartTotal - widget.customerPrevBalance;
                         final netDueWithoutToggle = widget.cartTotal;
                         
-                        print('💰 Current Payment State:');
-                        print('  - Cash: ₹${cashAmount.toStringAsFixed(2)}');
-                        print('  - Card: ₹${cardAmount.toStringAsFixed(2)}');
-                        print('  - UPI: ₹${upiAmount.toStringAsFixed(2)}');
-                        print('  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
-                        print('');
-                        print('🎯 Purchase & Balance Info:');
-                        print('  - Purchase Total: ₹${widget.cartTotal.toStringAsFixed(2)}');
-                        print('  - Customer Prev Balance: ₹${widget.customerPrevBalance.toStringAsFixed(2)}');
-                        print('  - Net Due (Toggle OFF): ₹${netDueWithoutToggle.toStringAsFixed(2)}');
-                        print('  - Net Due (Toggle ON): ₹${netDueWithToggle.toStringAsFixed(2)}');
-                        print('  - Available Cash Balance: ₹${currentBaseBalance.toStringAsFixed(2)}');
-                        print('');
+                        debugPrint('💰 Current Payment State:');
+                        debugPrint('  - Cash: ₹${cashAmount.toStringAsFixed(2)}');
+                        debugPrint('  - Card: ₹${cardAmount.toStringAsFixed(2)}');
+                        debugPrint('  - UPI: ₹${upiAmount.toStringAsFixed(2)}');
+                        debugPrint('  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
+                        debugPrint('');
+                        debugPrint('🎯 Purchase & Balance Info:');
+                        debugPrint('  - Purchase Total: ₹${widget.cartTotal.toStringAsFixed(2)}');
+                        debugPrint('  - Customer Prev Balance: ₹${widget.customerPrevBalance.toStringAsFixed(2)}');
+                        debugPrint('  - Net Due (Toggle OFF): ₹${netDueWithoutToggle.toStringAsFixed(2)}');
+                        debugPrint('  - Net Due (Toggle ON): ₹${netDueWithToggle.toStringAsFixed(2)}');
+                        debugPrint('  - Available Cash Balance: ₹${currentBaseBalance.toStringAsFixed(2)}');
+                        debugPrint('');
                         
                         // Auto-fill with available cash balance including previous balance effects
                         if (currentBaseBalance > 0) {
                           final prefillAmount = currentBaseBalance.toStringAsFixed(2);
                           toCustomerCreditController.text = prefillAmount;
                           toCustomerCredit = currentBaseBalance;
-                          print('✅ Auto-filled toCustomerCredit with available balance (including prev balance effects): ₹$prefillAmount');
+                          debugPrint('✅ Auto-filled toCustomerCredit with available balance (including prev balance effects): ₹$prefillAmount');
                         } else {
                           toCustomerCreditController.clear();
                           toCustomerCredit = 0.0;
-                          print('ℹ️ No excess money available - field left empty');
+                          debugPrint('ℹ️ No excess money available - field left empty');
                         }
                       } else {
-                        print('📉 TOGGLE OFF - Disabling customer credit functionality');
-                        print('  - Clearing toCustomerCredit field');
-                        print('  - All excess money will go to cash balance');
+                        debugPrint('📉 TOGGLE OFF - Disabling customer credit functionality');
+                        debugPrint('  - Clearing toCustomerCredit field');
+                        debugPrint('  - All excess money will go to cash balance');
                         
                         toCustomerCreditController.clear();
                         toCustomerCredit = 0.0;
                       }
                       
-                      print('');
+                      debugPrint('');
                       _calculateBalance();
-                      print('=== END TOGGLE OPERATION ===\n');
+                      debugPrint('=== END TOGGLE OPERATION ===\n');
                     });
                   },
                 ),
@@ -952,10 +952,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     final maxPossibleCredit = _computeBaseBalance(); // This includes previous balance effects
     final customerOwesAmount = widget.customerPrevBalance < 0 ? widget.customerPrevBalance.abs() : 0.0;
     
-    print('🎯 MAX CREDIT HELPER CALCULATIONS:');
-    print('  - Current Transaction Excess: ₹${currentTransactionExcess.toStringAsFixed(2)}');
-    print('  - Max Possible Credit (with prev balance): ₹${maxPossibleCredit.toStringAsFixed(2)}');
-    print('  - Customer Owes: ₹${customerOwesAmount.toStringAsFixed(2)}');
+    debugPrint('🎯 MAX CREDIT HELPER CALCULATIONS:');
+    debugPrint('  - Current Transaction Excess: ₹${currentTransactionExcess.toStringAsFixed(2)}');
+    debugPrint('  - Max Possible Credit (with prev balance): ₹${maxPossibleCredit.toStringAsFixed(2)}');
+    debugPrint('  - Customer Owes: ₹${customerOwesAmount.toStringAsFixed(2)}');
     
     return Container(
       padding: const EdgeInsets.all(10),
@@ -987,7 +987,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                       setState(() {
                         toCustomerCreditController.text = maxPossibleCredit.toStringAsFixed(2);
                         toCustomerCredit = maxPossibleCredit;
-                        print('📱 Quick fill: All available balance ₹${maxPossibleCredit.toStringAsFixed(2)}');
+                        debugPrint('📱 Quick fill: All available balance ₹${maxPossibleCredit.toStringAsFixed(2)}');
                         _calculateBalance();
                       });
                     },

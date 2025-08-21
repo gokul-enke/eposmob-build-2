@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class AppSettings {
   final bool barcodeSales;
   final String customerCarePhone;
@@ -24,8 +26,8 @@ class AppSettings {
     Map<String, dynamic> settingsMap = {};
 
     // Debug logging for parsing
-    print('🎫 APP SETTINGS PARSING DEBUG:');
-    print('  - Raw data length: ${data.length}');
+    debugPrint('🎫 APP SETTINGS PARSING DEBUG:');
+    debugPrint('  - Raw data length: ${data.length}');
 
     for (var setting in data) {
       // Handle both "true" and "1" as valid true values for status
@@ -33,10 +35,10 @@ class AppSettings {
       
       // Debug logging for DISCOUNT_AND_COUPON specifically
       if (setting['code'] == 'DISCOUNT_AND_COUPON') {
-        print('  - Found DISCOUNT_AND_COUPON:');
-        print('    - Raw status: "${setting['status']}" (type: ${setting['status'].runtimeType})');
-        print('    - Raw value: "${setting['value']}" (type: ${setting['value'].runtimeType})');
-        print('    - Parsed status: $isStatusTrue');
+        debugPrint('  - Found DISCOUNT_AND_COUPON:');
+        debugPrint('    - Raw status: "${setting['status']}" (type: ${setting['status'].runtimeType})');
+        debugPrint('    - Raw value: "${setting['value']}" (type: ${setting['value'].runtimeType})');
+        debugPrint('    - Parsed status: $isStatusTrue');
       }
       
       settingsMap[setting['code']] = {
@@ -46,10 +48,10 @@ class AppSettings {
     }
 
     // Debug logging for final parsed settings
-    print('  - Final parsed settings:');
-    print('    - BARCODE_SALES: ${settingsMap['BARCODE_SALES']?['status']}');
-    print('    - DISCOUNT_AND_COUPON: ${settingsMap['DISCOUNT_AND_COUPON']?['status']}');
-    print('    - PRICE_ROUND_OFF: ${settingsMap['PRICE_ROUND_OFF']?['status']}');
+    debugPrint('  - Final parsed settings:');
+    debugPrint('    - BARCODE_SALES: ${settingsMap['BARCODE_SALES']?['status']}');
+    debugPrint('    - DISCOUNT_AND_COUPON: ${settingsMap['DISCOUNT_AND_COUPON']?['status']}');
+    debugPrint('    - PRICE_ROUND_OFF: ${settingsMap['PRICE_ROUND_OFF']?['status']}');
 
     return AppSettings(
       barcodeSales: settingsMap['BARCODE_SALES']?['status'] ?? false,
