@@ -363,7 +363,7 @@ class BillingPageState extends State<BillingPage>
 
         // Check if there is any customer data to restore
         if (currentOrder.customerId != null ||
-            currentOrder.customerPhone != null) {
+            (currentOrder.customerPhone != null && currentOrder.customerPhone!.isNotEmpty)) {
           selectedCustomerID = currentOrder.customerId;
           selectedCustomerPhone = currentOrder.customerPhone;
 
@@ -391,11 +391,20 @@ class BillingPageState extends State<BillingPage>
           Provider.of<CustomerSelectionProvider>(context, listen: false)
               .setSelectedCustomer(selectedCustomer!);
 
-          String name = selectedCustomer!.name ?? '';
-          String phone = selectedCustomer!.phone ?? '';
-          mobileNumberTextController.text = "$name $phone".trim();
+          // **FIX**: Properly restore customer display based on whether it's a phone-only order
+          if (selectedCustomer!.id != null && (selectedCustomer!.name != null && selectedCustomer!.name!.isNotEmpty)) {
+            // Customer from list - show name and phone
+            String name = selectedCustomer!.name ?? '';
+            String phone = selectedCustomer!.phone ?? '';
+            mobileNumberTextController.text = "$name $phone".trim();
+            isCustomerFound = true;
+          } else {
+            // Phone-only order - show just the phone number
+            mobileNumberTextController.text = selectedCustomer!.phone ?? '';
+            mobileNumberText = selectedCustomer!.phone ?? '';
+            isCustomerFound = false;
+          }
 
-          isCustomerFound = selectedCustomer!.id != null;
           _isCustomerManuallySelected = true;
         }
 
@@ -2144,7 +2153,7 @@ class BillingPageState extends State<BillingPage>
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            (salesExecutivemobileNumberText != "")
+            (salesExecutivemobileNumberText != "" && !_isCustomerManuallySelected && Provider.of<LocalProductProvider>(context, listen: false).currentOrder == null)
                 ? Expanded(
                     child: buildColumnWidgetForTextFields(
                       controller: mobileNumberTextController,
@@ -2890,6 +2899,16 @@ class BillingPageState extends State<BillingPage>
         // Clear delivery date and time
         deliveryDate = null;
         deliveryTime = null;
+        
+        // Clear customer-related state completely
+        mobileNumberText = "";
+        selectedCustomerID = null;
+        selectedCustomerPhone = null;
+        selectedCustomer = null;
+        isCustomerFound = false;
+        salesExecutivemobileNumberText = "";
+        mobileNumberTextController.clear();
+        _autocompletePhoneKey = GlobalKey();
       });
       showScaffold(
         context: context,
@@ -2983,18 +3002,24 @@ class BillingPageState extends State<BillingPage>
         String? customerNameToSave = selectedCustomer?.name;
         String? customerPhoneToSave;
 
-        if (selectedCustomerID != null) {
-          // Customer is selected from list
-          customerPhoneToSave = selectedCustomerPhone;
-          debugPrint(
-              "  ✅ Customer from list - using selectedCustomerPhone: '$customerPhoneToSave'");
-        } else if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
+        // Priority order: 1) Manual entry, 2) Selected customer, 3) Text controller content
+        if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
           // Phone number entered directly (not from customer list)
           customerPhoneToSave = mobileNumberText;
           debugPrint(
               "  ✅ Phone-only order - using mobileNumberText: '$customerPhoneToSave'");
+        } else if (selectedCustomerID != null) {
+          // Customer is selected from list
+          customerPhoneToSave = selectedCustomerPhone;
+          debugPrint(
+              "  ✅ Customer from list - using selectedCustomerPhone: '$customerPhoneToSave'");
+        } else if (mobileNumberTextController.text.isNotEmpty) {
+          // Fallback to text controller content
+          customerPhoneToSave = mobileNumberTextController.text;
+          debugPrint(
+              "  ✅ Using text controller content: '$customerPhoneToSave'");
         } else {
-          // Fallback to selectedCustomerPhone
+          // Final fallback to selectedCustomerPhone
           customerPhoneToSave = selectedCustomerPhone;
           debugPrint(
               "  ⚠️ Fallback - using selectedCustomerPhone: '$customerPhoneToSave'");
@@ -3044,18 +3069,24 @@ class BillingPageState extends State<BillingPage>
         String? customerNameToSave = selectedCustomer?.name;
         String? customerPhoneToSave;
 
-        if (selectedCustomerID != null) {
-          // Customer is selected from list
-          customerPhoneToSave = selectedCustomerPhone;
-          debugPrint(
-              "  ✅ Customer from list - using selectedCustomerPhone: '$customerPhoneToSave'");
-        } else if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
+        // Priority order: 1) Manual entry, 2) Selected customer, 3) Text controller content
+        if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
           // Phone number entered directly (not from customer list)
           customerPhoneToSave = mobileNumberText;
           debugPrint(
               "  ✅ Phone-only order - using mobileNumberText: '$customerPhoneToSave'");
+        } else if (selectedCustomerID != null) {
+          // Customer is selected from list
+          customerPhoneToSave = selectedCustomerPhone;
+          debugPrint(
+              "  ✅ Customer from list - using selectedCustomerPhone: '$customerPhoneToSave'");
+        } else if (mobileNumberTextController.text.isNotEmpty) {
+          // Fallback to text controller content
+          customerPhoneToSave = mobileNumberTextController.text;
+          debugPrint(
+              "  ✅ Using text controller content: '$customerPhoneToSave'");
         } else {
-          // Fallback to selectedCustomerPhone
+          // Final fallback to selectedCustomerPhone
           customerPhoneToSave = selectedCustomerPhone;
           debugPrint(
               "  ⚠️ Fallback - using selectedCustomerPhone: '$customerPhoneToSave'");
@@ -3076,6 +3107,13 @@ class BillingPageState extends State<BillingPage>
           paymentMethod: paymentMethod,
           paidAmount: paidAmount,
           balanceAmount: _balanceAmount.toString(),
+          transactionId: _transactionNumberController.text,
+          couponId: isCouponApplied ? coupenCodeTextController.text : null,
+          deliveryMethodId: deliveryMethodId,
+          carNumber: _carNumberController.text,
+          status: "saved",
+          deliveryDate: deliveryDate,
+          deliveryTime: deliveryTime,
           context: context, // Pass context
         );
 

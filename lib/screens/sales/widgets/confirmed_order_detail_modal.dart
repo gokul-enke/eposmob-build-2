@@ -110,6 +110,10 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                             _buildInfoRow(
                                 "Customer Phone", order.customerPhone ?? "N/A"),
                             const SizedBox(height: 8),
+                            if (order.customerName != null && order.customerName!.isNotEmpty) ...[
+                              _buildInfoRow("Customer Name", order.customerName!),
+                              const SizedBox(height: 8),
+                            ],
                             _buildInfoRow(
                                 "Date", _formatDateTime(order.createdAt)),
                             const SizedBox(height: 8),
@@ -127,6 +131,43 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                   color: Colors.green,
                                   fontWeight: FontWeight.w600,
                                 )),
+                            // Display additional order details
+                            if (order.deliveryMethod != null && order.deliveryMethod!.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              _buildInfoRow("Delivery Method", order.deliveryMethod!),
+                            ],
+                            if (order.transactionId != null && order.transactionId!.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              _buildInfoRow("Transaction ID", order.transactionId!),
+                            ],
+                            if (order.balanceAmount != null && order.balanceAmount != "0.0" && order.balanceAmount!.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              _buildInfoRow("Balance Amount", "₹${order.balanceAmount}",
+                                  valueStyle: const TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.w600,
+                                  )),
+                            ],
+                            if (order.carNumber != null && order.carNumber!.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              _buildInfoRow("Car Number", order.carNumber!,
+                                  valueStyle: const TextStyle(
+                                    color: Colors.purple,
+                                    fontWeight: FontWeight.w600,
+                                  )),
+                            ],
+                            if (order.status != null && order.status!.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              _buildInfoRow("Order Status", order.status!.toUpperCase(),
+                                  valueStyle: TextStyle(
+                                    color: order.status!.toLowerCase() == 'confirmed' 
+                                        ? Colors.green 
+                                        : order.status!.toLowerCase() == 'saved'
+                                            ? Colors.orange
+                                            : Colors.grey,
+                                    fontWeight: FontWeight.bold,
+                                  )),
+                            ],
                             // Display Discount Information
                             if ((order.flatDiscount != null && order.flatDiscount! > 0) ||
                                 (order.percentageDiscount != null && order.percentageDiscount! > 0)) ...[
