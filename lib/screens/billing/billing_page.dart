@@ -628,7 +628,7 @@ class BillingPageState extends State<BillingPage>
                                       selectedProductIdController,
                                   productProvider: productProvider,
                                 ),
-                                _buildTestMobileButton(),
+                                // _buildTestMobileButton(),
                                 Expanded(
                                   child: Column(
                                     children: [
@@ -1735,61 +1735,61 @@ class BillingPageState extends State<BillingPage>
   
   
   //Texting mobile screen
-  Widget _buildTestMobileButton() {
-  return Positioned(
-    bottom: 20,
-    right: 20,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Text label
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.black54,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Text(
-            'Test Mobile UI',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        // Button
-        FloatingActionButton(
-          backgroundColor: Colors.blue,
-          mini: true,
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => Scaffold(
-                  body: MultiProvider(
-                    providers: [
-                      ChangeNotifierProvider.value(
-                        value: Provider.of<CartProvider>(context, listen: false),
-                      ),
-                      ChangeNotifierProvider.value(
-                        value: Provider.of<LocalProductProvider>(context, listen: false),
-                      ),
-                      // Add other providers as needed...
-                    ],
-                    child: BillingPageMobile(),
-                  ),
-                ),
-              ),
-            );
-          },
-          child: const Icon(Icons.phone_android, size: 20),
-        ),
-      ],
-    ),
-  );
-}
+//   Widget _buildTestMobileButton() {
+//   return Positioned(
+//     bottom: 20,
+//     right: 20,
+//     child: Column(
+//       mainAxisSize: MainAxisSize.min,
+//       children: [
+//         // Text label
+//         Container(
+//           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+//           decoration: BoxDecoration(
+//             color: Colors.black54,
+//             borderRadius: BorderRadius.circular(8),
+//           ),
+//           child: const Text(
+//             'Test Mobile UI',
+//             style: TextStyle(
+//               color: Colors.white,
+//               fontSize: 12,
+//               fontWeight: FontWeight.bold,
+//             ),
+//           ),
+//         ),
+//         const SizedBox(height: 8),
+//         // Button
+//         FloatingActionButton(
+//           backgroundColor: Colors.blue,
+//           mini: true,
+//           onPressed: () {
+//             Navigator.push(
+//               context,
+//               MaterialPageRoute(
+//                 builder: (_) => Scaffold(
+//                   body: MultiProvider(
+//                     providers: [
+//                       ChangeNotifierProvider.value(
+//                         value: Provider.of<CartProvider>(context, listen: false),
+//                       ),
+//                       ChangeNotifierProvider.value(
+//                         value: Provider.of<LocalProductProvider>(context, listen: false),
+//                       ),
+//                       // Add other providers as needed...
+//                     ],
+//                     child: BillingPageMobile(),
+//                   ),
+//                 ),
+//               ),
+//             );
+//           },
+//           child: const Icon(Icons.phone_android, size: 20),
+//         ),
+//       ],
+//     ),
+//   );
+// }
 
   Widget _buildHeaderCell(String text,
       {required int flex, required Alignment alignment}) {

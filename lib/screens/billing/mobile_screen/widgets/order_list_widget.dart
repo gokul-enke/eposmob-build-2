@@ -1,50 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
+import 'package:provider/provider.dart';
 
 class ViewOrders extends StatelessWidget {
-  const ViewOrders({super.key});
+  final Function(String) onOrderSelected;
+
+  const ViewOrders({
+    Key? key,
+    required this.onOrderSelected,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // Sample data - replace with your actual data source
-    final List<Map<String, dynamic>> orders = List.generate(10, (index) {
-      final now = DateTime.now().subtract(Duration(days: index));
-      return {
-        'id': 'ORD-${1000 + index}',
-        'date': now.toIso8601String(),
-        'total': (index + 1) * 50.0,
-        'items': (index + 2),
-        'status': index % 3 == 0 ? 'Completed' : 'Pending',
-        'customer': 'Customer ${index + 1}',
-      };
-    });
-
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: orders.isEmpty
-            ? _buildEmptyState()
-            : GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, // 2 cards per row
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 1.5, // Width/height ratio
+    return Consumer<LocalProductProvider>(
+      builder: (context, provider, child) {
+        return Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: provider.savedOrders.isEmpty
+              ? _buildEmptyState()
+              : GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2, // 2 cards per row
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 1.5, // Width/height ratio
+                  ),
+                  itemCount: provider.savedOrders.length,
+                  itemBuilder: (context, index) {
+                    final order = provider.savedOrders[index];
+                    return _buildOrderCard(context, provider, order);
+                  },
                 ),
-                itemCount: orders.length,
-                itemBuilder: (context, index) {
-                  final order = orders[index];
-                  return _buildOrderCard(context, order);
-                },
-              ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildOrderCard(BuildContext context, Map<String, dynamic> order) {
-    bool isSelected = false; // Add selection logic if needed
-    String time = _formatTimeWith12Hour(order['date']);
+  Widget _buildOrderCard(
+      BuildContext context, LocalProductProvider provider, SavedOrder order) {
+    String time = _formatTimeWith12Hour(order.createdAt);
+    bool isSelected = provider.currentOrder?.id == order.id;
 
     return BuildBoxShadowContainer(
       circleRadius: 8,
@@ -54,9 +54,7 @@ class ViewOrders extends StatelessWidget {
           : Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        onTap: () {
-          // Handle order selection
-        },
+        onTap: () => onOrderSelected(order.id),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
@@ -69,7 +67,7 @@ class ViewOrders extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      order['id'],
+                      order.orderNumber,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
@@ -90,13 +88,25 @@ class ViewOrders extends StatelessWidget {
                 ],
               ),
 
+              // Middle row - Customer info if available
+              if (order.customerName != null && order.customerName!.isNotEmpty)
+                Text(
+                  order.customerName!,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+
               // Bottom row - Amount, Items, and Action Buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Print Button
                   IconButton(
-                    onPressed: () => _printOrder(order),
+                    onPressed: () => _printOrder(context, order),
                     icon: const Icon(Icons.print, size: 20),
                     color: Colors.blue,
                     padding: EdgeInsets.zero,
@@ -108,14 +118,14 @@ class ViewOrders extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        "${order['items']} items",
+                        "${order.items.length} items",
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                         ),
                       ),
                       Text(
-                        "₹${order['total'].toStringAsFixed(2)}",
+                        "₹${order.total.toStringAsFixed(2)}",
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -127,7 +137,7 @@ class ViewOrders extends StatelessWidget {
 
                   // Delete Button
                   IconButton(
-                    onPressed: () => _showDeleteDialog(context, order),
+                    onPressed: () => _showDeleteDialog(context, provider, order),
                     icon: const Icon(Icons.delete_outline, size: 20),
                     color: ColorManager.kButtonRed,
                     padding: EdgeInsets.zero,
@@ -147,34 +157,33 @@ class ViewOrders extends StatelessWidget {
     return DateFormat('h:mm a').format(dateTime);
   }
 
-  void _printOrder(Map<String, dynamic> order) {
-    debugPrint("Printing order: ${order['id']}");
+  void _printOrder(BuildContext context, SavedOrder order) {
+    debugPrint("Printing order: ${order.orderNumber}");
     // Add your print logic here
+    showScaffold(
+      context: context,
+      message: "Printing order ${order.orderNumber}",
+    );
   }
 
-  void _showDeleteDialog(BuildContext context, Map<String, dynamic> order) {
-    showDialog(
+  void _showDeleteDialog(
+      BuildContext context, LocalProductProvider provider, SavedOrder order) {
+    DeleteConfirmationDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Delete Order"),
-        content: Text("Are you sure you want to delete order ${order['id']}?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("CANCEL"),
-          ),
-          TextButton(
-            onPressed: () {
-              // Add delete logic here
-              Navigator.pop(context);
-            },
-            child: const Text(
-              "DELETE",
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
+      title: "Delete Order",
+      itemName: order.orderNumber,
+      message: "This order will be permanently removed from your saved orders.",
+      warningIcon: Icons.receipt_long_outlined,
+      onDelete: () {
+        // Delete the order
+        provider.deleteSavedOrder(order.id);
+
+        // Show success message
+        showScaffold(
+          context: context,
+          message: "Order deleted successfully",
+        );
+      },
     );
   }
 
@@ -197,43 +206,26 @@ class ViewOrders extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
+          const SizedBox(height: 4),
+          Text(
+            "Create orders in the billing section",
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.withOpacity(0.6),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class BuildBoxShadowContainer extends StatelessWidget {
-  final Widget child;
-  final double circleRadius;
-  final Color color;
-  final Border? border;
-
-  const BuildBoxShadowContainer({
-    super.key,
-    required this.child,
-    this.circleRadius = 0,
-    this.color = Colors.white,
-    this.border,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(circleRadius),
-        border: border,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
+// Helper function to show snackbar messages
+void showScaffold({required BuildContext context, required String message}) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      duration: const Duration(seconds: 2),
+    ),
+  );
 }

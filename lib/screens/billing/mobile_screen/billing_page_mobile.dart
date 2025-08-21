@@ -1,9 +1,9 @@
-
-
 import 'package:flutter/material.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/screens/billing/mobile_screen/widgets/billing_widget.dart';
 import 'package:pos_machine/screens/billing/mobile_screen/widgets/home_widget.dart';
 import 'package:pos_machine/screens/billing/mobile_screen/widgets/order_list_widget.dart';
+import 'package:provider/provider.dart';
 
 class BillingPageMobile extends StatefulWidget {
   const BillingPageMobile({super.key});
@@ -19,6 +19,7 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
     {'name': 'Product 2', 'price': 50.0, 'quantity': 3, 'total': 150.0},
     // ... other products
   ];
+  String? _selectedOrderId;
 
   @override
   Widget build(BuildContext context) {
@@ -87,11 +88,23 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
   Widget _buildCurrentScreen() {
     switch (_currentIndex) {
       case 0:
-        return HomeWidget(cartItems: _cartItems);
+        return HomeWidget(
+          cartItems: _cartItems,
+          selectedOrderId: _selectedOrderId,
+          );
       case 1:
         return BillingWidget(cartItems: _cartItems);
       case 2:
-        return const ViewOrders();
+        return ViewOrders(
+          onOrderSelected: (orderId) {
+            setState(() {
+              _selectedOrderId = orderId;
+              _currentIndex = 0; // Switch to billing tab
+            });
+            final provider = Provider.of<LocalProductProvider>(context, listen: false);
+            provider.loadOrderForEditing(orderId);
+          },
+        );
       default:
         return Container();
     }
@@ -100,12 +113,20 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
   Widget _getAppBarTitle() {
     final String title;
     switch (_currentIndex) {
-      case 0: title = 'New Order'; break;
-      case 1: title = 'Billing'; break;
-      case 2: title = 'Saved Orders'; break;
-      default: title = 'POS System'; break;
+      case 0:
+        title = 'New Order';
+        break;
+      case 1:
+        title = 'Billing';
+        break;
+      case 2:
+        title = 'Saved Orders';
+        break;
+      default:
+        title = 'POS System';
+        break;
     }
-    
+
     return Text(
       title,
       style: const TextStyle(
