@@ -2926,7 +2926,10 @@ class BillingPageState extends State<BillingPage>
         // Clear delivery date and time
         deliveryDate = null;
         deliveryTime = null;
-        
+        // Clear delivery comment and car number
+        _commentController.clear();
+        _carNumberController.clear();
+
         // Clear customer-related state completely
         mobileNumberText = "";
         selectedCustomerID = null;
