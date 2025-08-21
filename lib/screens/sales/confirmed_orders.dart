@@ -649,6 +649,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           discountAmount: (order.flatDiscount ?? 0.0) + 
                          ((order.percentageDiscount ?? 0.0) > 0 ? 
                           (order.total * (order.percentageDiscount ?? 0.0) / 100) : 0.0),
+          toCustomerCredit: order.toCustomerCredit,
         );
 
         // AFTER the API call completes, update the index

@@ -133,6 +133,7 @@ class BillingPageState extends State<BillingPage>
   bool isLoadingSaveOrderAndPrint = false;
   bool isLoadingAddItem = false;
   bool _isProcessingBarcode = false;
+  bool _toCustomerCreditEnabled = false;
 
   // Add these variables for the new sidebar
   bool _isSidebarVisible = true;
@@ -507,9 +508,12 @@ class BillingPageState extends State<BillingPage>
           coupenCodeTextController.clear();
           isCouponApplied = false;
         }
+
+        // 6. Restore To Customer Credit flag
+        _toCustomerCreditEnabled = currentOrder.toCustomerCredit ?? false;
       });
 
-      // 6. Final UI Updates
+      // 7. Final UI Updates
       _updateBalanceAmount();
       // Force a rebuild of the autocomplete widget to reflect the new customer
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2979,6 +2983,7 @@ class BillingPageState extends State<BillingPage>
         unitPriceController.clear();
         isCouponApplied = false;
         _isCustomerManuallySelected = false;
+        _toCustomerCreditEnabled = false;
         // Clear delivery date and time
         deliveryDate = null;
         deliveryTime = null;
@@ -3086,30 +3091,7 @@ class BillingPageState extends State<BillingPage>
 
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave;
-
-        // Priority order: 1) Manual entry, 2) Selected customer, 3) Text controller content
-        if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
-          // Phone number entered directly (not from customer list)
-          customerPhoneToSave = mobileNumberText;
-          debugPrint(
-              "  ✅ Phone-only order - using mobileNumberText: '$customerPhoneToSave'");
-        } else if (selectedCustomerID != null) {
-          // Customer is selected from list
-          customerPhoneToSave = selectedCustomerPhone;
-          debugPrint(
-              "  ✅ Customer from list - using selectedCustomerPhone: '$customerPhoneToSave'");
-        } else if (mobileNumberTextController.text.isNotEmpty) {
-          // Fallback to text controller content
-          customerPhoneToSave = mobileNumberTextController.text;
-          debugPrint(
-              "  ✅ Using text controller content: '$customerPhoneToSave'");
-        } else {
-          // Final fallback to selectedCustomerPhone
-          customerPhoneToSave = selectedCustomerPhone;
-          debugPrint(
-              "  ⚠️ Fallback - using selectedCustomerPhone: '$customerPhoneToSave'");
-        }
+        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
 
         localProductProvider.updateSavedOrder(
           currentOrder.id,
@@ -3129,6 +3111,7 @@ class BillingPageState extends State<BillingPage>
           status: "saved",
           deliveryDate: deliveryDate, // Pass deliveryDate
           deliveryTime: deliveryTime, // Pass deliveryTime
+          toCustomerCredit: _toCustomerCreditEnabled,
           // context: context, // Pass context
         );
 
@@ -3153,30 +3136,7 @@ class BillingPageState extends State<BillingPage>
 
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave;
-
-        // Priority order: 1) Manual entry, 2) Selected customer, 3) Text controller content
-        if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
-          // Phone number entered directly (not from customer list)
-          customerPhoneToSave = mobileNumberText;
-          debugPrint(
-              "  ✅ Phone-only order - using mobileNumberText: '$customerPhoneToSave'");
-        } else if (selectedCustomerID != null) {
-          // Customer is selected from list
-          customerPhoneToSave = selectedCustomerPhone;
-          debugPrint(
-              "  ✅ Customer from list - using selectedCustomerPhone: '$customerPhoneToSave'");
-        } else if (mobileNumberTextController.text.isNotEmpty) {
-          // Fallback to text controller content
-          customerPhoneToSave = mobileNumberTextController.text;
-          debugPrint(
-              "  ✅ Using text controller content: '$customerPhoneToSave'");
-        } else {
-          // Final fallback to selectedCustomerPhone
-          customerPhoneToSave = selectedCustomerPhone;
-          debugPrint(
-              "  ⚠️ Fallback - using selectedCustomerPhone: '$customerPhoneToSave'");
-        }
+        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
 
         // Determine payment method and data
         Map<String, String> paymentData = _getPaymentMethodData();
@@ -3201,6 +3161,7 @@ class BillingPageState extends State<BillingPage>
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
           context: context, // Pass context
+          toCustomerCredit: _toCustomerCreditEnabled,
         );
 
         showScaffold(
@@ -3288,24 +3249,7 @@ class BillingPageState extends State<BillingPage>
 
           // **FIX**: Properly determine customer info for phone-only orders
           String? customerNameToSave = selectedCustomer?.name;
-          String? customerPhoneToSave;
-
-          if (selectedCustomerID != null) {
-            // Customer is selected from list
-            customerPhoneToSave = selectedCustomerPhone;
-            debugPrint(
-                "  ✅ Save&Print(fallback) - Customer from list: '$customerPhoneToSave'");
-          } else if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
-            // Phone number entered directly (not from customer list)
-            customerPhoneToSave = mobileNumberText;
-            debugPrint(
-                "  ✅ Save&Print(fallback) - Phone-only order: '$customerPhoneToSave'");
-          } else {
-            // Fallback to selectedCustomerPhone
-            customerPhoneToSave = selectedCustomerPhone;
-            debugPrint(
-                "  ⚠️ Save&Print(fallback) - Fallback: '$customerPhoneToSave'");
-          }
+          String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
 
           // Determine payment method and data
           Map<String, String> paymentData = _getPaymentMethodData();
@@ -3329,6 +3273,7 @@ class BillingPageState extends State<BillingPage>
             status: "confirmed",
             deliveryDate: deliveryDate, // Pass deliveryDate
             deliveryTime: deliveryTime, // Pass deliveryTime
+            toCustomerCredit: _toCustomerCreditEnabled,
           );
 
           showScaffold(
@@ -3342,23 +3287,7 @@ class BillingPageState extends State<BillingPage>
 
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave;
-
-        if (selectedCustomerID != null) {
-          // Customer is selected from list
-          customerPhoneToSave = selectedCustomerPhone;
-          debugPrint(
-              "  ✅ Save&Print - Customer from list: '$customerPhoneToSave'");
-        } else if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
-          // Phone number entered directly (not from customer list)
-          customerPhoneToSave = mobileNumberText;
-          debugPrint(
-              "  ✅ Save&Print - Phone-only order: '$customerPhoneToSave'");
-        } else {
-          // Fallback to selectedCustomerPhone
-          customerPhoneToSave = selectedCustomerPhone;
-          debugPrint("  ⚠️ Save&Print - Fallback: '$customerPhoneToSave'");
-        }
+        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
 
         // Determine payment method and data
         Map<String, String> paymentData = _getPaymentMethodData();
@@ -3382,6 +3311,7 @@ class BillingPageState extends State<BillingPage>
           status: "confirmed",
           deliveryDate: deliveryDate, // Pass deliveryDate
           deliveryTime: deliveryTime, // Pass deliveryTime
+          toCustomerCredit: _toCustomerCreditEnabled,
         );
 
         showScaffold(
@@ -3588,6 +3518,7 @@ class BillingPageState extends State<BillingPage>
         flatDiscount: priceSummary.flatDiscount,
         percentageDiscount: priceSummary.percentageDiscount,
         discountAmount: priceSummary.discount,
+        toCustomerCredit: _toCustomerCreditEnabled,
       )
           .then((response) async {
         debugPrint(
@@ -3817,7 +3748,7 @@ class BillingPageState extends State<BillingPage>
           "📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
       debugPrint(
           "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
-      debugPrint("�� Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
+      debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
 
       await Provider.of<CartProvider>(context, listen: false)
           .addToOrderAPI(
@@ -3846,6 +3777,7 @@ class BillingPageState extends State<BillingPage>
         percentageDiscount:
             localProductProvider.priceSummary!.percentageDiscount,
         discountAmount: localProductProvider.priceSummary!.discount,
+        toCustomerCredit: _toCustomerCreditEnabled,
       )
           .then((response) {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
@@ -3967,7 +3899,8 @@ class BillingPageState extends State<BillingPage>
     };
   }
 
-  void _updateBalanceAmount() {
+  // Helper method to calculate balance using the same logic as the modal
+  double _calculateBalanceAmount() {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     double cartTotal = localProductProvider.cartTotal;
@@ -3978,12 +3911,48 @@ class BillingPageState extends State<BillingPage>
     double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
     double actualCashPaid = cashAmount + cardAmount + upiAmount;
 
-    double balance = actualCashPaid - cartTotal;
-
-    if (balance < 0) {
-      balance = 0.0;
+    // Use the same calculation logic as the modal for consistency
+    double balance;
+    
+    if (_toCustomerCreditEnabled) {
+      // Toggle ON: Include previous balance in calculation
+      double customerPrevBalance = selectedCustomer?.balance ?? 0.0;
+      double netDue = cartTotal - customerPrevBalance;
+      double baseBalance = actualCashPaid - netDue;
+      
+      // Get the toCustomerCredit amount from the debit controller (legacy mapping)
+      double toCustomerCredit = double.tryParse(_debitAmountController.text) ?? 0.0;
+      
+      // Apply the same clamping logic as modal
+      if (toCustomerCredit < 0) toCustomerCredit = 0.0;
+      if (toCustomerCredit > baseBalance) toCustomerCredit = baseBalance;
+      
+      balance = baseBalance - toCustomerCredit;
+      
+      debugPrint('🧮 BILLING PAGE BALANCE CALCULATION (Toggle ON):');
+      debugPrint('  - Cart Total: ₹${cartTotal.toStringAsFixed(2)}');
+      debugPrint('  - Customer Prev Balance: ₹${customerPrevBalance.toStringAsFixed(2)}');
+      debugPrint('  - Net Due: ₹${netDue.toStringAsFixed(2)}');
+      debugPrint('  - Actual Cash Paid: ₹${actualCashPaid.toStringAsFixed(2)}');
+      debugPrint('  - Base Balance: ₹${baseBalance.toStringAsFixed(2)}');
+      debugPrint('  - To Customer Credit: ₹${toCustomerCredit.toStringAsFixed(2)}');
+      debugPrint('  - Final Balance: ₹${balance.toStringAsFixed(2)}');
+    } else {
+      // Toggle OFF: Simple calculation without previous balance
+      balance = actualCashPaid - cartTotal;
+      
+      debugPrint('🧮 BILLING PAGE BALANCE CALCULATION (Toggle OFF):');
+      debugPrint('  - Cart Total: ₹${cartTotal.toStringAsFixed(2)}');
+      debugPrint('  - Actual Cash Paid: ₹${actualCashPaid.toStringAsFixed(2)}');
+      debugPrint('  - Final Balance: ₹${balance.toStringAsFixed(2)}');
     }
 
+    return balance > 0 ? balance : 0.0;
+  }
+
+  void _updateBalanceAmount() {
+    double balance = _calculateBalanceAmount();
+    
     setState(() {
       _balanceAmount = balance;
     });
@@ -3993,10 +3962,9 @@ class BillingPageState extends State<BillingPage>
     double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
-    double debitAmount = double.tryParse(_debitAmountController.text) ?? 0.0;
-    // Include debit amount in total paid for display purposes (total transaction value)
-    // Note: Balance calculation uses separate logic excluding debit
-    return cashAmount + cardAmount + upiAmount + debitAmount;
+    // Note: We don't include debit/toCustomerCredit in total paid amount
+    // as it represents money going to customer credit, not money collected
+    return cashAmount + cardAmount + upiAmount;
   }
 
   List<String> _getSelectedPaymentMethods() {
@@ -4012,10 +3980,10 @@ class BillingPageState extends State<BillingPage>
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
       methods.add("UPI");
     }
-    if (_isDebitSelected &&
-        (double.tryParse(_debitAmountController.text) ?? 0) > 0) {
-      methods.add("DEBIT");
-    }
+    // if (_isDebitSelected &&
+    //     (double.tryParse(_debitAmountController.text) ?? 0) > 0) {
+    //   methods.add("DEBIT");
+    // }
     return methods;
   }
 
@@ -4045,13 +4013,13 @@ class BillingPageState extends State<BillingPage>
       });
     }
 
-    if (_isDebitSelected &&
-        (double.tryParse(_debitAmountController.text) ?? 0) > 0) {
-      paidMethods.add({
-        "method": "DEBIT",
-        "amount": double.tryParse(_debitAmountController.text) ?? 0,
-      });
-    }
+    // if (_isDebitSelected &&
+    //     (double.tryParse(_debitAmountController.text) ?? 0) > 0) {
+    //   paidMethods.add({
+    //     "method": "DEBIT",
+    //     "amount": double.tryParse(_debitAmountController.text) ?? 0,
+    //   });
+    // }
     return paidMethods;
   }
 
@@ -4065,8 +4033,9 @@ class BillingPageState extends State<BillingPage>
         double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
         double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
         double actualCashPaid = cashAmount + cardAmount + upiAmount;
-        double balance = actualCashPaid - cartTotal;
-        if (balance < 0) balance = 0.0;
+        
+        // Use the helper method for consistent balance calculation
+        double balance = _calculateBalanceAmount();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -4281,8 +4250,8 @@ class BillingPageState extends State<BillingPage>
         initialDebitAmount: _debitAmountController.text,
         initialTransactionNumber: _transactionNumberController.text,
         cartTotal: localProductProvider.cartTotal,
-        onPaymentMethodSelected: (isCash, isCard, isUpi, isDebit, cashAmount,
-            cardAmount, upiAmount, debitAmount, transactionNumber) {
+        customerPrevBalance: selectedCustomer?.balance ?? 0.0,
+        onPaymentMethodSelected: (isCash, isCard, isUpi, isDebit, cashAmount, cardAmount, upiAmount, debitAmount, transactionNumber, toCustomerCredit) {
           setState(() {
             _isCashSelected = isCash;
             _isCardSelected = isCard;
@@ -4293,6 +4262,9 @@ class BillingPageState extends State<BillingPage>
             _upiAmountController.text = upiAmount;
             _debitAmountController.text = debitAmount;
             _transactionNumberController.text = transactionNumber;
+            _toCustomerCreditEnabled = toCustomerCredit;
+            
+            // Update balance amount using the same calculation logic as the modal
             _updateBalanceAmount();
           });
         },

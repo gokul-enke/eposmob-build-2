@@ -693,6 +693,7 @@ class CartProvider with ChangeNotifier {
     double? flatDiscount,
     double? percentageDiscount,
     double? discountAmount,
+    bool? toCustomerCredit,
   }) async {
     debugPrint("📤 ADD TO ORDER API - Starting request");
     debugPrint("📦 Order items count: ${items?.length ?? 0}");
@@ -726,19 +727,39 @@ class CartProvider with ChangeNotifier {
 
     Map<String, dynamic> apiBodyData = {};
 
+    // Create a mutable copy of paidMethods to adjust the cash amount
+    List<Map<String, dynamic>>? finalPaidMethods =
+        paidMethods != null ? List<Map<String, dynamic>>.from(paidMethods) : null;
+    double parsedBalance = double.tryParse(balanceAmount ?? '0.0') ?? 0.0;
+
+    if (parsedBalance > 0 && finalPaidMethods != null) {
+      final cashPaymentIndex =
+          finalPaidMethods.indexWhere((p) => p['method'] == 'CASH');
+      if (cashPaymentIndex != -1) {
+        final cashPayment = finalPaidMethods[cashPaymentIndex];
+        double cashAmount = (cashPayment['amount'] as num).toDouble();
+        if (cashAmount >= parsedBalance) {
+          finalPaidMethods[cashPaymentIndex] = {
+            'method': 'CASH',
+            'amount': cashAmount - parsedBalance,
+          };
+        }
+      }
+    }
+
     debugPrint("paymentMethods $paymentMethods");
-    debugPrint("paidMethods $paidMethods");
+    debugPrint("paidMethods $finalPaidMethods");
 
     // Use multi-payment format if available, otherwise fall back to single payment
     if (paymentMethods != null &&
-        paidMethods != null &&
-        paidMethods.isNotEmpty) {
+        finalPaidMethods != null &&
+        finalPaidMethods.isNotEmpty) {
       apiBodyData = {
         "items": items,
         "phone": customerPhone,
         "transaction_number": transactionId,
         "payment_method": paymentMethods,
-        "paid_methods": paidMethods,
+        "paid_methods": finalPaidMethods,
         "source_type": "executive",
         "balance": balanceAmount,
         "coupon_id": couponId,
@@ -752,8 +773,10 @@ class CartProvider with ChangeNotifier {
         if (tableId != null) "table": tableId,
         // Include discount data
         if (flatDiscount != null) "flat_discount": flatDiscount,
-        if (percentageDiscount != null) "percentage_discount": percentageDiscount,
+        if (percentageDiscount != null)
+          "percentage_discount": percentageDiscount,
         if (discountAmount != null) "discount_amount": discountAmount,
+        if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
       };
     } else {
       // Fallback to single payment method format
@@ -776,8 +799,10 @@ class CartProvider with ChangeNotifier {
         if (tableId != null) "table": tableId,
         // Include discount data
         if (flatDiscount != null) "flat_discount": flatDiscount,
-        if (percentageDiscount != null) "percentage_discount": percentageDiscount,
+        if (percentageDiscount != null)
+          "percentage_discount": percentageDiscount,
         if (discountAmount != null) "discount_amount": discountAmount,
+        if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
       };
     }
 

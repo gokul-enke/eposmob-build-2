@@ -113,6 +113,9 @@ class HiveSavedOrder extends HiveObject {
   @HiveField(21)
   final double? percentageDiscount;
 
+  @HiveField(22)
+  final bool? toCustomerCredit;
+
   HiveSavedOrder({
     required this.id,
     required this.orderNumber,
@@ -137,6 +140,7 @@ class HiveSavedOrder extends HiveObject {
     this.deliveryTime,
     this.flatDiscount,
     this.percentageDiscount,
+    this.toCustomerCredit,
   });
 }
 

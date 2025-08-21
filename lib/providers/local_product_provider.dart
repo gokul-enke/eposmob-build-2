@@ -55,6 +55,7 @@ class SavedOrder {
   final String? deliveryTime; // Added for local persistence
   final double? flatDiscount;
   final double? percentageDiscount;
+  final bool? toCustomerCredit;
 
   SavedOrder({
     required this.id,
@@ -80,6 +81,7 @@ class SavedOrder {
     this.deliveryTime, // Added to constructor
     this.flatDiscount,
     this.percentageDiscount,
+    this.toCustomerCredit,
   });
 }
 
@@ -265,6 +267,7 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryTime: hiveSavedOrder.deliveryTime, // Restore delivery time
           flatDiscount: hiveSavedOrder.flatDiscount,
           percentageDiscount: hiveSavedOrder.percentageDiscount,
+          toCustomerCredit: hiveSavedOrder.toCustomerCredit,
         ));
       }
       notifyListeners();
@@ -329,6 +332,7 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryTime: order.deliveryTime,
           flatDiscount: order.flatDiscount,
           percentageDiscount: order.percentageDiscount,
+          toCustomerCredit: order.toCustomerCredit,
         );
 
         _confirmedOrdersBox.add(hiveSavedOrder);
@@ -425,6 +429,7 @@ class LocalProductProvider extends ChangeNotifier {
         deliveryTime: hiveSavedOrder.deliveryTime, // Restore delivery time
         flatDiscount: hiveSavedOrder.flatDiscount,
         percentageDiscount: hiveSavedOrder.percentageDiscount,
+        toCustomerCredit: hiveSavedOrder.toCustomerCredit,
       ));
     }
     notifyListeners();
@@ -516,6 +521,7 @@ class LocalProductProvider extends ChangeNotifier {
         deliveryTime: order.deliveryTime,
         flatDiscount: order.flatDiscount,
         percentageDiscount: order.percentageDiscount,
+        toCustomerCredit: order.toCustomerCredit,
       );
 
       _savedOrdersBox.add(hiveSavedOrder);
@@ -1426,6 +1432,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? status,
     String? deliveryDate, // Add deliveryDate
     String? deliveryTime, // Add deliveryTime
+    bool? toCustomerCredit,
     BuildContext? context, // Add context parameter
   }) {
     if (_cartItems.isEmpty) {
@@ -1477,6 +1484,7 @@ class LocalProductProvider extends ChangeNotifier {
       deliveryTime: deliveryTime, // Pass deliveryTime
       flatDiscount: _flatDiscount,
       percentageDiscount: _percentageDiscount,
+      toCustomerCredit: toCustomerCredit,
     );
 
     // Add to confirmed orders list
@@ -1522,6 +1530,7 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryTime: order.deliveryTime, // Store deliveryTime in Hive
           flatDiscount: order.flatDiscount,
           percentageDiscount: order.percentageDiscount,
+          toCustomerCredit: order.toCustomerCredit,
         );
 
         // Add to confirmed orders
@@ -1598,6 +1607,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? status,
     String? deliveryDate, // Add deliveryDate
     String? deliveryTime, // Add deliveryTime
+    bool? toCustomerCredit,
     BuildContext? context, // Add context parameter
   }) {
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder called");
@@ -1654,6 +1664,7 @@ class LocalProductProvider extends ChangeNotifier {
       deliveryTime: deliveryTime, // Pass deliveryTime
       flatDiscount: _flatDiscount,
       percentageDiscount: _percentageDiscount,
+      toCustomerCredit: toCustomerCredit,
     );
 
     // Add to saved orders list
@@ -1751,6 +1762,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? status,
     String? deliveryDate, // Add deliveryDate
     String? deliveryTime, // Add deliveryTime
+    bool? toCustomerCredit,
   }) {
     debugPrint("💾 LOCAL PROVIDER - updateSavedOrder called");
     debugPrint("  - Order ID: $orderId");
@@ -1807,6 +1819,8 @@ class LocalProductProvider extends ChangeNotifier {
             _savedOrders[index].deliveryTime, // Update deliveryTime
         flatDiscount: _flatDiscount,
         percentageDiscount: _percentageDiscount,
+        toCustomerCredit:
+            toCustomerCredit ?? _savedOrders[index].toCustomerCredit,
       );
 
       // Update in list

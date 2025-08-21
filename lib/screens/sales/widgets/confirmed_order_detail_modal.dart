@@ -234,6 +234,17 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                               const SizedBox(height: 8),
                               _buildInfoRow("Comment", order.comment!),
                             ],
+                            if (order.toCustomerCredit == true) ...[
+                              const SizedBox(height: 8),
+                              _buildInfoRow(
+                                "Credit Applied",
+                                "Yes",
+                                valueStyle: const TextStyle(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
