@@ -1,4 +1,7 @@
 import 'dart:ui';
+import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +23,7 @@ import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
@@ -430,8 +434,7 @@ class _SalesScreenState extends State<SalesScreen> {
           icon: const Icon(Icons.share, size: 18, color: Colors.blue),
           onPressed: () async {
             try {
-              String? invoiceHash =
-                  order.invoiceHash; // Use the new invoiceHash field
+              String? invoiceHash = order.invoiceHash; // Use the new invoiceHash field
               if (invoiceHash == null) {
                 if (context.mounted) {
                   showScaffoldError(
@@ -441,29 +444,163 @@ class _SalesScreenState extends State<SalesScreen> {
                 }
                 return;
               }
-              String invoiceUrl =
-                  "${APPUrl.baseURL}/invoice-download/$invoiceHash";
-              String message =
-                  "Here is the link for your invoice :- $invoiceUrl";
 
-              // Encode the message for WhatsApp
-              String encodedMessage = Uri.encodeComponent(message);
-              String whatsappUrl = "https://wa.me/?text=$encodedMessage";
+              // Build message with invoice link
+              final String invoiceUrl = "${APPUrl.baseURL}/invoice-download/$invoiceHash";
+              final String message = "Here is the link for your invoice: $invoiceUrl";
+              final String encodedMessage = Uri.encodeComponent(message);
 
-              // Launch WhatsApp
-              if (await canLaunchUrl(Uri.parse(whatsappUrl))) {
-                await launchUrl(Uri.parse(whatsappUrl),
-                    mode: LaunchMode.externalApplication);
-              } else {
-                // Fallback: show error message
-                if (context.mounted) {
-                  showScaffoldError(
-                    context: context,
-                    message:
-                        'Could not open WhatsApp. Please make sure WhatsApp is installed.',
-                  );
+              // Try to fetch customer phone/email from order details (for direct share targets)
+              String? customerPhone;
+              String? customerEmail;
+              try {
+                final String ordersId = order.orderNumber.toString();
+                final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+                final OrderDetailsresponse = await SalesProvider()
+                    .listOrderDetails(context, ordersId, accessToken ?? "");
+                if (OrderDetailsresponse["status"] == "success") {
+                  final OrderDetailsModel details = OrderDetailsModel.fromJson(OrderDetailsresponse);
+                  customerPhone = details.data?.customerDetails?.phone;
+                  customerEmail = details.data?.customerDetails?.email;
                 }
+              } catch (e) {
+                debugPrint('Could not fetch order details for phone: $e');
               }
+
+              // Sanitize phone for WhatsApp wa.me format (digits only, international format preferred)
+              String? intlPhone;
+              if (customerPhone != null && customerPhone.trim().isNotEmpty) {
+                final digits = customerPhone.replaceAll(RegExp(r'[^0-9]'), '');
+                if (digits.isNotEmpty) intlPhone = digits;
+              }
+
+              if (!context.mounted) return;
+              await showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                builder: (ctx) {
+                  return SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 4,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.black26,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const Text(
+                            'Share invoice',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
+                              child: Icon(Icons.share, color: ColorManager.kPrimaryColor),
+                            ),
+                            title: const Text('Share'),
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              // On Windows, sharing a file tends to open the native Share UI more reliably
+                              if (Platform.isWindows) {
+                                final Uint8List data = Uint8List.fromList(utf8.encode(message));
+                                final XFile note = XFile.fromData(
+                                  data,
+                                  mimeType: 'text/plain',
+                                  name: 'Invoice_${order.orderNumber}.txt',
+                                );
+                                await Share.shareXFiles(
+                                  [note],
+                                  text: message,
+                                  subject: 'Invoice #${order.orderNumber}',
+                                );
+                              } else {
+                                await Share.share(
+                                  message,
+                                  subject: 'Invoice #${order.orderNumber}',
+                                );
+                              }
+                            },
+                          ),
+                          ListTile(
+                            leading: const CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Color(0x1A1E88E5), // ~10% opacity blue
+                              child: Icon(Icons.email, color: Color(0xFF1E88E5)),
+                            ),
+                            title: Text(
+                              (customerEmail != null && customerEmail.isNotEmpty)
+                                  ? 'Share to Email ($customerEmail)'
+                                  : 'Share to Email',
+                            ),
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              final uri = Uri(
+                                scheme: 'mailto',
+                                path: (customerEmail != null && customerEmail.isNotEmpty) ? customerEmail : '',
+                                queryParameters: <String, String>{
+                                  'subject': 'Invoice #${order.orderNumber}',
+                                  'body': message,
+                                },
+                              );
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              } else {
+                                if (context.mounted) {
+                                  showScaffoldError(
+                                    context: context,
+                                    message: 'No email app found to share the invoice.',
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                          ListTile(
+                            leading: const CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Color(0x1A25D366), // ~10% opacity WhatsApp green
+                              child: Icon(Icons.chat, color: Color(0xFF25D366)),
+                            ),
+                            title: Text(
+                              intlPhone != null
+                                  ? 'Share to WhatsApp ($intlPhone)'
+                                  : 'Share to WhatsApp',
+                            ),
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              final String waUrl = intlPhone != null
+                                  ? 'https://wa.me/$intlPhone?text=$encodedMessage'
+                                  : 'https://wa.me/?text=$encodedMessage';
+                              final uri = Uri.parse(waUrl);
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              } else {
+                                if (context.mounted) {
+                                  showScaffoldError(
+                                    context: context,
+                                    message: 'Could not open WhatsApp. Please make sure WhatsApp is installed.',
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
             } catch (error) {
               debugPrint('Error sharing invoice: $error');
               if (context.mounted) {

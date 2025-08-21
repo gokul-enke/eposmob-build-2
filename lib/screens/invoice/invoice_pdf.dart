@@ -7,6 +7,7 @@ import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:share_plus_platform_interface/share_plus_platform_interface.dart' show XFile;
 // import 'package:pdf_render/pdf_render_widgets.dart';
 import 'package:provider/provider.dart';
 
@@ -275,8 +276,12 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
 
   Future<void> _sharePDF() async {
     if (_pdfFile != null) {
-      await Share.shareFiles([_pdfFile!.path],
-          text: 'Here is your order details PDF');
+      // share_plus v10+ uses shareXFiles with XFile
+      await Share.shareXFiles(
+        [XFile(_pdfFile!.path)],
+        text: 'Here is your order details PDF',
+        subject: 'Order PDF #${_orderDetails?.data?.orderNumber ?? ''}',
+      );
     } else {
       // debugPrint('PDF file is null, cannot share');
     }

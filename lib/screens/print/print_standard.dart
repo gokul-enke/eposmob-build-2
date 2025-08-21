@@ -585,8 +585,8 @@ class StandardPrinter {
       debugPrint("Attempting to share PDF as fallback...");
       // Only try to share on non-Windows platforms
       if (!Platform.isWindows) {
-        await Share.shareFiles(
-          [file.path],
+        await Share.shareXFiles(
+          [XFile(file.path)],
           subject:
               'Receipt #${file.path.split('/').last.replaceAll('.pdf', '').replaceAll('Receipt-', '')}',
           text: 'Your receipt for order',

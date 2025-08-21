@@ -8,7 +8,7 @@ import Foundation
 import network_info_plus
 import open_file_mac
 import path_provider_foundation
-import share_plus_macos
+import share_plus
 import shared_preferences_foundation
 import smart_auth
 import url_launcher_macos
