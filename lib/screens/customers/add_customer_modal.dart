@@ -17,9 +17,9 @@ import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 
-void showAddCustomerModal(BuildContext context, Size size,
+Future<dynamic> showAddCustomerModal(BuildContext context, Size size,
     {required String mobileNumber}) {
-  showDialog(
+  return showDialog(
     context: context,
     barrierDismissible: true,
     builder: (BuildContext context) {
@@ -401,8 +401,17 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
                     if (value["status"] == "success") {
                       showScaffold(
                           context: context, message: '${value["message"]}');
+                      // Close the loading dialog first
                       Navigator.pop(context);
-                      Navigator.pop(context);
+                      // Return the created customer's essential details to the caller
+                      Navigator.pop(context, {
+                        "status": "success",
+                        "phone": phoneNumberController.text
+                            .replaceAll("-", ""),
+                        "name":
+                            "${firstNameTextController.text} ${lastNameTextController.text}",
+                        "response": value,
+                      });
                       _clearFields();
                     } else {
                       Map<String, dynamic> errorResponse = value['errors'];

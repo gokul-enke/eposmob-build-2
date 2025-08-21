@@ -2639,10 +2639,66 @@ class BillingPageState extends State<BillingPage>
                     width: 50,
                     circleRadius: 5,
                     child: InkWell(
-                      onTap: () => {
-                        debugPrint("ADD NEW CUSTOMER BUTTON PRESSED"),
-                        showAddCustomerModal(context, size,
-                            mobileNumber: mobileNumberTextController.text),
+                      onTap: () async {
+                        debugPrint("ADD NEW CUSTOMER BUTTON PRESSED");
+                        final result = await showAddCustomerModal(context, size,
+                            mobileNumber: mobileNumberTextController.text);
+                        if (result != null && result is Map && result['status'] == 'success') {
+                          final createdPhone = (result['phone'] ?? '').toString();
+                          final createdName = (result['name'] ?? '').toString();
+                          // Try to fetch the newly created customer by phone and auto-select
+                          try {
+                            String? accessToken =
+                                Provider.of<AuthModel>(context, listen: false).token;
+                            final response = await CustomerProvider().findCustomerByPhone(
+                                accessToken ?? '', createdPhone, context);
+                            if (response != null && response['status'] == 'success') {
+                              final listModel = CustomerListModel.fromJson(response);
+                              final list = listModel.data ?? [];
+                              if (list.isNotEmpty) {
+                                final selection = list.first;
+                                Provider.of<CustomerSelectionProvider>(context, listen: false)
+                                    .setSelectedCustomer(selection);
+                                setState(() {
+                                  // Seed the Autocomplete with display text and rebuild it
+                                  mobileNumberText = "${selection.name} ${selection.phone}";
+                                  _autocompletePhoneKey = GlobalKey();
+
+                                  selectedCustomerID = selection.id!;
+                                  selectedCustomerPhone = selection.phone;
+                                  selectedCustomer = selection;
+                                  mobileNumberTextController.text =
+                                      "${selection.name} ${selection.phone}";
+                                  _isCustomerManuallySelected = true;
+                                  isCustomerFound = true;
+                                });
+                              } else {
+                                // Fallback: show name+phone from modal
+                                setState(() {
+                                  // Seed the Autocomplete and rebuild
+                                  mobileNumberText = "$createdName $createdPhone".trim();
+                                  _autocompletePhoneKey = GlobalKey();
+
+                                  mobileNumberTextController.text =
+                                      "$createdName $createdPhone".trim();
+                                  _isCustomerManuallySelected = true;
+                                  isCustomerFound = true;
+                                });
+                              }
+                            }
+                          } catch (e) {
+                            // On any error, at least reflect the phone/name entered
+                            setState(() {
+                              mobileNumberText = "$createdName $createdPhone".trim();
+                              _autocompletePhoneKey = GlobalKey();
+
+                              mobileNumberTextController.text =
+                                  "$createdName $createdPhone".trim();
+                              _isCustomerManuallySelected = true;
+                              isCustomerFound = true;
+                            });
+                          }
+                        }
                       },
                       child: const Center(
                         child: Icon(
