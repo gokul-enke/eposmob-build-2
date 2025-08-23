@@ -59,7 +59,7 @@ import 'package:pos_machine/screens/suppliers/supplier_list.dart';
 import 'package:pos_machine/screens/sales/confirmed_orders.dart';
 
 class SideBarController extends GetxController {
-  RxInt index = 46.obs;
+  RxInt index = 0.obs; // Default to HomeNew, will be set based on user role during login
   RxBool isExpanded = false.obs;
   void toggleExpansion() {
     isExpanded.value = !isExpanded.value;
