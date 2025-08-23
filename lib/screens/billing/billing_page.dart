@@ -179,13 +179,16 @@ class BillingPageState extends State<BillingPage>
 
     // Debug logging for AppSettings
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
       debugPrint('🎫 APP SETTINGS INIT DEBUG:');
       debugPrint('  - appSettingsProvider: $appSettingsProvider');
       debugPrint('  - appSettings: ${appSettingsProvider.appSettings}');
       if (appSettingsProvider.appSettings != null) {
-        debugPrint('  - discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
-        debugPrint('  - All settings: ${appSettingsProvider.appSettings.toString()}');
+        debugPrint(
+            '  - discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
+        debugPrint(
+            '  - All settings: ${appSettingsProvider.appSettings.toString()}');
       }
     });
 
@@ -247,12 +250,14 @@ class BillingPageState extends State<BillingPage>
       authModel.addListener(_onUserSwitched);
 
       // Listen for app settings changes
-      final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
       appSettingsProvider.addListener(() {
         debugPrint('🎫 APP SETTINGS CHANGED:');
         debugPrint('  - New appSettings: ${appSettingsProvider.appSettings}');
         if (appSettingsProvider.appSettings != null) {
-          debugPrint('  - New discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
+          debugPrint(
+              '  - New discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
         }
       });
     });
@@ -396,7 +401,8 @@ class BillingPageState extends State<BillingPage>
 
         // Check if there is any customer data to restore
         if (currentOrder.customerId != null ||
-            (currentOrder.customerPhone != null && currentOrder.customerPhone!.isNotEmpty)) {
+            (currentOrder.customerPhone != null &&
+                currentOrder.customerPhone!.isNotEmpty)) {
           selectedCustomerID = currentOrder.customerId;
           selectedCustomerPhone = currentOrder.customerPhone;
 
@@ -425,7 +431,9 @@ class BillingPageState extends State<BillingPage>
               .setSelectedCustomer(selectedCustomer!);
 
           // **FIX**: Properly restore customer display based on whether it's a phone-only order
-          if (selectedCustomer!.id != null && (selectedCustomer!.name != null && selectedCustomer!.name!.isNotEmpty)) {
+          if (selectedCustomer!.id != null &&
+              (selectedCustomer!.name != null &&
+                  selectedCustomer!.name!.isNotEmpty)) {
             // Customer from list - show name and phone
             String name = selectedCustomer!.name ?? '';
             String phone = selectedCustomer!.phone ?? '';
@@ -552,9 +560,11 @@ class BillingPageState extends State<BillingPage>
 
   Future<void> _fetchCustomers() async {
     // Early guard: if editing a saved order, do not override customer with defaults
-    final currentOrder = Provider.of<LocalProductProvider>(context, listen: false).currentOrder;
+    final currentOrder =
+        Provider.of<LocalProductProvider>(context, listen: false).currentOrder;
     if (currentOrder != null) {
-      debugPrint("🛡️ Skipping default customer fetch because a saved order is being edited");
+      debugPrint(
+          "🛡️ Skipping default customer fetch because a saved order is being edited");
       return;
     }
     debugPrint("🔍 _fetchCustomers() called");
@@ -830,7 +840,8 @@ class BillingPageState extends State<BillingPage>
     super.build(context);
 
     // Quick fix: if we are editing an order and it hasn't been rehydrated after navigation, rehydrate now
-    final currentOrder = Provider.of<LocalProductProvider>(context, listen: true).currentOrder;
+    final currentOrder =
+        Provider.of<LocalProductProvider>(context, listen: true).currentOrder;
     if (currentOrder != null && currentOrder.id != _lastRehydratedOrderId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -843,13 +854,15 @@ class BillingPageState extends State<BillingPage>
     debugPrint("🔨 BillingPage build() called");
     debugPrint(
         "  - Current salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
-    
+
     // Debug AppSettings during build
-    final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
     debugPrint("🎫 BUILD TIME APP SETTINGS:");
     debugPrint("  - appSettings: ${appSettingsProvider.appSettings}");
     if (appSettingsProvider.appSettings != null) {
-      debugPrint("  - discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}");
+      debugPrint(
+          "  - discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}");
     }
 
     Size size = MediaQuery.of(context).size;
@@ -2214,7 +2227,11 @@ class BillingPageState extends State<BillingPage>
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            (salesExecutivemobileNumberText != "" && !_isCustomerManuallySelected && Provider.of<LocalProductProvider>(context, listen: false).currentOrder == null)
+            (salesExecutivemobileNumberText != "" &&
+                    !_isCustomerManuallySelected &&
+                    Provider.of<LocalProductProvider>(context, listen: false)
+                            .currentOrder ==
+                        null)
                 ? Expanded(
                     child: buildColumnWidgetForTextFields(
                       controller: mobileNumberTextController,
@@ -2677,25 +2694,34 @@ class BillingPageState extends State<BillingPage>
                         debugPrint("ADD NEW CUSTOMER BUTTON PRESSED");
                         final result = await showAddCustomerModal(context, size,
                             mobileNumber: mobileNumberTextController.text);
-                        if (result != null && result is Map && result['status'] == 'success') {
-                          final createdPhone = (result['phone'] ?? '').toString();
+                        if (result != null &&
+                            result is Map &&
+                            result['status'] == 'success') {
+                          final createdPhone =
+                              (result['phone'] ?? '').toString();
                           final createdName = (result['name'] ?? '').toString();
                           // Try to fetch the newly created customer by phone and auto-select
                           try {
                             String? accessToken =
-                                Provider.of<AuthModel>(context, listen: false).token;
-                            final response = await CustomerProvider().findCustomerByPhone(
-                                accessToken ?? '', createdPhone, context);
-                            if (response != null && response['status'] == 'success') {
-                              final listModel = CustomerListModel.fromJson(response);
+                                Provider.of<AuthModel>(context, listen: false)
+                                    .token;
+                            final response = await CustomerProvider()
+                                .findCustomerByPhone(
+                                    accessToken ?? '', createdPhone, context);
+                            if (response != null &&
+                                response['status'] == 'success') {
+                              final listModel =
+                                  CustomerListModel.fromJson(response);
                               final list = listModel.data ?? [];
                               if (list.isNotEmpty) {
                                 final selection = list.first;
-                                Provider.of<CustomerSelectionProvider>(context, listen: false)
+                                Provider.of<CustomerSelectionProvider>(context,
+                                        listen: false)
                                     .setSelectedCustomer(selection);
                                 setState(() {
                                   // Seed the Autocomplete with display text and rebuild it
-                                  mobileNumberText = "${selection.name} ${selection.phone}";
+                                  mobileNumberText =
+                                      "${selection.name} ${selection.phone}";
                                   _autocompletePhoneKey = GlobalKey();
 
                                   selectedCustomerID = selection.id!;
@@ -2710,7 +2736,8 @@ class BillingPageState extends State<BillingPage>
                                 // Fallback: show name+phone from modal
                                 setState(() {
                                   // Seed the Autocomplete and rebuild
-                                  mobileNumberText = "$createdName $createdPhone".trim();
+                                  mobileNumberText =
+                                      "$createdName $createdPhone".trim();
                                   _autocompletePhoneKey = GlobalKey();
 
                                   mobileNumberTextController.text =
@@ -2723,7 +2750,8 @@ class BillingPageState extends State<BillingPage>
                           } catch (e) {
                             // On any error, at least reflect the phone/name entered
                             setState(() {
-                              mobileNumberText = "$createdName $createdPhone".trim();
+                              mobileNumberText =
+                                  "$createdName $createdPhone".trim();
                               _autocompletePhoneKey = GlobalKey();
 
                               mobileNumberTextController.text =
@@ -3279,7 +3307,8 @@ class BillingPageState extends State<BillingPage>
 
           // **FIX**: Properly determine customer info for phone-only orders
           String? customerNameToSave = selectedCustomer?.name;
-          String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
+          String? customerPhoneToSave =
+              selectedCustomerPhone ?? mobileNumberText;
 
           // Determine payment method and data
           Map<String, String> paymentData = _getPaymentMethodData();
@@ -3427,6 +3456,8 @@ class BillingPageState extends State<BillingPage>
           context: context,
           message: "Please select a payment method",
         );
+        // Show the payment method modal for user to select payment methods
+        _showPaymentMethodModal();
         return;
       }
 
@@ -3690,6 +3721,8 @@ class BillingPageState extends State<BillingPage>
           context: context,
           message: "Please select a payment method",
         );
+        // Show the payment method modal for user to select payment methods
+        _showPaymentMethodModal();
         return;
       }
 
@@ -3942,31 +3975,36 @@ class BillingPageState extends State<BillingPage>
     double totalCollected = cashAmount + cardAmount + upiAmount;
 
     double balance = 0.0;
-    
+
     if (_toCustomerCreditEnabled) {
-      debugPrint('🔛 BILLING PAGE: Toggle is ON - Calculating with customer credit consideration');
-      
+      debugPrint(
+          '🔛 BILLING PAGE: Toggle is ON - Calculating with customer credit consideration');
+
       double customerPrevBalance = selectedCustomer?.balance ?? 0.0;
-      
+
       if (customerPrevBalance < 0) {
         // Customer has debt - use transaction excess logic for consistency with auto-fill
         debugPrint('💳 Customer has debt - using transaction excess logic');
         final transactionExcess = totalCollected - cartTotal;
-        debugPrint('💰 Transaction excess: ₹${transactionExcess.toStringAsFixed(2)}');
-        
+        debugPrint(
+            '💰 Transaction excess: ₹${transactionExcess.toStringAsFixed(2)}');
+
         if (transactionExcess > 0) {
           // Get the actual customer credit amount being allocated
-          double actualCustomerCredit = double.tryParse(_debitAmountController.text) ?? 0.0;
-          
+          double actualCustomerCredit =
+              double.tryParse(_debitAmountController.text) ?? 0.0;
+
           // Clamp customer credit to available excess
           if (actualCustomerCredit > transactionExcess) {
             actualCustomerCredit = transactionExcess;
-            debugPrint('  - Clamped customer credit to transaction excess: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+            debugPrint(
+                '  - Clamped customer credit to transaction excess: ₹${actualCustomerCredit.toStringAsFixed(2)}');
           }
-          
+
           // Cash balance = transaction excess - customer credit
           balance = transactionExcess - actualCustomerCredit;
-          debugPrint('  - Balance = Transaction Excess (₹${transactionExcess.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
+          debugPrint(
+              '  - Balance = Transaction Excess (₹${transactionExcess.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
         } else {
           balance = 0.0;
           debugPrint('  - No transaction excess, balance = 0');
@@ -3978,27 +4016,33 @@ class BillingPageState extends State<BillingPage>
         double netDue = cartTotal - customerPrevBalance;
         debugPrint('💰 Net Due calculation:');
         debugPrint('  - Purchase Total: ₹${cartTotal.toStringAsFixed(2)}');
-        debugPrint('  - Customer Prev Balance: ₹${customerPrevBalance.toStringAsFixed(2)}');
+        debugPrint(
+            '  - Customer Prev Balance: ₹${customerPrevBalance.toStringAsFixed(2)}');
         debugPrint('  - Net Due: ₹${netDue.toStringAsFixed(2)}');
-        
+
         // Available balance = Total Collected - Net Due
         double availableBalance = totalCollected - netDue;
-        debugPrint('  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
-        debugPrint('  - Available Balance: ₹${availableBalance.toStringAsFixed(2)}');
-        
+        debugPrint(
+            '  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
+        debugPrint(
+            '  - Available Balance: ₹${availableBalance.toStringAsFixed(2)}');
+
         if (availableBalance > 0) {
           // Get the actual customer credit amount being allocated
-          double actualCustomerCredit = double.tryParse(_debitAmountController.text) ?? 0.0;
-          
+          double actualCustomerCredit =
+              double.tryParse(_debitAmountController.text) ?? 0.0;
+
           // Clamp customer credit to available balance
           if (actualCustomerCredit > availableBalance) {
             actualCustomerCredit = availableBalance;
-            debugPrint('  - Clamped customer credit to available balance: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+            debugPrint(
+                '  - Clamped customer credit to available balance: ₹${actualCustomerCredit.toStringAsFixed(2)}');
           }
-          
+
           // Cash balance = available balance - customer credit
           balance = availableBalance - actualCustomerCredit;
-          debugPrint('  - Balance = Available Balance (₹${availableBalance.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
+          debugPrint(
+              '  - Balance = Available Balance (₹${availableBalance.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
         } else {
           balance = 0.0;
           debugPrint('  - No available balance, balance = 0');
@@ -4008,13 +4052,15 @@ class BillingPageState extends State<BillingPage>
       debugPrint('🔴 BILLING PAGE: Toggle is OFF - Using simple calculation');
       // Toggle OFF: Simple calculation without previous balance
       balance = totalCollected - cartTotal;
-      debugPrint('  - Balance = Total Collected (₹${totalCollected.toStringAsFixed(2)}) - Cart Total (₹${cartTotal.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
+      debugPrint(
+          '  - Balance = Total Collected (₹${totalCollected.toStringAsFixed(2)}) - Cart Total (₹${cartTotal.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
     }
 
     // Clamp balance to never show negative values in UI
     // Negative balance means insufficient payment, but cash drawer can't give negative money
     if (balance < 0) {
-      debugPrint('🚫 BILLING PAGE: Clamping negative balance (₹${balance.toStringAsFixed(2)}) to 0 for UI display');
+      debugPrint(
+          '🚫 BILLING PAGE: Clamping negative balance (₹${balance.toStringAsFixed(2)}) to 0 for UI display');
       balance = 0.0;
     }
 
@@ -4104,7 +4150,7 @@ class BillingPageState extends State<BillingPage>
         double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
         double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
         double actualCashPaid = cashAmount + cardAmount + upiAmount;
-        
+
         // Use the helper method for consistent balance calculation
         double balance = _calculateBalanceAmount();
 
@@ -4142,20 +4188,27 @@ class BillingPageState extends State<BillingPage>
                     builder: (context, appSettingsProvider, child) {
                   // Debug logging for coupon button visibility
                   debugPrint('🎫 COUPON BUTTON DEBUG:');
-                  debugPrint('  - appSettingsProvider.appSettings: ${appSettingsProvider.appSettings}');
+                  debugPrint(
+                      '  - appSettingsProvider.appSettings: ${appSettingsProvider.appSettings}');
                   if (appSettingsProvider.appSettings != null) {
-                    debugPrint('  - discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
-                    debugPrint('  - All app settings: ${appSettingsProvider.appSettings.toString()}');
-                    
+                    debugPrint(
+                        '  - discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
+                    debugPrint(
+                        '  - All app settings: ${appSettingsProvider.appSettings.toString()}');
+
                     // More detailed debugging
-                    debugPrint('  - AppSettings runtimeType: ${appSettingsProvider.appSettings.runtimeType}');
+                    debugPrint(
+                        '  - AppSettings runtimeType: ${appSettingsProvider.appSettings.runtimeType}');
                     debugPrint('  - AppSettings properties:');
                     try {
                       // Use reflection to see all properties
                       final settings = appSettingsProvider.appSettings!;
-                      debugPrint('    - barcodeSales: ${settings.barcodeSales}');
-                      debugPrint('    - discountAndCoupon: ${settings.discountAndCoupon}');
-                      debugPrint('    - priceRoundOff: ${settings.priceRoundOff}');
+                      debugPrint(
+                          '    - barcodeSales: ${settings.barcodeSales}');
+                      debugPrint(
+                          '    - discountAndCoupon: ${settings.discountAndCoupon}');
+                      debugPrint(
+                          '    - priceRoundOff: ${settings.priceRoundOff}');
                       // Add other properties you know exist
                     } catch (e) {
                       debugPrint('    - Error accessing properties: $e');
@@ -4163,13 +4216,14 @@ class BillingPageState extends State<BillingPage>
                   } else {
                     debugPrint('  - appSettings is NULL');
                   }
-                  
+
                   if (appSettingsProvider.appSettings == null ||
                       !appSettingsProvider.appSettings!.discountAndCoupon) {
-                    debugPrint('  - ❌ Hiding coupon button (settings null or discountAndCoupon disabled)');
+                    debugPrint(
+                        '  - ❌ Hiding coupon button (settings null or discountAndCoupon disabled)');
                     return Container();
                   }
-                  
+
                   debugPrint('  - ✅ Showing coupon button');
                   return _buildQuickAccessIcon(
                     icon: isCouponApplied
@@ -4349,7 +4403,16 @@ class BillingPageState extends State<BillingPage>
         initialTransactionNumber: _transactionNumberController.text,
         cartTotal: localProductProvider.cartTotal,
         customerPrevBalance: selectedCustomer?.balance ?? 0.0,
-        onPaymentMethodSelected: (isCash, isCard, isUpi, isDebit, cashAmount, cardAmount, upiAmount, debitAmount, transactionNumber, toCustomerCredit) {
+        onPaymentMethodSelected: (isCash,
+            isCard,
+            isUpi,
+            isDebit,
+            cashAmount,
+            cardAmount,
+            upiAmount,
+            debitAmount,
+            transactionNumber,
+            toCustomerCredit) {
           setState(() {
             _isCashSelected = isCash;
             _isCardSelected = isCard;
@@ -4361,7 +4424,7 @@ class BillingPageState extends State<BillingPage>
             _debitAmountController.text = debitAmount;
             _transactionNumberController.text = transactionNumber;
             _toCustomerCreditEnabled = toCustomerCredit;
-            
+
             // Update balance amount using the same calculation logic as the modal
             _updateBalanceAmount();
           });
@@ -4397,9 +4460,11 @@ class BillingPageState extends State<BillingPage>
 
   void _showCouponModal() {
     debugPrint('🎫 _showCouponModal called');
-    debugPrint('  - Current app settings: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings}');
-    debugPrint('  - discountAndCoupon enabled: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.discountAndCoupon}');
-    
+    debugPrint(
+        '  - Current app settings: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings}');
+    debugPrint(
+        '  - discountAndCoupon enabled: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.discountAndCoupon}');
+
     showDialog(
       context: context,
       builder: (context) => CouponModal(

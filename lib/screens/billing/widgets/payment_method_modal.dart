@@ -421,7 +421,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     double amount = double.tryParse(controller.text) ?? 0;
 
     setState(() {
-      if (amount > 0) {
+      // Check if field has any text (including "0") to determine selection
+      bool hasValue = controller.text.isNotEmpty;
+      
+      if (hasValue) {
         switch (label) {
           case 'cash':
             isCashSelected = true;
@@ -437,7 +440,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             toCustomerCredit = amount;
             break;
         }
-      } else if (amount == 0) {
+      } else {
+        // Only deselect when field is completely empty
         switch (label) {
           case 'cash':
             isCashSelected = false;
