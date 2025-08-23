@@ -247,22 +247,22 @@ class SideMenu extends StatelessWidget {
                   sideBarController.index.value == 11,
             ),
           ),
-          Obx(
+
+                    Obx(
             () => DrawerListTile(
-              iconPath: ImageAssets.creditCardIcon,
-              title: 'Category',
+              iconPath: ImageAssets.customerIcon,
+              title: 'Customers',
               onTap: () {
-                sideBarController.index.value = 12;
-                // debugPrint(" 'Category',${sideBarController.index.value}");
+                sideBarController.index.value = 5;
+                // debugPrint(" 'Customers',${sideBarController.index.value}");
               },
-              selected: sideBarController.index.value == 12 ||
-                  sideBarController.index.value == 13 ||
-                  sideBarController.index.value == 27 ||
-                  sideBarController.index.value == 16 ||
-                  sideBarController.index.value == 34,
+              selected: sideBarController.index.value == 5 ||
+                  sideBarController.index.value == 9 ||
+                  sideBarController.index.value == 38,
             ),
           ),
-          Obx(
+
+                    Obx(
             () => DrawerListTileExpandableColumn(
                 onTapTitle1: () {
                   sideBarController.index.value = 14;
@@ -286,6 +286,22 @@ class SideMenu extends StatelessWidget {
                     sideBarController.index.value == 33 ||
                     sideBarController.index.value == 35),
           ),
+          Obx(
+            () => DrawerListTile(
+              iconPath: ImageAssets.creditCardIcon,
+              title: 'Category',
+              onTap: () {
+                sideBarController.index.value = 12;
+                // debugPrint(" 'Category',${sideBarController.index.value}");
+              },
+              selected: sideBarController.index.value == 12 ||
+                  sideBarController.index.value == 13 ||
+                  sideBarController.index.value == 27 ||
+                  sideBarController.index.value == 16 ||
+                  sideBarController.index.value == 34,
+            ),
+          ),
+
           Obx(
             () => DrawerListTile(
               iconPath: ImageAssets.cardIcon,
@@ -349,22 +365,65 @@ class SideMenu extends StatelessWidget {
                 selected: sideBarController.index.value == 4 ||
                     sideBarController.index.value == 23),
           ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.customerIcon,
-              title: 'Customers',
-              onTap: () {
-                sideBarController.index.value = 5;
-                // debugPrint(" 'Customers',${sideBarController.index.value}");
-              },
-              selected: sideBarController.index.value == 5 ||
-                  sideBarController.index.value == 9 ||
-                  sideBarController.index.value == 38,
-            ),
-          ),
-          const SizedBox(
-            height: 15,
-          ),
+//           Obx(
+//   () => DrawerListTileExpandableColumn(
+//     onTapTitle1: () {
+//       sideBarController.index.value = 53; // Printer
+//       debugPrint(" 'Printer', ${sideBarController.index.value}");
+//     },
+//     onTapTitle2: () async {
+//       String token = authModel.token ?? '';
+//       showDialog(
+//         context: context,
+//         barrierDismissible: false,
+//         builder: (context) {
+//           return const Center(
+//             child: CircularProgressIndicator.adaptive(),
+//           );
+//         },
+//       );
+
+//       await AuthenticationProvider().logout(token, context).then((value) async {
+//         if (value["status"] == "success") {
+//           authModel.logout();
+//           SharedPreferenceProvider().removeTokenAndCustomerId();
+
+//           debugPrint(" authmodel logout token ${authModel.token}");
+
+//           showScaffold(
+//             context: context,
+//             message: '${value["message"]}',
+//           );
+//           Navigator.pop(context);
+//           await Future.delayed(const Duration(seconds: 0)).then(
+//             (value) => Navigator.pushReplacement(
+//               context,
+//               MaterialPageRoute(builder: (context) => const SignInScreen()),
+//             ),
+//           );
+//         } else {
+//           Navigator.pop(context);
+//           showScaffoldError(
+//             context: context,
+//             message: '${value["message"]}',
+//           );
+//         }
+//       });
+
+//       debugPrint(" 'Logout', ${sideBarController.index.value}");
+//     },
+//     listTitle1: "Printer",
+//     listTitle2: "Logout",
+//     icon: Icons.settings,  // use a Settings icon here
+//     title: 'Settings',
+//     onTap: () {
+//       sideBarController.index.value = 53;
+//       debugPrint(" 'Settings', ${sideBarController.index.value}");
+//     },
+//     selected: sideBarController.index.value == 53,
+//   ),
+// ),
+
           Padding(
             padding: const EdgeInsets.only(left: 45.0),
             child: Text(
@@ -428,7 +487,7 @@ class SideMenu extends StatelessWidget {
               // debugPrint(" 'Logout',${sideBarController.index.value}");
             },
             selected: false,
-          ),
+           ),
           const SizedBox(
             height: 10,
           ),

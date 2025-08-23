@@ -40,7 +40,8 @@ class _CustomerTransactionListScreenState
   final TextEditingController customerSearchController =
       TextEditingController();
   String searchCustomer = '';
-  List<String> customerSuggestions = []; // This should be populated with your customer names
+  List<String> customerSuggestions =
+      []; // This should be populated with your customer names
   List<String> filteredSuggestions = [];
   bool initLoading = false;
   List<ListTransaction>? listTransaction = [];
@@ -54,13 +55,13 @@ class _CustomerTransactionListScreenState
   final int itemsPerPage = 20;
 
   List<String> getCustomerSuggestions() {
-  if (allTransactions == null) return [];
-  return allTransactions!
-      .map((t) => t.customerName ?? '')
-      .where((name) => name.isNotEmpty)
-      .toSet()
-      .toList();
-}
+    if (allTransactions == null) return [];
+    return allTransactions!
+        .map((t) => t.customerName ?? '')
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList();
+  }
 
   @override
   void initState() {
@@ -189,7 +190,6 @@ class _CustomerTransactionListScreenState
     amountRefController.clear();
     customerSearchController.clear();
     referenceSearchController.clear();
-    
 
     // Reset the search variables
     setState(() {
@@ -198,8 +198,7 @@ class _CustomerTransactionListScreenState
       searchReference = '';
       selectedDate = null;
       currentPage = 1;
-      _calendarKey++; 
-      
+      _calendarKey++;
     });
 
     // Force a refresh of the filters
@@ -472,27 +471,57 @@ class _CustomerTransactionListScreenState
                   ],
                 ),
                 const SizedBox(height: 15),
-                Row(
+                Column(
                   children: [
-                    Expanded(
-                      child: Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        alignment: WrapAlignment.start,
-                        crossAxisAlignment: WrapCrossAlignment.end,
-                        children: [
-                          // Existing Amount Search Field
-                          SizedBox(
-                            width: isSmallScreen
-                                ? size.width * 0.8
-                                : size.width * 0.15,
+                    // First row with 4 fields
+                    Row(
+                      children: [
+                        // Amount Search Field
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  "Amount",
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s14,
+                                    0.27,
+                                    Colors.black.withOpacity(0.6),
+                                  ),
+                                ),
+                              ),
+                              buildColumnWidgetForTextFields(
+                                height: 45,
+                                width: double.infinity,
+                                onchanged: (value) {
+                                  setState(() {
+                                    searchAmount = value!;
+                                    currentPage = 1;
+                                  });
+                                  applyFilters();
+                                },
+                                controller: amountRefController,
+                                size: size,
+                                hintText: 'Amount',
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Customer Name Search Field
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 10.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Text(
-                                    "Amount ",
+                                    "Customer Name",
                                     style: buildCustomStyle(
                                       FontWeightManager.regular,
                                       FontSize.s14,
@@ -501,64 +530,27 @@ class _CustomerTransactionListScreenState
                                     ),
                                   ),
                                 ),
-                                buildColumnWidgetForTextFields(
-                                  height: 45,
-                                  width: isSmallScreen
-                                      ? size.width * 0.8
-                                      : size.width * 0.15,
-                                  onchanged: (value) {
+                                CustomerAutocomplete(
+                                  size: size,
+                                  customerList: getCustomerSuggestions(),
+                                  controller: customerSearchController,
+                                  onSelected: (String selectedCustomer) {
                                     setState(() {
-                                      searchAmount = value!;
+                                      searchCustomer = selectedCustomer;
                                       currentPage = 1;
                                     });
                                     applyFilters();
                                   },
-                                  controller: amountRefController,
-                                  size: size,
-                                  hintText: 'Amount',
                                 ),
                               ],
                             ),
                           ),
+                        ),
 
-                          // NEW: Customer Name Search Field (Add this before the Reset button)
-                          SizedBox(
-  width: isSmallScreen ? size.width * 0.8 : size.width * 0.15,
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Text(
-          "Customer Name",
-          style: buildCustomStyle(
-            FontWeightManager.regular,
-            FontSize.s14,
-            0.27,
-            Colors.black.withOpacity(0.6),
-          ),
-        ),
-      ),
-      CustomerAutocomplete(
-        size: size,
-        customerList: getCustomerSuggestions(),
-        controller: customerSearchController,
-        onSelected: (String selectedCustomer) {
-          setState(() {
-            searchCustomer = selectedCustomer;
-            currentPage = 1;
-          });
-          applyFilters();
-        },
-      ),
-    ],
-  ),
-),
-                              // NEW: Reference ID Search Field
-                          SizedBox(
-                            width: isSmallScreen
-                                ? size.width * 0.8
-                                : size.width * 0.15,
+                        // Reference ID Search Field
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 10.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -576,9 +568,7 @@ class _CustomerTransactionListScreenState
                                 ),
                                 buildColumnWidgetForTextFields(
                                   height: 45,
-                                  width: isSmallScreen
-                                      ? size.width * 0.8
-                                      : size.width * 0.15,
+                                  width: double.infinity,
                                   onchanged: (value) {
                                     setState(() {
                                       searchReference = value!;
@@ -593,11 +583,12 @@ class _CustomerTransactionListScreenState
                               ],
                             ),
                           ),
-                          // Existing Date Picker
-                          SizedBox(
-                            width: isSmallScreen
-                                ? size.width * 0.8
-                                : size.width * 0.15,
+                        ),
+
+                        // Date Picker
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 10.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -614,12 +605,9 @@ class _CustomerTransactionListScreenState
                                   ),
                                 ),
                                 BuildBoxShadowContainer(
-                   
                                   circleRadius: 7,
                                   height: 45,
-                                  width: isSmallScreen
-                                      ? size.width * 0.8
-                                      : size.width * 0.15,
+                                  width: double.infinity,
                                   child: Center(
                                     child: CalendarPickerTableCell(
                                       key: ValueKey(_calendarKey),
@@ -636,21 +624,35 @@ class _CustomerTransactionListScreenState
                               ],
                             ),
                           ),
+                        ),
+                      ],
+                    ),
 
-                          // Existing Reset Button
-                          CustomRoundButton(
-                            title: "Reset",
-                            boxColor: Colors.white,
-                            textColor: ColorManager.kPrimaryColor,
-                            fct: resetSearch,
-                            height: 45,
-                            width: isSmallScreen
-                                ? size.width * 0.4
-                                : size.width * 0.09,
-                            fontSize: FontSize.s12,
+                    // Second row with reset button
+                    Row(
+                      children: [
+                        // Empty space to push reset button to the end
+                        Expanded(
+                          flex: 3,
+                          child: Container(),
+                        ),
+
+                        // Reset Button
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 10.0),
+                            child: CustomRoundButton(
+                              title: "Reset",
+                              boxColor: Colors.white,
+                              textColor: ColorManager.kPrimaryColor,
+                              fct: resetSearch,
+                              height: 45,
+                              width: double.infinity,
+                              fontSize: FontSize.s12,
+                            ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

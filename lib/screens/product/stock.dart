@@ -689,173 +689,172 @@ class _AddStockScreenState extends State<AddStockScreen> {
                 ],
               ),
               const SizedBox(height: 15),
-              Row(
-                children: [
-                  Expanded(
-                    child: Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      alignment: WrapAlignment.start,
-                      crossAxisAlignment: WrapCrossAlignment.end,
-                      children: [
-                        SizedBox(
-                          width: isSmallScreen
-                              ? size.width * 0.3
-                              : size.width * 0.15,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Stock Name ",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                alignment: Alignment.centerLeft,
-                                padding: const EdgeInsets.only(left: 15),
-                                height: 45,
-                                child: TextField(
-                                  controller: stockNameController,
-                                  onChanged: (value) {
-                                    searchStocks();
-                                  },
-                                  decoration: InputDecoration(
-                                    hintText: 'Stock Name',
-                                    hintStyle: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s12,
-                                      0.27,
-                                      ColorManager.textColor.withOpacity(.5),
-                                    ),
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.27,
-                                    ColorManager.textColor.withOpacity(.5),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(
-                          width: isSmallScreen
-                              ? size.width * 0.3
-                              : size.width * 0.15,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Category",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                alignment: Alignment.centerLeft,
-                                padding: const EdgeInsets.only(left: 15),
-                                height: 45,
-                                child: DropdownButtonFormField<String>(
-                                  isExpanded: true,
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  value: categoryController.text,
-                                  hint: Text(
-                                    'Please Select',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s12,
-                                      0.27,
-                                      ColorManager.textColor.withOpacity(.5),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  items: categories
-                                      .map<DropdownMenuItem<String>>(
-                                          (String value) {
-                                    return DropdownMenuItem<String>(
-                                      value: value,
-                                      child: Text(
-                                        value == "All Categories"
-                                            ? 'Please Select'
-                                            : value,
-                                        style: buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          FontSize.s12,
-                                          0.27,
-                                          ColorManager.textColor
-                                              .withOpacity(.5),
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (String? newValue) {
-                                    setState(() {
-                                      categoryController.text = newValue!;
-                                    });
-                                    searchStocks();
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CustomRoundButton(
-                              title: "Search",
-                              fct: () => {searchStocks()},
-                              height: 45,
-                              width: isSmallScreen
-                                  ? size.width * 0.2
-                                  : size.width * 0.08,
-                              fontSize: FontSize.s12,
-                              boxColor: ColorManager.kPrimaryColor,
-                              textColor: Colors.white,
-                            ),
-                            const SizedBox(width: 8),
-                            CustomRoundButton(
-                              title: "Reset",
-                              boxColor: Colors.white,
-                              textColor: ColorManager.kPrimaryColor,
-                              borderColor: ColorManager.kPrimaryColor,
-                              fct: resetSearch,
-                              height: 45,
-                              width: isSmallScreen
-                                  ? size.width * 0.2
-                                  : size.width * 0.08,
-                              fontSize: FontSize.s12,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+Row(
+  children: [
+    // Stock Name field
+    Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              "Stock Name",
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.27,
+                Colors.black.withOpacity(0.6),
               ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          BuildBoxShadowContainer(
+            circleRadius: 7,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.only(left: 15),
+            height: 45,
+            child: TextField(
+              controller: stockNameController,
+              onChanged: (value) {
+                searchStocks();
+              },
+              decoration: InputDecoration(
+                hintText: 'Stock Name',
+                hintStyle: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.27,
+                  ColorManager.textColor.withOpacity(.5),
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.27,
+                ColorManager.textColor.withOpacity(.5),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+    
+    const SizedBox(width: 10),
+    
+    // Category dropdown
+    Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              "Category",
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.27,
+                Colors.black.withOpacity(0.6),
+              ),
+            ),
+          ),
+          BuildBoxShadowContainer(
+            circleRadius: 7,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.only(left: 15),
+            height: 45,
+            child: DropdownButtonFormField<String>(
+              isExpanded: true,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+              value: categoryController.text,
+              hint: Text(
+                'Please Select',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.27,
+                  ColorManager.textColor.withOpacity(.5),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              items: categories
+                  .map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(
+                    value == "All Categories" ? 'Please Select' : value,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s12,
+                      0.27,
+                      ColorManager.textColor.withOpacity(.5),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  categoryController.text = newValue!;
+                });
+                searchStocks();
+              },
+            ),
+          ),
+        ],
+      ),
+    ),
+    
+    const SizedBox(width: 10),
+    
+    // Search button
+    Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 35), // Space to align with other fields
+          CustomRoundButton(
+            title: "Search",
+            fct: () => {searchStocks()},
+            height: 45,
+            width: double.infinity, // Take full available width
+            fontSize: FontSize.s12,
+            boxColor: ColorManager.kPrimaryColor,
+            textColor: Colors.white,
+          ),
+        ],
+      ),
+    ),
+    
+    const SizedBox(width: 10),
+    
+    // Reset button
+    Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 35), // Space to align with other fields
+          CustomRoundButton(
+            title: "Reset",
+            boxColor: Colors.white,
+            textColor: ColorManager.kPrimaryColor,
+            borderColor: ColorManager.kPrimaryColor,
+            fct: resetSearch,
+            height: 45,
+            width: double.infinity, // Take full available width
+            fontSize: FontSize.s12,
+          ),
+        ],
+      ),
+    ),
+  ],
+),
               const SizedBox(height: 20),
               Expanded(
                 child: Column(

@@ -190,108 +190,128 @@ class _CustomersScreenState extends State<CustomersScreen> {
                       height: 90,
                       child: Row(
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.only(left: 10.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Name",
-                                    style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      FontSize.s14,
-                                      0.27,
-                                      Colors.black.withOpacity(0.6),
+                          // Name Field
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 10.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      "Name",
+                                      style: buildCustomStyle(
+                                        FontWeightManager.regular,
+                                        FontSize.s14,
+                                        0.27,
+                                        Colors.black.withOpacity(0.6),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                buildColumnWidgetForTextFields(
-                                  height: 45,
-                                  width: 200,
-                                  onchanged: (value) {
-                                    searchCustomers();
-                                  },
-                                  controller: customerNameController,
-                                  size: size,
-                                  hintText: 'Name',
-                                ),
-                              ],
+                                  buildColumnWidgetForTextFields(
+                                    height: 45,
+                                    width: double
+                                        .infinity, // Changed to take full width
+                                    onchanged: (value) {
+                                      searchCustomers();
+                                    },
+                                    controller: customerNameController,
+                                    size: size,
+                                    hintText: 'Name',
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 10.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Email",
-                                    style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      FontSize.s14,
-                                      0.27,
-                                      Colors.black.withOpacity(0.6),
+
+                          // Email Field
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 10.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      "Email",
+                                      style: buildCustomStyle(
+                                        FontWeightManager.regular,
+                                        FontSize.s14,
+                                        0.27,
+                                        Colors.black.withOpacity(0.6),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                buildColumnWidgetForTextFields(
-                                  height: 45,
-                                  width: 200,
-                                  onchanged: (value) {
-                                    searchCustomers();
-                                  },
-                                  controller: customerEmailController,
-                                  size: size,
-                                  hintText: 'Email',
-                                ),
-                              ],
+                                  buildColumnWidgetForTextFields(
+                                    height: 45,
+                                    width: double
+                                        .infinity, // Changed to take full width
+                                    onchanged: (value) {
+                                      searchCustomers();
+                                    },
+                                    controller: customerEmailController,
+                                    size: size,
+                                    hintText: 'Email',
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 10.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Phone",
-                                    style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      FontSize.s14,
-                                      0.27,
-                                      Colors.black.withOpacity(0.6),
+
+                          // Phone Field
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 10.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      "Phone",
+                                      style: buildCustomStyle(
+                                        FontWeightManager.regular,
+                                        FontSize.s14,
+                                        0.27,
+                                        Colors.black.withOpacity(0.6),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                buildColumnWidgetForTextFields(
-                                  height: 45,
-                                  width: 200,
-                                  onchanged: (value) {
-                                    searchCustomers();
-                                  },
-                                  controller: customerPhoneController,
-                                  size: size,
-                                  hintText: 'Phone',
-                                ),
-                              ],
+                                  buildColumnWidgetForTextFields(
+                                    height: 45,
+                                    width: double
+                                        .infinity, // Changed to take full width
+                                    onchanged: (value) {
+                                      searchCustomers();
+                                    },
+                                    controller: customerPhoneController,
+                                    size: size,
+                                    hintText: 'Phone',
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 10.0, top: 30),
-                            child: CustomRoundButton(
-                              title: "Reset",
-                              boxColor: Colors.white,
-                              textColor: ColorManager.kPrimaryColor,
-                              fct: () {
-                                resetSearch();
-                              },
-                              height: 45,
-                              width: size.width * 0.09,
-                              fontSize: FontSize.s12,
+
+                          // Reset Button
+                          Expanded(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.only(left: 10.0, top: 30),
+                              child: CustomRoundButton(
+                                title: "Reset",
+                                boxColor: Colors.white,
+                                textColor: ColorManager.kPrimaryColor,
+                                fct: () {
+                                  resetSearch();
+                                },
+                                height: 45,
+                                width: double
+                                    .infinity, // Changed to take full width
+                                fontSize: FontSize.s12,
+                              ),
                             ),
                           ),
                         ],
