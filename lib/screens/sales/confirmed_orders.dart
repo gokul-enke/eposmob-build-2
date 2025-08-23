@@ -195,13 +195,17 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                       ],
                                       const Spacer(),
                                       // Show discount info if any discounts applied
-                                      if ((order.flatDiscount != null && order.flatDiscount! > 0) ||
-                                          (order.percentageDiscount != null && order.percentageDiscount! > 0) ||
-                                          (order.couponId != null && order.couponId!.isNotEmpty)) ...[
+                                      if ((order.flatDiscount != null &&
+                                              order.flatDiscount! > 0) ||
+                                          (order.percentageDiscount != null &&
+                                              order.percentageDiscount! > 0) ||
+                                          (order.couponId != null &&
+                                              order.couponId!.isNotEmpty)) ...[
                                         const SizedBox(height: 4),
                                         Row(
                                           children: [
-                                            const Icon(Icons.local_offer, size: 12, color: Colors.orange),
+                                            const Icon(Icons.local_offer,
+                                                size: 12, color: Colors.orange),
                                             const SizedBox(width: 4),
                                             Text(
                                               'Discount Applied',
@@ -306,7 +310,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
 
       // Use the stored total from order (already rounded when saved)
       double finalTotal = order.total;
-      
+
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -315,6 +319,11 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             cartItems: cartItems,
             formattedTotal: finalTotal.toString(), // Use order's total
             savedTotal: youSaved.toString(),
+            discountAmount: ((order.flatDiscount ?? 0.0) +
+                ((order.percentageDiscount ?? 0.0) > 0
+                    ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
+                    : 0.0))
+                .toString(),
             orderDate: order.createdAt,
             orderNumber: order.orderNumber,
             isFromLocalStorage: true,
@@ -646,9 +655,10 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           // Include discount data from saved order
           flatDiscount: order.flatDiscount,
           percentageDiscount: order.percentageDiscount,
-          discountAmount: (order.flatDiscount ?? 0.0) + 
-                         ((order.percentageDiscount ?? 0.0) > 0 ? 
-                          (order.total * (order.percentageDiscount ?? 0.0) / 100) : 0.0),
+          discountAmount: (order.flatDiscount ?? 0.0) +
+              ((order.percentageDiscount ?? 0.0) > 0
+                  ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
+                  : 0.0),
           toCustomerCredit: order.toCustomerCredit,
         );
 
@@ -716,4 +726,3 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
     });
   }
 }
-

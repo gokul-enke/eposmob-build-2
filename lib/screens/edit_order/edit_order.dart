@@ -2068,6 +2068,7 @@ class _EditOrderState extends State<EditOrder> {
                     cartItems: orderDetails.data!.cart!.cartItems!,
                     formattedTotal: formattedTotal!,
                     savedTotal: savedTotal!,
+                    discountAmount: orderDetails.data!.priceSummary?.discount?.toString() ?? "0.00",
                     orderDate: orderDate,
                     orderNumber: orderDetails.data!.orderNumber ?? "",
                   ),

@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -21,9 +22,13 @@ import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/screens/print/print_standard.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:cross_file/cross_file.dart';
 
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
@@ -61,6 +66,20 @@ class _SalesScreenState extends State<SalesScreen> {
 
   bool initLoading = false;
 
+  // Helper method to get or create the epos directory
+  Future<Directory> _getEposDirectory() async {
+    final documentsDirectory = await getApplicationDocumentsDirectory();
+    final eposDirectory = Directory('${documentsDirectory.path}/epos');
+    
+    // Create epos directory if it doesn't exist
+    if (!await eposDirectory.exists()) {
+      await eposDirectory.create(recursive: true);
+      debugPrint('Created epos directory: ${eposDirectory.path}');
+    }
+    
+    return eposDirectory;
+  }
+
   @override
   void initState() {
     loadInitData();
@@ -84,11 +103,11 @@ class _SalesScreenState extends State<SalesScreen> {
       final url = '${APPUrl.baseURL}/invoice-download/$invoiceHash';
       debugPrint('Attempting to download from: $url');
 
-      // Get the application directory
-      final directory = await getApplicationDocumentsDirectory();
+      // Get the epos directory
+      final eposDirectory = await _getEposDirectory();
 
-      // Create a file path for the PDF
-      final filePath = '${directory.path}/invoice_$invoiceHash.pdf';
+      // Create a file path for the PDF in the epos folder
+      final filePath = '${eposDirectory.path}/invoice_$invoiceHash.pdf';
 
       // Configure Dio with options
       final dio = Dio();
@@ -110,7 +129,7 @@ class _SalesScreenState extends State<SalesScreen> {
       if (response.statusCode == 200) {
         showScaffold(
           context: context,
-          message: 'Invoice downloaded successfully to ${directory.path}',
+          message: 'Invoice downloaded successfully to ${eposDirectory.path}',
         );
         debugPrint('File downloaded successfully to $filePath');
       } else if (response.statusCode == 404) {
@@ -157,6 +176,298 @@ class _SalesScreenState extends State<SalesScreen> {
         message: errorMessage,
       );
       debugPrint('Error downloading file: $e');
+    }
+  }
+
+  Future<void> _sharePDFInvoice(ListOrderModelData order) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
+      );
+
+      // Fetch order details
+      final String ordersId = order.orderNumber.toString();
+      final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+      final OrderDetailsresponse = await SalesProvider()
+          .listOrderDetails(context, ordersId, accessToken ?? "");
+      
+      if (OrderDetailsresponse["status"] != "success") {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Unable to fetch order details for PDF generation.',
+          );
+        }
+        return;
+      }
+
+      final OrderDetailsModel details = OrderDetailsModel.fromJson(OrderDetailsresponse);
+      final orderData = details.data;
+      
+      if (orderData == null || orderData.cart?.cartItems == null) {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Order details not available for PDF generation.',
+          );
+        }
+        return;
+      }
+
+      // Get app settings and document configuration
+      final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+      final docConfigProvider = Provider.of<DocumentConfigProvider>(context, listen: false);
+      
+      final appSettings = appSettingsProvider.appSettings;
+      final billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+      
+      if (appSettings == null || billDocumentConfig == null) {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'App settings or document configuration not loaded.',
+          );
+        }
+        return;
+      }
+
+      // Create StandardPrinter instance and generate PDF
+      final standardPrinter = StandardPrinter(context);
+      
+      // Use the cart items directly without conversion since the PDF method expects the original objects
+      final File? pdfFile = await standardPrinter.generatePDFForSharing(
+        cartItems: orderData.cart!.cartItems!,
+        formattedTotal: orderData.priceSummary?.netPayable?.toString() ?? order.grantTotal ?? '0.00',
+        savedTotal: orderData.priceSummary?.savedTotal?.toString() ?? '0.00',
+        discountAmount: orderData.priceSummary?.discount?.toString() ?? '0.00',
+        orderDate: orderData.orderDate ?? DateTime.now().toIso8601String(),
+        orderNumber: orderData.orderNumber?.toString() ?? order.orderNumber.toString(),
+        isFromLocalStorage: false,
+        selectedPaperSize: 'A4', // Default to A4 for sharing
+        billDocumentConfig: billDocumentConfig,
+        customerCareNumber: appSettings.customerCarePhone,
+        customerCareEmail: appSettings.customerCareEmail,
+        customerName: orderData.customerDetails?.name,
+        customerPhone: orderData.customerDetails?.phone,
+        customerEmail: orderData.customerDetails?.email,
+        customerAddress: orderData.customerDetails?.address?.toString(),
+      );
+
+      // Close loading dialog
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (pdfFile == null) {
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Failed to generate PDF invoice.',
+          );
+        }
+        return;
+      }
+
+      // Debug information
+      debugPrint('PDF file generated successfully: ${pdfFile.path}');
+      debugPrint('PDF file size: ${await pdfFile.length()} bytes');
+      debugPrint('PDF file exists: ${await pdfFile.exists()}');
+
+      // Share the PDF file using modern ShareParams API
+      debugPrint('Starting PDF share process...');
+      if (Platform.isWindows) {
+        debugPrint('Sharing on Windows platform');
+        // On Windows, use modern ShareParams API with pure file sharing
+        try {
+          debugPrint('Attempting Windows share with ShareParams API...');
+          // Create XFile with enhanced properties
+          final enhancedXFile = XFile(
+            pdfFile.path,
+            name: 'Invoice_${order.orderNumber}.pdf',
+            mimeType: 'application/pdf',
+            length: await pdfFile.length(),
+          );
+          
+          // Use modern ShareParams API - files only for Windows
+          final params = ShareParams(
+            files: [enhancedXFile],
+          );
+          
+          final result = await SharePlus.instance.share(params);
+          
+          debugPrint('ShareParams API completed with status: ${result.status}');
+          
+          if (result.status == ShareResultStatus.success) {
+            debugPrint('Windows file sharing succeeded!');
+          } else if (result.status == ShareResultStatus.dismissed) {
+            debugPrint('Windows sharing was dismissed by user');
+            if (context.mounted) {
+              showScaffold(
+                context: context,
+                message: 'Sharing cancelled by user.',
+              );
+            }
+            return;
+          } else {
+            debugPrint('Windows sharing failed with status: ${result.status}');
+            // Try alternative sharing approach
+            _handleWindowsAlternativeSharing(pdfFile, order);
+            return;
+          }
+          
+        } catch (e) {
+          debugPrint('ShareParams API failed: $e');
+          // Alternative approach: Open the PDF file directly
+          _handleWindowsAlternativeSharing(pdfFile, order);
+          return;
+        }
+      } else {
+        debugPrint('Sharing on non-Windows platform');
+        // On other platforms, use enhanced sharing with context
+        final enhancedXFile = XFile(
+          pdfFile.path,
+          name: 'Invoice_${order.orderNumber}.pdf', 
+          mimeType: 'application/pdf',
+        );
+        
+        final params = ShareParams(
+          text: 'Please find attached the invoice for order #${order.orderNumber}',
+          files: [enhancedXFile],
+        );
+        
+        final result = await SharePlus.instance.share(params);
+        debugPrint('Non-Windows share completed with status: ${result.status}');
+      }
+
+      if (context.mounted) {
+        showScaffold(
+          context: context,
+          message: 'PDF invoice shared successfully!',
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if still showing
+      if (Navigator.canPop(context)) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      debugPrint('Error sharing PDF invoice: $e');
+      if (context.mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Error generating or sharing PDF invoice. Please try again.',
+        );
+      }
+    }
+  }
+
+  Future<void> _handleWindowsAlternativeSharing(File pdfFile, ListOrderModelData order) async {
+    debugPrint('Using alternative Windows sharing approach');
+    
+    if (context.mounted) {
+      // Show dialog with multiple options
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.picture_as_pdf, color: Colors.red[700]),
+              const SizedBox(width: 8),
+              const Text('PDF Invoice Ready'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Invoice: ${order.orderNumber}'),
+              const SizedBox(height: 8),
+              Text('File: ${pdfFile.path.split('/').last}'),
+              const SizedBox(height: 16),
+              const Text(
+                'Choose how to share your PDF:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          actions: [
+            // Option 1: Open file location
+            TextButton.icon(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                try {
+                  // Open file explorer to the file location
+                  await Process.start(
+                    'explorer.exe',
+                    ['/select,', pdfFile.path.replaceAll('/', '\\')],
+                    mode: ProcessStartMode.detached,
+                  );
+                  if (context.mounted) {
+                    showScaffold(
+                      context: context,
+                      message: 'File location opened. The PDF is saved in Documents/epos folder.',
+                    );
+                  }
+                } catch (e) {
+                  debugPrint('Error opening file location: $e');
+                }
+              },
+              icon: const Icon(Icons.folder_open),
+              label: const Text('Open File Location'),
+            ),
+            // Option 2: Open PDF directly
+            TextButton.icon(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                try {
+                  await Process.start(
+                    'cmd',
+                    ['/c', 'start', '""', pdfFile.path],
+                    mode: ProcessStartMode.detached,
+                  );
+                  if (context.mounted) {
+                    showScaffold(
+                      context: context,
+                      message: 'PDF opened. You can now share it from your PDF viewer.',
+                    );
+                  }
+                } catch (e) {
+                  debugPrint('Error opening PDF: $e');
+                }
+              },
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Open PDF'),
+            ),
+            // Option 3: Copy path
+            TextButton.icon(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                try {
+                  await Clipboard.setData(ClipboardData(text: pdfFile.path));
+                  if (context.mounted) {
+                    showScaffold(
+                      context: context,
+                      message: 'File path copied to clipboard!',
+                    );
+                  }
+                } catch (e) {
+                  debugPrint('Error copying to clipboard: $e');
+                }
+              },
+              icon: const Icon(Icons.copy),
+              label: const Text('Copy Path'),
+            ),
+          ],
+        ),
+      );
     }
   }
 
@@ -415,6 +726,7 @@ class _SalesScreenState extends State<SalesScreen> {
                       cartItems: orderDetails.data?.cart?.cartItems ?? [],
                       formattedTotal: formattedTotal!,
                       savedTotal: savedTotal!,
+                      discountAmount: orderDetails.data?.priceSummary?.discount?.toString() ?? "0.00",
                       orderDate: orderDate,
                       orderNumber: orderDetails.data!.orderNumber.toString(),
                       customerName: customerName,
@@ -593,6 +905,18 @@ class _SalesScreenState extends State<SalesScreen> {
                                   );
                                 }
                               }
+                            },
+                          ),
+                          ListTile(
+                            leading: const CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Color(0x1AE53E3E), // ~10% opacity red
+                              child: Icon(Icons.picture_as_pdf, color: Color(0xFFE53E3E)),
+                            ),
+                            title: const Text('Share PDF'),
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              await _sharePDFInvoice(order);
                             },
                           ),
                         ],

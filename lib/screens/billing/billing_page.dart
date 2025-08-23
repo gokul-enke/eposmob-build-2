@@ -3630,6 +3630,7 @@ class BillingPageState extends State<BillingPage>
                   cartItems: orderDetails.data!.cart!.cartItems!,
                   formattedTotal: formattedTotal!,
                   savedTotal: savedTotal!,
+                  discountAmount: orderDetails.data!.priceSummary?.discount?.toString() ?? "0.00",
                   orderDate: orderDate,
                   orderNumber: orderDetails.data!.orderNumber ?? "",
                 ),
@@ -4658,6 +4659,12 @@ class BillingPageState extends State<BillingPage>
             formattedTotal: netTotal.toString(), // Use calculated net total
             savedTotal:
                 youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
+            discountAmount: savedOrder.flatDiscount != null || savedOrder.percentageDiscount != null
+                ? ((savedOrder.flatDiscount ?? 0.0) + 
+                   ((savedOrder.percentageDiscount ?? 0.0) > 0 ? 
+                    (savedOrder.total * (savedOrder.percentageDiscount ?? 0.0) / 100) : 0.0))
+                      .toString()
+                : "0.00",
             orderDate: savedOrder.createdAt,
             orderNumber: savedOrder.orderNumber,
             isFromLocalStorage: true,

@@ -307,6 +307,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
 
           String? formattedTotal = orderDetailsModelData?.cart?.priceSummary?.netTotal?.toString() ?? "0.00";
           String? savedTotal = orderDetailsModelData?.cart?.priceSummary?.savedTotal?.toString() ?? "0.00";
+          String? discountAmount = orderDetailsModelData?.cart?.priceSummary?.discount?.toString() ?? "0.00";
           String storeName = orderDetailsModelData?.cart?.storeName ?? "Store";
           String orderDate = orderDetailsModelData?.orderDate ?? "";
 
@@ -318,6 +319,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 cartItems: cartItems ?? [],
                 formattedTotal: formattedTotal,
                 savedTotal: savedTotal,
+                discountAmount: discountAmount,
                 orderDate: orderDate,
                 orderNumber: orderNumber,
               ),

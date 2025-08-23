@@ -456,6 +456,11 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
             formattedTotal: netTotal.toString(), // Use calculated net total
             savedTotal:
                 youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
+            discountAmount: ((order.flatDiscount ?? 0.0) +
+                ((order.percentageDiscount ?? 0.0) > 0
+                    ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
+                    : 0.0))
+                .toString(),
             orderDate: order.createdAt,
             orderNumber: order.orderNumber,
             isFromLocalStorage: true,

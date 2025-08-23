@@ -58,6 +58,7 @@ class ThermalPrinter {
     required List<dynamic> cartItems,
     required String formattedTotal,
     required String? savedTotal,
+    String? discountAmount,
     required String orderDate,
     required String orderNumber,
     required bool isFromLocalStorage,
@@ -159,6 +160,7 @@ class ThermalPrinter {
           displayConfig,
           formattedTotal,
           savedTotal,
+          discountAmount,
           cartItems.length,
           billDocumentConfig,
           cartItems,
@@ -815,6 +817,7 @@ class ThermalPrinter {
       Map<String, DisplayOption>? displayConfig,
       String formattedTotal,
       String? savedTotal,
+      String? discountAmount,
       int itemCount,
       DocumentConfig? billDocumentConfig,
       List<dynamic> cartItems,
@@ -825,10 +828,12 @@ class ThermalPrinter {
     debugPrint("===== BUILD TOTAL AMOUNT DEBUG =====");
     debugPrint("Formatted total: $formattedTotal");
     debugPrint("Saved total: $savedTotal");
+    debugPrint("Discount amount: $discountAmount");
     debugPrint("Item count: $itemCount");
 
     double saved = double.tryParse(savedTotal ?? '0.0') ?? 0.0;
     double total = double.tryParse(formattedTotal) ?? 0.0;
+    double discountAmountValue = double.tryParse(discountAmount ?? '0.0') ?? 0.0;
     double totalMrp = saved + total;
 
     // Calculate total quantity from all cart items
@@ -894,14 +899,14 @@ class ThermalPrinter {
     if (displayConfig?['showDiscount']?.visible == true) {
       rightSideItems.add({
         'label': 'Discount',
-        'value': saved.toStringAsFixed(2),
+        'value': discountAmountValue.toStringAsFixed(2),
         'textSize': 'small',
         'bold': 'false',
         'fontStyle': 'normal',
         'fontType': 'fontA' // Default font type
       });
       debugPrint(
-          "Added right side item: Discount = ${saved.toStringAsFixed(2)}");
+          "Added right side item: Discount = ${discountAmountValue.toStringAsFixed(2)}");
     }
 
     if (displayConfig?['showNetAmount']?.visible == true) {

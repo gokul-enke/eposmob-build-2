@@ -1251,6 +1251,8 @@ class _OrderListState extends State<OrderList> {
                                           builder: (context) => PrintPage(
                                             cartItems: cartProductItems!,
                                             formattedTotal: formattedTotal,
+                                            discountAmount: Provider.of<CartProvider>(context, listen: false)
+                                                .priceSummary?.discount?.toString() ?? "0.00",
                                             orderDate: DateHelper.formatDate(
                                                 DateTime.now()),
                                             orderNumber: "#000000",

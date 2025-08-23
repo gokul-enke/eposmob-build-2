@@ -71,4 +71,46 @@ class DocumentConfigProvider extends ChangeNotifier {
   Map<String, String>? get templateOptions {
     return _documentConfigurations?.options?.templateOptions;
   }
+
+  // Debug method to clear cached data
+  void clearConfiguration() {
+    debugPrint("🗑️ Clearing cached document configurations");
+    _documentConfigurations = null;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  // Debug method to inspect current configuration
+  void debugCurrentConfiguration() {
+    debugPrint("===== CURRENT DOCUMENT CONFIG PROVIDER STATE =====");
+    debugPrint("Has configurations: ${_documentConfigurations != null}");
+    debugPrint("Error message: $_errorMessage");
+    debugPrint("Is loading: $isLoading");
+    
+    if (_documentConfigurations != null) {
+      final billConfig = _documentConfigurations!.documentConfigurations?['Bill'];
+      if (billConfig != null) {
+        debugPrint("\n📄 CURRENT BILL CONFIG:");
+        debugPrint("- ID: ${billConfig.id}");
+        debugPrint("- Updated At: ${billConfig.updatedAt}");
+        
+        final displayConfig = billConfig.displayConfiguration?.options;
+        if (displayConfig != null && displayConfig.containsKey('showDiscount')) {
+          final showDiscount = displayConfig['showDiscount'];
+          debugPrint("\n🔍 CURRENT showDiscount:");
+          debugPrint("  * visible: ${showDiscount?.visible}");
+          debugPrint("  * value: ${showDiscount?.value}");
+        }
+      }
+    }
+    debugPrint("===== END CURRENT CONFIG PROVIDER STATE =====");
+  }
+
+  // Force refresh method for debugging
+  Future<void> forceRefreshConfiguration(String accessToken) async {
+    debugPrint("🔄 Force refreshing document configurations...");
+    clearConfiguration();
+    await fetchDocumentConfigurations(accessToken: accessToken);
+    debugCurrentConfiguration();
+  }
 }
