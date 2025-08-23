@@ -3939,45 +3939,86 @@ class BillingPageState extends State<BillingPage>
     double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
-    double actualCashPaid = cashAmount + cardAmount + upiAmount;
+    double totalCollected = cashAmount + cardAmount + upiAmount;
 
-    // Use the same calculation logic as the modal for consistency
-    double balance;
+    double balance = 0.0;
     
     if (_toCustomerCreditEnabled) {
-      // Toggle ON: Include previous balance in calculation
+      debugPrint('🔛 BILLING PAGE: Toggle is ON - Calculating with customer credit consideration');
+      
       double customerPrevBalance = selectedCustomer?.balance ?? 0.0;
-      double netDue = cartTotal - customerPrevBalance;
-      double baseBalance = actualCashPaid - netDue;
       
-      // Get the toCustomerCredit amount from the debit controller (legacy mapping)
-      double toCustomerCredit = double.tryParse(_debitAmountController.text) ?? 0.0;
-      
-      // Apply the same clamping logic as modal
-      if (toCustomerCredit < 0) toCustomerCredit = 0.0;
-      if (toCustomerCredit > baseBalance) toCustomerCredit = baseBalance;
-      
-      balance = baseBalance - toCustomerCredit;
-      
-      debugPrint('🧮 BILLING PAGE BALANCE CALCULATION (Toggle ON):');
-      debugPrint('  - Cart Total: ₹${cartTotal.toStringAsFixed(2)}');
-      debugPrint('  - Customer Prev Balance: ₹${customerPrevBalance.toStringAsFixed(2)}');
-      debugPrint('  - Net Due: ₹${netDue.toStringAsFixed(2)}');
-      debugPrint('  - Actual Cash Paid: ₹${actualCashPaid.toStringAsFixed(2)}');
-      debugPrint('  - Base Balance: ₹${baseBalance.toStringAsFixed(2)}');
-      debugPrint('  - To Customer Credit: ₹${toCustomerCredit.toStringAsFixed(2)}');
-      debugPrint('  - Final Balance: ₹${balance.toStringAsFixed(2)}');
+      if (customerPrevBalance < 0) {
+        // Customer has debt - use transaction excess logic for consistency with auto-fill
+        debugPrint('💳 Customer has debt - using transaction excess logic');
+        final transactionExcess = totalCollected - cartTotal;
+        debugPrint('💰 Transaction excess: ₹${transactionExcess.toStringAsFixed(2)}');
+        
+        if (transactionExcess > 0) {
+          // Get the actual customer credit amount being allocated
+          double actualCustomerCredit = double.tryParse(_debitAmountController.text) ?? 0.0;
+          
+          // Clamp customer credit to available excess
+          if (actualCustomerCredit > transactionExcess) {
+            actualCustomerCredit = transactionExcess;
+            debugPrint('  - Clamped customer credit to transaction excess: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+          }
+          
+          // Cash balance = transaction excess - customer credit
+          balance = transactionExcess - actualCustomerCredit;
+          debugPrint('  - Balance = Transaction Excess (₹${transactionExcess.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
+        } else {
+          balance = 0.0;
+          debugPrint('  - No transaction excess, balance = 0');
+        }
+      } else {
+        // Customer has positive/zero balance - use Net Due logic
+        debugPrint('💵 Customer has credit/zero balance - using Net Due logic');
+        // Net Due = Purchase Total - Customer Previous Balance
+        double netDue = cartTotal - customerPrevBalance;
+        debugPrint('💰 Net Due calculation:');
+        debugPrint('  - Purchase Total: ₹${cartTotal.toStringAsFixed(2)}');
+        debugPrint('  - Customer Prev Balance: ₹${customerPrevBalance.toStringAsFixed(2)}');
+        debugPrint('  - Net Due: ₹${netDue.toStringAsFixed(2)}');
+        
+        // Available balance = Total Collected - Net Due
+        double availableBalance = totalCollected - netDue;
+        debugPrint('  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
+        debugPrint('  - Available Balance: ₹${availableBalance.toStringAsFixed(2)}');
+        
+        if (availableBalance > 0) {
+          // Get the actual customer credit amount being allocated
+          double actualCustomerCredit = double.tryParse(_debitAmountController.text) ?? 0.0;
+          
+          // Clamp customer credit to available balance
+          if (actualCustomerCredit > availableBalance) {
+            actualCustomerCredit = availableBalance;
+            debugPrint('  - Clamped customer credit to available balance: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+          }
+          
+          // Cash balance = available balance - customer credit
+          balance = availableBalance - actualCustomerCredit;
+          debugPrint('  - Balance = Available Balance (₹${availableBalance.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
+        } else {
+          balance = 0.0;
+          debugPrint('  - No available balance, balance = 0');
+        }
+      }
     } else {
+      debugPrint('🔴 BILLING PAGE: Toggle is OFF - Using simple calculation');
       // Toggle OFF: Simple calculation without previous balance
-      balance = actualCashPaid - cartTotal;
-      
-      debugPrint('🧮 BILLING PAGE BALANCE CALCULATION (Toggle OFF):');
-      debugPrint('  - Cart Total: ₹${cartTotal.toStringAsFixed(2)}');
-      debugPrint('  - Actual Cash Paid: ₹${actualCashPaid.toStringAsFixed(2)}');
-      debugPrint('  - Final Balance: ₹${balance.toStringAsFixed(2)}');
+      balance = totalCollected - cartTotal;
+      debugPrint('  - Balance = Total Collected (₹${totalCollected.toStringAsFixed(2)}) - Cart Total (₹${cartTotal.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
     }
 
-    return balance > 0 ? balance : 0.0;
+    // Clamp balance to never show negative values in UI
+    // Negative balance means insufficient payment, but cash drawer can't give negative money
+    if (balance < 0) {
+      debugPrint('🚫 BILLING PAGE: Clamping negative balance (₹${balance.toStringAsFixed(2)}) to 0 for UI display');
+      balance = 0.0;
+    }
+
+    return balance;
   }
 
   void _updateBalanceAmount() {

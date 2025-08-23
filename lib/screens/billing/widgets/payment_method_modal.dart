@@ -292,36 +292,87 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   void _calculateBalance() {
     debugPrint('🧮 === CALCULATE BALANCE START ===');
     
-    final baseBalance = _computeBaseBalance();
-    debugPrint('📊 Base balance calculated: ₹${baseBalance.toStringAsFixed(2)}');
+    double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
+    double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
+    double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
+    double totalCollected = cashAmount + cardAmount + upiAmount;
     
-    double toCredit = 0.0;
+    double cashBal = 0.0;
+    
     if (toCustomerCreditEnabled) {
-      debugPrint('🔛 Toggle is ON - Processing customer credit');
-      debugPrint('  - Raw toCustomerCredit input: ₹${toCustomerCredit.toStringAsFixed(2)}');
+      debugPrint('🔛 Toggle is ON - Calculating with customer credit consideration');
       
-      // Apply clamping for calculation only, don't modify the input field
-      double clampedCredit = toCustomerCredit;
-      if (clampedCredit < 0) {
-        clampedCredit = 0.0;
-        debugPrint('  - Clamped negative value to 0');
+      if (widget.customerPrevBalance < 0) {
+        // Customer has debt - use transaction excess logic for consistency with auto-fill
+        debugPrint('💳 Customer has debt - using transaction excess logic');
+        final transactionExcess = totalCollected - widget.cartTotal;
+        debugPrint('💰 Transaction excess: ₹${transactionExcess.toStringAsFixed(2)}');
+        
+        if (transactionExcess > 0) {
+          // Get the actual customer credit amount being allocated
+          double actualCustomerCredit = toCustomerCredit;
+          
+          // Clamp customer credit to available excess
+          if (actualCustomerCredit > transactionExcess) {
+            actualCustomerCredit = transactionExcess;
+            debugPrint('  - Clamped customer credit to transaction excess: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+          }
+          
+          // Cash balance = transaction excess - customer credit
+          cashBal = transactionExcess - actualCustomerCredit;
+          debugPrint('  - Cash Balance = Transaction Excess (₹${transactionExcess.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBal.toStringAsFixed(2)}');
+        } else {
+          cashBal = 0.0;
+          debugPrint('  - No transaction excess, cash balance = 0');
+        }
+      } else {
+        // Customer has positive/zero balance - use Net Due logic
+        debugPrint('💵 Customer has credit/zero balance - using Net Due logic');
+        // Net Due = Purchase Total - Customer Previous Balance
+        double netDue = widget.cartTotal - widget.customerPrevBalance;
+        debugPrint('💰 Net Due calculation:');
+        debugPrint('  - Purchase Total: ₹${widget.cartTotal.toStringAsFixed(2)}');
+        debugPrint('  - Customer Prev Balance: ₹${widget.customerPrevBalance.toStringAsFixed(2)}');
+        debugPrint('  - Net Due: ₹${netDue.toStringAsFixed(2)}');
+        
+        // Available balance = Total Collected - Net Due
+        double availableBalance = totalCollected - netDue;
+        debugPrint('  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
+        debugPrint('  - Available Balance: ₹${availableBalance.toStringAsFixed(2)}');
+        
+        if (availableBalance > 0) {
+          // Get the actual customer credit amount being allocated
+          double actualCustomerCredit = toCustomerCredit;
+          
+          // Clamp customer credit to available balance
+          if (actualCustomerCredit > availableBalance) {
+            actualCustomerCredit = availableBalance;
+            debugPrint('  - Clamped customer credit to available balance: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+          }
+          
+          // Cash balance = available balance - customer credit
+          cashBal = availableBalance - actualCustomerCredit;
+          debugPrint('  - Cash Balance = Available Balance (₹${availableBalance.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBal.toStringAsFixed(2)}');
+        } else {
+          cashBal = 0.0;
+          debugPrint('  - No available balance, cash balance = 0');
+        }
       }
-      if (clampedCredit > baseBalance) {
-        clampedCredit = baseBalance;
-        debugPrint('  - Clamped to available balance: ₹${clampedCredit.toStringAsFixed(2)}');
-      }
-      toCredit = clampedCredit;
-      debugPrint('  - Final customer credit amount: ₹${toCredit.toStringAsFixed(2)}');
     } else {
-      debugPrint('🔴 Toggle is OFF - No customer credit');
-      toCredit = 0.0;
+      debugPrint('🔴 Toggle is OFF - Using simple calculation');
+      // Toggle OFF: Simple calculation without previous balance
+      cashBal = totalCollected - widget.cartTotal;
+      debugPrint('  - Cash Balance = Total Collected (₹${totalCollected.toStringAsFixed(2)}) - Cart Total (₹${widget.cartTotal.toStringAsFixed(2)}) = ₹${cashBal.toStringAsFixed(2)}');
     }
     
-    final cashBal = baseBalance - toCredit;
-    debugPrint('💵 Final calculations:');
-    debugPrint('  - Base Balance: ₹${baseBalance.toStringAsFixed(2)}');
-    debugPrint('  - To Customer Credit: ₹${toCredit.toStringAsFixed(2)}');
-    debugPrint('  - Resulting Cash Balance: ₹${cashBal.toStringAsFixed(2)}');
+    // Clamp cash balance to never show negative values in UI
+    // Negative balance means insufficient payment, but cash drawer can't give negative money
+    if (cashBal < 0) {
+      debugPrint('🚫 Clamping negative cash balance (₹${cashBal.toStringAsFixed(2)}) to 0 for UI display');
+      cashBal = 0.0;
+    }
+    
+    debugPrint('💵 Final cash balance: ₹${cashBal.toStringAsFixed(2)}');
     
     setState(() {
       balanceAmount = cashBal;
@@ -628,12 +679,40 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                         debugPrint('  - Available Cash Balance: ₹${currentBaseBalance.toStringAsFixed(2)}');
                         debugPrint('');
                         
-                        // Auto-fill with available cash balance including previous balance effects
-                        if (currentBaseBalance > 0) {
-                          final prefillAmount = currentBaseBalance.toStringAsFixed(2);
-                          toCustomerCreditController.text = prefillAmount;
-                          toCustomerCredit = currentBaseBalance;
-                          debugPrint('✅ Auto-filled toCustomerCredit with available balance (including prev balance effects): ₹$prefillAmount');
+                        // Auto-fill logic with debt settlement priority
+                        // Calculate transaction excess (money beyond purchase total)
+                        final transactionExcess = totalCollected - widget.cartTotal;
+                        
+                        if (transactionExcess > 0) {
+                          double prefillAmount;
+                          
+                          if (widget.customerPrevBalance < 0) {
+                            // Customer owes money - prioritize debt settlement
+                            final customerDebt = widget.customerPrevBalance.abs(); // Convert negative to positive
+                            
+                            debugPrint('💳 DEBT SETTLEMENT PRIORITY:');
+                            debugPrint('  - Customer Debt: ₹${customerDebt.toStringAsFixed(2)}');
+                            debugPrint('  - Transaction Excess: ₹${transactionExcess.toStringAsFixed(2)}');
+                            debugPrint('  - Available Base Balance: ₹${currentBaseBalance.toStringAsFixed(2)}');
+                            
+                            if (customerDebt <= transactionExcess) {
+                              // Can settle full debt from transaction excess - auto-fill with debt amount
+                              prefillAmount = customerDebt;
+                              debugPrint('  - Auto-filling with debt amount: ₹${prefillAmount.toStringAsFixed(2)} (can settle full debt)');
+                            } else {
+                              // Can't settle full debt - auto-fill with available transaction excess
+                              prefillAmount = transactionExcess;
+                              debugPrint('  - Auto-filling with transaction excess: ₹${prefillAmount.toStringAsFixed(2)} (partial debt settlement)');
+                            }
+                          } else {
+                            // Customer has positive/zero balance - use available base balance as before
+                            prefillAmount = currentBaseBalance;
+                            debugPrint('  - Customer has credit/zero balance - auto-filling with base balance: ₹${prefillAmount.toStringAsFixed(2)}');
+                          }
+                          
+                          toCustomerCreditController.text = prefillAmount.toStringAsFixed(2);
+                          toCustomerCredit = prefillAmount;
+                          debugPrint('✅ Auto-filled toCustomerCredit: ₹${prefillAmount.toStringAsFixed(2)}');
                         } else {
                           toCustomerCreditController.clear();
                           toCustomerCredit = 0.0;
