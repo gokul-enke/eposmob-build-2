@@ -3613,12 +3613,19 @@ class BillingPageState extends State<BillingPage>
                 OrderDetailsModel.fromJson(OrderDetailsresponse);
 
             String? formattedTotal =
+                orderDetails.data?.cart?.priceSummary?.netPayable?.toString() ??
                 orderDetails.data?.cart?.priceSummary?.netTotal.toString();
             String? savedTotal =
                 orderDetails.data?.cart?.priceSummary?.savedTotal.toString();
 
             String storeName = orderDetails.data!.cart!.storeName ?? "";
             String orderDate = orderDetails.data!.orderDate ?? "";
+            
+            // Extract customer details
+            String? customerName = orderDetails.data?.customerDetails?.name;
+            String? customerPhone = orderDetails.data?.customerDetails?.phone;
+            String? customerEmail = orderDetails.data?.customerDetails?.email;
+            String? customerAddress = orderDetails.data?.customerDetails?.address?.join(', ');
 
             debugPrint(
                 "🖨️ Navigating to print page for order #${orderDetails.data!.orderNumber}");
@@ -3633,6 +3640,10 @@ class BillingPageState extends State<BillingPage>
                   discountAmount: orderDetails.data!.priceSummary?.discount?.toString() ?? "0.00",
                   orderDate: orderDate,
                   orderNumber: orderDetails.data!.orderNumber ?? "",
+                  customerName: customerName,
+                  customerPhone: customerPhone,
+                  customerEmail: customerEmail,
+                  customerAddress: customerAddress,
                 ),
               ),
             );

@@ -129,7 +129,7 @@ class MyApp extends StatelessWidget {
       child: KeyboardDispatcher(
         child: GetMaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'CLOUDE POS',
+          title: 'CLOUD POS',
           theme: ThemeData(),
           builder: (context, child) {
             return Stack(

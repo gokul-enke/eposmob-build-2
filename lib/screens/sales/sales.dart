@@ -247,7 +247,9 @@ class _SalesScreenState extends State<SalesScreen> {
       // Use the cart items directly without conversion since the PDF method expects the original objects
       final File? pdfFile = await standardPrinter.generatePDFForSharing(
         cartItems: orderData.cart!.cartItems!,
-        formattedTotal: orderData.priceSummary?.netPayable?.toString() ?? order.grantTotal ?? '0.00',
+        formattedTotal: orderData.priceSummary?.netPayable?.toString() ?? 
+                        orderData.priceSummary?.netTotal?.toString() ?? 
+                        order.grantTotal ?? '0.00',
         savedTotal: orderData.priceSummary?.savedTotal?.toString() ?? '0.00',
         discountAmount: orderData.priceSummary?.discount?.toString() ?? '0.00',
         orderDate: orderData.orderDate ?? DateTime.now().toIso8601String(),
@@ -704,6 +706,7 @@ class _SalesScreenState extends State<SalesScreen> {
                     OrderDetailsModel.fromJson(OrderDetailsresponse);
 
                 String? formattedTotal =
+                    orderDetails.data?.cart?.priceSummary?.netPayable?.toString() ??
                     orderDetails.data?.cart?.priceSummary?.netTotal.toString();
                 String? savedTotal = orderDetails
                     .data?.cart?.priceSummary?.savedTotal

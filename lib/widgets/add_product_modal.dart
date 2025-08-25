@@ -1,6 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
@@ -69,6 +69,8 @@ class _AddProductWithBarcodeModalState
     isValidatedOnce = false;
     super.dispose();
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -140,9 +142,7 @@ class _AddProductWithBarcodeModalState
                       return null;
                     },
                     onchanged: (value) {
-                      if (isValidatedOnce) {
-                        formKey.currentState!.validate();
-                      }
+                      // Remove validation loop - only validate on submit
                     },
                     hintText: 'Product Name',
                     size: size,
@@ -161,9 +161,7 @@ class _AddProductWithBarcodeModalState
                       return null;
                     },
                     onchanged: (value) {
-                      if (isValidatedOnce) {
-                        formKey.currentState!.validate();
-                      }
+                      // Remove validation loop - only validate on submit
                     },
                     hintText: 'Barcode',
                     readOnly: widget.barcode != null,
@@ -180,51 +178,77 @@ class _AddProductWithBarcodeModalState
                 children: [
                   SizedBox(
                     width: size.width / 4.4,
-                    child: BuildDropDownWithSearch<String>(
-                      title: 'Product Unit',
-                      hintText: 'Choose Product Unit',
-                      value: selectedUnit,
-                      margin: const EdgeInsets.only(left: 5),
-                      items:
-                          unitList!.entries.map((entry) => entry.key).toList(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          selectedUnit = newValue;
-                        });
-                        if (isValidatedOnce) {
-                          formKey.currentState!.validate();
-                        }
-                      },
-                      displayText: (item) => unitList![item]!,
-                      searchController: _unitSearchController,
-                      isRequired: true,
-                      height: size.height * .07,
-                      showName: false,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        BuildDropDownWithSearch<String>(
+                          title: 'Product Unit',
+                          hintText: 'Choose Product Unit',
+                          value: selectedUnit,
+                          margin: const EdgeInsets.only(left: 5),
+                          items:
+                              unitList?.entries.map((entry) => entry.key).toList() ?? [],
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              selectedUnit = newValue;
+                            });
+                          },
+                          displayText: (item) => unitList?[item] ?? '',
+                          searchController: _unitSearchController,
+                          isRequired: true,
+                          height: size.height * .07,
+                          showName: false,
+                        ),
+                        if (isValidatedOnce && selectedUnit == null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 5, top: 5),
+                            child: Text(
+                              'Product Unit is required',
+                              style: TextStyle(
+                                color: Colors.red[700],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   // Product Category Dropdown
                   SizedBox(
                     width: size.width / 4.4,
-                    child: BuildDropDownWithSearch<Category>(
-                      title: 'Product Category',
-                      hintText: 'Select Category',
-                      value: selectedCategory,
-                      margin: const EdgeInsets.only(right: 5),
-                      items: categoryList!,
-                      onChanged: (Category? newCategory) {
-                        setState(() {
-                          selectedCategory = newCategory;
-                        });
-                        if (isValidatedOnce) {
-                          formKey.currentState!.validate();
-                        }
-                      },
-                      displayText: (category) => category.categoryName ?? '',
-                      searchController: _categorySearchController,
-                      isRequired: true,
-                      height: size.height * .07,
-                      showName: false,
-                      width: size.width / 4.5,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        BuildDropDownWithSearch<Category>(
+                          title: 'Product Category',
+                          hintText: 'Select Category',
+                          value: selectedCategory,
+                          margin: const EdgeInsets.only(right: 5),
+                          items: categoryList ?? [],
+                          onChanged: (Category? newCategory) {
+                            setState(() {
+                              selectedCategory = newCategory;
+                            });
+                          },
+                          displayText: (category) => category.categoryName ?? '',
+                          searchController: _categorySearchController,
+                          isRequired: true,
+                          height: size.height * .07,
+                          showName: false,
+                          width: size.width / 4.5,
+                        ),
+                        if (isValidatedOnce && selectedCategory == null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 5, top: 5),
+                            child: Text(
+                              'Product Category is required',
+                              style: TextStyle(
+                                color: Colors.red[700],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ],
@@ -252,9 +276,7 @@ class _AddProductWithBarcodeModalState
                       return null;
                     },
                     onchanged: (value) {
-                      if (isValidatedOnce) {
-                        formKey.currentState!.validate();
-                      }
+                      // Remove validation loop - only validate on submit
                     },
                     hintText: 'Product MRP',
                     size: size,
@@ -276,9 +298,7 @@ class _AddProductWithBarcodeModalState
                       return null;
                     },
                     onchanged: (value) {
-                      if (isValidatedOnce) {
-                        formKey.currentState!.validate();
-                      }
+                      // Remove validation loop - only validate on submit
                     },
                     hintText: 'Product Selling Price',
                     size: size,
@@ -308,9 +328,7 @@ class _AddProductWithBarcodeModalState
                       return null;
                     },
                     onchanged: (value) {
-                      if (isValidatedOnce) {
-                        formKey.currentState!.validate();
-                      }
+                      // Remove validation loop - only validate on submit
                     },
                     hintText: 'Quantity',
                     size: size,
@@ -347,8 +365,16 @@ class _AddProductWithBarcodeModalState
                     height: MediaQuery.of(context).size.height * .05,
                     width: 120,
                     fct: () async {
-                      isValidatedOnce = true;
-                      if (formKey.currentState!.validate()) {
+                      setState(() {
+                        isValidatedOnce = true;
+                      });
+                      
+                      // Validate form fields and dropdowns
+                      bool isFormValid = formKey.currentState!.validate();
+                      bool isUnitValid = selectedUnit != null;
+                      bool isCategoryValid = selectedCategory != null;
+                      
+                      if (isFormValid && isUnitValid && isCategoryValid) {
                         formKey.currentState!.save();
 
                         setState(() {
@@ -361,7 +387,8 @@ class _AddProductWithBarcodeModalState
                           GridSelectionProvider gridSelectionProvider =
                               Provider.of<GridSelectionProvider>(context,
                                   listen: false);
-                          gridSelectionProvider
+                          
+                          final result = await gridSelectionProvider
                               .createProductAPI(
                             categoryId: selectedCategory!.categoryId.toString(),
                             productName: _productNameController.text,
@@ -371,11 +398,13 @@ class _AddProductWithBarcodeModalState
                             quantity: _productQuantityController.text,
                             barcode: _productBarcodeController.text,
                             accessToken: accessToken ?? "",
-                          )
-                              .then((value) {
+                          );
+                          
+                          // Handle success response
+                          if (result is Map<String, dynamic> && result.containsKey('data')) {
                             try {
                               GetProduct product =
-                                  GetProduct.fromJson(value['data']);
+                                  GetProduct.fromJson(result['data']);
                               Provider.of<LocalProductProvider>(context,
                                       listen: false)
                                   .addProduct(product);
@@ -388,7 +417,7 @@ class _AddProductWithBarcodeModalState
                               Provider.of<LocalProductProvider>(context,
                                       listen: false)
                                   .addToCart(
-                                productId: value["data"]['product_id'],
+                                productId: result["data"]['product_id'],
                                 price: double.parse(
                                     _productSellingPriceController.text),
                                 quantity: 1,
@@ -404,18 +433,62 @@ class _AddProductWithBarcodeModalState
                               context: context,
                               message: 'Product added successfully',
                             );
-                          });
+                          } else {
+                            // Handle error response
+                            String errorMessage = 'Failed to add product';
+                            
+                            if (result is Map<String, dynamic>) {
+                              if (result.containsKey('message')) {
+                                errorMessage = result['message'].toString();
+                              } else if (result.containsKey('errors')) {
+                                // Handle validation errors
+                                Map<String, dynamic> errors = result['errors'];
+                                List<String> errorMessages = [];
+                                errors.forEach((field, messages) {
+                                  if (messages is List) {
+                                    for (var message in messages) {
+                                      errorMessages.add("$field: $message");
+                                    }
+                                  } else {
+                                    errorMessages.add("$field: $messages");
+                                  }
+                                });
+                                errorMessage = errorMessages.join('\n');
+                              }
+                            } else if (result is String) {
+                              try {
+                                // Try to parse as JSON if it's a string
+                                final jsonResponse = json.decode(result);
+                                if (jsonResponse['message'] != null) {
+                                  errorMessage = jsonResponse['message'];
+                                }
+                              } catch (e) {
+                                errorMessage = result;
+                              }
+                            }
+                            
+                            showScaffoldError(
+                              context: context,
+                              message: errorMessage,
+                            );
+                          }
                         } catch (e) {
-                          showScaffold(
+                          showScaffoldError(
                             context: context,
-                            message: 'Error adding product',
+                            message: 'Error adding product: ${e.toString()}',
                           );
-                          debugPrint("Error setting loading state: $e");
+                          debugPrint("Error in product creation: $e");
                         } finally {
                           setState(() {
                             isLoading = false;
                           });
                         }
+                      } else {
+                        // Show validation error
+                        showScaffoldError(
+                          context: context,
+                          message: 'Please fill all required fields correctly',
+                        );
                       }
                     },
                   ),
