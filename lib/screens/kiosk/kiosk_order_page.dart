@@ -911,6 +911,8 @@ class KioskOrderPageState extends State<KioskOrderPage> {
         builder: (context) => PrintPage(
           cartItems: cartProductItems!,
           formattedTotal: formattedTotal,
+          discountAmount: Provider.of<CartProvider>(context, listen: false)
+              .priceSummary?.discount?.toString() ?? "0.00",
           orderDate: DateTime.now().toString(),
           orderNumber: "#000000",
         ),

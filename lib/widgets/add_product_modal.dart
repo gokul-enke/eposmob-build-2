@@ -11,15 +11,16 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
-import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
-import 'package:pos_machine/resources/style_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/components/build_dropdown_with_search.dart';
 
 class AddProductWithBarcodeModal extends StatefulWidget {
   final String? barcode;
+  final bool isAddToCart;
 
-  const AddProductWithBarcodeModal({Key? key, this.barcode}) : super(key: key);
+  const AddProductWithBarcodeModal({Key? key, this.barcode, this.isAddToCart = false})
+      : super(key: key);
 
   @override
   State<AddProductWithBarcodeModal> createState() =>
@@ -36,6 +37,9 @@ class _AddProductWithBarcodeModalState
   final TextEditingController _productQuantityController =
       TextEditingController();
   final TextEditingController _productSellingPriceController =
+      TextEditingController();
+  final TextEditingController _unitSearchController = TextEditingController();
+  final TextEditingController _categorySearchController =
       TextEditingController();
   bool isLoading = false;
   String? selectedUnit;
@@ -57,6 +61,8 @@ class _AddProductWithBarcodeModalState
     _productMRPController.dispose();
     _productQuantityController.dispose();
     _productSellingPriceController.dispose();
+    _unitSearchController.dispose();
+    _categorySearchController.dispose();
     isLoading = false;
     selectedUnit = null;
     selectedCategory = null;
@@ -172,106 +178,53 @@ class _AddProductWithBarcodeModalState
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  BuildBoxShadowContainer(
-                    circleRadius: 7,
-                    width: size.width / 4.5,
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-                    padding: const EdgeInsets.only(left: 15, right: 15),
-                    child: DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        border: InputBorder.none, // Remove the underline
-                      ),
+                  SizedBox(
+                    width: size.width / 4.4,
+                    child: BuildDropDownWithSearch<String>(
+                      title: 'Product Unit',
+                      hintText: 'Choose Product Unit',
                       value: selectedUnit,
-                      hint: Text(
-                        'Choose Product Unit',
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s12,
-                          0.27,
-                          ColorManager.textColor.withOpacity(.5),
-                        ),
-                      ),
-                      icon: const Icon(Icons.arrow_drop_down),
-                      iconSize: 24,
-                      elevation: 16,
+                      margin: const EdgeInsets.only(left: 5),
+                      items:
+                          unitList!.entries.map((entry) => entry.key).toList(),
                       onChanged: (String? newValue) {
+                        setState(() {
+                          selectedUnit = newValue;
+                        });
                         if (isValidatedOnce) {
                           formKey.currentState!.validate();
                         }
-                        setState(() {
-                          selectedUnit =
-                              newValue; // Update selectedUnit in state
-                        });
                       },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'This field is required';
-                        }
-                        return null;
-                      },
-                      items: unitList!.entries.map((entry) {
-                        return DropdownMenuItem<String>(
-                          value: entry.key,
-                          child: Text(
-                            entry.value,
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s12,
-                              0.27,
-                              ColorManager.textColor.withOpacity(.5),
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                      displayText: (item) => unitList![item]!,
+                      searchController: _unitSearchController,
+                      isRequired: true,
+                      height: size.height * .07,
+                      showName: false,
                     ),
                   ),
                   // Product Category Dropdown
-                  BuildBoxShadowContainer(
-                    circleRadius: 7,
-                    alignment: Alignment.centerLeft,
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-                    padding: const EdgeInsets.only(left: 15, right: 15),
-                    height: size.height * .07,
-                    width: size.width / 4.5,
-                    child: DropdownButtonFormField<Category>(
-                      decoration: const InputDecoration(
-                        border: InputBorder.none, // Remove the underline
-                      ),
+                  SizedBox(
+                    width: size.width / 4.4,
+                    child: BuildDropDownWithSearch<Category>(
+                      title: 'Product Category',
+                      hintText: 'Select Category',
                       value: selectedCategory,
-                      hint: Text(
-                        'Select Category',
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s12,
-                          0.27,
-                          ColorManager.textColor.withOpacity(.5),
-                        ),
-                      ),
-                      items: categoryList!
-                          .map((Category category) {
-                            return DropdownMenuItem<Category>(
-                                value: category,
-                                child: Text(
-                                  category.categoryName ?? '',
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.27,
-                                    ColorManager.textColor.withOpacity(.5),
-                                  ),
-                                ));
-                          })
-                          .toSet()
-                          .toList(),
-                      onChanged: (Category? Category) {
-                        if (Category != null) {
-                          setState(() {
-                            selectedCategory = Category;
-                          });
+                      margin: const EdgeInsets.only(right: 5),
+                      items: categoryList!,
+                      onChanged: (Category? newCategory) {
+                        setState(() {
+                          selectedCategory = newCategory;
+                        });
+                        if (isValidatedOnce) {
+                          formKey.currentState!.validate();
                         }
                       },
+                      displayText: (category) => category.categoryName ?? '',
+                      searchController: _categorySearchController,
+                      isRequired: true,
+                      height: size.height * .07,
+                      showName: false,
+                      width: size.width / 4.5,
                     ),
                   ),
                 ],
@@ -431,14 +384,16 @@ class _AddProductWithBarcodeModalState
                             }
 
                             // Add the product directly to the cart
-                            Provider.of<LocalProductProvider>(context,
-                                    listen: false)
-                                .addToCart(
-                              productId: value["data"]['product_id'],
-                              price: double.parse(
-                                  _productSellingPriceController.text),
-                              quantity: 1,
-                            );
+                            if (widget.isAddToCart) {
+                              Provider.of<LocalProductProvider>(context,
+                                      listen: false)
+                                  .addToCart(
+                                productId: value["data"]['product_id'],
+                                price: double.parse(
+                                    _productSellingPriceController.text),
+                                quantity: 1,
+                              );
+                            }
 
                             Provider.of<LocalProductProvider>(context,
                                     listen: false)

@@ -58,6 +58,7 @@ class ThermalPrinter {
     required List<dynamic> cartItems,
     required String formattedTotal,
     required String? savedTotal,
+    String? discountAmount,
     required String orderDate,
     required String orderNumber,
     required bool isFromLocalStorage,
@@ -65,6 +66,10 @@ class ThermalPrinter {
     required DocumentConfig? billDocumentConfig,
     required String customerCareNumber,
     required String customerCareEmail,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? customerAddress,
   }) async {
     debugPrint("===== THERMAL PRINTING DEBUG =====");
 
@@ -128,6 +133,16 @@ class ThermalPrinter {
           orderDate, orderNumber, selectedFontType);
       debugPrint("Header built successfully");
 
+      // Build customer details if available
+      if (customerName != null ||
+          customerPhone != null ||
+          customerEmail != null) {
+        debugPrint("Building customer details...");
+        bytes += _buildCustomerDetails(generator, customerName, customerPhone,
+            customerEmail, customerAddress, selectedFontType);
+        debugPrint("Customer details built successfully");
+      }
+
       debugPrint("Building cart items...");
       bytes += _buildCartItems(
           generator,
@@ -145,6 +160,7 @@ class ThermalPrinter {
           displayConfig,
           formattedTotal,
           savedTotal,
+          discountAmount,
           cartItems.length,
           billDocumentConfig,
           cartItems,
@@ -291,10 +307,10 @@ class ThermalPrinter {
     if (displayConfig?['showDescription']?.visible == true) {
       final description = displayConfig?['showDescription']?.value as String? ??
           docConfig?.subheader ??
-          'Mini Supermarket';
+          '';
       bytes += generator.row([
         PosColumn(
-          text: description.isNotEmpty ? description : 'Mini Supermarket',
+          text: description.isNotEmpty ? description : '',
           width: 12,
           styles: PosStyles(
             fontType: fontType,
@@ -455,7 +471,8 @@ class ThermalPrinter {
               bold: true,
               height: is58mm ? textSizeSmall : textSizeSmall)));
       totalHeaderWidth += 1;
-      debugPrint("Added SL column with width 1, total width: $totalHeaderWidth");
+      debugPrint(
+          "Added SL column with width 1, total width: $totalHeaderWidth");
     }
 
     if (displayConfig?['showParticulars']?.visible == true) {
@@ -479,7 +496,8 @@ class ThermalPrinter {
               bold: true,
               height: is58mm ? textSizeSmall : textSizeSmall)));
       totalHeaderWidth += particularsWidth;
-      debugPrint("Added PARTICULARS column with width $particularsWidth, total width: $totalHeaderWidth");
+      debugPrint(
+          "Added PARTICULARS column with width $particularsWidth, total width: $totalHeaderWidth");
     }
 
     if (displayConfig?['showMRP']?.visible == true) {
@@ -496,7 +514,8 @@ class ThermalPrinter {
               bold: true,
               height: is58mm ? textSizeSmall : textSizeSmall)));
       totalHeaderWidth += 2;
-      debugPrint("Added MRP column with width 2, total width: $totalHeaderWidth");
+      debugPrint(
+          "Added MRP column with width 2, total width: $totalHeaderWidth");
     }
 
     if (displayConfig?['showQty']?.visible == true) {
@@ -513,7 +532,8 @@ class ThermalPrinter {
               bold: true,
               height: is58mm ? textSizeSmall : textSizeSmall)));
       totalHeaderWidth += 2;
-      debugPrint("Added QTY column with width 2, total width: $totalHeaderWidth");
+      debugPrint(
+          "Added QTY column with width 2, total width: $totalHeaderWidth");
     }
 
     if (displayConfig?['showRate']?.visible == true) {
@@ -530,7 +550,8 @@ class ThermalPrinter {
               bold: true,
               height: is58mm ? textSizeSmall : textSizeSmall)));
       totalHeaderWidth += 2;
-      debugPrint("Added RATE column with width 2, total width: $totalHeaderWidth");
+      debugPrint(
+          "Added RATE column with width 2, total width: $totalHeaderWidth");
     }
 
     if (displayConfig?['showTotal']?.visible == true) {
@@ -547,12 +568,14 @@ class ThermalPrinter {
               bold: true,
               height: is58mm ? textSizeSmall : textSizeSmall)));
       totalHeaderWidth += 2;
-      debugPrint("Added TOTAL column with width 2, total width: $totalHeaderWidth");
+      debugPrint(
+          "Added TOTAL column with width 2, total width: $totalHeaderWidth");
     }
 
     debugPrint("Final header total width: $totalHeaderWidth");
     if (totalHeaderWidth != 12) {
-      debugPrint("ERROR: Header columns width ($totalHeaderWidth) is not equal to 12!");
+      debugPrint(
+          "ERROR: Header columns width ($totalHeaderWidth) is not equal to 12!");
     }
 
     if (headerColumns.isNotEmpty) {
@@ -596,7 +619,8 @@ class ThermalPrinter {
       }
 
       String slNumber = (i + 1).toString();
-      debugPrint("Item $i: $productName, MRP: $mrp, Qty: $quantity, Rate: $unitPrice, Total: $totalPrice");
+      debugPrint(
+          "Item $i: $productName, MRP: $mrp, Qty: $quantity, Rate: $unitPrice, Total: $totalPrice");
 
       // Product Name Row using date/time row approach (SL + Product Name in one column, empty space in second column)
       if (displayConfig?['showParticulars']?.visible == true ||
@@ -712,7 +736,8 @@ class ThermalPrinter {
           width: 4,
           styles: PosStyles(fontType: fontType, align: PosAlign.left)));
       priceRowWidth += 4;
-      debugPrint("Added empty space column with width 4, total width: $priceRowWidth");
+      debugPrint(
+          "Added empty space column with width 4, total width: $priceRowWidth");
       // }
 
       // Add price columns with the old working widths (like your old code)
@@ -726,7 +751,8 @@ class ThermalPrinter {
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)));
         priceRowWidth += 2;
-        debugPrint("Added MRP column with width 2, total width: $priceRowWidth");
+        debugPrint(
+            "Added MRP column with width 2, total width: $priceRowWidth");
       }
       if (displayConfig?['showQty']?.visible == true) {
         priceDetailsRow.add(PosColumn(
@@ -738,7 +764,8 @@ class ThermalPrinter {
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)));
         priceRowWidth += 2;
-        debugPrint("Added QTY column with width 2, total width: $priceRowWidth");
+        debugPrint(
+            "Added QTY column with width 2, total width: $priceRowWidth");
       }
       if (displayConfig?['showRate']?.visible == true) {
         priceDetailsRow.add(PosColumn(
@@ -750,7 +777,8 @@ class ThermalPrinter {
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)));
         priceRowWidth += 2;
-        debugPrint("Added RATE column with width 2, total width: $priceRowWidth");
+        debugPrint(
+            "Added RATE column with width 2, total width: $priceRowWidth");
       }
       if (displayConfig?['showTotal']?.visible == true) {
         priceDetailsRow.add(PosColumn(
@@ -762,16 +790,19 @@ class ThermalPrinter {
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)));
         priceRowWidth += 2;
-        debugPrint("Added TOTAL column with width 2, total width: $priceRowWidth");
+        debugPrint(
+            "Added TOTAL column with width 2, total width: $priceRowWidth");
       }
 
       debugPrint("Final price row total width: $priceRowWidth");
       if (priceRowWidth != 12) {
-        debugPrint("ERROR: Price row columns width ($priceRowWidth) is not equal to 12!");
+        debugPrint(
+            "ERROR: Price row columns width ($priceRowWidth) is not equal to 12!");
       }
 
       if (priceDetailsRow.isNotEmpty) {
-        debugPrint("Adding price details row with ${priceDetailsRow.length} columns");
+        debugPrint(
+            "Adding price details row with ${priceDetailsRow.length} columns");
         bytes += generator.row(priceDetailsRow);
       }
     }
@@ -786,6 +817,7 @@ class ThermalPrinter {
       Map<String, DisplayOption>? displayConfig,
       String formattedTotal,
       String? savedTotal,
+      String? discountAmount,
       int itemCount,
       DocumentConfig? billDocumentConfig,
       List<dynamic> cartItems,
@@ -796,10 +828,12 @@ class ThermalPrinter {
     debugPrint("===== BUILD TOTAL AMOUNT DEBUG =====");
     debugPrint("Formatted total: $formattedTotal");
     debugPrint("Saved total: $savedTotal");
+    debugPrint("Discount amount: $discountAmount");
     debugPrint("Item count: $itemCount");
 
     double saved = double.tryParse(savedTotal ?? '0.0') ?? 0.0;
     double total = double.tryParse(formattedTotal) ?? 0.0;
+    double discountAmountValue = double.tryParse(discountAmount ?? '0.0') ?? 0.0;
     double totalMrp = saved + total;
 
     // Calculate total quantity from all cart items
@@ -814,7 +848,8 @@ class ThermalPrinter {
       }
     }
 
-    debugPrint("Calculated values - Saved: $saved, Total: $total, Total MRP: $totalMrp, Total Qty: $totalQuantity");
+    debugPrint(
+        "Calculated values - Saved: $saved, Total: $total, Total MRP: $totalMrp, Total Qty: $totalQuantity");
 
     // Create vertical division layout
     // Collect all left side and right side items first
@@ -844,7 +879,8 @@ class ThermalPrinter {
       'fontStyle': 'normal',
       'fontType': 'fontA' // Default font type
     });
-    debugPrint("Added left side item: Total Qty = ${totalQuantity % 1 == 0 ? totalQuantity.toInt().toString() : totalQuantity.toStringAsFixed(2)}");
+    debugPrint(
+        "Added left side item: Total Qty = ${totalQuantity % 1 == 0 ? totalQuantity.toInt().toString() : totalQuantity.toStringAsFixed(2)}");
 
     // Right side items
     if (displayConfig?['showMRPTotal']?.visible == true) {
@@ -856,19 +892,21 @@ class ThermalPrinter {
         'fontStyle': 'normal',
         'fontType': 'fontA' // Different font type for MRP
       });
-      debugPrint("Added right side item: Total MRP = ${totalMrp.toStringAsFixed(2)}");
+      debugPrint(
+          "Added right side item: Total MRP = ${totalMrp.toStringAsFixed(2)}");
     }
 
     if (displayConfig?['showDiscount']?.visible == true) {
       rightSideItems.add({
         'label': 'Discount',
-        'value': saved.toStringAsFixed(2),
+        'value': discountAmountValue.toStringAsFixed(2),
         'textSize': 'small',
         'bold': 'false',
         'fontStyle': 'normal',
         'fontType': 'fontA' // Default font type
       });
-      debugPrint("Added right side item: Discount = ${saved.toStringAsFixed(2)}");
+      debugPrint(
+          "Added right side item: Discount = ${discountAmountValue.toStringAsFixed(2)}");
     }
 
     if (displayConfig?['showNetAmount']?.visible == true) {
@@ -879,7 +917,8 @@ class ThermalPrinter {
         'bold': 'true',
         'fontType': 'fontA' // Different font type for Net Total
       });
-      debugPrint("Added right side item: Net Total = ${total.toStringAsFixed(2)}");
+      debugPrint(
+          "Added right side item: Net Total = ${total.toStringAsFixed(2)}");
     }
 
     debugPrint("Left side items count: ${leftSideItems.length}");
@@ -923,7 +962,8 @@ class ThermalPrinter {
                 bold: isBold,
                 height: textSize)));
         rowWidth += 3;
-        debugPrint("Added left label column with width 3, row width: $rowWidth");
+        debugPrint(
+            "Added left label column with width 3, row width: $rowWidth");
 
         columns.add(PosColumn(
             text: leftItem['value']!,
@@ -934,18 +974,21 @@ class ThermalPrinter {
                 bold: true,
                 height: textSize)));
         rowWidth += 1;
-        debugPrint("Added left value column with width 1, row width: $rowWidth");
+        debugPrint(
+            "Added left value column with width 1, row width: $rowWidth");
       } else {
         // Empty left side
         columns.add(PosColumn(
             text: '', width: 2, styles: PosStyles(fontType: fontType)));
         rowWidth += 2;
-        debugPrint("Added empty left column with width 2, row width: $rowWidth");
+        debugPrint(
+            "Added empty left column with width 2, row width: $rowWidth");
 
         columns.add(PosColumn(
             text: '', width: 2, styles: PosStyles(fontType: fontType)));
         rowWidth += 2;
-        debugPrint("Added empty left column with width 2, row width: $rowWidth");
+        debugPrint(
+            "Added empty left column with width 2, row width: $rowWidth");
       }
 
       // Gap column (1 column for spacing)
@@ -981,7 +1024,8 @@ class ThermalPrinter {
                 height: textSize,
                 width: textSize)));
         rowWidth += 3;
-        debugPrint("Added right label column with width 3, row width: $rowWidth");
+        debugPrint(
+            "Added right label column with width 3, row width: $rowWidth");
 
         columns.add(PosColumn(
             text: rightItem['value']!,
@@ -993,23 +1037,27 @@ class ThermalPrinter {
                 height: textSize,
                 width: textSize)));
         rowWidth += 3;
-        debugPrint("Added right value column with width 3, row width: $rowWidth");
+        debugPrint(
+            "Added right value column with width 3, row width: $rowWidth");
       } else {
         // Empty right side
         columns.add(PosColumn(
             text: '', width: 3, styles: PosStyles(fontType: fontType)));
         rowWidth += 3;
-        debugPrint("Added empty right column with width 3, row width: $rowWidth");
+        debugPrint(
+            "Added empty right column with width 3, row width: $rowWidth");
 
         columns.add(PosColumn(
             text: '', width: 3, styles: PosStyles(fontType: fontType)));
         rowWidth += 3;
-        debugPrint("Added empty right column with width 3, row width: $rowWidth");
+        debugPrint(
+            "Added empty right column with width 3, row width: $rowWidth");
       }
 
       debugPrint("Row $i final width: $rowWidth");
       if (rowWidth != 12) {
-        debugPrint("ERROR: Row $i columns width ($rowWidth) is not equal to 12!");
+        debugPrint(
+            "ERROR: Row $i columns width ($rowWidth) is not equal to 12!");
       }
 
       bytes += generator.row(columns);
@@ -1180,11 +1228,12 @@ class ThermalPrinter {
               height: textSizeSmall,
               width: textSizeSmall)),
     ];
-    
+
     int dateTimeRowWidth = 6 + 6;
     debugPrint("Date/time row total width: $dateTimeRowWidth");
     if (dateTimeRowWidth != 12) {
-      debugPrint("ERROR: Date/time row columns width ($dateTimeRowWidth) is not equal to 12!");
+      debugPrint(
+          "ERROR: Date/time row columns width ($dateTimeRowWidth) is not equal to 12!");
     }
 
     bytes += generator.row(dateTimeColumns);
@@ -1205,7 +1254,7 @@ class ThermalPrinter {
 
     // Adjust barcode size based on paper width
     bool is58mm = selectedPaperSize == '58mm';
-    int barcodeHeight = is58mm ? 20 : 30; // Smaller height for 58mm
+    int barcodeHeight = is58mm ? 40 : 30; // Bigger height for 58mm (increased from 20 to 40)
 
     try {
       // Use CODE39 which supports: '0'–'9', A–Z, SP, $, %, *, +, -, ., /
@@ -1387,5 +1436,85 @@ class ThermalPrinter {
     displayConfig.forEach((key, value) {
       debugPrint("- $key: visible=${value.visible}, value=${value.value}");
     });
+  }
+
+  // Customer Details Section for Thermal Receipt
+  List<int> _buildCustomerDetails(
+    Generator generator,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? customerAddress,
+    PosFontType fontType,
+  ) {
+    List<int> bytes = [];
+
+    // Add separator line
+    bytes += generator.hr();
+
+    // Customer Details Title
+    // bytes += generator.text(
+    //   'CUSTOMER DETAILS',
+    //   styles: PosStyles(
+    //     fontType: fontType,
+    //     align: PosAlign.center,
+    //     bold: true,
+    //     height: textSizeMedium,
+    //     width: textSizeMedium,
+    //   ),
+    // );
+
+    // Customer Name
+    if (customerName != null && customerName.isNotEmpty) {
+      bytes += generator.text(
+        'Name: $customerName',
+        styles: PosStyles(
+          fontType: fontType,
+          height: textSizeSmall,
+          width: textSizeSmall,
+        ),
+      );
+    }
+
+    // Customer Phone
+    if (customerPhone != null && customerPhone.isNotEmpty) {
+      bytes += generator.text(
+        'Phone: $customerPhone',
+        styles: PosStyles(
+          fontType: fontType,
+          height: textSizeSmall,
+          width: textSizeSmall,
+        ),
+      );
+    }
+
+    // Customer Email
+    if (customerEmail != null && customerEmail.isNotEmpty) {
+      bytes += generator.text(
+        'Email: $customerEmail',
+        styles: PosStyles(
+          fontType: fontType,
+          height: textSizeSmall,
+          width: textSizeSmall,
+        ),
+      );
+    }
+
+    // Customer Address
+    if (customerAddress != null && customerAddress.isNotEmpty) {
+      bytes += generator.text(
+        'Address: $customerAddress',
+        styles: PosStyles(
+          fontType: fontType,
+          height: textSizeSmall,
+          width: textSizeSmall,
+        ),
+      );
+    }
+
+    // Add separator line
+    bytes += generator.hr();
+
+    return bytes;
   }
 }

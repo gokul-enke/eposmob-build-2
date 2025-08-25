@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class AppSettings {
   final bool barcodeSales;
   final String customerCarePhone;
@@ -6,6 +8,7 @@ class AppSettings {
   final bool showCustomerLastBuyedPriceList;
   final bool askDeliveryDate;
   final bool priceRoundOff;
+  final bool discountAndCoupon;
 
   AppSettings({
     required this.barcodeSales,
@@ -15,19 +18,40 @@ class AppSettings {
     required this.showCustomerLastBuyedPriceList,
     required this.askDeliveryDate,
     required this.priceRoundOff,
+    required this.discountAndCoupon,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
     var data = json['data'] as List;
     Map<String, dynamic> settingsMap = {};
 
+    // Debug logging for parsing
+    debugPrint('🎫 APP SETTINGS PARSING DEBUG:');
+    debugPrint('  - Raw data length: ${data.length}');
+
     for (var setting in data) {
-      // Only use the value of 'status' to determine boolean values
+      // Handle both "true" and "1" as valid true values for status
+      bool isStatusTrue = setting['status'] == "true" || setting['status'] == "1";
+      
+      // Debug logging for DISCOUNT_AND_COUPON specifically
+      if (setting['code'] == 'DISCOUNT_AND_COUPON') {
+        debugPrint('  - Found DISCOUNT_AND_COUPON:');
+        debugPrint('    - Raw status: "${setting['status']}" (type: ${setting['status'].runtimeType})');
+        debugPrint('    - Raw value: "${setting['value']}" (type: ${setting['value'].runtimeType})');
+        debugPrint('    - Parsed status: $isStatusTrue');
+      }
+      
       settingsMap[setting['code']] = {
-        'status': setting['status'] == "true",
+        'status': isStatusTrue,
         'value': setting['value'] ?? ""
       };
     }
+
+    // Debug logging for final parsed settings
+    debugPrint('  - Final parsed settings:');
+    debugPrint('    - BARCODE_SALES: ${settingsMap['BARCODE_SALES']?['status']}');
+    debugPrint('    - DISCOUNT_AND_COUPON: ${settingsMap['DISCOUNT_AND_COUPON']?['status']}');
+    debugPrint('    - PRICE_ROUND_OFF: ${settingsMap['PRICE_ROUND_OFF']?['status']}');
 
     return AppSettings(
       barcodeSales: settingsMap['BARCODE_SALES']?['status'] ?? false,
@@ -41,6 +65,7 @@ class AppSettings {
               false,
       askDeliveryDate: settingsMap['ASK_DELIVERY_DATE']?['status'] ?? false,
       priceRoundOff: settingsMap['PRICE_ROUND_OFF']?['status'] ?? false,
+      discountAndCoupon: settingsMap['DISCOUNT_AND_COUPON']?['status'] ?? false,
     );
   }
 
@@ -88,6 +113,12 @@ class AppSettings {
           "code": "PRICE_ROUND_OFF",
           "value": "",
           "status": priceRoundOff.toString(),
+        },
+        {
+          "name": "Discount and Coupon",
+          "code": "DISCOUNT_AND_COUPON",
+          "value": "",
+          "status": discountAndCoupon.toString(),
         },
       ],
     };

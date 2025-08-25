@@ -90,7 +90,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   void searchProducts(page) async {
-    
     try {
       setState(() {
         initLoading = true;
@@ -108,9 +107,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
         filterCreatedBy: createdByController.text,
         filterProperties: selectedProperty,
         filterStore: storeController.text,
-        filterSupplier: supplierIdController.text.isNotEmpty 
-          ? supplierIdController.text 
-          : null,
+        filterSupplier: supplierIdController.text.isNotEmpty
+            ? supplierIdController.text
+            : null,
         page: page,
       );
     } catch (error) {
@@ -120,30 +119,29 @@ class _AddProductScreenState extends State<AddProductScreen> {
         initLoading = false;
       });
     }
-    
   }
 
   void resetSearch() {
-  setState(() {
-    productNameController.clear();
-    storeController.clear();
-    amountController.clear();
-    barcodeController.clear();
-    createdByController.clear();
-    supplierIdController.clear();
-    
-    // Reset dropdown selections
-    selectedCategoryId = null;
-    selectedProperties = null;
-    selectedSupplierId = null;
-    selectedProperty = null;
-    storeSelected = null;
-    supplier = null;
-    
-    page = 1;
-  });
-  loadInitData();
-}
+    setState(() {
+      productNameController.clear();
+      storeController.clear();
+      amountController.clear();
+      barcodeController.clear();
+      createdByController.clear();
+      supplierIdController.clear();
+
+      // Reset dropdown selections
+      selectedCategoryId = null;
+      selectedProperties = null;
+      selectedSupplierId = null;
+      selectedProperty = null;
+      storeSelected = null;
+      supplier = null;
+
+      page = 1;
+    });
+    loadInitData();
+  }
 
   void _showProductDetails(GetProduct product) {
     setState(() {
@@ -192,17 +190,165 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   shrinkWrap: true,
                   physics: const BouncingScrollPhysics(),
                   children: [
-                    _buildDetailRow(
-                        'Product Name', product.productName ?? 'N/A'),
-                    _buildDetailRow(
-                        'Category', product.category?.name ?? 'N/A'),
-                    _buildDetailRow('Slug', product.productSlug ?? 'N/A'),
-                    _buildDetailRow('Barcode', product.barcode ?? 'N/A'),
-                    _buildDetailRow('Unit', product.unit ?? 'N/A'),
-                    _buildDetailRow(
-                        'Price', product.price?.price?.toString() ?? 'N/A'),
-                    _buildDetailRow(
-                        'Product ID', product.productId?.toString() ?? 'N/A'),
+                    // Product Details in 2 columns
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Left Column - First 4 details
+                        Expanded(
+                          child: Column(
+                            children: [
+                              _buildDetailRow(
+                                  'Product Name', product.productName ?? 'N/A'),
+                              _buildDetailRow(
+                                  'Slug', product.productSlug ?? 'N/A'),
+                              _buildDetailRow(
+                                  'Category', product.category?.name ?? 'N/A'),
+                              _buildDetailRow(
+                                  'Barcode', product.barcode ?? 'N/A'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        // Right Column - Next 4 details
+                        Expanded(
+                          child: Column(
+                            children: [
+                              _buildDetailRow('Unit', product.unit ?? 'N/A'),
+                              _buildDetailRow('Price',
+                                  product.price?.price?.toString() ?? 'N/A'),
+                              _buildDetailRow(
+                                  'MRP', product.mrp?.toString() ?? 'N/A'),
+                              _buildDetailRow(
+                                  'SKU', product.sku ?? 'Not Available'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Stock Information Section
+                    const SizedBox(height: 16),
+                    Text(
+                      'Stock Information',
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s16,
+                        0.20,
+                        ColorManager.kPrimaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Show stock information in table format
+                    if (product.stock != null && product.stock!.isNotEmpty)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border:
+                              Border.all(color: Colors.grey.withOpacity(0.3)),
+                        ),
+                        child: Column(
+                          children: [
+                            // Table Header
+                            Container(
+                              decoration: const BoxDecoration(
+                                color: ColorManager.tableBGColor,
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(8),
+                                  topRight: Radius.circular(8),
+                                ),
+                              ),
+                              child: Table(
+                                columnWidths: const {
+                                  0: FlexColumnWidth(0.8), // Sl No
+                                  1: FlexColumnWidth(1.5), // Quantity
+                                  2: FlexColumnWidth(1.5), // Price
+                                  3: FlexColumnWidth(1.5), // MRP
+                                  4: FlexColumnWidth(1.5), // Purchase Price
+                                },
+                                border: null,
+                                defaultVerticalAlignment:
+                                    TableCellVerticalAlignment.middle,
+                                children: [
+                                  TableRow(
+                                    children: [
+                                      _buildStockTableHeader('Sl No'),
+                                      _buildStockTableHeader('Quantity'),
+                                      _buildStockTableHeader('Price'),
+                                      _buildStockTableHeader('MRP'),
+                                      _buildStockTableHeader('Purchase Price'),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Table Body
+                            ...product.stock!.asMap().entries.map((entry) {
+                              int stockIndex = entry.key;
+                              var stock = entry.value;
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: stockIndex % 2 == 0
+                                      ? Colors.white
+                                      : Colors.grey.withOpacity(0.05),
+                                ),
+                                child: Table(
+                                  columnWidths: const {
+                                    0: FlexColumnWidth(0.8), // Sl No
+                                    1: FlexColumnWidth(1.5), // Quantity
+                                    2: FlexColumnWidth(1.5), // Price
+                                    3: FlexColumnWidth(1.5), // MRP
+                                    4: FlexColumnWidth(1.5), // Purchase Price
+                                  },
+                                  border: null,
+                                  defaultVerticalAlignment:
+                                      TableCellVerticalAlignment.middle,
+                                  children: [
+                                    TableRow(
+                                      children: [
+                                        _buildStockTableCell(
+                                            '${stockIndex + 1}'),
+                                        _buildStockTableCell(
+                                            stock.quantity?.toString() ??
+                                                'N/A'),
+                                        _buildStockTableCell(
+                                            stock.price ?? 'N/A'),
+                                        _buildStockTableCell(
+                                            stock.mrp ?? 'N/A'),
+                                        _buildStockTableCell(
+                                            stock.purchasePrice ?? 'N/A'),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border:
+                              Border.all(color: Colors.grey.withOpacity(0.3)),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'No stock information available',
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s14,
+                              0.20,
+                              Colors.grey[600]!,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -263,6 +409,46 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
+  Widget _buildStockTableHeader(String text) {
+    return TableCell(
+      verticalAlignment: TableCellVerticalAlignment.middle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+        child: Center(
+          child: Text(
+            text,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.18,
+              ColorManager.kPrimaryColor,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStockTableCell(String text) {
+    return TableCell(
+      verticalAlignment: TableCellVerticalAlignment.middle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+        child: Center(
+          child: Text(
+            text,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.18,
+              Colors.black,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> refreshData() async {
     resetSearch();
   }
@@ -273,7 +459,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
         Provider.of<CategoryProvider>(context, listen: false);
 
     Size size = MediaQuery.of(context).size;
-    
 
     PurchaseProvider purchaseProvider =
         Provider.of<PurchaseProvider>(context, listen: false);
@@ -287,8 +472,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       child: RefreshIndicator(
         onRefresh: refreshData,
         child: Container(
-          margin:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
@@ -712,7 +896,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                   GetSuppliersModelData>(
                                               value: supplier,
                                               child: Text(
-                                                supplier.user?.name ?? 'No Name',
+                                                supplier.user?.name ??
+                                                    'No Name',
                                                 style: buildCustomStyle(
                                                   FontWeightManager.medium,
                                                   FontSize.s12,
@@ -827,14 +1012,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                       columnWidths: const {
                                         0: FractionColumnWidth(0.05), // No
                                         1: FractionColumnWidth(
-                                            0.20), // Product Name
+                                            0.26), // Product Name
                                         2: FractionColumnWidth(
-                                            0.15), // Category Name
-                                        3: FractionColumnWidth(0.10), // Price
-                                        4: FractionColumnWidth(0.10), // MRP
-                                        5: FractionColumnWidth(0.10), // Unit
-                                        6: FractionColumnWidth(0.15), // Barcode
-                                        7: FractionColumnWidth(0.15), // Action
+                                            0.12), // Category Name
+                                        3: FractionColumnWidth(0.08), // Price
+                                        4: FractionColumnWidth(0.08), // MRP
+                                        5: FractionColumnWidth(
+                                            0.08), // Purchase Price
+                                        6: FractionColumnWidth(0.08), // Unit
+                                        7: FractionColumnWidth(0.13), // Barcode
+                                        8: FractionColumnWidth(0.12), // Action
                                       },
                                       border: null,
                                       defaultVerticalAlignment:
@@ -847,6 +1034,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                             _buildTableHeader("Category Name"),
                                             _buildTableHeader("Price"),
                                             _buildTableHeader("MRP"),
+                                            _buildTableHeader("Purchase Price"),
                                             _buildTableHeader("Unit"),
                                             _buildTableHeader("Barcode"),
                                             _buildTableHeader("Action"),
@@ -879,19 +1067,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                               0: FractionColumnWidth(
                                                   0.05), // No
                                               1: FractionColumnWidth(
-                                                  0.20), // Product Name
+                                                  0.26), // Product Name
                                               2: FractionColumnWidth(
-                                                  0.15), // Category Name
+                                                  0.12), // Category Name
                                               3: FractionColumnWidth(
-                                                  0.10), // Price
+                                                  0.08), // Price
                                               4: FractionColumnWidth(
-                                                  0.10), // MRP
+                                                  0.08), // MRP
                                               5: FractionColumnWidth(
-                                                  0.10), // Unit
+                                                  0.08), // Purchase Price
                                               6: FractionColumnWidth(
-                                                  0.15), // Barcode
+                                                  0.08), // Unit
                                               7: FractionColumnWidth(
-                                                  0.15), // Action
+                                                  0.13), // Barcode
+                                              8: FractionColumnWidth(
+                                                  0.12), // Action
                                             },
                                             border: null,
                                             defaultVerticalAlignment:
@@ -929,10 +1119,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         "${product.price?.price ?? 'N/A'}"),
                                                     _buildTableCell(
                                                         "${product.mrp ?? 'N/A'}"),
+                                                    _buildTableCell(product
+                                                                .stock
+                                                                ?.isNotEmpty ==
+                                                            true
+                                                        ? product.stock!.first
+                                                                .purchasePrice ??
+                                                            'N/A'
+                                                        : 'N/A'),
                                                     _buildTableCell(
-                                                        "${product.unit ?? 'N/A'}"),
+                                                        product.unit ?? 'N/A'),
                                                     _buildTableCell(
-                                                        "${product.barcode ?? 'N/A'}"),
+                                                        product.barcode ??
+                                                            'N/A'),
                                                     Center(
                                                       child: Padding(
                                                         padding:

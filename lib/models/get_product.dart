@@ -68,6 +68,7 @@ class GetProduct {
   final List<ProductProp>? productProps;
   final WeightInfo? weightInfo;
   final List<Stock>? stock;
+  final String? sku;
 
   GetProduct({
     this.productId,
@@ -88,6 +89,7 @@ class GetProduct {
     this.productProps,
     this.weightInfo,
     this.stock,
+    this.sku,
   });
 
   factory GetProduct.fromJson(Map<String, dynamic> json) => GetProduct(
@@ -129,6 +131,7 @@ class GetProduct {
             ? []
             : List<Stock>.from(
                 json["stock"]!.map((x) => Stock.fromJson(x))),
+        sku: json["sku"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -156,6 +159,7 @@ class GetProduct {
         "stock": stock == null
             ? []
             : List<dynamic>.from(stock!.map((x) => x.toJson())),
+        "sku": sku,
       };
 }
 

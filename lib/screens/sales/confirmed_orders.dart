@@ -194,6 +194,31 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                         ),
                                       ],
                                       const Spacer(),
+                                      // Show discount info if any discounts applied
+                                      if ((order.flatDiscount != null &&
+                                              order.flatDiscount! > 0) ||
+                                          (order.percentageDiscount != null &&
+                                              order.percentageDiscount! > 0) ||
+                                          (order.couponId != null &&
+                                              order.couponId!.isNotEmpty)) ...[
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.local_offer,
+                                                size: 12, color: Colors.orange),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Discount Applied',
+                                              style: buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s10,
+                                                0.21,
+                                                Colors.orange,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                       Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
@@ -285,7 +310,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
 
       // Use the stored total from order (already rounded when saved)
       double finalTotal = order.total;
-      
+
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -294,6 +319,11 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             cartItems: cartItems,
             formattedTotal: finalTotal.toString(), // Use order's total
             savedTotal: youSaved.toString(),
+            discountAmount: ((order.flatDiscount ?? 0.0) +
+                ((order.percentageDiscount ?? 0.0) > 0
+                    ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
+                    : 0.0))
+                .toString(),
             orderDate: order.createdAt,
             orderNumber: order.orderNumber,
             isFromLocalStorage: true,
@@ -530,6 +560,9 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       debugPrint("  - Car Number: ${order.carNumber}");
       debugPrint("  - Status: ${order.status}");
       debugPrint("  - Total: ${order.total}");
+      debugPrint("  - Flat Discount: ${order.flatDiscount}");
+      debugPrint("  - Percentage Discount: ${order.percentageDiscount}");
+      debugPrint("  - Coupon ID: ${order.couponId}");
 
       // Prepare items for API
       List<Map<String, dynamic>> items = [];
@@ -619,6 +652,14 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               "1", // Use stored delivery method or default
           carNumber: order.carNumber,
           status: order.status ?? "confirmed",
+          // Include discount data from saved order
+          flatDiscount: order.flatDiscount,
+          percentageDiscount: order.percentageDiscount,
+          discountAmount: (order.flatDiscount ?? 0.0) +
+              ((order.percentageDiscount ?? 0.0) > 0
+                  ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
+                  : 0.0),
+          toCustomerCredit: order.toCustomerCredit,
         );
 
         // AFTER the API call completes, update the index
@@ -685,4 +726,3 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
     });
   }
 }
-

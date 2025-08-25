@@ -55,20 +55,36 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
 
       final response = await SalesProvider()
           .listOrderDetails(context, ordersId, accessToken ?? "");
+      
       if (response["status"] == "success") {
         setState(() {
           OrderDetailsModel? orderDetails;
           try {
             orderDetails = OrderDetailsModel.fromJson(response);
+            if (orderDetails?.data != null) {
+              orderDetailsModelData = orderDetails!.data;
+              cart = orderDetailsModelData?.cart;
+              priceSummary = cart?.priceSummary;
+              customerDetails = orderDetailsModelData?.customerDetails;
+              cartItems = cart?.cartItems ?? [];
+              orderNumber = orderDetailsModelData?.orderNumber ?? "N/A";
+              
+              // Debug: Check payments data
+              if (orderDetailsModelData?.payments != null) {
+                debugPrint("Payments data: ${orderDetailsModelData?.payments}");
+                orderDetailsModelData?.payments?.forEach((key, value) {
+                  debugPrint("Payment method: $key, Amount: $value");
+                });
+              } else {
+                debugPrint("No payments data found");
+              }
+            } else {
+              orderNumber = "Order data is null";
+            }
           } catch (e) {
             debugPrint("Error parsing JSON data: $e");
+            orderNumber = "Error parsing order data";
           }
-          orderDetailsModelData = orderDetails!.data;
-          cart = orderDetailsModelData?.cart;
-          priceSummary = cart?.priceSummary;
-          customerDetails = orderDetailsModelData?.customerDetails;
-          cartItems = cart?.cartItems;
-          orderNumber = orderDetailsModelData?.orderNumber ?? "";
         });
       } else {
         setState(() {
@@ -76,7 +92,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         });
       }
     } catch (error) {
-      // debugPrint(error.toString());
+      debugPrint("Error fetching order details: $error");
       setState(() {
         orderNumber = "Error fetching order details";
       });
@@ -146,7 +162,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                         Builder(
                           builder: (context) {
                             final dateProp =
-                                orderDetailsModelData!.orderProps!.firstWhere(
+                                orderDetailsModelData?.orderProps?.firstWhere(
                               (prop) =>
                                   prop.propsCode?.toUpperCase() ==
                                   'DELIVERY_DATE',
@@ -156,7 +172,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                                   propsValue: null),
                             );
                             final timeProp =
-                                orderDetailsModelData!.orderProps!.firstWhere(
+                                orderDetailsModelData?.orderProps?.firstWhere(
                               (prop) =>
                                   prop.propsCode?.toUpperCase() ==
                                   'DELIVERY_TIME',
@@ -168,13 +184,13 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                if (dateProp.propsCode != null &&
-                                    dateProp.propsValue != null &&
-                                    dateProp.propsValue!.isNotEmpty)
+                                if (dateProp?.propsCode != null &&
+                                    dateProp?.propsValue != null &&
+                                    (dateProp?.propsValue?.isNotEmpty ?? false))
                                   Padding(
                                     padding: const EdgeInsets.only(top: 4.0),
                                     child: Text(
-                                      'Delivery Date: 	${DateHelper.formatISODate(dateProp.propsValue!)}',
+                                      'Delivery Date: 	${DateHelper.formatISODate(dateProp?.propsValue ?? '')}',
                                       style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s14,
@@ -182,13 +198,13 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                                           ColorManager.textColor),
                                     ),
                                   ),
-                                if (timeProp.propsCode != null &&
-                                    timeProp.propsValue != null &&
-                                    timeProp.propsValue!.isNotEmpty)
+                                if (timeProp?.propsCode != null &&
+                                    timeProp?.propsValue != null &&
+                                    (timeProp?.propsValue?.isNotEmpty ?? false))
                                   Padding(
                                     padding: const EdgeInsets.only(top: 2.0),
                                     child: Text(
-                                      'Delivery Time: 	${timeProp.propsValue}',
+                                      'Delivery Time: 	${timeProp?.propsValue ?? ''}',
                                       style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s14,
@@ -260,13 +276,13 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
   Widget _buildOrderReturns() {
     // Check if orderReturns is null or has no return items
     if (orderDetailsModelData?.orderReturns == null ||
-        (orderDetailsModelData!.orderReturns!.returnItems?.isEmpty ?? true)) {
+        (orderDetailsModelData?.orderReturns?.returnItems?.isEmpty ?? true)) {
       return const SizedBox(); // Return an empty SizedBox to hide the widget
     }
 
     // If there are return items, show the OrderReturnsWidget
     return OrderReturnsWidget(
-      orderReturns: orderDetailsModelData!.orderReturns,
+      orderReturns: orderDetailsModelData?.orderReturns,
     );
   }
 
@@ -278,21 +294,32 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         boxColor: Colors.white,
         textColor: ColorManager.kPrimaryColor,
         fct: () async {
-          String? formattedTotal =
-              orderDetailsModelData?.cart?.priceSummary?.netTotal.toString();
-          String? savedTotal =
-              orderDetailsModelData?.cart?.priceSummary?.savedTotal.toString();
-          String storeName = orderDetailsModelData!.cart!.storeName ?? "";
-          String orderDate = orderDetailsModelData!.orderDate ?? "";
+          // Check if we have the required data
+          if (orderDetailsModelData?.cart == null || cartItems == null || cartItems!.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No order data available for printing'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
+
+          String? formattedTotal = orderDetailsModelData?.cart?.priceSummary?.netTotal?.toString() ?? "0.00";
+          String? savedTotal = orderDetailsModelData?.cart?.priceSummary?.savedTotal?.toString() ?? "0.00";
+          String? discountAmount = orderDetailsModelData?.cart?.priceSummary?.discount?.toString() ?? "0.00";
+          String storeName = orderDetailsModelData?.cart?.storeName ?? "Store";
+          String orderDate = orderDetailsModelData?.orderDate ?? "";
 
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => PrintPage(
                 storeName: storeName,
-                cartItems: cartItems!,
-                formattedTotal: formattedTotal!,
+                cartItems: cartItems ?? [],
+                formattedTotal: formattedTotal,
                 savedTotal: savedTotal,
+                discountAmount: discountAmount,
                 orderDate: orderDate,
                 orderNumber: orderNumber,
               ),

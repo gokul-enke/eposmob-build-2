@@ -31,7 +31,6 @@ import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/screens/billing/mobile_screen/billing_page_mobile.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
@@ -48,6 +47,8 @@ import 'package:pos_machine/screens/billing/widgets/payment_method_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/delivery_method_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/price_fields.dart';
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
+import 'package:pos_machine/screens/customers/add_customer_modal.dart';
 
 class BillingPage extends StatefulWidget {
   const BillingPage({super.key});
@@ -91,14 +92,17 @@ class BillingPageState extends State<BillingPage>
   final TextEditingController _cashAmountController = TextEditingController();
   final TextEditingController _cardAmountController = TextEditingController();
   final TextEditingController _upiAmountController = TextEditingController();
+  final TextEditingController _debitAmountController = TextEditingController();
   final FocusNode _cashAmountFocusNode = FocusNode();
   final FocusNode _cardAmountFocusNode = FocusNode();
   final FocusNode _upiAmountFocusNode = FocusNode();
+  final FocusNode _debitAmountFocusNode = FocusNode();
 
   // Payment method selection states
-  bool _isCashSelected = true;
+  bool _isCashSelected = false;
   bool _isCardSelected = false;
   bool _isUpiSelected = false;
+  bool _isDebitSelected = false;
   bool isInitLoading = false;
   List<CustomerListModelData>? customerList = [];
   CustomerListModelData? selectedCustomer;
@@ -129,6 +133,7 @@ class BillingPageState extends State<BillingPage>
   bool isLoadingSaveOrderAndPrint = false;
   bool isLoadingAddItem = false;
   bool _isProcessingBarcode = false;
+  bool _toCustomerCreditEnabled = false;
 
   // Add these variables for the new sidebar
   bool _isSidebarVisible = true;
@@ -157,6 +162,9 @@ class BillingPageState extends State<BillingPage>
   String? deliveryDate;
   String? deliveryTime;
 
+  // Track last rehydrated order to avoid losing state on navigation
+  String? _lastRehydratedOrderId;
+
   @override
   void initState() {
     super.initState();
@@ -168,15 +176,38 @@ class BillingPageState extends State<BillingPage>
     _focusNode.addListener(_handleFocusChange);
     _paidAmountFocusNode
         .addListener(_handlePaidAmountFocusChange); // Add this line
-    deliveryMethodId = "3";
-    deliveryMethod = "Store Takeaway";
 
-    // Initialize multi-payment with cash selected by default
-    _isCashSelected = true;
+    // Debug logging for AppSettings
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      debugPrint('🎫 APP SETTINGS INIT DEBUG:');
+      debugPrint('  - appSettingsProvider: $appSettingsProvider');
+      debugPrint('  - appSettings: ${appSettingsProvider.appSettings}');
+      if (appSettingsProvider.appSettings != null) {
+        debugPrint(
+            '  - discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
+        debugPrint(
+            '  - All settings: ${appSettingsProvider.appSettings.toString()}');
+      }
+    });
+
+    // Initialize with dynamic default delivery method
+    _initializeDeliveryMethod();
+
+    // Initialize multi-payment with no defaults - let user select manually
+    _isCashSelected = false;
     _isCardSelected = false;
     _isUpiSelected = false;
+    _isDebitSelected = false;
 
     _fetchCustomers();
+
+    // After first frame, rehydrate UI from any saved order/discounts
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _rehydrateFromProvider();
+    });
 
     _quantityFocusNode.addListener(() {
       if (_quantityFocusNode.hasFocus) {
@@ -217,6 +248,18 @@ class BillingPageState extends State<BillingPage>
       // Also listen for auth changes (more direct indicator of user switch)
       final authModel = Provider.of<AuthModel>(context, listen: false);
       authModel.addListener(_onUserSwitched);
+
+      // Listen for app settings changes
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      appSettingsProvider.addListener(() {
+        debugPrint('🎫 APP SETTINGS CHANGED:');
+        debugPrint('  - New appSettings: ${appSettingsProvider.appSettings}');
+        if (appSettingsProvider.appSettings != null) {
+          debugPrint(
+              '  - New discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
+        }
+      });
     });
 
     // Ensure UI updates when virtual keyboard edits the customer phone field
@@ -252,9 +295,11 @@ class BillingPageState extends State<BillingPage>
     _cashAmountController.dispose();
     _cardAmountController.dispose();
     _upiAmountController.dispose();
+    _debitAmountController.dispose();
     _cashAmountFocusNode.dispose();
     _cardAmountFocusNode.dispose();
     _upiAmountFocusNode.dispose();
+    _debitAmountFocusNode.dispose();
 
     _debounce?.cancel();
     _debounceTimer?.cancel();
@@ -311,7 +356,217 @@ class BillingPageState extends State<BillingPage>
     });
   }
 
+  // Rehydrate all UI state from the provider's current order
+  void _rehydrateFromProvider() {
+    // Prevent default customer from overriding when editing an order
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final SavedOrder? currentOrder = localProductProvider.currentOrder;
+    if (currentOrder != null) {
+      _lastRehydratedOrderId = currentOrder.id;
+    }
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      final SavedOrder? currentOrder = localProductProvider.currentOrder;
+
+      // If there's no order, there's nothing to rehydrate.
+      // We can infer coupon state from provider, but we'll keep it simple.
+      if (currentOrder == null) {
+        // Infer discount state from provider summary if any
+        final summary = localProductProvider.priceSummary;
+        setState(() {
+          if (summary != null &&
+              ((summary.flatDiscount > 0) ||
+                  (summary.percentageDiscount > 0))) {
+            isCouponApplied = true;
+          } else {
+            isCouponApplied = false;
+          }
+        });
+        return;
+      }
+
+      // Start full UI state restoration
+      setState(() {
+        // 1. Restore Customer Information
+        // Clear existing state first to prevent contamination
+        selectedCustomerID = null;
+        selectedCustomerPhone = null;
+        selectedCustomer = null;
+        isCustomerFound = false;
+        mobileNumberTextController.clear();
+        Provider.of<CustomerSelectionProvider>(context, listen: false)
+            .clearSelectedCustomer();
+
+        // Check if there is any customer data to restore
+        if (currentOrder.customerId != null ||
+            (currentOrder.customerPhone != null &&
+                currentOrder.customerPhone!.isNotEmpty)) {
+          selectedCustomerID = currentOrder.customerId;
+          selectedCustomerPhone = currentOrder.customerPhone;
+
+          // Try to find the customer in the main list if an ID exists
+          if (currentOrder.customerId != null && customerList != null) {
+            try {
+              selectedCustomer = customerList!
+                  .firstWhere((c) => c.id == currentOrder.customerId);
+            } catch (e) {
+              // Not found in list, will create a virtual one next.
+            }
+          }
+
+          // If not found in the list or if it's a phone-only order,
+          // create a 'virtual' customer object from the order data.
+          if (selectedCustomer == null) {
+            selectedCustomer = CustomerListModelData(
+              id: currentOrder.customerId,
+              name: currentOrder.customerName,
+              phone: currentOrder.customerPhone,
+            );
+          }
+
+          // Now, with a guaranteed selectedCustomer object, update the UI
+          Provider.of<CustomerSelectionProvider>(context, listen: false)
+              .setSelectedCustomer(selectedCustomer!);
+
+          // **FIX**: Properly restore customer display based on whether it's a phone-only order
+          if (selectedCustomer!.id != null &&
+              (selectedCustomer!.name != null &&
+                  selectedCustomer!.name!.isNotEmpty)) {
+            // Customer from list - show name and phone
+            String name = selectedCustomer!.name ?? '';
+            String phone = selectedCustomer!.phone ?? '';
+            mobileNumberTextController.text = "$name $phone".trim();
+            isCustomerFound = true;
+          } else {
+            // Phone-only order - show just the phone number
+            mobileNumberTextController.text = selectedCustomer!.phone ?? '';
+            mobileNumberText = selectedCustomer!.phone ?? '';
+            isCustomerFound = false;
+          }
+
+          _isCustomerManuallySelected = true;
+        }
+
+        // 2. Restore Payment Methods
+        // Reset all payment state first
+        _isCashSelected = false;
+        _isCardSelected = false;
+        _isUpiSelected = false;
+        _isDebitSelected = false;
+        _cashAmountController.clear();
+        _cardAmountController.clear();
+        _upiAmountController.clear();
+        _debitAmountController.clear();
+
+        if (currentOrder.paymentMethod != null) {
+          final pm = currentOrder.paymentMethod!;
+          if (pm.startsWith('{')) {
+            try {
+              final Map<String, dynamic> multi = json.decode(pm);
+              if (multi['isMultiPayment'] == true) {
+                final List<String> methods =
+                    List<String>.from(multi['methods'] ?? []);
+                final Map<String, dynamic> amounts =
+                    Map<String, dynamic>.from(multi['amounts'] ?? {});
+
+                if (methods.contains('CASH')) {
+                  _isCashSelected = true;
+                  _cashAmountController.text =
+                      (amounts['CASH'] ?? '0').toString();
+                }
+                if (methods.contains('CARD')) {
+                  _isCardSelected = true;
+                  _cardAmountController.text =
+                      (amounts['CARD'] ?? '0').toString();
+                }
+                if (methods.contains('UPI')) {
+                  _isUpiSelected = true;
+                  _upiAmountController.text =
+                      (amounts['UPI'] ?? '0').toString();
+                }
+                if (methods.contains('DEBIT')) {
+                  _isDebitSelected = true;
+                  _debitAmountController.text =
+                      (amounts['DEBIT'] ?? '0').toString();
+                }
+              }
+            } catch (e) {
+              debugPrint("Error parsing payment JSON on rehydration: $e");
+            }
+          } else {
+            // Single method
+            _isCashSelected = pm.toUpperCase() == 'CASH';
+            _isCardSelected = pm.toUpperCase() == 'CARD';
+            _isUpiSelected = pm.toUpperCase() == 'UPI';
+            _isDebitSelected = pm.toUpperCase() == 'DEBIT';
+
+            final paid = currentOrder.paidAmount ?? '0.0';
+            if (_isCashSelected) _cashAmountController.text = paid;
+            if (_isCardSelected) _cardAmountController.text = paid;
+            if (_isUpiSelected) _upiAmountController.text = paid;
+            if (_isDebitSelected) _debitAmountController.text = paid;
+          }
+        }
+
+        // 3. Restore Main Payment Amounts
+        _paidAmountController.text = currentOrder.paidAmount ?? "0.0";
+        _balanceAmount =
+            double.tryParse(currentOrder.balanceAmount ?? "0.0") ?? 0.0;
+
+        // 4. Restore Transaction, Delivery, and Other Details
+        _transactionNumberController.text = currentOrder.transactionId ?? "";
+        deliveryMethod = currentOrder.deliveryMethod ?? "Store Takeaway";
+        deliveryMethodId =
+            currentOrder.deliveryMethodId ?? _getDefaultDeliveryMethodId();
+        _commentController.text = currentOrder.comment ?? "";
+        _carNumberController.text = currentOrder.carNumber ?? "";
+        deliveryDate = currentOrder.deliveryDate;
+        deliveryTime = currentOrder.deliveryTime;
+
+        // 5. Restore Coupon State
+        if ((currentOrder.couponId != null &&
+                currentOrder.couponId!.isNotEmpty) ||
+            (currentOrder.flatDiscount != null &&
+                currentOrder.flatDiscount! > 0) ||
+            (currentOrder.percentageDiscount != null &&
+                currentOrder.percentageDiscount! > 0)) {
+          coupenCodeTextController.text = currentOrder.couponId ?? "";
+          isCouponApplied = true;
+        } else {
+          coupenCodeTextController.clear();
+          isCouponApplied = false;
+        }
+
+        // 6. Restore To Customer Credit flag
+        _toCustomerCreditEnabled = currentOrder.toCustomerCredit ?? false;
+      });
+
+      // 7. Final UI Updates
+      _updateBalanceAmount();
+      // Force a rebuild of the autocomplete widget to reflect the new customer
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _autocompletePhoneKey = GlobalKey();
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint("Error during rehydration: $e");
+    }
+  }
+
   Future<void> _fetchCustomers() async {
+    // Early guard: if editing a saved order, do not override customer with defaults
+    final currentOrder =
+        Provider.of<LocalProductProvider>(context, listen: false).currentOrder;
+    if (currentOrder != null) {
+      debugPrint(
+          "🛡️ Skipping default customer fetch because a saved order is being edited");
+      return;
+    }
     debugPrint("🔍 _fetchCustomers() called");
     debugPrint("  - _isCustomerManuallySelected: $_isCustomerManuallySelected");
     debugPrint("  - selectedCustomerID: $selectedCustomerID");
@@ -552,7 +807,8 @@ class BillingPageState extends State<BillingPage>
         // Set dialog state to open
         await showDialog(
           context: context,
-          builder: (context) => AddProductWithBarcodeModal(barcode: query),
+          builder: (context) =>
+              AddProductWithBarcodeModal(barcode: query, isAddToCart: true),
         );
         // Reset dialog state
 
@@ -581,12 +837,33 @@ class BillingPageState extends State<BillingPage>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
 
+    // Quick fix: if we are editing an order and it hasn't been rehydrated after navigation, rehydrate now
+    final currentOrder =
+        Provider.of<LocalProductProvider>(context, listen: true).currentOrder;
+    if (currentOrder != null && currentOrder.id != _lastRehydratedOrderId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _rehydrateFromProvider();
+        }
+      });
+    }
     super.build(context); // Required for AutomaticKeepAliveClientMixin
 
     debugPrint("🔨 BillingPage build() called");
     debugPrint(
         "  - Current salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
+
+    // Debug AppSettings during build
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    debugPrint("🎫 BUILD TIME APP SETTINGS:");
+    debugPrint("  - appSettings: ${appSettingsProvider.appSettings}");
+    if (appSettingsProvider.appSettings != null) {
+      debugPrint(
+          "  - discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}");
+    }
 
     Size size = MediaQuery.of(context).size;
     final productProvider =
@@ -628,7 +905,6 @@ class BillingPageState extends State<BillingPage>
                                       selectedProductIdController,
                                   productProvider: productProvider,
                                 ),
-                                // _buildTestMobileButton(),
                                 Expanded(
                                   child: Column(
                                     children: [
@@ -1732,64 +2008,6 @@ class BillingPageState extends State<BillingPage>
       },
     );
   }
-  
-  
-  //Texting mobile screen
-//   Widget _buildTestMobileButton() {
-//   return Positioned(
-//     bottom: 20,
-//     right: 20,
-//     child: Column(
-//       mainAxisSize: MainAxisSize.min,
-//       children: [
-//         // Text label
-//         Container(
-//           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-//           decoration: BoxDecoration(
-//             color: Colors.black54,
-//             borderRadius: BorderRadius.circular(8),
-//           ),
-//           child: const Text(
-//             'Test Mobile UI',
-//             style: TextStyle(
-//               color: Colors.white,
-//               fontSize: 12,
-//               fontWeight: FontWeight.bold,
-//             ),
-//           ),
-//         ),
-//         const SizedBox(height: 8),
-//         // Button
-//         FloatingActionButton(
-//           backgroundColor: Colors.blue,
-//           mini: true,
-//           onPressed: () {
-//             Navigator.push(
-//               context,
-//               MaterialPageRoute(
-//                 builder: (_) => Scaffold(
-//                   body: MultiProvider(
-//                     providers: [
-//                       ChangeNotifierProvider.value(
-//                         value: Provider.of<CartProvider>(context, listen: false),
-//                       ),
-//                       ChangeNotifierProvider.value(
-//                         value: Provider.of<LocalProductProvider>(context, listen: false),
-//                       ),
-//                       // Add other providers as needed...
-//                     ],
-//                     child: BillingPageMobile(),
-//                   ),
-//                 ),
-//               ),
-//             );
-//           },
-//           child: const Icon(Icons.phone_android, size: 20),
-//         ),
-//       ],
-//     ),
-//   );
-// }
 
   Widget _buildHeaderCell(String text,
       {required int flex, required Alignment alignment}) {
@@ -1861,15 +2079,15 @@ class BillingPageState extends State<BillingPage>
                   true)
               ? BuildPaymentRow(
                   amount:
-                      "INR ${AmountHelper.roundOffAmount(localProductProvider.priceSummary!.discount)}",
+                      "INR ${AmountHelper.roundOffAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
                   title: "Discount",
-                  color: ColorManager.textColor,
+                  color: ColorManager.kButtonGreen,
                 )
               : BuildPaymentRow(
                   amount:
-                      "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)}",
+                      "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
                   title: "Discount",
-                  color: ColorManager.textColor,
+                  color: ColorManager.kButtonGreen,
                 ),
           const Divider(thickness: 2),
           BuildPaymentRow(
@@ -1880,7 +2098,7 @@ class BillingPageState extends State<BillingPage>
               FontWeightManager.bold,
               FontSize.s15,
               0.23,
-              ColorManager.textColor,
+              ColorManager.kPrimaryColor,
             ),
             firstRowTextStyle: buildCustomStyle(
               FontWeightManager.bold,
@@ -1926,7 +2144,7 @@ class BillingPageState extends State<BillingPage>
         ),
         BuildPaymentRow(
           amount:
-              "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)}",
+              "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
           title: "Discount",
           color: ColorManager.textColor,
         ),
@@ -2009,7 +2227,11 @@ class BillingPageState extends State<BillingPage>
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            (salesExecutivemobileNumberText != "")
+            (salesExecutivemobileNumberText != "" &&
+                    !_isCustomerManuallySelected &&
+                    Provider.of<LocalProductProvider>(context, listen: false)
+                            .currentOrder ==
+                        null)
                 ? Expanded(
                     child: buildColumnWidgetForTextFields(
                       controller: mobileNumberTextController,
@@ -2459,66 +2681,156 @@ class BillingPageState extends State<BillingPage>
                     ),
                   ),
             const SizedBox(width: 10),
-            BuildBoxShadowContainer(
-              height: size.height * .07,
-              width: 50,
-              circleRadius: 5,
-              child: InkWell(
-                onTap: () => {
-                  debugPrint("❌ CLEAR CUSTOMER BUTTON PRESSED"),
-                  debugPrint("  - Before clear:"),
-                  debugPrint(
-                      "    - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'"),
-                  debugPrint("    - mobileNumberText: '$mobileNumberText'"),
-                  debugPrint(
-                      "    - mobileNumberTextController.text: '${mobileNumberTextController.text}'"),
+            Row(
+              children: [
+                // Plus button - only show when no customer is selected
+                if (selectedCustomerID == null && !isCustomerFound) ...[
+                  BuildBoxShadowContainer(
+                    height: size.height * .07,
+                    width: 50,
+                    circleRadius: 5,
+                    child: InkWell(
+                      onTap: () async {
+                        debugPrint("ADD NEW CUSTOMER BUTTON PRESSED");
+                        final result = await showAddCustomerModal(context, size,
+                            mobileNumber: mobileNumberTextController.text);
+                        if (result != null &&
+                            result is Map &&
+                            result['status'] == 'success') {
+                          final createdPhone =
+                              (result['phone'] ?? '').toString();
+                          final createdName = (result['name'] ?? '').toString();
+                          // Try to fetch the newly created customer by phone and auto-select
+                          try {
+                            String? accessToken =
+                                Provider.of<AuthModel>(context, listen: false)
+                                    .token;
+                            final response = await CustomerProvider()
+                                .findCustomerByPhone(
+                                    accessToken ?? '', createdPhone, context);
+                            if (response != null &&
+                                response['status'] == 'success') {
+                              final listModel =
+                                  CustomerListModel.fromJson(response);
+                              final list = listModel.data ?? [];
+                              if (list.isNotEmpty) {
+                                final selection = list.first;
+                                Provider.of<CustomerSelectionProvider>(context,
+                                        listen: false)
+                                    .setSelectedCustomer(selection);
+                                setState(() {
+                                  // Seed the Autocomplete with display text and rebuild it
+                                  mobileNumberText =
+                                      "${selection.name} ${selection.phone}";
+                                  _autocompletePhoneKey = GlobalKey();
 
-                  // Clear the global customer selection provider
-                  Provider.of<CustomerSelectionProvider>(context, listen: false)
-                      .clearSelectedCustomer(),
+                                  selectedCustomerID = selection.id!;
+                                  selectedCustomerPhone = selection.phone;
+                                  selectedCustomer = selection;
+                                  mobileNumberTextController.text =
+                                      "${selection.name} ${selection.phone}";
+                                  _isCustomerManuallySelected = true;
+                                  isCustomerFound = true;
+                                });
+                              } else {
+                                // Fallback: show name+phone from modal
+                                setState(() {
+                                  // Seed the Autocomplete and rebuild
+                                  mobileNumberText =
+                                      "$createdName $createdPhone".trim();
+                                  _autocompletePhoneKey = GlobalKey();
 
-                  setState(() {
-                    _autocompletePhoneKey = GlobalKey();
-                    mobileNumberTextController.clear();
-                    mobileNumberText = "";
-                    selectedCustomerID = null;
-                    selectedCustomerPhone = null;
-                    selectedCustomer = null;
-                    isCustomerFound = false;
-                    salesExecutivemobileNumberText = "";
-                    _isCustomerManuallySelected = false; // Reset the flag
-                    debugPrint(
-                        "  - Reset manual selection (clear button pressed)");
-                  }),
+                                  mobileNumberTextController.text =
+                                      "$createdName $createdPhone".trim();
+                                  _isCustomerManuallySelected = true;
+                                  isCustomerFound = true;
+                                });
+                              }
+                            }
+                          } catch (e) {
+                            // On any error, at least reflect the phone/name entered
+                            setState(() {
+                              mobileNumberText =
+                                  "$createdName $createdPhone".trim();
+                              _autocompletePhoneKey = GlobalKey();
 
-                  debugPrint("  - After clear:"),
-                  debugPrint(
-                      "    - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'"),
-                  debugPrint("    - mobileNumberText: '$mobileNumberText'"),
-                  debugPrint(
-                      "    - mobileNumberTextController.text: '${mobileNumberTextController.text}'"),
-
-                  showScaffold(
-                    context: context,
-                    message: 'Customer Details Cleared Successfully',
-                  )
-                },
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Center(
-                        child: WebsafeSvg.asset(
-                          ImageAssets.oderlistCloseIcon,
-                          width: 27,
-                          color: ColorManager.kButtonRed,
+                              mobileNumberTextController.text =
+                                  "$createdName $createdPhone".trim();
+                              _isCustomerManuallySelected = true;
+                              isCustomerFound = true;
+                            });
+                          }
+                        }
+                      },
+                      child: const Center(
+                        child: Icon(
+                          Icons.add,
+                          size: 27,
+                          color: ColorManager.kButtonGreen,
                         ),
                       ),
-                    ],
+                    ),
+                  ),
+                  const SizedBox(
+                      width: 10), // Spacing between plus and close buttons
+                ],
+
+                // Close button - always show
+                BuildBoxShadowContainer(
+                  height: size.height * .07,
+                  width: 50,
+                  circleRadius: 5,
+                  child: InkWell(
+                    onTap: () => {
+                      debugPrint("❌ CLEAR CUSTOMER BUTTON PRESSED"),
+                      debugPrint("  - Before clear:"),
+                      debugPrint(
+                          "    - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'"),
+                      debugPrint("    - mobileNumberText: '$mobileNumberText'"),
+                      debugPrint(
+                          "    - mobileNumberTextController.text: '${mobileNumberTextController.text}'"),
+
+                      // Clear the global customer selection provider
+                      Provider.of<CustomerSelectionProvider>(context,
+                              listen: false)
+                          .clearSelectedCustomer(),
+
+                      setState(() {
+                        _autocompletePhoneKey = GlobalKey();
+                        mobileNumberTextController.clear();
+                        mobileNumberText = "";
+                        selectedCustomerID = null;
+                        selectedCustomerPhone = null;
+                        selectedCustomer = null;
+                        isCustomerFound = false;
+                        salesExecutivemobileNumberText = "";
+                        _isCustomerManuallySelected = false;
+                        debugPrint(
+                            "  - Reset manual selection (clear button pressed)");
+                      }),
+
+                      debugPrint("  - After clear:"),
+                      debugPrint(
+                          "    - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'"),
+                      debugPrint("    - mobileNumberText: '$mobileNumberText'"),
+                      debugPrint(
+                          "    - mobileNumberTextController.text: '${mobileNumberTextController.text}'"),
+
+                      showScaffold(
+                        context: context,
+                        message: 'Customer Details Cleared Successfully',
+                      )
+                    },
+                    child: Center(
+                      child: WebsafeSvg.asset(
+                        ImageAssets.oderlistCloseIcon,
+                        width: 27,
+                        color: ColorManager.kButtonRed,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
             // if (selectedCustomerID == null || !isCustomerFound) ...[
             //   const SizedBox(width: 10),
@@ -2701,19 +3013,27 @@ class BillingPageState extends State<BillingPage>
       isLoadingClearCart = true; // Indicate that loading has started
     });
     try {
-      Provider.of<LocalProductProvider>(context, listen: false).clearCart();
+      // Clear local cart
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      localProductProvider.clearCart();
+      localProductProvider.clearCurrentOrder();
+
+      // Clear UI state
       setState(() {
         coupenCodeTextController.clear();
         _transactionNumberController.clear();
         _paidAmountController.clear();
         _balanceAmount = 0;
-        // Reset multi-payment fields
-        _isCashSelected = true;
+        // Reset all payment methods to none
+        _isCashSelected = false;
         _isCardSelected = false;
         _isUpiSelected = false;
+        _isDebitSelected = false;
         _cashAmountController.clear();
         _cardAmountController.clear();
         _upiAmountController.clear();
+        _debitAmountController.clear();
         _autocompleteProductKey = GlobalKey();
         quantityController.clear();
         barcodeController.clear();
@@ -2721,9 +3041,23 @@ class BillingPageState extends State<BillingPage>
         unitPriceController.clear();
         isCouponApplied = false;
         _isCustomerManuallySelected = false;
+        _toCustomerCreditEnabled = false;
         // Clear delivery date and time
         deliveryDate = null;
         deliveryTime = null;
+        // Clear delivery comment and car number
+        _commentController.clear();
+        _carNumberController.clear();
+
+        // Clear customer-related state completely
+        mobileNumberText = "";
+        selectedCustomerID = null;
+        selectedCustomerPhone = null;
+        selectedCustomer = null;
+        isCustomerFound = false;
+        salesExecutivemobileNumberText = "";
+        mobileNumberTextController.clear();
+        _autocompletePhoneKey = GlobalKey();
       });
       showScaffold(
         context: context,
@@ -2800,46 +3134,9 @@ class BillingPageState extends State<BillingPage>
         debugPrint("💾 Updating existing order: ${currentOrder.orderNumber}");
 
         // Get payment method and data using multi-payment system
-        String paymentMethod = "";
-        String paidAmount = "";
-
-        List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-        if (selectedPaymentMethods.length > 1) {
-          // Multi-payment: store as JSON
-          Map<String, dynamic> multiPaymentData = {
-            "methods": selectedPaymentMethods,
-            "amounts": {
-              "CASH": _cashAmountController.text.isNotEmpty
-                  ? _cashAmountController.text
-                  : "0",
-              "CARD": _cardAmountController.text.isNotEmpty
-                  ? _cardAmountController.text
-                  : "0",
-              "UPI": _upiAmountController.text.isNotEmpty
-                  ? _upiAmountController.text
-                  : "0",
-            },
-            "isMultiPayment": true
-          };
-          paymentMethod = json.encode(multiPaymentData);
-          paidAmount = _getTotalPaidAmount().toString();
-        } else {
-          // Single payment method
-          if (selectedPaymentMethods.isNotEmpty) {
-            paymentMethod = selectedPaymentMethods.first;
-            if (paymentMethod == "CASH") {
-              paidAmount = _cashAmountController.text;
-            } else if (paymentMethod == "CARD") {
-              paidAmount = _cardAmountController.text;
-            } else if (paymentMethod == "UPI") {
-              paidAmount = _upiAmountController.text;
-            }
-          } else {
-            // Default to cash if no payment method selected
-            paymentMethod = "CASH";
-            paidAmount = "0";
-          }
-        }
+        Map<String, String> paymentData = _getPaymentMethodData();
+        String paymentMethod = paymentData["paymentMethod"]!;
+        String paidAmount = paymentData["paidAmount"]!;
 
         // Debug customer info being saved
         debugPrint("📝 UPDATING ORDER - Customer info:");
@@ -2852,24 +3149,7 @@ class BillingPageState extends State<BillingPage>
 
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave;
-
-        if (selectedCustomerID != null) {
-          // Customer is selected from list
-          customerPhoneToSave = selectedCustomerPhone;
-          debugPrint(
-              "  ✅ Customer from list - using selectedCustomerPhone: '$customerPhoneToSave'");
-        } else if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
-          // Phone number entered directly (not from customer list)
-          customerPhoneToSave = mobileNumberText;
-          debugPrint(
-              "  ✅ Phone-only order - using mobileNumberText: '$customerPhoneToSave'");
-        } else {
-          // Fallback to selectedCustomerPhone
-          customerPhoneToSave = selectedCustomerPhone;
-          debugPrint(
-              "  ⚠️ Fallback - using selectedCustomerPhone: '$customerPhoneToSave'");
-        }
+        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
 
         localProductProvider.updateSavedOrder(
           currentOrder.id,
@@ -2889,6 +3169,7 @@ class BillingPageState extends State<BillingPage>
           status: "saved",
           deliveryDate: deliveryDate, // Pass deliveryDate
           deliveryTime: deliveryTime, // Pass deliveryTime
+          toCustomerCredit: _toCustomerCreditEnabled,
           // context: context, // Pass context
         );
 
@@ -2896,41 +3177,8 @@ class BillingPageState extends State<BillingPage>
           context: context,
           message: "Order Updated Successfully",
         );
-
-        // Clear cart after successful update
-        localProductProvider.clearCart();
-
-        // Clear form fields
-        setState(() {
-          mobileNumberText = ""; // Clear the variable
-          selectedCustomerID = null;
-          selectedCustomerPhone = null;
-          mobileNumberTextController.clear();
-          quantityController.clear();
-          barcodeController.clear();
-          selectedProductIdController.clear();
-          unitPriceController.clear();
-          isCustomerFound = false;
-          selectedCustomer = null;
-          isCouponApplied = false;
-          coupenCodeTextController.clear();
-          _transactionNumberController.clear();
-          _paidAmountController.clear();
-          _balanceAmount = 0;
-          _carNumberController.clear();
-          _commentController.clear();
-          _isCustomerManuallySelected = false; // Reset manual selection after save
-          deliveryDate = null;
-          deliveryTime = null;
-        });
-
-        resetAutocomplete(shouldFetchCustomers: false); // Preserve customer selection after saving
-        _focusTextField();
-
-        // Reset to default sales executive after saving only if no manual customer was selected
-        if (!_isCustomerManuallySelected) {
-          _fetchCustomers();
-        }
+        // Centralized clear
+        _clearCart();
       } else {
         // Save as new order
         debugPrint("💾 Saving as new order");
@@ -2946,67 +3194,12 @@ class BillingPageState extends State<BillingPage>
 
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave;
-
-        if (selectedCustomerID != null) {
-          // Customer is selected from list
-          customerPhoneToSave = selectedCustomerPhone;
-          debugPrint(
-              "  ✅ Customer from list - using selectedCustomerPhone: '$customerPhoneToSave'");
-        } else if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
-          // Phone number entered directly (not from customer list)
-          customerPhoneToSave = mobileNumberText;
-          debugPrint(
-              "  ✅ Phone-only order - using mobileNumberText: '$customerPhoneToSave'");
-        } else {
-          // Fallback to selectedCustomerPhone
-          customerPhoneToSave = selectedCustomerPhone;
-          debugPrint(
-              "  ⚠️ Fallback - using selectedCustomerPhone: '$customerPhoneToSave'");
-        }
+        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
 
         // Determine payment method and data
-        String paymentMethod = "";
-        String paidAmount = "";
-
-        // Check if multi-payment is being used
-        List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-        if (selectedPaymentMethods.length > 1) {
-          // Multi-payment: store as JSON
-          Map<String, dynamic> multiPaymentData = {
-            "methods": selectedPaymentMethods,
-            "amounts": {
-              "CASH": _cashAmountController.text.isNotEmpty
-                  ? _cashAmountController.text
-                  : "0",
-              "CARD": _cardAmountController.text.isNotEmpty
-                  ? _cardAmountController.text
-                  : "0",
-              "UPI": _upiAmountController.text.isNotEmpty
-                  ? _upiAmountController.text
-                  : "0",
-            },
-            "isMultiPayment": true
-          };
-          paymentMethod = json.encode(multiPaymentData);
-          paidAmount = _getTotalPaidAmount().toString();
-        } else {
-          // Single payment method
-          if (selectedPaymentMethods.isNotEmpty) {
-            paymentMethod = selectedPaymentMethods.first;
-            if (paymentMethod == "CASH") {
-              paidAmount = _cashAmountController.text;
-            } else if (paymentMethod == "CARD") {
-              paidAmount = _cardAmountController.text;
-            } else if (paymentMethod == "UPI") {
-              paidAmount = _upiAmountController.text;
-            }
-          } else {
-            // Default to cash if no payment method selected
-            paymentMethod = "CASH";
-            paidAmount = "0";
-          }
-        }
+        Map<String, String> paymentData = _getPaymentMethodData();
+        String paymentMethod = paymentData["paymentMethod"]!;
+        String paidAmount = paymentData["paidAmount"]!;
 
         localProductProvider.saveCurrentCartAsOrder(
           customerName: customerNameToSave,
@@ -3018,48 +3211,25 @@ class BillingPageState extends State<BillingPage>
           paymentMethod: paymentMethod,
           paidAmount: paidAmount,
           balanceAmount: _balanceAmount.toString(),
+          transactionId: _transactionNumberController.text,
+          couponId: isCouponApplied ? coupenCodeTextController.text : null,
+          deliveryMethodId: deliveryMethodId,
+          carNumber: _carNumberController.text,
+          status: "saved",
+          deliveryDate: deliveryDate,
+          deliveryTime: deliveryTime,
           context: context, // Pass context
+          toCustomerCredit: _toCustomerCreditEnabled,
         );
 
         showScaffold(
           context: context,
           message: "Order Saved Successfully",
         );
-
-        // Clear cart after successful save
-        localProductProvider.clearCart();
-
-        // Clear form fields
-        setState(() {
-          mobileNumberText = ""; // Clear the variable
-          selectedCustomerID = null;
-          selectedCustomerPhone = null;
-          mobileNumberTextController.clear();
-          quantityController.clear();
-          barcodeController.clear();
-          selectedProductIdController.clear();
-          unitPriceController.clear();
-          isCustomerFound = false;
-          selectedCustomer = null;
-          isCouponApplied = false;
-          coupenCodeTextController.clear();
-          _transactionNumberController.clear();
-          _paidAmountController.clear();
-          _balanceAmount = 0;
-          _carNumberController.clear();
-          _commentController.clear();
-          _isCustomerManuallySelected = false; // Reset manual selection after save
-          deliveryDate = null;
-          deliveryTime = null;
-        });
-
-        resetAutocomplete(shouldFetchCustomers: false); // Preserve customer selection after saving
-        _focusTextField();
-
-        // Reset to default sales executive after saving only if no manual customer was selected
-        if (!_isCustomerManuallySelected) {
-          _fetchCustomers();
-        }
+        resetAutocomplete();
+        _fetchCustomers();
+        // Centralized clear
+        _clearCart();
       }
     } catch (e) {
       debugPrint("Error saving order: $e");
@@ -3137,67 +3307,13 @@ class BillingPageState extends State<BillingPage>
 
           // **FIX**: Properly determine customer info for phone-only orders
           String? customerNameToSave = selectedCustomer?.name;
-          String? customerPhoneToSave;
-
-          if (selectedCustomerID != null) {
-            // Customer is selected from list
-            customerPhoneToSave = selectedCustomerPhone;
-            debugPrint(
-                "  ✅ Save&Print(fallback) - Customer from list: '$customerPhoneToSave'");
-          } else if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
-            // Phone number entered directly (not from customer list)
-            customerPhoneToSave = mobileNumberText;
-            debugPrint(
-                "  ✅ Save&Print(fallback) - Phone-only order: '$customerPhoneToSave'");
-          } else {
-            // Fallback to selectedCustomerPhone
-            customerPhoneToSave = selectedCustomerPhone;
-            debugPrint(
-                "  ⚠️ Save&Print(fallback) - Fallback: '$customerPhoneToSave'");
-          }
+          String? customerPhoneToSave =
+              selectedCustomerPhone ?? mobileNumberText;
 
           // Determine payment method and data
-          String paymentMethod = "";
-          String paidAmount = "";
-
-          // Check if multi-payment is being used
-          List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-          if (selectedPaymentMethods.length > 1) {
-            // Multi-payment: store as JSON
-            Map<String, dynamic> multiPaymentData = {
-              "methods": selectedPaymentMethods,
-              "amounts": {
-                "CASH": _cashAmountController.text.isNotEmpty
-                    ? _cashAmountController.text
-                    : "0",
-                "CARD": _cardAmountController.text.isNotEmpty
-                    ? _cardAmountController.text
-                    : "0",
-                "UPI": _upiAmountController.text.isNotEmpty
-                    ? _upiAmountController.text
-                    : "0",
-              },
-              "isMultiPayment": true
-            };
-            paymentMethod = json.encode(multiPaymentData);
-            paidAmount = _getTotalPaidAmount().toString();
-          } else {
-            // Single payment method
-            if (selectedPaymentMethods.isNotEmpty) {
-              paymentMethod = selectedPaymentMethods.first;
-              if (paymentMethod == "CASH") {
-                paidAmount = _cashAmountController.text;
-              } else if (paymentMethod == "CARD") {
-                paidAmount = _cardAmountController.text;
-              } else if (paymentMethod == "UPI") {
-                paidAmount = _upiAmountController.text;
-              }
-            } else {
-              // Default to cash if no payment method selected
-              paymentMethod = "CASH";
-              paidAmount = "0";
-            }
-          }
+          Map<String, String> paymentData = _getPaymentMethodData();
+          String paymentMethod = paymentData["paymentMethod"]!;
+          String paidAmount = paymentData["paidAmount"]!;
 
           orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
             customerName: customerNameToSave,
@@ -3216,6 +3332,7 @@ class BillingPageState extends State<BillingPage>
             status: "confirmed",
             deliveryDate: deliveryDate, // Pass deliveryDate
             deliveryTime: deliveryTime, // Pass deliveryTime
+            toCustomerCredit: _toCustomerCreditEnabled,
           );
 
           showScaffold(
@@ -3229,66 +3346,12 @@ class BillingPageState extends State<BillingPage>
 
         // **FIX**: Properly determine customer info for phone-only orders
         String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave;
-
-        if (selectedCustomerID != null) {
-          // Customer is selected from list
-          customerPhoneToSave = selectedCustomerPhone;
-          debugPrint(
-              "  ✅ Save&Print - Customer from list: '$customerPhoneToSave'");
-        } else if (mobileNumberText != null && mobileNumberText!.isNotEmpty) {
-          // Phone number entered directly (not from customer list)
-          customerPhoneToSave = mobileNumberText;
-          debugPrint(
-              "  ✅ Save&Print - Phone-only order: '$customerPhoneToSave'");
-        } else {
-          // Fallback to selectedCustomerPhone
-          customerPhoneToSave = selectedCustomerPhone;
-          debugPrint("  ⚠️ Save&Print - Fallback: '$customerPhoneToSave'");
-        }
+        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
 
         // Determine payment method and data
-        String paymentMethod = "";
-        String paidAmount = "";
-
-        // Check if multi-payment is being used
-        List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-        if (selectedPaymentMethods.length > 1) {
-          // Multi-payment: store as JSON
-          Map<String, dynamic> multiPaymentData = {
-            "methods": selectedPaymentMethods,
-            "amounts": {
-              "CASH": _cashAmountController.text.isNotEmpty
-                  ? _cashAmountController.text
-                  : "0",
-              "CARD": _cardAmountController.text.isNotEmpty
-                  ? _cardAmountController.text
-                  : "0",
-              "UPI": _upiAmountController.text.isNotEmpty
-                  ? _upiAmountController.text
-                  : "0",
-            },
-            "isMultiPayment": true
-          };
-          paymentMethod = json.encode(multiPaymentData);
-          paidAmount = _getTotalPaidAmount().toString();
-        } else {
-          // Single payment method
-          if (selectedPaymentMethods.isNotEmpty) {
-            paymentMethod = selectedPaymentMethods.first;
-            if (paymentMethod == "CASH") {
-              paidAmount = _cashAmountController.text;
-            } else if (paymentMethod == "CARD") {
-              paidAmount = _cardAmountController.text;
-            } else if (paymentMethod == "UPI") {
-              paidAmount = _upiAmountController.text;
-            }
-          } else {
-            // Default to cash if no payment method selected
-            paymentMethod = "CASH";
-            paidAmount = "0";
-          }
-        }
+        Map<String, String> paymentData = _getPaymentMethodData();
+        String paymentMethod = paymentData["paymentMethod"]!;
+        String paidAmount = paymentData["paidAmount"]!;
 
         orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
           customerName: customerNameToSave,
@@ -3307,6 +3370,7 @@ class BillingPageState extends State<BillingPage>
           status: "confirmed",
           deliveryDate: deliveryDate, // Pass deliveryDate
           deliveryTime: deliveryTime, // Pass deliveryTime
+          toCustomerCredit: _toCustomerCreditEnabled,
         );
 
         showScaffold(
@@ -3319,48 +3383,12 @@ class BillingPageState extends State<BillingPage>
         // Print the order that was just confirmed
         printFromSavedOrder(orderToUse);
       } catch (error) {
-        debugPrint(error.toString());
+        debugPrint("Error printing saved order: ${error.toString()}");
       }
-
-      localProductProvider.clearCart();
-
-      // Clear form fields
-      setState(() {
-        mobileNumberText = ""; // Clear the variable
-        selectedCustomerID = null;
-        selectedCustomerPhone = null;
-        // Remove iconColor reset
-        // iconColor = 1; // DELETE THIS LINE
-        mobileNumberTextController.clear();
-        quantityController.clear();
-        barcodeController.clear();
-        selectedProductIdController.clear();
-        unitPriceController.clear();
-        isCustomerFound = false;
-        selectedCustomer = null;
-        isCouponApplied = false;
-        coupenCodeTextController.clear();
-        _transactionNumberController.clear();
-        _paidAmountController.clear();
-        _balanceAmount = 0;
-        _carNumberController.clear();
-        _commentController.clear();
-        _isCustomerManuallySelected =
-            false; // Reset manual selection after save
-        deliveryDate = null;
-        deliveryTime = null;
-      });
-
-      resetAutocomplete(
-          shouldFetchCustomers:
-              false); // Preserve customer selection after saving
-      _focusTextField();
-
-      // Reset to default sales executive after saving only if no manual customer was selected
-      if (!_isCustomerManuallySelected) {
-        _clearCart();
-        _fetchCustomers();
-      }
+      resetAutocomplete();
+      // Centralized clear
+      _fetchCustomers();
+      _clearCart();
     } catch (error) {
       debugPrint(error.toString());
       showScaffoldError(
@@ -3380,502 +3408,16 @@ class BillingPageState extends State<BillingPage>
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
 
-      // Load the order into the current cart
+      // Load the order into the provider's state
       localProductProvider.loadOrderForEditing(orderId);
 
-      // Get the current order
-      SavedOrder? currentOrder = localProductProvider.currentOrder;
+      // Rehydrate the entire UI from the newly loaded order
+      _rehydrateFromProvider();
 
-      if (currentOrder != null) {
-        debugPrint("===== SAVED ORDER LOADING START =====");
-        debugPrint("📋 LOADING SAVED ORDER FOR EDITING:");
-        debugPrint("  - Order: ${currentOrder.orderNumber}");
-        debugPrint("  - Order ID: ${currentOrder.id}");
-        debugPrint("  - Customer Name: '${currentOrder.customerName}'");
-        debugPrint("  - Customer ID: ${currentOrder.customerId}");
-        debugPrint("  - Customer Phone: '${currentOrder.customerPhone}'");
-        debugPrint("  - Payment Method: ${currentOrder.paymentMethod}");
-        debugPrint("  - Delivery Method: ${currentOrder.deliveryMethod}");
-
-        // **DEBUG**: Log all saved orders to check for phone number mixing
-        debugPrint("🔍 ALL SAVED ORDERS IN MEMORY:");
-        for (int i = 0; i < localProductProvider.savedOrders.length; i++) {
-          final order = localProductProvider.savedOrders[i];
-          debugPrint(
-              "  [$i] ${order.orderNumber} - Phone: '${order.customerPhone}' - Name: '${order.customerName}'");
-        }
-
-        debugPrint("📝 CURRENT STATE BEFORE LOADING:");
-        debugPrint(
-            "  - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
-        debugPrint("  - mobileNumberText: '$mobileNumberText'");
-        debugPrint(
-            "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
-        debugPrint("  - selectedCustomerID: $selectedCustomerID");
-        debugPrint("  - selectedCustomerPhone: $selectedCustomerPhone");
-        debugPrint("  - isCustomerFound: $isCustomerFound");
-        debugPrint("  - customerList length: ${customerList?.length ?? 0}");
-
-        // **FIX: Restore all order details to the UI**
-        setState(() {
-          debugPrint("🔄 INSIDE setState - Starting restore process");
-
-          // **FIX: Clear ALL customer-related state variables first to prevent cross-contamination**
-          debugPrint("🧹 CLEARING ALL CUSTOMER STATE VARIABLES");
-          salesExecutivemobileNumberText = "";
-          mobileNumberText = "";
-          selectedCustomerID = null;
-          selectedCustomerPhone = null;
-          selectedCustomer = null;
-          isCustomerFound = false;
-          mobileNumberTextController.clear();
-          debugPrint("  ✅ All customer state variables cleared");
-
-          // Clear current customer selection provider
-          Provider.of<CustomerSelectionProvider>(context, listen: false)
-              .clearSelectedCustomer();
-          debugPrint("  ✅ Cleared customer selection provider");
-
-          // Restore customer information
-          if (currentOrder.customerId != null ||
-              currentOrder.customerPhone != null) {
-            debugPrint("📋 Customer info found in saved order");
-            selectedCustomerID = currentOrder.customerId;
-            selectedCustomerPhone = currentOrder.customerPhone;
-            debugPrint("  - Set selectedCustomerID: $selectedCustomerID");
-            debugPrint(
-                "  - Set selectedCustomerPhone: '$selectedCustomerPhone'");
-
-            // **FIX: Check if this is the default sales executive customer**
-            final salesExecutiveProvider =
-                Provider.of<SalesExecutiveProvider>(context, listen: false);
-            final currentExecutive =
-                salesExecutiveProvider.getCurrentUser(context);
-            debugPrint("🔍 Checking if default sales executive customer:");
-            debugPrint("  - Current Executive ID: ${currentExecutive?.id}");
-            debugPrint("  - Current Executive Name: ${currentExecutive?.name}");
-            debugPrint(
-                "  - Current Executive Phone: ${currentExecutive?.phone}");
-            debugPrint(
-                "  - Saved Order Customer ID: ${currentOrder.customerId}");
-
-            bool isDefaultSalesExecutiveCustomer = false;
-
-            if (currentExecutive != null &&
-                currentOrder.customerId == currentExecutive.id) {
-              // This is the default sales executive customer - keep read-only behavior
-              isDefaultSalesExecutiveCustomer = true;
-              salesExecutivemobileNumberText = currentOrder.customerPhone ?? "";
-              debugPrint(
-                  "✅ Loading default sales executive customer (read-only)");
-              debugPrint(
-                  "  - Set salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
-
-              // Always show name + phone for sales executive
-              if (currentExecutive.name != null &&
-                  currentExecutive.name!.isNotEmpty) {
-                mobileNumberTextController.text =
-                    "${currentExecutive.name} ${currentExecutive.phone}";
-              } else {
-                mobileNumberTextController.text = currentExecutive.phone ?? "";
-              }
-            } else {
-              // This is a different customer - make field editable
-              salesExecutivemobileNumberText = "";
-              debugPrint("✅ Loading different customer (editable)");
-              debugPrint(
-                  "  - Cleared salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
-            }
-
-            // Find and set the full customer object if available
-            if (customerList != null &&
-                customerList!.isNotEmpty &&
-                currentOrder.customerId != null) {
-              debugPrint(
-                  "🔍 Searching for customer in list of ${customerList!.length} customers");
-              try {
-                selectedCustomer = customerList!.firstWhere(
-                  (customer) => customer.id == currentOrder.customerId,
-                );
-                debugPrint("✅ Found customer in list:");
-                debugPrint("  - ID: ${selectedCustomer!.id}");
-                debugPrint("  - Name: '${selectedCustomer!.name}'");
-                debugPrint("  - Phone: '${selectedCustomer!.phone}'");
-
-                // Update the global customer selection provider
-                Provider.of<CustomerSelectionProvider>(context, listen: false)
-                    .setSelectedCustomer(selectedCustomer!);
-                debugPrint("  ✅ Updated global customer selection provider");
-
-                // **FIX: If this is NOT the sales executive customer, show in autocomplete field**
-                if (!isDefaultSalesExecutiveCustomer) {
-                  // **FIX: Use the exact same format as normal customer selection**
-                  String textToSet = "";
-                  if (selectedCustomer!.name != null &&
-                      selectedCustomer!.name!.isNotEmpty) {
-                    textToSet =
-                        "${selectedCustomer!.name} ${selectedCustomer!.phone}";
-                    debugPrint(
-                        "  📝 Setting text with name+phone: '$textToSet'");
-                  } else {
-                    textToSet = selectedCustomer!.phone ?? "";
-                    debugPrint(
-                        "  📝 Setting text with phone only: '$textToSet'");
-                  }
-                  mobileNumberTextController.text = textToSet;
-                  mobileNumberText = textToSet; // <-- Ensure both are set
-
-                  // **FIX: For custom phone orders, mobileNumberText should be the phone number**
-                  if (isDefaultSalesExecutiveCustomer) {
-                    mobileNumberText = selectedCustomer!.phone ?? "";
-                  } else if (currentOrder.customerId == null) {
-                    // This is a phone-only order, set mobileNumberText to the phone
-                    mobileNumberText = currentOrder.customerPhone ?? "";
-
-                    // **FIX: Mark as manually selected for phone-only orders**
-                    _isCustomerManuallySelected = true;
-                    debugPrint(
-                        "  - 🔒 Marked as manually selected (phone-only order loading)");
-                  } else {
-                    // Regular customer from list, clear mobileNumberText
-                    // mobileNumberText = ""; // <-- Don't clear, keep the text for display
-
-                    // **FIX: Mark as manually selected for customer from list**
-                    _isCustomerManuallySelected = true;
-                    debugPrint(
-                        "  - 🔒 Marked as manually selected (customer from list loading)");
-                  }
-                  debugPrint(
-                      "  - Set mobileNumberText to: '$mobileNumberText'");
-                  debugPrint(
-                      "  - Set mobileNumberTextController.text to: '${mobileNumberTextController.text}'");
-                }
-
-                isCustomerFound = true;
-                debugPrint("  - Set isCustomerFound: $isCustomerFound");
-              } catch (e) {
-                debugPrint(
-                    "⚠️ Customer not found in list, creating virtual customer");
-                debugPrint("  - Error: $e");
-                // Create a virtual customer if not found in list
-                selectedCustomer = CustomerListModelData(
-                  id: currentOrder.customerId,
-                  name: currentOrder.customerName,
-                  phone: currentOrder.customerPhone,
-                );
-                debugPrint("  📝 Created virtual customer:");
-                debugPrint("    - ID: ${selectedCustomer!.id}");
-                debugPrint("    - Name: '${selectedCustomer!.name}'");
-                debugPrint("    - Phone: '${selectedCustomer!.phone}'");
-
-                Provider.of<CustomerSelectionProvider>(context, listen: false)
-                    .setSelectedCustomer(selectedCustomer!);
-                debugPrint("  ✅ Updated global customer selection provider");
-
-                // **FIX: Handle case where name might be null/empty**
-                String textToSet = "";
-                if (selectedCustomer!.name != null &&
-                    selectedCustomer!.name!.isNotEmpty) {
-                  // Show name + phone (normal format)
-                  textToSet =
-                      "${selectedCustomer!.name} ${selectedCustomer!.phone}";
-                  debugPrint("  📝 Setting text with name+phone: '$textToSet'");
-                } else {
-                  // Show only phone number if no name available
-                  textToSet = selectedCustomer!.phone ?? "";
-                  debugPrint("  📝 Setting text with phone only: '$textToSet'");
-                }
-                mobileNumberTextController.text = textToSet;
-
-                // **FIX: Set mobileNumberText correctly based on order type**
-                if (isDefaultSalesExecutiveCustomer) {
-                  mobileNumberText = selectedCustomer!.phone ?? "";
-                } else if (currentOrder.customerId == null &&
-                    currentOrder.customerPhone != null) {
-                  // This is a phone-only order, set mobileNumberText to the phone
-                  mobileNumberText = currentOrder.customerPhone;
-                  debugPrint(
-                      "  - Set mobileNumberText for phone-only case: '$mobileNumberText'");
-
-                  // **FIX: Mark as manually selected for phone-only orders**
-                  _isCustomerManuallySelected = true;
-                  debugPrint(
-                      "  - 🔒 Marked as manually selected (phone-only order loading)");
-                } else {
-                  // Regular customer from list, clear mobileNumberText
-                  mobileNumberText = "";
-                  debugPrint(
-                      "  - Set mobileNumberText to: '$mobileNumberText'");
-
-                  // **FIX: Mark as manually selected for customer from list**
-                  _isCustomerManuallySelected = true;
-                  debugPrint(
-                      "  - 🔒 Marked as manually selected (customer from list loading)");
-                }
-
-                debugPrint(
-                    "  - Set mobileNumberTextController.text to: '${mobileNumberTextController.text}'");
-
-                isCustomerFound = currentOrder.customerId != null;
-                debugPrint("  - Set isCustomerFound: $isCustomerFound");
-              }
-            } else {
-              debugPrint(
-                  "📋 No customer list available or customer ID is null");
-
-              // Check if we have at least a phone number
-              if (currentOrder.customerPhone != null &&
-                  currentOrder.customerPhone!.isNotEmpty) {
-                debugPrint(
-                    "  - Found phone number: '${currentOrder.customerPhone}'");
-
-                // Create virtual customer with available data
-                selectedCustomer = CustomerListModelData(
-                  id: currentOrder.customerId,
-                  name: currentOrder.customerName,
-                  phone: currentOrder.customerPhone,
-                );
-
-                // If we have a customer ID, set it in the provider
-                if (currentOrder.customerId != null) {
-                  Provider.of<CustomerSelectionProvider>(context, listen: false)
-                      .setSelectedCustomer(selectedCustomer!);
-                }
-
-                // **FIX: Handle case where name might be null/empty**
-                if (currentOrder.customerName != null &&
-                    currentOrder.customerName!.isNotEmpty) {
-                  // Show name + phone (normal format)
-                  mobileNumberTextController.text =
-                      "${currentOrder.customerName} ${currentOrder.customerPhone}";
-                  debugPrint(
-                      "  📝 Setting text with name+phone: '${mobileNumberTextController.text}'");
-                } else {
-                  // Show only phone number if no name available
-                  mobileNumberTextController.text =
-                      currentOrder.customerPhone ?? "";
-                  debugPrint(
-                      "  📝 Setting text with phone only: '${mobileNumberTextController.text}'");
-                }
-
-                // **FIX: Set mobileNumberText correctly based on order type**
-                if (isDefaultSalesExecutiveCustomer) {
-                  mobileNumberText = currentOrder.customerPhone ?? "";
-                } else if (currentOrder.customerId == null) {
-                  // This is a phone-only order, set mobileNumberText to the phone
-                  mobileNumberText = currentOrder.customerPhone ?? "";
-                  debugPrint(
-                      "  - Set mobileNumberText for phone-only case: '$mobileNumberText'");
-
-                  // **FIX: Mark as manually selected for phone-only orders**
-                  _isCustomerManuallySelected = true;
-                  debugPrint(
-                      "  - 🔒 Marked as manually selected (phone-only order loading)");
-                } else {
-                  // Regular customer from list, clear mobileNumberText
-                  mobileNumberText = "";
-                }
-
-                isCustomerFound = currentOrder.customerId != null;
-                debugPrint("  - Set isCustomerFound: $isCustomerFound");
-              }
-            }
-          } else {
-            // No customer info in saved order - reset to default behavior
-            debugPrint(
-                "📋 No customer info in saved order, resetting to default");
-            salesExecutivemobileNumberText = ""; // Make field editable
-            selectedCustomerID = null;
-            selectedCustomerPhone = null;
-            selectedCustomer = null;
-            mobileNumberTextController.clear();
-            mobileNumberText = "";
-            isCustomerFound = false;
-
-            // Clear customer selection provider
-            Provider.of<CustomerSelectionProvider>(context, listen: false)
-                .clearSelectedCustomer();
-          }
-
-          // Restore payment method
-          if (currentOrder.paymentMethod != null) {
-            // Check if it's a JSON string (multi-payment)
-            if (currentOrder.paymentMethod!.startsWith('{')) {
-              try {
-                Map<String, dynamic> multiPaymentData = json.decode(
-                    currentOrder.paymentMethod!); // Use json.decode here
-                if (multiPaymentData['isMultiPayment'] == true) {
-                  List<String> methods =
-                      List<String>.from(multiPaymentData['methods'] ?? []);
-                  Map<String, dynamic> amounts = Map<String, dynamic>.from(
-                      multiPaymentData['amounts'] ?? {});
-
-                  // Reset all payment methods first
-                  _isCashSelected = false;
-                  _isCardSelected = false;
-                  _isUpiSelected = false;
-                  _cashAmountController.clear();
-                  _cardAmountController.clear();
-                  _upiAmountController.clear();
-
-                  // Restore multi-payment selections and amounts
-                  if (methods.contains("CASH")) {
-                    _isCashSelected = true;
-                    _cashAmountController.text = amounts['CASH'] ?? "0";
-                  }
-                  if (methods.contains("CARD")) {
-                    _isCardSelected = true;
-                    _cardAmountController.text = amounts['CARD'] ?? "0";
-                  }
-                  if (methods.contains("UPI")) {
-                    _isUpiSelected = true;
-                    _upiAmountController.text = amounts['UPI'] ?? "0";
-                  }
-                } else {
-                  // If it's a JSON string but not marked as multiPayment, treat as single
-                  _isCashSelected = true;
-                  _isCardSelected = false;
-                  _isUpiSelected = false;
-                }
-              } catch (e) {
-                debugPrint("Error parsing multi-payment data: $e");
-                // Fall back to single payment method if parsing fails
-                switch (currentOrder.paymentMethod?.toUpperCase()) {
-                  case "CASH":
-                    _isCashSelected = true;
-                    _isCardSelected = false;
-                    _isUpiSelected = false;
-                    break;
-                  case "CARD":
-                    _isCashSelected = false;
-                    _isCardSelected = true;
-                    _isUpiSelected = false;
-                    break;
-                  case "UPI":
-                    _isCashSelected = false;
-                    _isCardSelected = false;
-                    _isUpiSelected = true;
-                    break;
-                  default:
-                    _isCashSelected = true;
-                    _isCardSelected = false;
-                    _isUpiSelected = false;
-                }
-              }
-            } else {
-              // Single payment method
-              switch (currentOrder.paymentMethod?.toUpperCase()) {
-                case "CASH":
-                  _isCashSelected = true;
-                  _isCardSelected = false;
-                  _isUpiSelected = false;
-                  break;
-                case "CARD":
-                  _isCashSelected = false;
-                  _isCardSelected = true;
-                  _isUpiSelected = false;
-                  break;
-                case "UPI":
-                  _isCashSelected = false;
-                  _isCardSelected = false;
-                  _isUpiSelected = true;
-                  break;
-                default:
-                  _isCashSelected = true;
-                  _isCardSelected = false;
-                  _isUpiSelected = false;
-              }
-            }
-          } else {
-            // Default to cash if no payment method
-            _isCashSelected = true;
-            _isCardSelected = false;
-            _isUpiSelected = false;
-          }
-
-          // Restore payment amounts (for single payment, this will set the primary controller)
-          _paidAmountController.text = currentOrder.paidAmount ?? "0.0";
-          _balanceAmount =
-              double.tryParse(currentOrder.balanceAmount ?? "0.0") ?? 0.0;
-
-          // For single payment methods, also populate the individual payment controllers
-          if (!currentOrder.paymentMethod!.startsWith('{')) {
-            String paidAmount = currentOrder.paidAmount ?? "0.0";
-            if (_isCashSelected) {
-              _cashAmountController.text = paidAmount;
-            } else if (_isCardSelected) {
-              _cardAmountController.text = paidAmount;
-            } else if (_isUpiSelected) {
-              _upiAmountController.text = paidAmount;
-            }
-          }
-
-          // Restore transaction details
-          _transactionNumberController.text = currentOrder.transactionId ?? "";
-
-          // Restore delivery method
-          if (currentOrder.deliveryMethod != null) {
-            deliveryMethod = currentOrder.deliveryMethod!;
-            deliveryMethodId = currentOrder.deliveryMethodId ?? "3";
-          } else {
-            deliveryMethod = "Store Takeaway";
-            deliveryMethodId = "3";
-          }
-
-          // Restore comments and car number
-          _commentController.text = currentOrder.comment ?? "";
-          _carNumberController.text = currentOrder.carNumber ?? "";
-
-          // Restore delivery date and time
-          deliveryDate = currentOrder.deliveryDate;
-          deliveryTime = currentOrder.deliveryTime;
-
-          // Restore coupon if any
-          if (currentOrder.couponId != null &&
-              currentOrder.couponId!.isNotEmpty) {
-            coupenCodeTextController.text = currentOrder.couponId!;
-            isCouponApplied = true;
-          } else {
-            coupenCodeTextController.clear();
-            isCouponApplied = false;
-          }
-          debugPrint("📝 FINAL STATE AFTER LOADING:");
-          debugPrint(
-              "  - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'");
-          debugPrint("  - mobileNumberText: '$mobileNumberText' 🔍");
-          debugPrint(
-              "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
-          debugPrint("  - selectedCustomerID: $selectedCustomerID");
-          debugPrint("  - selectedCustomerPhone: '$selectedCustomerPhone'");
-          debugPrint("  - selectedCustomer?.name: '${selectedCustomer?.name}'");
-          debugPrint("  - isCustomerFound: $isCustomerFound");
-          debugPrint(
-              "  - _isCustomerManuallySelected: $_isCustomerManuallySelected 🔒");
-          debugPrint(
-              "  - 🔍 SUMMARY: Order '${currentOrder.orderNumber}' with phone '${currentOrder.customerPhone}' → mobileNumberText='$mobileNumberText'");
-        });
-
-        debugPrint("✅ Order details restored to UI successfully");
-        debugPrint("===== SAVED ORDER LOADING END =====");
-
-        // Force a complete rebuild of the autocomplete widget
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          debugPrint("🔄 Post-frame callback - forcing rebuild");
-          debugPrint("  - Will reset autocomplete key and trigger rebuild");
-          if (mounted) {
-            setState(() {
-              // **FIX: Reset the autocomplete key to force complete rebuild**
-              _autocompletePhoneKey = GlobalKey();
-              debugPrint("🔨 Triggering rebuild after order load with new key");
-            });
-          }
-        });
-
-        showScaffold(
-          context: context,
-          message: "Order loaded for editing",
-        );
-      }
+      showScaffold(
+        context: context,
+        message: "Order loaded for editing",
+      );
     } catch (error) {
       debugPrint("Error loading order: $error");
       showScaffoldError(
@@ -3914,6 +3456,8 @@ class BillingPageState extends State<BillingPage>
           context: context,
           message: "Please select a payment method",
         );
+        // Show the payment method modal for user to select payment methods
+        _showPaymentMethodModal();
         return;
       }
 
@@ -3940,6 +3484,10 @@ class BillingPageState extends State<BillingPage>
         paymentMethod = "CARD";
       } else if (selectedPaymentMethods.contains("UPI")) {
         paymentMethod = "UPI";
+      } else if (selectedPaymentMethods.contains("DEBIT")) {
+        paymentMethod = "DEBIT";
+      } else if (selectedPaymentMethods.contains("BALANCE")) {
+        paymentMethod = "BALANCE";
       }
       debugPrint("💰 Payment Method: $paymentMethod");
 
@@ -4001,16 +3549,17 @@ class BillingPageState extends State<BillingPage>
           "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
       debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
 
+      final priceSummary = localProductProvider.priceSummary!;
+      debugPrint(
+          "🏷️ Discount Data - Flat: ${priceSummary.flatDiscount}, Percentage: ${priceSummary.percentageDiscount}, Total: ${priceSummary.discount}");
+
       await Provider.of<CartProvider>(context, listen: false)
           .addToOrderAPI(
         items: items,
         cartIds: cartId ?? 0,
         accessToken: accessToken ?? "",
         transactionId: _transactionNumberController.text,
-        totalPrice: Provider.of<LocalProductProvider>(context, listen: false)
-            .priceSummary!
-            .netTotal
-            .toString(),
+        totalPrice: priceSummary.netTotal.toString(),
         customerId: selectedCustomerID,
         customerPhone: selectedCustomerPhone ?? mobileNumberText,
         // Always use multi-payment format
@@ -4026,6 +3575,11 @@ class BillingPageState extends State<BillingPage>
         status: "confirmed",
         deliveryDate: deliveryDate,
         deliveryTime: deliveryTime,
+        // Include discount data
+        flatDiscount: priceSummary.flatDiscount,
+        percentageDiscount: priceSummary.percentageDiscount,
+        discountAmount: priceSummary.discount,
+        toCustomerCredit: _toCustomerCreditEnabled,
       )
           .then((response) async {
         debugPrint(
@@ -4076,6 +3630,7 @@ class BillingPageState extends State<BillingPage>
                   cartItems: orderDetails.data!.cart!.cartItems!,
                   formattedTotal: formattedTotal!,
                   savedTotal: savedTotal!,
+                  discountAmount: orderDetails.data!.priceSummary?.discount?.toString() ?? "0.00",
                   orderDate: orderDate,
                   orderNumber: orderDetails.data!.orderNumber ?? "",
                 ),
@@ -4167,6 +3722,8 @@ class BillingPageState extends State<BillingPage>
           context: context,
           message: "Please select a payment method",
         );
+        // Show the payment method modal for user to select payment methods
+        _showPaymentMethodModal();
         return;
       }
 
@@ -4193,6 +3750,10 @@ class BillingPageState extends State<BillingPage>
         paymentMethod = "CARD";
       } else if (selectedPaymentMethods.contains("UPI")) {
         paymentMethod = "UPI";
+      } else if (selectedPaymentMethods.contains("DEBIT")) {
+        paymentMethod = "DEBIT";
+      } else if (selectedPaymentMethods.contains("BALANCE")) {
+        paymentMethod = "BALANCE";
       }
       debugPrint("💰 Payment Method: $paymentMethod");
 
@@ -4251,7 +3812,7 @@ class BillingPageState extends State<BillingPage>
           "📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
       debugPrint(
           "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
-      debugPrint("�� Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
+      debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
 
       await Provider.of<CartProvider>(context, listen: false)
           .addToOrderAPI(
@@ -4259,10 +3820,7 @@ class BillingPageState extends State<BillingPage>
         cartIds: cartId ?? 0,
         accessToken: accessToken ?? "",
         transactionId: _transactionNumberController.text,
-        totalPrice: Provider.of<LocalProductProvider>(context, listen: false)
-            .priceSummary!
-            .netTotal
-            .toString(),
+        totalPrice: localProductProvider.priceSummary!.netTotal.toString(),
         customerId: selectedCustomerID,
         customerPhone: selectedCustomerPhone ?? mobileNumberText,
         // Always use multi-payment format
@@ -4278,6 +3836,12 @@ class BillingPageState extends State<BillingPage>
         status: "confirmed",
         deliveryDate: deliveryDate,
         deliveryTime: deliveryTime,
+        // Include discount data
+        flatDiscount: localProductProvider.priceSummary!.flatDiscount,
+        percentageDiscount:
+            localProductProvider.priceSummary!.percentageDiscount,
+        discountAmount: localProductProvider.priceSummary!.discount,
+        toCustomerCredit: _toCustomerCreditEnabled,
       )
           .then((response) {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
@@ -4346,17 +3910,166 @@ class BillingPageState extends State<BillingPage>
   }
 
   // Multi-payment helper methods
-  void _updateBalanceAmount() {
+  Map<String, String> _getPaymentMethodData() {
+    List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
+    String paymentMethod = "";
+    String paidAmount = "";
+
+    if (selectedPaymentMethods.length > 1) {
+      // Multi-payment: store as JSON
+      Map<String, dynamic> multiPaymentData = {
+        "methods": selectedPaymentMethods,
+        "amounts": {
+          "CASH": _cashAmountController.text.isNotEmpty
+              ? _cashAmountController.text
+              : "0",
+          "CARD": _cardAmountController.text.isNotEmpty
+              ? _cardAmountController.text
+              : "0",
+          "UPI": _upiAmountController.text.isNotEmpty
+              ? _upiAmountController.text
+              : "0",
+          "DEBIT": _debitAmountController.text.isNotEmpty
+              ? _debitAmountController.text
+              : "0",
+        },
+        "isMultiPayment": true
+      };
+      paymentMethod = json.encode(multiPaymentData);
+      paidAmount = _getTotalPaidAmount().toString();
+    } else {
+      // Single payment method
+      if (selectedPaymentMethods.isNotEmpty) {
+        paymentMethod = selectedPaymentMethods.first;
+        if (paymentMethod == "CASH") {
+          paidAmount = _cashAmountController.text;
+        } else if (paymentMethod == "CARD") {
+          paidAmount = _cardAmountController.text;
+        } else if (paymentMethod == "UPI") {
+          paidAmount = _upiAmountController.text;
+        } else if (paymentMethod == "DEBIT") {
+          paidAmount = _debitAmountController.text;
+        }
+      } else {
+        // No payment method selected - leave empty
+        paymentMethod = "";
+        paidAmount = "0";
+      }
+    }
+
+    return {
+      "paymentMethod": paymentMethod,
+      "paidAmount": paidAmount,
+    };
+  }
+
+  // Helper method to calculate balance using the same logic as the modal
+  double _calculateBalanceAmount() {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     double cartTotal = localProductProvider.cartTotal;
 
-    double totalPaid = _getTotalPaidAmount();
-    double balance = totalPaid - cartTotal;
+    // For balance calculation, only include actual cash payments (not debit/store credit)
+    double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
+    double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
+    double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
+    double totalCollected = cashAmount + cardAmount + upiAmount;
 
+    double balance = 0.0;
+
+    if (_toCustomerCreditEnabled) {
+      debugPrint(
+          '🔛 BILLING PAGE: Toggle is ON - Calculating with customer credit consideration');
+
+      double customerPrevBalance = selectedCustomer?.balance ?? 0.0;
+
+      if (customerPrevBalance < 0) {
+        // Customer has debt - use transaction excess logic for consistency with auto-fill
+        debugPrint('💳 Customer has debt - using transaction excess logic');
+        final transactionExcess = totalCollected - cartTotal;
+        debugPrint(
+            '💰 Transaction excess: ₹${transactionExcess.toStringAsFixed(2)}');
+
+        if (transactionExcess > 0) {
+          // Get the actual customer credit amount being allocated
+          double actualCustomerCredit =
+              double.tryParse(_debitAmountController.text) ?? 0.0;
+
+          // Clamp customer credit to available excess
+          if (actualCustomerCredit > transactionExcess) {
+            actualCustomerCredit = transactionExcess;
+            debugPrint(
+                '  - Clamped customer credit to transaction excess: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+          }
+
+          // Cash balance = transaction excess - customer credit
+          balance = transactionExcess - actualCustomerCredit;
+          debugPrint(
+              '  - Balance = Transaction Excess (₹${transactionExcess.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
+        } else {
+          balance = 0.0;
+          debugPrint('  - No transaction excess, balance = 0');
+        }
+      } else {
+        // Customer has positive/zero balance - use Net Due logic
+        debugPrint('💵 Customer has credit/zero balance - using Net Due logic');
+        // Net Due = Purchase Total - Customer Previous Balance
+        double netDue = cartTotal - customerPrevBalance;
+        debugPrint('💰 Net Due calculation:');
+        debugPrint('  - Purchase Total: ₹${cartTotal.toStringAsFixed(2)}');
+        debugPrint(
+            '  - Customer Prev Balance: ₹${customerPrevBalance.toStringAsFixed(2)}');
+        debugPrint('  - Net Due: ₹${netDue.toStringAsFixed(2)}');
+
+        // Available balance = Total Collected - Net Due
+        double availableBalance = totalCollected - netDue;
+        debugPrint(
+            '  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
+        debugPrint(
+            '  - Available Balance: ₹${availableBalance.toStringAsFixed(2)}');
+
+        if (availableBalance > 0) {
+          // Get the actual customer credit amount being allocated
+          double actualCustomerCredit =
+              double.tryParse(_debitAmountController.text) ?? 0.0;
+
+          // Clamp customer credit to available balance
+          if (actualCustomerCredit > availableBalance) {
+            actualCustomerCredit = availableBalance;
+            debugPrint(
+                '  - Clamped customer credit to available balance: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+          }
+
+          // Cash balance = available balance - customer credit
+          balance = availableBalance - actualCustomerCredit;
+          debugPrint(
+              '  - Balance = Available Balance (₹${availableBalance.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
+        } else {
+          balance = 0.0;
+          debugPrint('  - No available balance, balance = 0');
+        }
+      }
+    } else {
+      debugPrint('🔴 BILLING PAGE: Toggle is OFF - Using simple calculation');
+      // Toggle OFF: Simple calculation without previous balance
+      balance = totalCollected - cartTotal;
+      debugPrint(
+          '  - Balance = Total Collected (₹${totalCollected.toStringAsFixed(2)}) - Cart Total (₹${cartTotal.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
+    }
+
+    // Clamp balance to never show negative values in UI
+    // Negative balance means insufficient payment, but cash drawer can't give negative money
     if (balance < 0) {
+      debugPrint(
+          '🚫 BILLING PAGE: Clamping negative balance (₹${balance.toStringAsFixed(2)}) to 0 for UI display');
       balance = 0.0;
     }
+
+    return balance;
+  }
+
+  void _updateBalanceAmount() {
+    double balance = _calculateBalanceAmount();
 
     setState(() {
       _balanceAmount = balance;
@@ -4367,6 +4080,8 @@ class BillingPageState extends State<BillingPage>
     double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
+    // Note: We don't include debit/toCustomerCredit in total paid amount
+    // as it represents money going to customer credit, not money collected
     return cashAmount + cardAmount + upiAmount;
   }
 
@@ -4383,6 +4098,10 @@ class BillingPageState extends State<BillingPage>
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
       methods.add("UPI");
     }
+    // if (_isDebitSelected &&
+    //     (double.tryParse(_debitAmountController.text) ?? 0) > 0) {
+    //   methods.add("DEBIT");
+    // }
     return methods;
   }
 
@@ -4412,6 +4131,13 @@ class BillingPageState extends State<BillingPage>
       });
     }
 
+    // if (_isDebitSelected &&
+    //     (double.tryParse(_debitAmountController.text) ?? 0) > 0) {
+    //   paidMethods.add({
+    //     "method": "DEBIT",
+    //     "amount": double.tryParse(_debitAmountController.text) ?? 0,
+    //   });
+    // }
     return paidMethods;
   }
 
@@ -4420,8 +4146,14 @@ class BillingPageState extends State<BillingPage>
       builder: (context, localProductProvider, child) {
         double totalPaid = _getTotalPaidAmount();
         double cartTotal = localProductProvider.cartTotal;
-        double balance = totalPaid - cartTotal;
-        if (balance < 0) balance = 0.0;
+        // For balance calculation, only include actual cash payments (not debit/store credit)
+        double cashAmount = double.tryParse(_cashAmountController.text) ?? 0.0;
+        double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
+        double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
+        double actualCashPaid = cashAmount + cardAmount + upiAmount;
+
+        // Use the helper method for consistent balance calculation
+        double balance = _calculateBalanceAmount();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -4453,16 +4185,58 @@ class BillingPageState extends State<BillingPage>
                 ),
                 const SizedBox(width: 12),
                 // Coupon Icon
-                _buildQuickAccessIcon(
-                  icon: isCouponApplied
-                      ? Icons.discount
-                      : Icons.local_offer_outlined,
-                  label: isCouponApplied ? 'Applied' : 'Coupon',
-                  color: isCouponApplied
-                      ? ColorManager.kButtonGreen
-                      : ColorManager.kButtonYellow,
-                  onTap: () => _showCouponModal(),
-                ),
+                Consumer<AppSettingsProvider>(
+                    builder: (context, appSettingsProvider, child) {
+                  // Debug logging for coupon button visibility
+                  debugPrint('🎫 COUPON BUTTON DEBUG:');
+                  debugPrint(
+                      '  - appSettingsProvider.appSettings: ${appSettingsProvider.appSettings}');
+                  if (appSettingsProvider.appSettings != null) {
+                    debugPrint(
+                        '  - discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
+                    debugPrint(
+                        '  - All app settings: ${appSettingsProvider.appSettings.toString()}');
+
+                    // More detailed debugging
+                    debugPrint(
+                        '  - AppSettings runtimeType: ${appSettingsProvider.appSettings.runtimeType}');
+                    debugPrint('  - AppSettings properties:');
+                    try {
+                      // Use reflection to see all properties
+                      final settings = appSettingsProvider.appSettings!;
+                      debugPrint(
+                          '    - barcodeSales: ${settings.barcodeSales}');
+                      debugPrint(
+                          '    - discountAndCoupon: ${settings.discountAndCoupon}');
+                      debugPrint(
+                          '    - priceRoundOff: ${settings.priceRoundOff}');
+                      // Add other properties you know exist
+                    } catch (e) {
+                      debugPrint('    - Error accessing properties: $e');
+                    }
+                  } else {
+                    debugPrint('  - appSettings is NULL');
+                  }
+
+                  if (appSettingsProvider.appSettings == null ||
+                      !appSettingsProvider.appSettings!.discountAndCoupon) {
+                    debugPrint(
+                        '  - ❌ Hiding coupon button (settings null or discountAndCoupon disabled)');
+                    return Container();
+                  }
+
+                  debugPrint('  - ✅ Showing coupon button');
+                  return _buildQuickAccessIcon(
+                    icon: isCouponApplied
+                        ? Icons.discount
+                        : Icons.local_offer_outlined,
+                    label: isCouponApplied ? 'Applied' : 'Coupon',
+                    color: isCouponApplied
+                        ? ColorManager.kButtonGreen
+                        : ColorManager.kButtonYellow,
+                    onTap: () => _showCouponModal(),
+                  );
+                }),
               ],
             ),
             const SizedBox(height: 8),
@@ -4622,21 +4396,37 @@ class BillingPageState extends State<BillingPage>
         initialIsCashSelected: _isCashSelected,
         initialIsCardSelected: _isCardSelected,
         initialIsUpiSelected: _isUpiSelected,
+        initialIsDebitSelected: _isDebitSelected,
         initialCashAmount: _cashAmountController.text,
         initialCardAmount: _cardAmountController.text,
         initialUpiAmount: _upiAmountController.text,
+        initialDebitAmount: _debitAmountController.text,
         initialTransactionNumber: _transactionNumberController.text,
         cartTotal: localProductProvider.cartTotal,
-        onPaymentMethodSelected: (isCash, isCard, isUpi, cashAmount, cardAmount,
-            upiAmount, transactionNumber) {
+        customerPrevBalance: selectedCustomer?.balance ?? 0.0,
+        onPaymentMethodSelected: (isCash,
+            isCard,
+            isUpi,
+            isDebit,
+            cashAmount,
+            cardAmount,
+            upiAmount,
+            debitAmount,
+            transactionNumber,
+            toCustomerCredit) {
           setState(() {
             _isCashSelected = isCash;
             _isCardSelected = isCard;
             _isUpiSelected = isUpi;
+            _isDebitSelected = isDebit;
             _cashAmountController.text = cashAmount;
             _cardAmountController.text = cardAmount;
             _upiAmountController.text = upiAmount;
+            _debitAmountController.text = debitAmount;
             _transactionNumberController.text = transactionNumber;
+            _toCustomerCreditEnabled = toCustomerCredit;
+
+            // Update balance amount using the same calculation logic as the modal
             _updateBalanceAmount();
           });
         },
@@ -4670,16 +4460,44 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _showCouponModal() {
+    debugPrint('🎫 _showCouponModal called');
+    debugPrint(
+        '  - Current app settings: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings}');
+    debugPrint(
+        '  - discountAndCoupon enabled: ${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.discountAndCoupon}');
+
     showDialog(
       context: context,
       builder: (context) => CouponModal(
         initialCouponCode: coupenCodeTextController.text,
         isCouponApplied: isCouponApplied,
-        onCouponAction: (couponCode, shouldApply) async {
+        onCouponAction: (couponCode, shouldApply,
+            {double? flatDiscount, double? percentageDiscount}) async {
           if (shouldApply) {
             coupenCodeTextController.text = couponCode;
-            await _applyCoupon();
+
+            // Apply manual discounts to local product provider
+            final localProductProvider =
+                Provider.of<LocalProductProvider>(context, listen: false);
+            localProductProvider.applyDiscount(
+              flatDiscount: flatDiscount ?? 0.0,
+              percentageDiscount: percentageDiscount ?? 0.0,
+            );
+
+            // Apply coupon if provided
+            if (couponCode.isNotEmpty) {
+              await _applyCoupon();
+            }
+
+            setState(() {
+              isCouponApplied = true;
+            });
           } else {
+            // Clear all discounts
+            final localProductProvider =
+                Provider.of<LocalProductProvider>(context, listen: false);
+            localProductProvider.clearDiscount();
+
             setState(() {
               isCouponApplied = false;
               coupenCodeTextController.clear();
@@ -4783,7 +4601,7 @@ class BillingPageState extends State<BillingPage>
             "  - Skipping _fetchCustomers() because customer was manually selected");
       }
 
-      deliveryMethodId = "3";
+      deliveryMethodId = _getDefaultDeliveryMethodId();
       deliveryMethod = "Store Takeaway";
       // Remove iconColor reset
       // iconColor = 1; // DELETE THIS LINE
@@ -4841,6 +4659,12 @@ class BillingPageState extends State<BillingPage>
             formattedTotal: netTotal.toString(), // Use calculated net total
             savedTotal:
                 youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
+            discountAmount: savedOrder.flatDiscount != null || savedOrder.percentageDiscount != null
+                ? ((savedOrder.flatDiscount ?? 0.0) + 
+                   ((savedOrder.percentageDiscount ?? 0.0) > 0 ? 
+                    (savedOrder.total * (savedOrder.percentageDiscount ?? 0.0) / 100) : 0.0))
+                      .toString()
+                : "0.00",
             orderDate: savedOrder.createdAt,
             orderNumber: savedOrder.orderNumber,
             isFromLocalStorage: true,
@@ -4942,7 +4766,7 @@ class BillingPageState extends State<BillingPage>
       // Clear payment and delivery states
       // iconColor = 1; // Default to cash
       deliveryMethod = "Store Takeaway";
-      deliveryMethodId = "3";
+      deliveryMethodId = _getDefaultDeliveryMethodId();
 
       // Clear all controllers
       coupenCodeTextController.clear();
@@ -5017,5 +4841,57 @@ class BillingPageState extends State<BillingPage>
 
     // Re-fetch customers to set new default based on new executive
     _fetchCustomers();
+  }
+
+  void _initializeDeliveryMethod() {
+    // Set initial default values
+    deliveryMethod = "Store Takeaway";
+    deliveryMethodId = "11"; // Updated to match API response
+
+    // Listen for delivery methods to be loaded and update default
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final deliveryMethodsProvider =
+          Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+      // Add listener to update default when delivery methods are loaded
+      deliveryMethodsProvider.addListener(() {
+        if (!deliveryMethodsProvider.isLoading &&
+            deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
+          final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+          if (defaultMethod != null) {
+            setState(() {
+              deliveryMethod = defaultMethod.name;
+              deliveryMethodId = defaultMethod.id;
+            });
+            debugPrint(
+                "🚚 Updated default delivery method: ${defaultMethod.name} (ID: ${defaultMethod.id})");
+          }
+        }
+      });
+
+      // If delivery methods are already loaded, set the default immediately
+      if (!deliveryMethodsProvider.isLoading &&
+          deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
+        final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+        if (defaultMethod != null) {
+          deliveryMethod = defaultMethod.name;
+          deliveryMethodId = defaultMethod.id;
+          debugPrint(
+              "🚚 Set initial default delivery method: ${defaultMethod.name} (ID: ${defaultMethod.id})");
+        }
+      }
+    });
+  }
+
+  String _getDefaultDeliveryMethodId() {
+    try {
+      final deliveryMethodsProvider =
+          Provider.of<DeliveryMethodsProvider>(context, listen: false);
+      final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+      return defaultMethod?.id ??
+          "11"; // Fallback to Store Takeaway ID from API
+    } catch (e) {
+      return "11"; // Fallback to Store Takeaway ID from API
+    }
   }
 }

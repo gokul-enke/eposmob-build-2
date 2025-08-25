@@ -1,7 +1,11 @@
 import 'dart:ui';
+import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -18,12 +22,19 @@ import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/screens/print/print_standard.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:cross_file/cross_file.dart';
 
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../models/list_sales_order.dart';
 import '../../providers/auth_model.dart';
+import '../../resources/app_url.dart';
 import '../../resources/color_manager.dart';
 
 import '../../resources/font_manager.dart';
@@ -55,13 +66,27 @@ class _SalesScreenState extends State<SalesScreen> {
 
   bool initLoading = false;
 
+  // Helper method to get or create the epos directory
+  Future<Directory> _getEposDirectory() async {
+    final documentsDirectory = await getApplicationDocumentsDirectory();
+    final eposDirectory = Directory('${documentsDirectory.path}/epos');
+    
+    // Create epos directory if it doesn't exist
+    if (!await eposDirectory.exists()) {
+      await eposDirectory.create(recursive: true);
+      debugPrint('Created epos directory: ${eposDirectory.path}');
+    }
+    
+    return eposDirectory;
+  }
+
   @override
   void initState() {
     loadInitData();
     super.initState();
   }
 
-  Future<void> downloadFile(String orderNumber) async {
+  Future<void> downloadFile(String invoiceHash) async {
     try {
       // Show loading indicator
       showDialog(
@@ -75,14 +100,14 @@ class _SalesScreenState extends State<SalesScreen> {
       );
 
       // URL of the PDF file
-      final url = 'https://hypersouq.enke.in/download-invoice/$orderNumber';
+      final url = '${APPUrl.baseURL}/invoice-download/$invoiceHash';
       debugPrint('Attempting to download from: $url');
 
-      // Get the application directory
-      final directory = await getApplicationDocumentsDirectory();
+      // Get the epos directory
+      final eposDirectory = await _getEposDirectory();
 
-      // Create a file path for the PDF
-      final filePath = '${directory.path}/invoice_$orderNumber.pdf';
+      // Create a file path for the PDF in the epos folder
+      final filePath = '${eposDirectory.path}/invoice_$invoiceHash.pdf';
 
       // Configure Dio with options
       final dio = Dio();
@@ -104,7 +129,7 @@ class _SalesScreenState extends State<SalesScreen> {
       if (response.statusCode == 200) {
         showScaffold(
           context: context,
-          message: 'Invoice downloaded successfully to ${directory.path}',
+          message: 'Invoice downloaded successfully to ${eposDirectory.path}',
         );
         debugPrint('File downloaded successfully to $filePath');
       } else if (response.statusCode == 404) {
@@ -151,6 +176,298 @@ class _SalesScreenState extends State<SalesScreen> {
         message: errorMessage,
       );
       debugPrint('Error downloading file: $e');
+    }
+  }
+
+  Future<void> _sharePDFInvoice(ListOrderModelData order) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
+      );
+
+      // Fetch order details
+      final String ordersId = order.orderNumber.toString();
+      final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+      final OrderDetailsresponse = await SalesProvider()
+          .listOrderDetails(context, ordersId, accessToken ?? "");
+      
+      if (OrderDetailsresponse["status"] != "success") {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Unable to fetch order details for PDF generation.',
+          );
+        }
+        return;
+      }
+
+      final OrderDetailsModel details = OrderDetailsModel.fromJson(OrderDetailsresponse);
+      final orderData = details.data;
+      
+      if (orderData == null || orderData.cart?.cartItems == null) {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Order details not available for PDF generation.',
+          );
+        }
+        return;
+      }
+
+      // Get app settings and document configuration
+      final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
+      final docConfigProvider = Provider.of<DocumentConfigProvider>(context, listen: false);
+      
+      final appSettings = appSettingsProvider.appSettings;
+      final billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+      
+      if (appSettings == null || billDocumentConfig == null) {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'App settings or document configuration not loaded.',
+          );
+        }
+        return;
+      }
+
+      // Create StandardPrinter instance and generate PDF
+      final standardPrinter = StandardPrinter(context);
+      
+      // Use the cart items directly without conversion since the PDF method expects the original objects
+      final File? pdfFile = await standardPrinter.generatePDFForSharing(
+        cartItems: orderData.cart!.cartItems!,
+        formattedTotal: orderData.priceSummary?.netPayable?.toString() ?? order.grantTotal ?? '0.00',
+        savedTotal: orderData.priceSummary?.savedTotal?.toString() ?? '0.00',
+        discountAmount: orderData.priceSummary?.discount?.toString() ?? '0.00',
+        orderDate: orderData.orderDate ?? DateTime.now().toIso8601String(),
+        orderNumber: orderData.orderNumber?.toString() ?? order.orderNumber.toString(),
+        isFromLocalStorage: false,
+        selectedPaperSize: 'A4', // Default to A4 for sharing
+        billDocumentConfig: billDocumentConfig,
+        customerCareNumber: appSettings.customerCarePhone,
+        customerCareEmail: appSettings.customerCareEmail,
+        customerName: orderData.customerDetails?.name,
+        customerPhone: orderData.customerDetails?.phone,
+        customerEmail: orderData.customerDetails?.email,
+        customerAddress: orderData.customerDetails?.address?.toString(),
+      );
+
+      // Close loading dialog
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (pdfFile == null) {
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Failed to generate PDF invoice.',
+          );
+        }
+        return;
+      }
+
+      // Debug information
+      debugPrint('PDF file generated successfully: ${pdfFile.path}');
+      debugPrint('PDF file size: ${await pdfFile.length()} bytes');
+      debugPrint('PDF file exists: ${await pdfFile.exists()}');
+
+      // Share the PDF file using modern ShareParams API
+      debugPrint('Starting PDF share process...');
+      if (Platform.isWindows) {
+        debugPrint('Sharing on Windows platform');
+        // On Windows, use modern ShareParams API with pure file sharing
+        try {
+          debugPrint('Attempting Windows share with ShareParams API...');
+          // Create XFile with enhanced properties
+          final enhancedXFile = XFile(
+            pdfFile.path,
+            name: 'Invoice_${order.orderNumber}.pdf',
+            mimeType: 'application/pdf',
+            length: await pdfFile.length(),
+          );
+          
+          // Use modern ShareParams API - files only for Windows
+          final params = ShareParams(
+            files: [enhancedXFile],
+          );
+          
+          final result = await SharePlus.instance.share(params);
+          
+          debugPrint('ShareParams API completed with status: ${result.status}');
+          
+          if (result.status == ShareResultStatus.success) {
+            debugPrint('Windows file sharing succeeded!');
+          } else if (result.status == ShareResultStatus.dismissed) {
+            debugPrint('Windows sharing was dismissed by user');
+            if (context.mounted) {
+              showScaffold(
+                context: context,
+                message: 'Sharing cancelled by user.',
+              );
+            }
+            return;
+          } else {
+            debugPrint('Windows sharing failed with status: ${result.status}');
+            // Try alternative sharing approach
+            _handleWindowsAlternativeSharing(pdfFile, order);
+            return;
+          }
+          
+        } catch (e) {
+          debugPrint('ShareParams API failed: $e');
+          // Alternative approach: Open the PDF file directly
+          _handleWindowsAlternativeSharing(pdfFile, order);
+          return;
+        }
+      } else {
+        debugPrint('Sharing on non-Windows platform');
+        // On other platforms, use enhanced sharing with context
+        final enhancedXFile = XFile(
+          pdfFile.path,
+          name: 'Invoice_${order.orderNumber}.pdf', 
+          mimeType: 'application/pdf',
+        );
+        
+        final params = ShareParams(
+          text: 'Please find attached the invoice for order #${order.orderNumber}',
+          files: [enhancedXFile],
+        );
+        
+        final result = await SharePlus.instance.share(params);
+        debugPrint('Non-Windows share completed with status: ${result.status}');
+      }
+
+      if (context.mounted) {
+        showScaffold(
+          context: context,
+          message: 'PDF invoice shared successfully!',
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if still showing
+      if (Navigator.canPop(context)) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      debugPrint('Error sharing PDF invoice: $e');
+      if (context.mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Error generating or sharing PDF invoice. Please try again.',
+        );
+      }
+    }
+  }
+
+  Future<void> _handleWindowsAlternativeSharing(File pdfFile, ListOrderModelData order) async {
+    debugPrint('Using alternative Windows sharing approach');
+    
+    if (context.mounted) {
+      // Show dialog with multiple options
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.picture_as_pdf, color: Colors.red[700]),
+              const SizedBox(width: 8),
+              const Text('PDF Invoice Ready'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Invoice: ${order.orderNumber}'),
+              const SizedBox(height: 8),
+              Text('File: ${pdfFile.path.split('/').last}'),
+              const SizedBox(height: 16),
+              const Text(
+                'Choose how to share your PDF:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          actions: [
+            // Option 1: Open file location
+            TextButton.icon(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                try {
+                  // Open file explorer to the file location
+                  await Process.start(
+                    'explorer.exe',
+                    ['/select,', pdfFile.path.replaceAll('/', '\\')],
+                    mode: ProcessStartMode.detached,
+                  );
+                  if (context.mounted) {
+                    showScaffold(
+                      context: context,
+                      message: 'File location opened. The PDF is saved in Documents/epos folder.',
+                    );
+                  }
+                } catch (e) {
+                  debugPrint('Error opening file location: $e');
+                }
+              },
+              icon: const Icon(Icons.folder_open),
+              label: const Text('Open File Location'),
+            ),
+            // Option 2: Open PDF directly
+            TextButton.icon(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                try {
+                  await Process.start(
+                    'cmd',
+                    ['/c', 'start', '""', pdfFile.path],
+                    mode: ProcessStartMode.detached,
+                  );
+                  if (context.mounted) {
+                    showScaffold(
+                      context: context,
+                      message: 'PDF opened. You can now share it from your PDF viewer.',
+                    );
+                  }
+                } catch (e) {
+                  debugPrint('Error opening PDF: $e');
+                }
+              },
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Open PDF'),
+            ),
+            // Option 3: Copy path
+            TextButton.icon(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                try {
+                  await Clipboard.setData(ClipboardData(text: pdfFile.path));
+                  if (context.mounted) {
+                    showScaffold(
+                      context: context,
+                      message: 'File path copied to clipboard!',
+                    );
+                  }
+                } catch (e) {
+                  debugPrint('Error copying to clipboard: $e');
+                }
+              },
+              icon: const Icon(Icons.copy),
+              label: const Text('Copy Path'),
+            ),
+          ],
+        ),
+      );
     }
   }
 
@@ -236,12 +553,11 @@ class _SalesScreenState extends State<SalesScreen> {
         filterStore: filters['filterStore'],
         page: int.tryParse(filters['page'] ?? '1') ?? 1,
       );
-      
+
       debugPrint('=== SEARCH ORDERS COMPLETED ===');
       debugPrint('Current Page: ${orderProvider.currentPage}');
       debugPrint('Total Pages: ${orderProvider.totalPages}');
       debugPrint('Orders Count: ${orderProvider.orders.length}');
-      
     } catch (error, stackTrace) {
       debugPrint('Search error: $error');
       debugPrint('Stack trace: $stackTrace');
@@ -351,7 +667,7 @@ class _SalesScreenState extends State<SalesScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
-          icon: Icon(Icons.visibility,
+          icon: const Icon(Icons.visibility,
               size: 18, color: ColorManager.kPrimaryColor),
           onPressed: () {
             Provider.of<SalesProvider>(context, listen: false)
@@ -359,21 +675,21 @@ class _SalesScreenState extends State<SalesScreen> {
             Get.find<SideBarController>().index.value = 11;
           },
         ),
-        if (order.status == "new")
-          IconButton(
-            icon: Icon(Icons.edit, size: 18, color: Colors.orange),
-            onPressed: () {
-              Provider.of<CartProvider>(context, listen: false)
-                  .setCartIDForOrder(int.parse(order.cartId.toString()));
-              Provider.of<SalesProvider>(context, listen: false)
-                  .setOrderNumber(order.orderNumber.toString());
-              Provider.of<SalesProvider>(context, listen: false)
-                  .setOrderId(order.id.toString());
-              Get.find<SideBarController>().index.value = 51;
-            },
-          ),
+        // if (order.status == "new")
+        //   IconButton(
+        //     icon: Icon(Icons.edit, size: 18, color: Colors.orange),
+        //     onPressed: () {
+        //       Provider.of<CartProvider>(context, listen: false)
+        //           .setCartIDForOrder(int.parse(order.cartId.toString()));
+        //       Provider.of<SalesProvider>(context, listen: false)
+        //           .setOrderNumber(order.orderNumber.toString());
+        //       Provider.of<SalesProvider>(context, listen: false)
+        //           .setOrderId(order.id.toString());
+        //       Get.find<SideBarController>().index.value = 51;
+        //     },
+        //   ),
         IconButton(
-          icon: Icon(Icons.print, size: 18, color: Colors.blue),
+          icon: const Icon(Icons.print, size: 18, color: Colors.blue),
           onPressed: () async {
             try {
               String ordersId = order.orderNumber.toString();
@@ -395,6 +711,12 @@ class _SalesScreenState extends State<SalesScreen> {
 
                 String storeName = orderDetails.data!.cart!.storeName ?? "";
                 String orderDate = orderDetails.data!.orderDate ?? "";
+                
+                // Extract customer details
+                String? customerName = orderDetails.data?.customerDetails?.name;
+                String? customerPhone = orderDetails.data?.customerDetails?.phone;
+                String? customerEmail = orderDetails.data?.customerDetails?.email;
+                String? customerAddress = orderDetails.data?.customerDetails?.address?.join(', ');
 
                 Navigator.push(
                   context,
@@ -404,14 +726,213 @@ class _SalesScreenState extends State<SalesScreen> {
                       cartItems: orderDetails.data?.cart?.cartItems ?? [],
                       formattedTotal: formattedTotal!,
                       savedTotal: savedTotal!,
+                      discountAmount: orderDetails.data?.priceSummary?.discount?.toString() ?? "0.00",
                       orderDate: orderDate,
                       orderNumber: orderDetails.data!.orderNumber.toString(),
+                      customerName: customerName,
+                      customerPhone: customerPhone,
+                      customerEmail: customerEmail,
+                      customerAddress: customerAddress,
                     ),
                   ),
                 );
               }
             } catch (error) {
               debugPrint(error.toString());
+            }
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.share, size: 18, color: Colors.blue),
+          onPressed: () async {
+            try {
+              String? invoiceHash = order.invoiceHash; // Use the new invoiceHash field
+              if (invoiceHash == null) {
+                if (context.mounted) {
+                  showScaffoldError(
+                    context: context,
+                    message: 'Invoice not available for sharing.',
+                  );
+                }
+                return;
+              }
+
+              // Build message with invoice link
+              final String invoiceUrl = "${APPUrl.baseURL}/invoice-download/$invoiceHash";
+              final String message = "Here is the link for your invoice: $invoiceUrl";
+              final String encodedMessage = Uri.encodeComponent(message);
+
+              // Try to fetch customer phone/email from order details (for direct share targets)
+              String? customerPhone;
+              String? customerEmail;
+              try {
+                final String ordersId = order.orderNumber.toString();
+                final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+                final OrderDetailsresponse = await SalesProvider()
+                    .listOrderDetails(context, ordersId, accessToken ?? "");
+                if (OrderDetailsresponse["status"] == "success") {
+                  final OrderDetailsModel details = OrderDetailsModel.fromJson(OrderDetailsresponse);
+                  customerPhone = details.data?.customerDetails?.phone;
+                  customerEmail = details.data?.customerDetails?.email;
+                }
+              } catch (e) {
+                debugPrint('Could not fetch order details for phone: $e');
+              }
+
+              // Sanitize phone for WhatsApp wa.me format (digits only, international format preferred)
+              String? intlPhone;
+              if (customerPhone != null && customerPhone.trim().isNotEmpty) {
+                final digits = customerPhone.replaceAll(RegExp(r'[^0-9]'), '');
+                if (digits.isNotEmpty) intlPhone = digits;
+              }
+
+              if (!context.mounted) return;
+              await showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                builder: (ctx) {
+                  return SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 4,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.black26,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const Text(
+                            'Share invoice',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
+                              child: Icon(Icons.share, color: ColorManager.kPrimaryColor),
+                            ),
+                            title: const Text('Share'),
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              // On Windows, sharing a file tends to open the native Share UI more reliably
+                              if (Platform.isWindows) {
+                                final Uint8List data = Uint8List.fromList(utf8.encode(message));
+                                final XFile note = XFile.fromData(
+                                  data,
+                                  mimeType: 'text/plain',
+                                  name: 'Invoice_${order.orderNumber}.txt',
+                                );
+                                await Share.shareXFiles(
+                                  [note],
+                                  text: message,
+                                  subject: 'Invoice #${order.orderNumber}',
+                                );
+                              } else {
+                                await Share.share(
+                                  message,
+                                  subject: 'Invoice #${order.orderNumber}',
+                                );
+                              }
+                            },
+                          ),
+                          ListTile(
+                            leading: const CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Color(0x1A1E88E5), // ~10% opacity blue
+                              child: Icon(Icons.email, color: Color(0xFF1E88E5)),
+                            ),
+                            title: Text(
+                              (customerEmail != null && customerEmail.isNotEmpty)
+                                  ? 'Share to Email ($customerEmail)'
+                                  : 'Share to Email',
+                            ),
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              final uri = Uri(
+                                scheme: 'mailto',
+                                path: (customerEmail != null && customerEmail.isNotEmpty) ? customerEmail : '',
+                                queryParameters: <String, String>{
+                                  'subject': 'Invoice #${order.orderNumber}',
+                                  'body': message,
+                                },
+                              );
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              } else {
+                                if (context.mounted) {
+                                  showScaffoldError(
+                                    context: context,
+                                    message: 'No email app found to share the invoice.',
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                          ListTile(
+                            leading: const CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Color(0x1A25D366), // ~10% opacity WhatsApp green
+                              child: Icon(Icons.chat, color: Color(0xFF25D366)),
+                            ),
+                            title: Text(
+                              intlPhone != null
+                                  ? 'Share to WhatsApp ($intlPhone)'
+                                  : 'Share to WhatsApp',
+                            ),
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              final String waUrl = intlPhone != null
+                                  ? 'https://wa.me/$intlPhone?text=$encodedMessage'
+                                  : 'https://wa.me/?text=$encodedMessage';
+                              final uri = Uri.parse(waUrl);
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              } else {
+                                if (context.mounted) {
+                                  showScaffoldError(
+                                    context: context,
+                                    message: 'Could not open WhatsApp. Please make sure WhatsApp is installed.',
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                          ListTile(
+                            leading: const CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Color(0x1AE53E3E), // ~10% opacity red
+                              child: Icon(Icons.picture_as_pdf, color: Color(0xFFE53E3E)),
+                            ),
+                            title: const Text('Share PDF'),
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              await _sharePDFInvoice(order);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            } catch (error) {
+              debugPrint('Error sharing invoice: $error');
+              if (context.mounted) {
+                showScaffoldError(
+                  context: context,
+                  message: 'Error sharing invoice. Please try again.',
+                );
+              }
             }
           },
         ),
@@ -904,7 +1425,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                               storeSelected = storeModelData;
                                               if (storeModelData != null) {
                                                 storeController.text =
-                                                    storeModelData.id.toString();
+                                                    storeModelData.id
+                                                        .toString();
                                               } else {
                                                 storeController.clear();
                                               }
@@ -958,8 +1480,10 @@ class _SalesScreenState extends State<SalesScreen> {
                             onPageChanged: (int page) {
                               debugPrint('=== PAGINATION CLICKED ===');
                               debugPrint('User clicked page: $page');
-                              debugPrint('Current provider page: ${orderProvider.currentPage}');
-                              debugPrint('Total pages: ${orderProvider.totalPages}');
+                              debugPrint(
+                                  'Current provider page: ${orderProvider.currentPage}');
+                              debugPrint(
+                                  'Total pages: ${orderProvider.totalPages}');
                               searchOrders(page);
                             },
                           ),

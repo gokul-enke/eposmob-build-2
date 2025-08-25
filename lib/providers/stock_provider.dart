@@ -147,6 +147,8 @@ class StockProvider extends ChangeNotifier {
       'wholesale_price_tax': wholesalePriceTax,
     };
 
+    debugPrint('📦 ADD STOCK API REQUEST BODY: ${json.encode(apiBodyData)}');
+
     final url = Uri.parse(APPUrl.addToStock);
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -156,13 +158,12 @@ class StockProvider extends ChangeNotifier {
       throw const HttpException("API key not found. Please restart the app.");
     }
     try {
-      final response = await http.post(url,
-          body: json.encode(apiBodyData),
-          headers: {
-            'Authorization': 'Bearer $accessToken',
-            'Content-Type': 'application/json',
-            'X-Tenant': apiKey,
-          });
+      final response =
+          await http.post(url, body: json.encode(apiBodyData), headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      });
 
       if (response.statusCode == 200) {
         final result = json.decode(response.body);
@@ -194,38 +195,80 @@ class StockProvider extends ChangeNotifier {
               mrp: mrp,
               purchasePrice: purchaseRate,
             );
-
-            debugPrint(
-                "🚀 LOCAL PRODUCT PROVIDER UPDATED MANUALLY - NO 10-SECOND API FETCH NEEDED!");
           } catch (e) {
-            debugPrint("❌ Error updating LocalProductProvider: $e");
-            // Fallback: If manual update fails, we could still do full refresh
-            // but in most cases manual update should work fine
+            debugPrint("Error updating local product provider: $e");
           }
-        } else {
-          debugPrint(
-              "⚠️ Context not provided - skipping manual LocalProductProvider update");
         }
 
-        // Refresh stock data for stock list UI
-        await loadAllStocks(accessToken);
-
-        // Notify listeners
-        notifyListeners();
-
         return result;
+      } else {
+        // Capture the response body even on non-200 status for debugging
+        debugPrint(
+            '❌ ADD PRODUCT STOCK API FAILED (Status: ${response.statusCode})');
+        debugPrint('   - Response Body: ${response.body}');
+        return {'status': 'failed', 'message': response.body};
       }
     } catch (e) {
-      return {
-        'status': "failed",
-        'message': e.toString(),
-      };
+      debugPrint("Error in addProductStockAPI: $e");
+      return {'status': 'failed', 'message': 'Error: ${e.toString()}'};
+    }
+  }
+
+  //          *********************** CALCULATE TAX API ***************************************************
+
+  Future<Map<String, dynamic>?> calculateTaxAPI({
+    required String accessToken,
+    required double price,
+    required int productId,
+    required int categoryId,
+    required bool taxInclude,
+  }) async {
+    debugPrint("CALCULATE TAX API CALLED");
+    final queryParameters = <String, String>{
+      'price': price.toString(),
+      'product_id': productId.toString(),
+      'tax_include': taxInclude ? '1' : '0',
+      'category_id': categoryId.toString(),
+    };
+
+    final url = Uri.parse(APPUrl.calculateTax)
+        .replace(queryParameters: queryParameters);
+    debugPrint("Tax API URL: $url");
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
     }
 
-    return {
-      'status': "failed",
-      'message': "Failed to add stock",
-    };
+    try {
+      final response = await http.get(url, headers: {
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      });
+
+      debugPrint('Calculate Tax API response status: ${response.statusCode}');
+      debugPrint('Calculate Tax API response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final result = json.decode(response.body);
+        if (result['status'] == 'success' && result['data'] != null) {
+          return Map<String, dynamic>.from(result['data']);
+        } else {
+          debugPrint(
+              'Failed to calculate tax: ${result['message'] ?? 'Unknown error'}');
+          return null;
+        }
+      } else {
+        debugPrint(
+            'Calculate Tax API failed with status: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error in calculateTaxAPI: $e');
+      return null;
+    }
   }
 
   /// *********************** LIST STOCK API ***************************************************

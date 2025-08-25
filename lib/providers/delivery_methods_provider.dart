@@ -13,6 +13,19 @@ class DeliveryMethodsProvider with ChangeNotifier {
   List<DeliveryMethod> get deliveryMethods => _deliveryMethods;
   bool get isLoading => _isLoading;
 
+  // Add method to get default delivery method (Store Takeaway)
+  DeliveryMethod? get defaultDeliveryMethod {
+    try {
+      return _deliveryMethods.firstWhere(
+        (method) => method.name.toLowerCase().contains('store takeaway'),
+        orElse: () => _deliveryMethods.isNotEmpty ? _deliveryMethods.first : DeliveryMethod(id: "11", name: "Store Takeaway"),
+      );
+    } catch (e) {
+      // Fallback to first method or default
+      return _deliveryMethods.isNotEmpty ? _deliveryMethods.first : DeliveryMethod(id: "11", name: "Store Takeaway");
+    }
+  }
+
   DeliveryMethodsProvider() {
     fetchDeliveryMethods();
   }

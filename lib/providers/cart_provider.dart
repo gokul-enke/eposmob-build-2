@@ -140,6 +140,7 @@ class CartProvider with ChangeNotifier {
       'customer_id': "1",
       if (cartId != null) 'cart_id': cartId.toString(),
     });
+    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -240,7 +241,7 @@ class CartProvider with ChangeNotifier {
     // debugPrint(quantity.toString());
     Map<String, dynamic> apiBodyData = {};
     apiBodyData = {
-      'customer_id': "1",
+      'customer_id': customerId.toString(),
       'quantity': quantity,
       // 'app_type': "api",
       'product_id': productId,
@@ -255,6 +256,7 @@ class CartProvider with ChangeNotifier {
     // debugPrint("customerId $customerId");
     debugPrint("customerId $apiBodyData");
     final url = Uri.parse(APPUrl.addToCartUrl);
+    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -321,11 +323,12 @@ class CartProvider with ChangeNotifier {
       // 'quantity': 1,
       'action': "remove_item",
       // 'action': "clear_cart",
-      'customer_id': "1"
+      // 'customer_id': customerId.toString()
     };
     // debugPrint("productId $productId");
     final url = Uri.parse(APPUrl
         .removeFromCartUrl); // Update this to the correct endpoint for removing items
+    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -340,31 +343,34 @@ class CartProvider with ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      // debugPrint('inside ${response.statusCode}');
+      
+      debugPrint('🔍 Remove API Response Status Code: ${response.statusCode}');
+      debugPrint('🔍 Remove API Response Body: ${response.body}');
+      debugPrint('🔍 Remove API Request Body: ${json.encode(apiBodyData)}');
+      
       if (response.statusCode == 200) {
-        // debugPrint('inside');
-
-        // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
+        debugPrint('🔍 Parsed JSON Response: $jsonData');
+        
         AddToCartModel addToCartModel = AddToCartModel.fromJson(jsonData);
+        debugPrint('🔍 AddToCartModel Status: ${addToCartModel.status}');
+        
         await fetchCartDataFromApi(
           customerId: customerId,
           accessToken: accessToken,
           cartId: cartId,
         );
-        // customerId: customerId, accessToken: accessToken);
-        // debugPrint(addToCartModel.status);
+        
         if (addToCartModel.status == 'success') {
-          // debugPrint("  if (addToCartModel.status == 'success') {");
-          // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
-
-          // setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
+          debugPrint('✅ Remove from cart successful');
+        } else {
+          debugPrint('⚠️ Remove from cart status not success: ${addToCartModel.status}');
         }
-
-        // debugPrint("Removed from cart successfully");
 
         return jsonData; // Return response data or success status
       } else {
+        debugPrint('❌ Remove API failed with status ${response.statusCode}');
+        debugPrint('❌ Error response body: ${response.body}');
         return false;
       }
     } finally {}
@@ -392,6 +398,7 @@ class CartProvider with ChangeNotifier {
     // debugPrint("productId $productId");
     final url = Uri.parse(APPUrl
         .removeFromCartUrl); // Update this to the correct endpoint for removing items
+    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -455,11 +462,12 @@ class CartProvider with ChangeNotifier {
       'quantity': quantity,
       // 'action': "remove_item",
       // 'action': "clear_cart",
-      'customer_id': "1"
+      'customer_id': customerId.toString()
     };
     debugPrint("apiBodyData $apiBodyData");
     final url = Uri.parse(APPUrl
         .removeFromCartUrl); // Update this to the correct endpoint for removing items
+    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -489,7 +497,10 @@ class CartProvider with ChangeNotifier {
           // debugPrint("  if (addToCartModel.status == 'success') {");
           // debugPrint("${addToCartModel.cart!.cartItem![0].cartItemId ?? 0}");
 
-          setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
+          // Check if cartItem list is not empty before accessing first element
+          if (addToCartModel.cart!.cartItem!.isNotEmpty) {
+            setCartIDForOrder(addToCartModel.cart!.cartItem![0].cartItemId ?? 0);
+          }
         }
 
         // debugPrint("Removed from cart successfully");
@@ -499,6 +510,98 @@ class CartProvider with ChangeNotifier {
         return false;
       }
     } finally {}
+  }
+
+  //          *********************** GET CART ITEM STATUSES API ***************************************************
+
+  Future<Map<String, dynamic>> getCartItemStatuses({
+    required String accessToken,
+  }) async {
+    debugPrint("📤 GET CART ITEM STATUSES API - Starting request");
+    
+    final url = Uri.parse(APPUrl.getCartItemStatuses);
+    debugPrint('🌐 API URL: ${url.toString()}');
+    
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+    
+    try {
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      });
+      
+      debugPrint('📥 Response status code: ${response.statusCode}');
+      debugPrint('📥 Response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        debugPrint('✅ Cart item statuses fetched successfully');
+        return jsonData;
+      } else {
+        debugPrint('❌ Failed to fetch cart item statuses (status ${response.statusCode})');
+        return {"status": "error", "message": "Failed to fetch cart item statuses"};
+      }
+    } catch (e) {
+      debugPrint('❌ Exception during API call: $e');
+      return {"status": "error", "message": e.toString()};
+    }
+  }
+
+  //          *********************** UPDATE CART ITEM STATUS API ***************************************************
+
+  Future<Map<String, dynamic>> updateCartItemStatus({
+    required int cartItemId,
+    required int statusId,
+    required String accessToken,
+  }) async {
+    debugPrint("📤 UPDATE CART ITEM STATUS API - Starting request");
+    debugPrint("🛒 Cart Item ID: $cartItemId");
+    debugPrint("📊 Status ID: $statusId");
+    
+    final url = Uri.parse(APPUrl.updateCartItemStatus).replace(queryParameters: {
+      'cart_item_id': cartItemId.toString(),
+      'status_id': statusId.toString(),
+    });
+    debugPrint('🌐 API URL: ${url.toString()}');
+    
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+    
+    try {
+      final response = await http.post(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      });
+      
+      debugPrint('📥 Response status code: ${response.statusCode}');
+      debugPrint('📥 Response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        debugPrint('✅ Cart item status updated successfully');
+        return jsonData;
+      } else {
+        debugPrint('❌ Failed to update cart item status (status ${response.statusCode})');
+        final jsonData = json.decode(response.body);
+        return jsonData;
+      }
+    } catch (e) {
+      debugPrint('❌ Exception during API call: $e');
+      return {"status": "error", "message": e.toString()};
+    }
   }
 
   //          *********************** Change Cart Item Price API ***************************************************
@@ -518,6 +621,7 @@ class CartProvider with ChangeNotifier {
       'unit_price': unitPrice,
     };
     final url = Uri.parse(APPUrl.updateCartItemPriceUrl);
+    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -582,8 +686,14 @@ class CartProvider with ChangeNotifier {
     String? deliveryMethodId,
     String? carNumber,
     String? status,
-    String? deliveryDate, // <-- add this
-    String? deliveryTime, // <-- add this
+    String? deliveryDate,
+    String? deliveryTime,
+    String? tableId,
+    // Add discount parameters
+    double? flatDiscount,
+    double? percentageDiscount,
+    double? discountAmount,
+    bool? toCustomerCredit,
   }) async {
     debugPrint("📤 ADD TO ORDER API - Starting request");
     debugPrint("📦 Order items count: ${items?.length ?? 0}");
@@ -602,6 +712,9 @@ class CartProvider with ChangeNotifier {
     debugPrint("🚚 Delivery Method ID: $deliveryMethodId");
     debugPrint("🚗 Car Number: $carNumber");
     debugPrint("📊 Status: $status");
+    debugPrint("🏷️ Flat Discount: $flatDiscount");
+    debugPrint("📊 Percentage Discount: $percentageDiscount");
+    debugPrint("💰 Discount Amount: $discountAmount");
 
     DateTime now = DateTime.now();
 
@@ -614,16 +727,39 @@ class CartProvider with ChangeNotifier {
 
     Map<String, dynamic> apiBodyData = {};
 
+    // Create a mutable copy of paidMethods to adjust the cash amount
+    List<Map<String, dynamic>>? finalPaidMethods =
+        paidMethods != null ? List<Map<String, dynamic>>.from(paidMethods) : null;
+    double parsedBalance = double.tryParse(balanceAmount ?? '0.0') ?? 0.0;
+
+    if (parsedBalance > 0 && finalPaidMethods != null) {
+      final cashPaymentIndex =
+          finalPaidMethods.indexWhere((p) => p['method'] == 'CASH');
+      if (cashPaymentIndex != -1) {
+        final cashPayment = finalPaidMethods[cashPaymentIndex];
+        double cashAmount = (cashPayment['amount'] as num).toDouble();
+        if (cashAmount >= parsedBalance) {
+          finalPaidMethods[cashPaymentIndex] = {
+            'method': 'CASH',
+            'amount': cashAmount - parsedBalance,
+          };
+        }
+      }
+    }
+
+    debugPrint("paymentMethods $paymentMethods");
+    debugPrint("paidMethods $finalPaidMethods");
+
     // Use multi-payment format if available, otherwise fall back to single payment
     if (paymentMethods != null &&
-        paidMethods != null &&
-        paidMethods.isNotEmpty) {
+        finalPaidMethods != null &&
+        finalPaidMethods.isNotEmpty) {
       apiBodyData = {
         "items": items,
         "phone": customerPhone,
         "transaction_number": transactionId,
-        "payment_methods": paymentMethods,
-        "paid_methods": paidMethods,
+        "payment_method": paymentMethods,
+        "paid_methods": finalPaidMethods,
         "source_type": "executive",
         "balance": balanceAmount,
         "coupon_id": couponId,
@@ -634,6 +770,13 @@ class CartProvider with ChangeNotifier {
         if (status != null) "status": status,
         if (deliveryDate != null) "delivery_date": deliveryDate,
         if (deliveryTime != null) "delivery_time": deliveryTime,
+        if (tableId != null) "table": tableId,
+        // Include discount data
+        if (flatDiscount != null) "flat_discount": flatDiscount,
+        if (percentageDiscount != null)
+          "percentage_discount": percentageDiscount,
+        if (discountAmount != null) "discount_amount": discountAmount,
+        if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
       };
     } else {
       // Fallback to single payment method format
@@ -653,6 +796,13 @@ class CartProvider with ChangeNotifier {
         if (status != null) "status": status,
         if (deliveryDate != null) "delivery_date": deliveryDate,
         if (deliveryTime != null) "delivery_time": deliveryTime,
+        if (tableId != null) "table": tableId,
+        // Include discount data
+        if (flatDiscount != null) "flat_discount": flatDiscount,
+        if (percentageDiscount != null)
+          "percentage_discount": percentageDiscount,
+        if (discountAmount != null) "discount_amount": discountAmount,
+        if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
       };
     }
 
@@ -724,6 +874,10 @@ class CartProvider with ChangeNotifier {
     String? deliveryMethodId,
     String? carNumber,
     String? status,
+    // Add discount parameters
+    double? flatDiscount,
+    double? percentageDiscount,
+    double? discountAmount,
   }) async {
     debugPrint("📤 UPDATE ORDER API - Starting request");
     DateTime now = DateTime.now();
@@ -749,6 +903,10 @@ class CartProvider with ChangeNotifier {
         if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
         if (carNumber != null) "car_number": carNumber,
         if (status != null) "status": status,
+        // Include discount data
+        if (flatDiscount != null) "flat_discount": flatDiscount,
+        if (percentageDiscount != null) "percentage_discount": percentageDiscount,
+        if (discountAmount != null) "discount_amount": discountAmount,
       };
     } else {
       // Fallback to single payment method format
@@ -765,6 +923,10 @@ class CartProvider with ChangeNotifier {
         if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
         if (carNumber != null) "car_number": carNumber,
         if (status != null) "status": status,
+        // Include discount data
+        if (flatDiscount != null) "flat_discount": flatDiscount,
+        if (percentageDiscount != null) "percentage_discount": percentageDiscount,
+        if (discountAmount != null) "discount_amount": discountAmount,
       };
     }
 
@@ -925,7 +1087,7 @@ class CartProvider with ChangeNotifier {
       'price': totalAmount.toString(),
       'coupon_code': couponCode,
     });
-
+    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -968,6 +1130,91 @@ class CartProvider with ChangeNotifier {
         'message': 'An error occurred: $e',
         'data': null,
       };
+    }
+  }
+
+  Future<Map<String, dynamic>> listSavedOrders({
+    required String accessToken,
+    required String? tableId,
+  }) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    if (apiKey == null || apiKey.isEmpty) {
+      debugPrint('CartProvider: API key not found. Please restart the app.');
+      return {
+        "status": "failure",
+        "message": "API key not found. Please restart the app."
+      };
+    }
+    try {
+      // Build URL with table query parameter if tableId is provided
+      String url = APPUrl.listSavedOrders;
+      if (tableId != null && tableId.isNotEmpty) {
+        url += '?table=$tableId';
+      }
+      debugPrint('🌐 API URL: ${url.toString()}');
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      );
+      debugPrint(
+          'listSavedOrders API Response Status Code: ${response.statusCode}');
+      debugPrint('listSavedOrders API Response Body: ${response.body}');
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        return {'status': 'success', 'orders': jsonData['data']['data']};
+      } else {
+        final jsonData = json.decode(response.body);
+        return {
+          'status': 'failure',
+          'message': jsonData['message'] ?? 'Failed to fetch saved orders'
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> getListOrderDetails({
+    required String accessToken,
+    required String orderId,
+  }) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    if (apiKey == null || apiKey.isEmpty) {
+      return {
+        "status": "failure",
+        "message": "API key not found. Please restart the app."
+      };
+    }
+    try {
+      final url = Uri.parse(APPUrl.getListOrderDetails);
+      debugPrint('🌐 API URL: ${url.toString()}');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: json.encode({'order_id': orderId}),
+      );
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        return {'status': 'success', 'order_details': jsonData['order']};
+      } else {
+        final jsonData = json.decode(response.body);
+        return {
+          'status': 'failure',
+          'message': jsonData['message'] ?? 'Failed to fetch order details'
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': e.toString()};
     }
   }
 }

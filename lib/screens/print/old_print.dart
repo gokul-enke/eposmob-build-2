@@ -255,10 +255,10 @@ class ThermalPrinter {
     if (displayConfig?['showDescription']?.visible == true) {
       final description = displayConfig?['showDescription']?.value as String? ??
           docConfig?.subheader ??
-          'Mini Supermarket';
+          '';
       bytes += generator.row([
         PosColumn(
-          text: description.isNotEmpty ? description : 'Mini Supermarket',
+          text: description.isNotEmpty ? description : '',
           width: 12,
           styles: PosStyles(
             fontType: fontType,

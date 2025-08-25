@@ -1,12 +1,12 @@
 class APPUrl {
   // static String baseURL = "https://epos.enke.ae";
   // static String baseURL = "https://hypersouq.enke.in";
-//   static String baseURL = "https://epos.mevcakes.com";
   // static String baseURL = "https://epos.mevcakes.com";
   // static String baseURL = "https://kmstoys.enke.in";
   //  static String baseURL = "https://stagingepos.enke.ae";
   // static String baseURL = "https://tenant.hypersouq.in";
-  static String baseURL = "https://eposdemo.hypersouq.in";
+  // static String baseURL = "https://eposdemo.hypersouq.in";
+  static String baseURL = "https://epos.hypersouq.in";
   // static String baseURL = "https://stagingepos.enke.ae";
   // static String baseURL = "https://open-poems-sneeze.loca.lt";
   // static String baseURL = "http://localhost:8000";
@@ -46,6 +46,8 @@ class APPUrl {
       '$baseURL/api/v1/order/list-return-order-items';
   static String completeSalesReturn =
       '$baseURL/api/v1/order/complete-return-order';
+
+  static String listSavedOrders = '$baseURL/api/v1/order/list-saved-orders';
 
   static String loginUrl = '$baseURL/api/v1/user/signin';
   static String forgotPasswordUrl = '$baseURL/api/v1/user/forgot';
@@ -91,7 +93,7 @@ class APPUrl {
       '$baseURL/api/v1/purchases/add-purchase-item';
   static String addToPurchase = '$baseURL/api/v1/purchases/add-to-purchase';
   static String finishPurchaseOrder =
-      '$baseURL/api/v1/purchases/add-purchase-order';
+      '$baseURL/api/v1/product/complete-purchase';
   static String addToStock = '$baseURL/api/v1/product/add-stock';
   static String getTaxtDetails = '$baseURL/api/v1/tax/get-category-tax';
   static String addPurchaseStock = '$baseURL/api/v1/purchases/add-stock';
@@ -148,7 +150,14 @@ class APPUrl {
   static String listSalesExecutives = '$baseURL/api/v1/list-sales-executives';
   static String getRacksDataValues =
       '$baseURL/api/v1/master-data-values?code=RACKS';
+  static String getMasterDataValues = '$baseURL/api/v1/master-data-values';
+  static String getTableList =
+      '$baseURL/api/v1/master-data-values?code=TABLE_LIST';
   static String documentConfigs = '$baseURL/api/v1/document/document-configs';
   static String supplierTransactions =
       '$baseURL/api/v1/suppliers/list-transactions';
+  static String calculateTax = '$baseURL/api/v1/calculate-tax';
+  static String getCartItemStatuses = '$baseURL/api/v1/cart/cart-item-statuses';
+  static String updateCartItemStatus =
+      '$baseURL/api/v1/cart/update-cart-item-status';
 }

@@ -330,6 +330,7 @@ class OrderItem {
   final int? cartId;
   final int? categoryId;
   final int? productId;
+  final String? productName;
   final int? productStockId;
   final String? quantity;
   final dynamic mrp; // Can be int or null
@@ -347,6 +348,7 @@ class OrderItem {
     this.cartId,
     this.categoryId,
     this.productId,
+    this.productName,
     this.productStockId,
     this.quantity,
     this.mrp,
@@ -365,6 +367,7 @@ class OrderItem {
         cartId: json["cart_id"],
         categoryId: json["category_id"],
         productId: json["product_id"],
+        productName: json["product_name"],
         productStockId: json["product_stock_id"],
         quantity: json["quantity"],
         mrp: json["mrp"],
@@ -389,6 +392,7 @@ class OrderItem {
         "cart_id": cartId,
         "category_id": categoryId,
         "product_id": productId,
+        "product_name": productName,
         "product_stock_id": productStockId,
         "quantity": quantity,
         "mrp": mrp,

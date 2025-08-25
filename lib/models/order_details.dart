@@ -34,6 +34,8 @@ class OrderDetailsModelData {
   final int? storeId;
   final String? storeName;
   final String? orderDate;
+  final String? deliveryDate;
+  final String? deliveryTime;
   final OrderDetailsModelDataCart? cart;
   final String? orderNumber;
   final String? orderStatus;
@@ -46,12 +48,16 @@ class OrderDetailsModelData {
   final String? deliveryMethodId;
   final String? deliveryMethodName;
   final OrderReturns? orderReturns;
+  final dynamic points;
+  final Map<String, dynamic>? payments;
 
   OrderDetailsModelData({
     this.ordersId,
     this.storeId,
     this.storeName,
     this.orderDate,
+    this.deliveryDate,
+    this.deliveryTime,
     this.cart,
     this.orderNumber,
     this.orderStatus,
@@ -64,6 +70,8 @@ class OrderDetailsModelData {
     this.deliveryMethodId,
     this.deliveryMethodName,
     this.orderReturns,
+    this.points,
+    this.payments,
   });
 
   factory OrderDetailsModelData.fromJson(Map<String, dynamic> json) =>
@@ -72,6 +80,8 @@ class OrderDetailsModelData {
         storeId: json["store_id"],
         storeName: json["store_name"],
         orderDate: json["order_date"],
+        deliveryDate: json["delivery_date"],
+        deliveryTime: json["delivery_time"],
         cart: json["cart"] == null
             ? null
             : OrderDetailsModelDataCart.fromJson(json["cart"]),
@@ -95,8 +105,8 @@ class OrderDetailsModelData {
             ? []
             : List<OrderDetailsModelDataOrderProp>.from(json["order_props"]!
                 .map((x) => OrderDetailsModelDataOrderProp.fromJson(x))),
-        deliveryMethodId: json["delivery_method_id"].toString(),
-        deliveryMethodName: json["delivery_method_name"].toString(),
+        deliveryMethodId: json["delivery_method_id"]?.toString(),
+        deliveryMethodName: json["delivery_method_name"]?.toString(),
         orderReturns: json["order_returns"] == null
             ? null
             : OrderReturns.fromJson(
@@ -104,6 +114,10 @@ class OrderDetailsModelData {
                     ? json["order_returns"]
                     : {},
               ),
+        points: json["points"],
+        payments: json["payments"] is Map<String, dynamic> 
+            ? Map<String, dynamic>.from(json["payments"])
+            : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -111,6 +125,8 @@ class OrderDetailsModelData {
         "store_id": storeId,
         "store_name": storeName,
         "order_date": orderDate,
+        "delivery_date": deliveryDate,
+        "delivery_time": deliveryTime,
         "cart": cart?.toJson(),
         "order_number": orderNumber,
         "order_status": orderStatus,
@@ -124,7 +140,9 @@ class OrderDetailsModelData {
             : List<dynamic>.from(orderProps!.map((x) => x.toJson())),
         "delivery_method_id": deliveryMethodId,
         "delivery_method_name": deliveryMethodName,
-        "order_returns": orderReturns?.toJson(), // Serialize orderReturns
+        "order_returns": orderReturns?.toJson(),
+        "points": points,
+        "payments": payments,
       };
 }
 
@@ -194,6 +212,7 @@ class OrderDetailsModelDataCartItem {
   final String? mrp;
   final String? totalPrice; // Changed to int
   final String? currency;
+  final String? taxAmount; // Added tax_amount field
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -210,6 +229,7 @@ class OrderDetailsModelDataCartItem {
     this.mrp,
     this.totalPrice,
     this.currency,
+    this.taxAmount, // Added tax_amount field
     this.createdAt,
     this.updatedAt,
   });
@@ -232,6 +252,7 @@ class OrderDetailsModelDataCartItem {
         mrp: json["mrp"].toString(),
         totalPrice: json["total_price"].toString(),
         currency: json["currency"],
+        taxAmount: json["tax_amount"]?.toString(), // Added tax_amount parsing
         createdAt: json["created_at"] == null
             ? null
             : DateTime.parse(json["created_at"]),
@@ -255,6 +276,7 @@ class OrderDetailsModelDataCartItem {
         "mrp": mrp,
         "total_price": totalPrice,
         "currency": currency,
+        "tax_amount": taxAmount, // Added tax_amount serialization
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),
       };
@@ -338,8 +360,8 @@ class OrderDetailsModelDataPriceSummary {
         totalTax: json["total_tax"] is num ? json["total_tax"] : null,
         netTotal: json["net_total"] is num ? json["net_total"] : null,
         savedTotal: json["total_saved"] is num ? json["total_saved"] : null,
-        discount: json["discount"] is num ? json["discount"] : null,
-        netPayable: json["net_payable"] is num ? json["net_payable"] : null,
+        discount: num.tryParse(json["discount"]?.toString() ?? ""),
+        netPayable: num.tryParse(json["net_payable"]?.toString() ?? ""),
       );
 
   Map<String, dynamic> toJson() => {
@@ -452,7 +474,8 @@ class OrderDetailsModelDataPaymentDetails {
     if (paymentMethod == null) return null;
     if (paymentMethod is String) return paymentMethod;
     if (paymentMethod is List && paymentMethod.isNotEmpty) {
-      return paymentMethod.first.toString();
+      // Join all payment methods with commas for multiple payment methods
+      return paymentMethod.map((method) => method.toString()).join(', ');
     }
     return null;
   }

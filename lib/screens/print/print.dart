@@ -22,19 +22,29 @@ class PrintPage extends StatefulWidget {
   final String? storeName;
   final String formattedTotal;
   final String? savedTotal;
+  final String? discountAmount;
   final String orderDate;
   final String orderNumber;
   final bool isFromLocalStorage;
+  final String? customerName;
+  final String? customerPhone;
+  final String? customerEmail;
+  final String? customerAddress;
 
   const PrintPage({
     Key? key,
     required this.cartItems,
     required this.formattedTotal,
     this.savedTotal,
+    this.discountAmount,
     this.storeName,
     required this.orderDate,
     required this.orderNumber,
     this.isFromLocalStorage = false,
+    this.customerName,
+    this.customerPhone,
+    this.customerEmail,
+    this.customerAddress,
   }) : super(key: key);
 
   @override
@@ -327,6 +337,7 @@ class _PrintPageState extends State<PrintPage> {
       cartItems: widget.cartItems,
       formattedTotal: widget.formattedTotal,
       savedTotal: widget.savedTotal,
+      discountAmount: widget.discountAmount,
       orderDate: widget.orderDate,
       orderNumber: widget.orderNumber,
       isFromLocalStorage: widget.isFromLocalStorage,
@@ -334,6 +345,10 @@ class _PrintPageState extends State<PrintPage> {
       billDocumentConfig: _billDocumentConfig,
       customerCareNumber: customerCareNumber,
       customerCareEmail: customerCareEmail,
+      customerName: widget.customerName,
+      customerPhone: widget.customerPhone,
+      customerEmail: widget.customerEmail,
+      customerAddress: widget.customerAddress,
     );
   }
 
@@ -346,6 +361,7 @@ class _PrintPageState extends State<PrintPage> {
       cartItems: widget.cartItems,
       formattedTotal: widget.formattedTotal,
       savedTotal: widget.savedTotal,
+      discountAmount: widget.discountAmount,
       orderDate: widget.orderDate,
       orderNumber: widget.orderNumber,
       isFromLocalStorage: widget.isFromLocalStorage,
@@ -353,6 +369,10 @@ class _PrintPageState extends State<PrintPage> {
       billDocumentConfig: _billDocumentConfig,
       customerCareNumber: customerCareNumber,
       customerCareEmail: customerCareEmail,
+      customerName: widget.customerName,
+      customerPhone: widget.customerPhone,
+      customerEmail: widget.customerEmail,
+      customerAddress: widget.customerAddress,
     );
   }
 

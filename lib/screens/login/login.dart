@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/main_screen.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
@@ -345,12 +347,15 @@ class _SignInScreenState extends State<SignInScreen> {
                                                     .adaptive(),
                                               );
                                             });
-                                        await AuthenticationProvider()
-                                            .login(
-                                                _emailController.text,
-                                                _passwordTextController.text,
-                                                context)
-                                            .then((value) async {
+                                        // Save remember me state when login button is pressed
+                                        _handleRememberMe(_rememberMe);
+                                        try {
+                                          final value = await AuthenticationProvider()
+                                              .login(
+                                                  _emailController.text,
+                                                  _passwordTextController.text,
+                                                  context);
+
                                           if (value["status"] == "success") {
                                             ExecutiveModel executiveModel =
                                                 ExecutiveModel.fromJson(value);
@@ -374,6 +379,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                                         0,
                                                     executiveModelData
                                                             ?.userName ??
+                                                        "",
+                                                    executiveModelData
+                                                            ?.userRole ??
                                                         "");
                                             SalesProvider salesProvider =
                                                 Provider.of<SalesProvider>(
@@ -410,6 +418,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                                 authModel.token ?? '', null);
                                             purchaseProvider.listAllUnits(
                                                 authModel.token ?? '');
+                                            purchaseProvider.listMasterDataValues(
+                                                authModel.token ?? '', 'RACKS');
 
                                             showScaffold(
                                               context: context,
@@ -458,6 +468,23 @@ class _SignInScreenState extends State<SignInScreen> {
 
                                             Navigator.pop(context);
 
+                                            // Set appropriate home page based on user role
+                                            SideBarController sideBarController = Get.put(SideBarController());
+                                            String userRole = executiveModelData?.userRole ?? "";
+                                            
+                                            switch (userRole) {
+                                              case 'attender':
+                                                sideBarController.index.value = 55; // Restaurant Page
+                                                break;
+                                              case 'kitchen_master':
+                                                sideBarController.index.value = 56; // Kitchen Master Page
+                                                break;
+                                              case 'sales_executive':
+                                              default:
+                                                sideBarController.index.value = 46; // Billing Page (Home for sales executive)
+                                                break;
+                                            }
+
                                             await Future.delayed(
                                                     const Duration(seconds: 1))
                                                 .then((value) => Navigator.push(
@@ -472,7 +499,13 @@ class _SignInScreenState extends State<SignInScreen> {
                                               message: '${value["message"]}',
                                             );
                                           }
-                                        });
+                                        } catch (e) {
+                                          Navigator.pop(context); // Dismiss loading dialog
+                                          showScaffoldError(
+                                            context: context,
+                                            message: 'Login failed: ${e.toString()}',
+                                          );
+                                        }
                                       } else {
                                         showScaffoldError(
                                             context: context,

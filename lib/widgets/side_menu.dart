@@ -55,6 +55,7 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               width: _isExpanded ? _expandedWidth : _collapsedWidth,
+              height: double.infinity,
               child: _isExpanded
                   ? widget.sidebarContent
                   : Container(
@@ -107,8 +108,38 @@ class _PreservedChildState extends State<_PreservedChild>
   }
 }
 
-class SideMenu extends StatelessWidget {
+class SideMenu extends StatefulWidget {
   const SideMenu({Key? key}) : super(key: key);
+
+  @override
+  State<SideMenu> createState() => _SideMenuState();
+}
+
+class _SideMenuState extends State<SideMenu> {
+  String userRole = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserRole();
+  }
+
+  void _loadUserRole() async {
+    String role = await SharedPreferenceProvider().getUserRole();
+    setState(() {
+      userRole = role;
+    });
+  }
+
+  // Helper method to check if user has specific role
+  bool _hasRole(String role) {
+    return userRole == role;
+  }
+
+  // Helper method to check if user has any of the specified roles
+  bool _hasAnyRole(List<String> roles) {
+    return roles.contains(userRole);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +149,7 @@ class SideMenu extends StatelessWidget {
 
     return SingleChildScrollView(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           IconButton(
@@ -153,239 +184,259 @@ class SideMenu extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(
-            height: 20,
-          ),
-          Builder(
-            builder: (context) {
-              debugPrint("🔧 SideMenu: Building UserSwitcher widget");
-              return const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 15.0),
-                child: UserSwitcher(),
-              );
-            },
-          ),
-          const SizedBox(
-            height: 20,
-          ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.homeIcon,
-              title: 'Home',
-              onTap: () {
-                // debugPrint(" Billing, ${sideBarController.index.value}");
-                sideBarController.index.value = 46;
-              },
-              selected: sideBarController.index.value == 46,
+          if (_hasRole('sales_executive'))
+            const SizedBox(
+              height: 20,
             ),
-          ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.barcodeIcon,
-              title: 'Restaurant',
-              onTap: () {
-                sideBarController.index.value = 55;
-              },
-              selected: sideBarController.index.value == 55,
-            ),
-          ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.barcodeIcon,
-              title: 'Kitchen Master',
-              onTap: () {
-                sideBarController.index.value = 56;
-              },
-              selected: sideBarController.index.value == 56,
-            ),
-          ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.dashBoardIcon,
-              title: 'Dashboard',
-              onTap: () {
-                // debugPrint(" 'Dashboard',${sideBarController.index.value}");
-                sideBarController.index.value = 1;
-              },
-              selected: sideBarController.index.value == 1,
-            ),
-          ),
-          Obx(
-            () => DrawerListTileExpandableColumn(
-              onTapTitle1: () {
-                sideBarController.index.value = 2;
-              },
-              onTapTitle2: () {
-                sideBarController.index.value = 54;
-              },
-              onTapTitle3: () {
-                sideBarController.index.value = 50;
-              },
-              listTitle1: "Sales",
-              listTitle2: "Confirmed Orders",
-              listTitle3: "Sales Return",
-              iconPath: ImageAssets.saleIcon,
-              title: 'Sales',
-              onTap: () {
-                // debugPrint(" 'Sales',${sideBarController.index.value}");
-                sideBarController.index.value = 2;
-                final salesProvider =
-                    Provider.of<SalesProvider>(context, listen: false);
-                String? accessToken =
-                    Provider.of<AuthModel>(context, listen: false).token;
-                //-------------------------
-                salesProvider.fetchOrders(
-                  accessToken: accessToken ?? '',
-                  storeId: 1,
+          if (_hasRole('sales_executive'))
+            Builder(
+              builder: (context) {
+                debugPrint("🔧 SideMenu: Building UserSwitcher widget");
+                return const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 15.0),
+                  child: UserSwitcher(),
                 );
               },
-              selected: sideBarController.index.value == 2 ||
-                  sideBarController.index.value == 51 ||
-                  sideBarController.index.value == 54 ||
-                  sideBarController.index.value == 50 ||
-                  sideBarController.index.value == 49 ||
-                  sideBarController.index.value == 11,
             ),
+          const SizedBox(
+            height: 20,
           ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.creditCardIcon,
-              title: 'Category',
-              onTap: () {
-                sideBarController.index.value = 12;
-                // debugPrint(" 'Category',${sideBarController.index.value}");
-              },
-              selected: sideBarController.index.value == 12 ||
-                  sideBarController.index.value == 13 ||
-                  sideBarController.index.value == 27 ||
-                  sideBarController.index.value == 16 ||
-                  sideBarController.index.value == 34,
-            ),
-          ),
-          Obx(
-            () => DrawerListTileExpandableColumn(
-                onTapTitle1: () {
-                  sideBarController.index.value = 14;
-                },
-                onTapTitle2: () {
-                  sideBarController.index.value = 15;
-                },
-                listTitle1: "Product",
-                listTitle2: "Stock",
-                iconPath: ImageAssets.allCategoryIcon,
-                title: 'Product',
-                onTap: () async {
-                  sideBarController.index.value = 14;
-                  // debugPrint(" 'Category',${sideBarController.index.value}");
-                },
-                selected: sideBarController.index.value == 14 ||
-                    sideBarController.index.value == 15 ||
-                    sideBarController.index.value == 18 ||
-                    sideBarController.index.value == 28 ||
-                    sideBarController.index.value == 17 ||
-                    sideBarController.index.value == 33 ||
-                    sideBarController.index.value == 35),
-          ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.cardIcon,
-              title: 'Suppliers',
-              onTap: () {
-                sideBarController.index.value =
-                    52; // New index for supplier screen
-                // Load supplier data when selected
-                final supplierProvider =
-                    Provider.of<SupplierProvider>(context, listen: false);
-                String? accessToken =
-                    Provider.of<AuthModel>(context, listen: false).token;
-                supplierProvider.fetchSuppliers(accessToken: accessToken ?? '');
-              },
-              selected: sideBarController.index.value == 52,
-            ),
-          ),
-          Obx(
-            () => DrawerListTileExpandableColumn(
-              onTapTitle1: () {
-                sideBarController.index.value = 21;
-              },
-              onTapTitle2: () {
-                sideBarController.index.value = 47;
-              },
-              listTitle1: "Invoice",
-              listTitle2: "Receipts",
-              iconPath: ImageAssets.transactionIcon,
-              title: 'Accounts',
-              onTap: () {
-                sideBarController.index.value = 21;
-                // debugPrint(" 'Category',${sideBarController.index.value}");
-              },
-              selected: sideBarController.index.value == 21 ||
-                  sideBarController.index.value == 22 ||
-                  sideBarController.index.value == 30 ||
-                  sideBarController.index.value == 31 ||
-                  sideBarController.index.value == 32 ||
-                  sideBarController.index.value == 24 ||
-                  sideBarController.index.value == 25 ||
-                  sideBarController.index.value == 48 ||
-                  sideBarController.index.value == 47,
-            ),
-          ),
-          Obx(
-            () => DrawerListTileExpandableColumn(
-                onTapTitle1: () {
-                  sideBarController.index.value = 4;
-                },
-                onTapTitle2: () {
-                  sideBarController.index.value = 23;
-                },
-                listTitle1: "Supplier Transactions",
-                listTitle2: "Customer Transactions",
-                iconPath: ImageAssets.transactionIcon,
-                title: 'Transactions',
+          if (_hasRole('sales_executive'))
+            Obx(
+              () => DrawerListTile(
+                iconPath: ImageAssets.homeIcon,
+                title: 'Home',
                 onTap: () {
-                  sideBarController.index.value = 4;
+                  // debugPrint(" Billing, ${sideBarController.index.value}");
+                  sideBarController.index.value = 46;
+                },
+                selected: sideBarController.index.value == 46,
+              ),
+            ),
+          // if (_hasAnyRole(['attender', 'sales_executive']))
+          if (_hasRole('attender'))
+            Obx(
+              () => DrawerListTile(
+                iconPath: ImageAssets.barcodeIcon,
+                title: 'Restaurant',
+                onTap: () {
+                  sideBarController.index.value = 55;
+                },
+                selected: sideBarController.index.value == 55,
+              ),
+            ),
+          // if (_hasAnyRole(['kitchen_master', 'sales_executive']))
+          if (_hasRole('kitchen_master'))
+            Obx(
+              () => DrawerListTile(
+                iconPath: ImageAssets.barcodeIcon,
+                title: 'Kitchen Master',
+                onTap: () {
+                  sideBarController.index.value = 56;
+                },
+                selected: sideBarController.index.value == 56,
+              ),
+            ),
+          if (_hasRole('sales_executive'))
+            Obx(
+              () => DrawerListTile(
+                iconPath: ImageAssets.dashBoardIcon,
+                title: 'Dashboard',
+                onTap: () {
+                  // debugPrint(" 'Dashboard',${sideBarController.index.value}");
+                  sideBarController.index.value = 1;
+                },
+                selected: sideBarController.index.value == 1,
+              ),
+            ),
+          if (_hasRole('sales_executive'))
+            Obx(
+              () => DrawerListTileExpandableColumn(
+                onTapTitle1: () {
+                  sideBarController.index.value = 2;
+                },
+                onTapTitle2: () {
+                  sideBarController.index.value = 54;
+                },
+                onTapTitle3: () {
+                  sideBarController.index.value = 50;
+                },
+                listTitle1: "Sales",
+                listTitle2: "Confirmed Orders",
+                listTitle3: "Sales Return",
+                iconPath: ImageAssets.saleIcon,
+                title: 'Sales',
+                onTap: () {
+                  // debugPrint(" 'Sales',${sideBarController.index.value}");
+                  sideBarController.index.value = 2;
+                  final salesProvider =
+                      Provider.of<SalesProvider>(context, listen: false);
+                  String? accessToken =
+                      Provider.of<AuthModel>(context, listen: false).token;
+                  //-------------------------
+                  salesProvider.fetchOrders(
+                    accessToken: accessToken ?? '',
+                    storeId: 1,
+                  );
+                },
+                selected: sideBarController.index.value == 2 ||
+                    sideBarController.index.value == 51 ||
+                    sideBarController.index.value == 54 ||
+                    sideBarController.index.value == 50 ||
+                    sideBarController.index.value == 49 ||
+                    sideBarController.index.value == 11,
+              ),
+            ),
+          if (_hasAnyRole(['kitchen_master', 'sales_executive', 'admin']))
+            Obx(
+              () => DrawerListTile(
+                iconPath: ImageAssets.creditCardIcon,
+                title: 'Category',
+                onTap: () {
+                  sideBarController.index.value = 12;
                   // debugPrint(" 'Category',${sideBarController.index.value}");
                 },
-                selected: sideBarController.index.value == 4 ||
-                    sideBarController.index.value == 23),
-          ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.customerIcon,
-              title: 'Customers',
-              onTap: () {
-                sideBarController.index.value = 5;
-                // debugPrint(" 'Customers',${sideBarController.index.value}");
-              },
-              selected: sideBarController.index.value == 5 ||
-                  sideBarController.index.value == 9 ||
-                  sideBarController.index.value == 38,
+                selected: sideBarController.index.value == 12 ||
+                    sideBarController.index.value == 13 ||
+                    sideBarController.index.value == 27 ||
+                    sideBarController.index.value == 16 ||
+                    sideBarController.index.value == 34,
+              ),
             ),
-          ),
-          const SizedBox(
-            height: 15,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 45.0),
-            child: Text(
-              'Other',
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s13,
-                  0.16, ColorManager.textColor),
+          if (_hasAnyRole(['kitchen_master', 'sales_executive']))
+            Obx(
+              () => DrawerListTileExpandableColumn(
+                  onTapTitle1: () {
+                    sideBarController.index.value = 14;
+                  },
+                  onTapTitle2: () {
+                    sideBarController.index.value = 15;
+                  },
+                  listTitle1: "Product",
+                  listTitle2: "Stock",
+                  iconPath: ImageAssets.allCategoryIcon,
+                  title: 'Product',
+                  onTap: () async {
+                    sideBarController.index.value = 14;
+                    // debugPrint(" 'Category',${sideBarController.index.value}");
+                  },
+                  selected: sideBarController.index.value == 14 ||
+                      sideBarController.index.value == 15 ||
+                      sideBarController.index.value == 18 ||
+                      sideBarController.index.value == 28 ||
+                      sideBarController.index.value == 17 ||
+                      sideBarController.index.value == 33 ||
+                      sideBarController.index.value == 35),
             ),
-          ),
-          const SizedBox(
-            height: 15,
-          ),
-          Obx(
-            () => DrawerListTile(
-              iconPath: ImageAssets.printIcon,
-              title: 'Printer',
-              onTap: () {
-                sideBarController.index.value = 53;
-              },
-              selected: sideBarController.index.value == 53,
+          if (_hasRole('sales_executive'))
+            Obx(
+              () => DrawerListTile(
+                iconPath: ImageAssets.cardIcon,
+                title: 'Suppliers',
+                onTap: () {
+                  sideBarController.index.value =
+                      52; // New index for supplier screen
+                  // Load supplier data when selected
+                  final supplierProvider =
+                      Provider.of<SupplierProvider>(context, listen: false);
+                  String? accessToken =
+                      Provider.of<AuthModel>(context, listen: false).token;
+                  supplierProvider.fetchSuppliers(
+                      accessToken: accessToken ?? '');
+                },
+                selected: sideBarController.index.value == 52,
+              ),
             ),
-          ),
+          if (_hasRole('sales_executive'))
+            Obx(
+              () => DrawerListTileExpandableColumn(
+                onTapTitle1: () {
+                  sideBarController.index.value = 21;
+                },
+                onTapTitle2: () {
+                  sideBarController.index.value = 47;
+                },
+                listTitle1: "Invoice",
+                listTitle2: "Receipts",
+                iconPath: ImageAssets.transactionIcon,
+                title: 'Accounts',
+                onTap: () {
+                  sideBarController.index.value = 21;
+                  // debugPrint(" 'Category',${sideBarController.index.value}");
+                },
+                selected: sideBarController.index.value == 21 ||
+                    sideBarController.index.value == 22 ||
+                    sideBarController.index.value == 30 ||
+                    sideBarController.index.value == 31 ||
+                    sideBarController.index.value == 32 ||
+                    sideBarController.index.value == 24 ||
+                    sideBarController.index.value == 25 ||
+                    sideBarController.index.value == 48 ||
+                    sideBarController.index.value == 47,
+              ),
+            ),
+          if (_hasRole('sales_executive'))
+            Obx(
+              () => DrawerListTileExpandableColumn(
+                  onTapTitle1: () {
+                    sideBarController.index.value = 4;
+                  },
+                  onTapTitle2: () {
+                    sideBarController.index.value = 23;
+                  },
+                  listTitle1: "Supplier Transactions",
+                  listTitle2: "Customer Transactions",
+                  iconPath: ImageAssets.transactionIcon,
+                  title: 'Transactions',
+                  onTap: () {
+                    sideBarController.index.value = 4;
+                    // debugPrint(" 'Category',${sideBarController.index.value}");
+                  },
+                  selected: sideBarController.index.value == 4 ||
+                      sideBarController.index.value == 23),
+            ),
+          if (_hasRole('sales_executive'))
+            Obx(
+              () => DrawerListTile(
+                iconPath: ImageAssets.customerIcon,
+                title: 'Customers',
+                onTap: () {
+                  sideBarController.index.value = 5;
+                  // debugPrint(" 'Customers',${sideBarController.index.value}");
+                },
+                selected: sideBarController.index.value == 5 ||
+                    sideBarController.index.value == 9 ||
+                    sideBarController.index.value == 38,
+              ),
+            ),
+          if (_hasRole('sales_executive'))
+            const SizedBox(
+              height: 15,
+            ),
+          if (_hasRole('sales_executive'))
+            Padding(
+              padding: const EdgeInsets.only(left: 45.0),
+              child: Text(
+                'Other',
+                style: buildCustomStyle(FontWeightManager.medium, FontSize.s13,
+                    0.16, ColorManager.textColor),
+              ),
+            ),
+          if (_hasRole('sales_executive'))
+            const SizedBox(
+              height: 15,
+            ),
+          if (_hasRole('sales_executive'))
+            Obx(
+              () => DrawerListTile(
+                iconPath: ImageAssets.printIcon,
+                title: 'Printer',
+                onTap: () {
+                  sideBarController.index.value = 53;
+                },
+                selected: sideBarController.index.value == 53,
+              ),
+            ),
           DrawerListTile(
             iconPath: ImageAssets.logoutIcon,
             title: 'Logout',

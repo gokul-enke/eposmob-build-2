@@ -207,6 +207,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                     executiveModelData.accessToken ?? "",
                                     executiveModelData.userId ?? 0,
                                     executiveModelData.userName ?? "",
+                                    executiveModelData.userRole ?? "",
                                   );
 
                                   // Switch to the selected executive

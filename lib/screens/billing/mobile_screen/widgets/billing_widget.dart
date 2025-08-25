@@ -13,10 +13,9 @@ import 'package:pos_machine/screens/billing/widgets/delivery_method_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
-
 class BillingWidget extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
-  
+
   const BillingWidget({super.key, required this.cartItems});
 
   @override
@@ -26,7 +25,7 @@ class BillingWidget extends StatefulWidget {
 class _BillingWidgetState extends State<BillingWidget> {
   final TextEditingController _customerController = TextEditingController();
   final TextEditingController _paidAmountController = TextEditingController();
-  
+
   // Payment method modal state variables
   bool _isCashSelected = false;
   bool _isCardSelected = false;
@@ -35,7 +34,7 @@ class _BillingWidgetState extends State<BillingWidget> {
   String _cardAmount = "";
   String _upiAmount = "";
   String _transactionNumber = "";
-  
+
   // Delivery method state variables
   String _deliveryMethod = "Takeaway";
   String _deliveryMethodId = "";
@@ -43,7 +42,7 @@ class _BillingWidgetState extends State<BillingWidget> {
   String _comment = "";
   String? _deliveryDate;
   String? _deliveryTime;
-  
+
   // Coupon state variables
   bool _couponApplied = false;
   String _couponCode = "";
@@ -59,7 +58,8 @@ class _BillingWidgetState extends State<BillingWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final totalAmount = widget.cartItems.fold(0.0, (sum, item) => sum + item['total']);
+    final totalAmount =
+        widget.cartItems.fold(0.0, (sum, item) => sum + item['total']);
     final subtotal = totalAmount - _discountAmount;
     final taxAmount = subtotal * 0.1; // Assuming 10% tax
     final grandTotal = subtotal + taxAmount;
@@ -81,7 +81,8 @@ class _BillingWidgetState extends State<BillingWidget> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
                     prefixIcon: const Icon(Icons.person),
                   ),
                 ),
@@ -91,7 +92,7 @@ class _BillingWidgetState extends State<BillingWidget> {
             ),
           ),
         ),
-        
+
         // Flexible Middle Section with Proper Scroll
         Flexible(
           child: Container(
@@ -121,10 +122,13 @@ class _BillingWidgetState extends State<BillingWidget> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              _buildSummaryRow('Subtotal:', '₹${totalAmount.toStringAsFixed(2)}'),
-                              if (_couponApplied) 
-                                _buildSummaryRow('Discount:', '-₹${_discountAmount.toStringAsFixed(2)}'),
-                              _buildSummaryRow('Tax (10%):', '₹${taxAmount.toStringAsFixed(2)}'),
+                              _buildSummaryRow('Subtotal:',
+                                  '₹${totalAmount.toStringAsFixed(2)}'),
+                              if (_couponApplied)
+                                _buildSummaryRow('Discount:',
+                                    '-₹${_discountAmount.toStringAsFixed(2)}'),
+                              _buildSummaryRow('Tax (10%):',
+                                  '₹${taxAmount.toStringAsFixed(2)}'),
                               const Divider(height: 24),
                               _buildSummaryRow(
                                 'GRAND TOTAL:',
@@ -135,7 +139,7 @@ class _BillingWidgetState extends State<BillingWidget> {
                             ],
                           ),
                         ),
-                        
+
                         // Payment Section
                         Container(
                           padding: const EdgeInsets.all(16),
@@ -152,13 +156,15 @@ class _BillingWidgetState extends State<BillingWidget> {
                               const SizedBox(height: 12),
                               TextField(
                                 controller: _paidAmountController,
-                                readOnly: true, // Make it read-only since payment is handled by modal
+                                readOnly:
+                                    true, // Make it read-only since payment is handled by modal
                                 decoration: InputDecoration(
                                   labelText: 'Paid Amount',
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
                                   prefixText: '₹ ',
                                 ),
                               ),
@@ -166,7 +172,8 @@ class _BillingWidgetState extends State<BillingWidget> {
                               _buildSummaryRow(
                                 'BALANCE:',
                                 '₹${_balance.toStringAsFixed(2)}',
-                                textColor: _balance >= 0 ? Colors.green : Colors.red,
+                                textColor:
+                                    _balance >= 0 ? Colors.green : Colors.red,
                                 isBold: true,
                               ),
                               const SizedBox(height: 12),
@@ -187,7 +194,7 @@ class _BillingWidgetState extends State<BillingWidget> {
             ),
           ),
         ),
-        
+
         // Fixed Bottom Section - Action Buttons
         Material(
           elevation: 8,
@@ -223,147 +230,162 @@ class _BillingWidgetState extends State<BillingWidget> {
     );
   }
 
- Widget _buildOptionsRow() {
-  return LayoutBuilder(
-    builder: (context, constraints) {
-      // For screens wider than 600px, use a row layout
-      if (constraints.maxWidth > 600) {
-        return Row(
-          children: _buildButtonChildren(true),
-        );
-      } else {
-        // For narrower screens, use a column layout with full width buttons
-        return Column(
-          children: _buildButtonChildren(false)
-              .map((button) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6.0),
-                    child: button,
-                  ))
-              .toList(),
-        );
-      }
-    },
-  );
-}
+  Widget _buildOptionsRow() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // For screens wider than 600px, use a row layout
+        if (constraints.maxWidth > 600) {
+          return Row(
+            children: _buildButtonChildren(true),
+          );
+        } else {
+          // For narrower screens, use a column layout with full width buttons
+          return Column(
+            children: _buildButtonChildren(false)
+                .map((button) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6.0),
+                      child: button,
+                    ))
+                .toList(),
+          );
+        }
+      },
+    );
+  }
 
-List<Widget> _buildButtonChildren(bool isRowLayout) {
-  return [
-    // Payment Methods Button
-    if (isRowLayout) Expanded(child: _buildPaymentButton()) else _buildPaymentButton(),
-    
-    if (isRowLayout) const SizedBox(width: 8) else const SizedBox.shrink(),
-    
-    // Delivery Methods Button
-    if (isRowLayout) Expanded(child: _buildDeliveryButton()) else _buildDeliveryButton(),
-    
-    if (isRowLayout) const SizedBox(width: 8) else const SizedBox.shrink(),
-    
-    // Coupon Button
-    if (isRowLayout) Expanded(child: _buildCouponButton()) else _buildCouponButton(),
-  ];
-}
+  List<Widget> _buildButtonChildren(bool isRowLayout) {
+    return [
+      // Payment Methods Button
+      if (isRowLayout)
+        Expanded(child: _buildPaymentButton())
+      else
+        _buildPaymentButton(),
 
-Widget _buildPaymentButton() {
-  return SizedBox(
-    width: double.infinity, // Full width on mobile
-    child: ElevatedButton(
-      onPressed: _showPaymentMethodModal,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.blue[100],
-        foregroundColor: Colors.blue[800],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+      if (isRowLayout) const SizedBox(width: 8) else const SizedBox.shrink(),
+
+      // Delivery Methods Button
+      if (isRowLayout)
+        Expanded(child: _buildDeliveryButton())
+      else
+        _buildDeliveryButton(),
+
+      if (isRowLayout) const SizedBox(width: 8) else const SizedBox.shrink(),
+
+      // Coupon Button
+      if (isRowLayout)
+        Expanded(child: _buildCouponButton())
+      else
+        _buildCouponButton(),
+    ];
+  }
+
+  Widget _buildPaymentButton() {
+    return SizedBox(
+      width: double.infinity, // Full width on mobile
+      child: ElevatedButton(
+        onPressed: _showPaymentMethodModal,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue[100],
+          foregroundColor: Colors.blue[800],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.payment, size: 18),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              _getPaymentMethodSummary(),
-              overflow: TextOverflow.ellipsis,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.payment, size: 18),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                _getPaymentMethodSummary(),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-Widget _buildDeliveryButton() {
-  return SizedBox(
-    width: double.infinity, // Full width on mobile
-    child: ElevatedButton(
-      onPressed: _showDeliveryMethodModal,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.orange[100],
-        foregroundColor: Colors.orange[800],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          ],
         ),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            _deliveryMethod == "Takeaway" 
-              ? Icons.shopping_bag 
-              : _deliveryMethod == "Car Delivery"
-                ? Icons.car_rental
-                : Icons.delivery_dining,
-            size: 18,
-          ),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              _deliveryMethod,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
+    );
+  }
 
-Widget _buildCouponButton() {
-  return SizedBox(
-    width: double.infinity, // Full width on mobile
-    child: ElevatedButton(
-      onPressed: _showCouponModal,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _couponApplied ? Colors.purple[100] : Colors.grey[200],
-        foregroundColor: _couponApplied ? Colors.purple[800] : Colors.grey[800],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+  Widget _buildDeliveryButton() {
+    return SizedBox(
+      width: double.infinity, // Full width on mobile
+      child: ElevatedButton(
+        onPressed: _showDeliveryMethodModal,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.orange[100],
+          foregroundColor: Colors.orange[800],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(_couponApplied ? Icons.discount : Icons.discount_outlined, size: 18),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              _couponApplied ? 'Coupon Applied' : 'Add Coupon',
-              overflow: TextOverflow.ellipsis,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _deliveryMethod == "Takeaway"
+                  ? Icons.shopping_bag
+                  : _deliveryMethod == "Car Delivery"
+                      ? Icons.car_rental
+                      : Icons.delivery_dining,
+              size: 18,
             ),
-          ),
-        ],
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                _deliveryMethod,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-  Widget _buildSummaryRow(String label, String value, {
+  Widget _buildCouponButton() {
+    return SizedBox(
+      width: double.infinity, // Full width on mobile
+      child: ElevatedButton(
+        onPressed: () {},
+        // onPressed: _showCouponModal,
+        style: ElevatedButton.styleFrom(
+          backgroundColor:
+              _couponApplied ? Colors.purple[100] : Colors.grey[200],
+          foregroundColor:
+              _couponApplied ? Colors.purple[800] : Colors.grey[800],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(_couponApplied ? Icons.discount : Icons.discount_outlined,
+                size: 18),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                _couponApplied ? 'Coupon Applied' : 'Add Coupon',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(
+    String label,
+    String value, {
     bool isBold = false,
     Color? textColor,
   }) {
@@ -398,13 +420,14 @@ Widget _buildCouponButton() {
     if (_isCashSelected) methods.add('Cash');
     if (_isCardSelected) methods.add('Card');
     if (_isUpiSelected) methods.add('UPI');
-    
+
     if (methods.isEmpty) return 'Payment Methods';
     return methods.join(' + ');
   }
 
   void _showPaymentMethodModal() {
-    final totalAmount = widget.cartItems.fold(0.0, (sum, item) => sum + item['total']);
+    final totalAmount =
+        widget.cartItems.fold(0.0, (sum, item) => sum + item['total']);
     final subtotal = totalAmount - _discountAmount;
     final taxAmount = subtotal * 0.1;
     final grandTotal = subtotal + taxAmount;
@@ -420,7 +443,8 @@ Widget _buildCouponButton() {
         initialUpiAmount: _upiAmount,
         initialTransactionNumber: _transactionNumber,
         cartTotal: grandTotal,
-        onPaymentMethodSelected: (isCash, isCard, isUpi, cashAmt, cardAmt, upiAmt, transNum) {
+        onPaymentMethodSelected:
+            (isCash, isCard, isUpi, cashAmt, cardAmt, upiAmt, transNum) {
           setState(() {
             _isCashSelected = isCash;
             _isCardSelected = isCard;
@@ -429,11 +453,11 @@ Widget _buildCouponButton() {
             _cardAmount = cardAmt;
             _upiAmount = upiAmt;
             _transactionNumber = transNum;
-            
+
             // Calculate total paid amount and update balance
             double totalPaid = _calculateTotalPaid();
             _balance = totalPaid - grandTotal;
-            
+
             // Update paid amount controller
             _paidAmountController.text = totalPaid.toStringAsFixed(2);
           });
@@ -452,7 +476,8 @@ Widget _buildCouponButton() {
         initialComment: _comment,
         initialDeliveryDate: _deliveryDate,
         initialDeliveryTime: _deliveryTime,
-        onDeliveryMethodSelected: (method, methodId, carNumber, comment, deliveryDate, deliveryTime) {
+        onDeliveryMethodSelected:
+            (method, methodId, carNumber, comment, deliveryDate, deliveryTime) {
           setState(() {
             _deliveryMethod = method;
             _deliveryMethodId = methodId;
@@ -466,24 +491,24 @@ Widget _buildCouponButton() {
     );
   }
 
-  void _showCouponModal() {
-    showDialog(
-      context: context,
-      builder: (context) => CouponModal(
-        initialCouponCode: _couponCode,
-        isCouponApplied: _couponApplied,
-        onCouponAction: (couponCode, isApplied) {
-          setState(() {
-            _couponCode = couponCode;
-            _couponApplied = isApplied;
-            // For demo purposes, set a fixed discount amount
-            // In a real app, you would calculate this based on the coupon code
-            _discountAmount = isApplied ? 50.0 : 0.0;
-          });
-        },
-      ),
-    );
-  }
+  // void _showCouponModal() {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => CouponModal(
+  //       initialCouponCode: _couponCode,
+  //       isCouponApplied: _couponApplied,
+  //       onCouponAction: (couponCode, isApplied) {
+  //         setState(() {
+  //           _couponCode = couponCode;
+  //           _couponApplied = isApplied;
+  //           // For demo purposes, set a fixed discount amount
+  //           // In a real app, you would calculate this based on the coupon code
+  //           _discountAmount = isApplied ? 50.0 : 0.0;
+  //         });
+  //       },
+  //     ),
+  //   );
+  // }
 
   double _calculateTotalPaid() {
     double cash = double.tryParse(_cashAmount) ?? 0.0;
@@ -565,7 +590,8 @@ Widget _buildCouponButton() {
     _showOrderConfirmationDialog(context, grandTotal, totalPaid);
   }
 
-  void _showOrderConfirmationDialog(BuildContext context, double grandTotal, double totalPaid) {
+  void _showOrderConfirmationDialog(
+      BuildContext context, double grandTotal, double totalPaid) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -595,8 +621,7 @@ Widget _buildCouponButton() {
                 '₹${_balance.toStringAsFixed(2)}',
                 textColor: _balance >= 0 ? Colors.green : Colors.red,
               ),
-              if (_couponApplied)
-                _buildSummaryRow('Coupon:', _couponCode),
+              if (_couponApplied) _buildSummaryRow('Coupon:', _couponCode),
               const SizedBox(height: 16),
               // Show payment method details
               if (_isCashSelected && _cashAmount.isNotEmpty)
