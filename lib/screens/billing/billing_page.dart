@@ -3613,6 +3613,7 @@ class BillingPageState extends State<BillingPage>
                 OrderDetailsModel.fromJson(OrderDetailsresponse);
 
             String? formattedTotal =
+                orderDetails.data?.cart?.priceSummary?.netPayable?.toString() ??
                 orderDetails.data?.cart?.priceSummary?.netTotal.toString();
             String? savedTotal =
                 orderDetails.data?.cart?.priceSummary?.savedTotal.toString();

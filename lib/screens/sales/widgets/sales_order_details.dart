@@ -305,7 +305,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
             return;
           }
 
-          String? formattedTotal = orderDetailsModelData?.cart?.priceSummary?.netTotal?.toString() ?? "0.00";
+          String? formattedTotal = orderDetailsModelData?.cart?.priceSummary?.netPayable?.toString() ?? 
+                                   orderDetailsModelData?.cart?.priceSummary?.netTotal?.toString() ?? "0.00";
           String? savedTotal = orderDetailsModelData?.cart?.priceSummary?.savedTotal?.toString() ?? "0.00";
           String? discountAmount = orderDetailsModelData?.cart?.priceSummary?.discount?.toString() ?? "0.00";
           String storeName = orderDetailsModelData?.cart?.storeName ?? "Store";
