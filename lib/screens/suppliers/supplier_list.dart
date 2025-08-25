@@ -549,13 +549,15 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
     );
   }
 
-  Widget _buildSearchBar(Size size) {
-    return SizedBox(
-      height: 90,
-      child: Row(
-        children: [
-          // Name Search Field
-          Padding(
+ Widget _buildSearchBar(Size size) {
+  return SizedBox(
+    height: 90,
+    child: Row(
+      children: [
+        // Name Search Field
+        Expanded(
+          flex: 2,
+          child: Padding(
             padding: const EdgeInsets.only(left: 10.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -570,7 +572,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                 ),
                 buildColumnWidgetForTextFields(
                   height: 45,
-                  width: 180,
+                  width: double.infinity, // Take full available width
                   onchanged: (value) {
                     if (value != null) {
                       Future.microtask(() {
@@ -596,9 +598,12 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
               ],
             ),
           ),
+        ),
 
-          // Email Search Field
-          Padding(
+        // Email Search Field
+        Expanded(
+          flex: 2,
+          child: Padding(
             padding: const EdgeInsets.only(left: 10.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -613,7 +618,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                 ),
                 buildColumnWidgetForTextFields(
                   height: 45,
-                  width: 180,
+                  width: double.infinity, // Take full available width
                   onchanged: (value) {
                     if (value != null) {
                       Future.microtask(() {
@@ -639,9 +644,12 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
               ],
             ),
           ),
+        ),
 
-          // Phone Search Field
-          Padding(
+        // Phone Search Field
+        Expanded(
+          flex: 2,
+          child: Padding(
             padding: const EdgeInsets.only(left: 10.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -656,7 +664,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                 ),
                 buildColumnWidgetForTextFields(
                   height: 45,
-                  width: 180,
+                  width: double.infinity, // Take full available width
                   onchanged: (value) {
                     if (value != null) {
                       Future.microtask(() {
@@ -682,9 +690,12 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
               ],
             ),
           ),
+        ),
 
-          // Reset Button
-          Padding(
+        // Reset Button
+        Expanded(
+          flex: 2,
+          child: Padding(
             padding: const EdgeInsets.only(left: 10.0, top: 30),
             child: CustomRoundButton(
               title: "Reset",
@@ -702,14 +713,15 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                 });
               },
               height: 45,
-              width: size.width * 0.09,
+              width: double.infinity, // Take full available width
               fontSize: FontSize.s12,
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 }
 
 class SupplierDetailModal extends StatelessWidget {

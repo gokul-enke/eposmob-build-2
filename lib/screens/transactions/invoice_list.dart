@@ -170,16 +170,33 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-  Widget _buildSearchBar(Size size) {
-    return SizedBox(
-      height: 90,
-      child: Row(
-        children: [
-          _buildSearchTextField(),
-          _buildInvoiceNumberSearch(),
-          // _buildDateRangeSearch(),
-          _buildStatusFilter(),
-          Padding(
+Widget _buildSearchBar(Size size) {
+  return SizedBox(
+    height: 90,
+    child: Row(
+      children: [
+        // Name Search Field
+        Expanded(
+          flex: 1,
+          child: _buildSearchTextField(),
+        ),
+        
+        // Invoice Number Search Field
+        Expanded(
+          flex: 1,
+          child: _buildInvoiceNumberSearch(),
+        ),
+        
+        // Status Filter
+        Expanded(
+          flex: 1,
+          child: _buildStatusFilter(),
+        ),
+        
+        // Reset Button
+        Expanded(
+          flex: 1,
+          child: Padding(
             padding: const EdgeInsets.only(left: 10.0, top: 42),
             child: CustomRoundButton(
               title: "Reset",
@@ -187,14 +204,16 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               textColor: ColorManager.kPrimaryColor,
               fct: resetSearch,
               height: 45,
-              width: size.width * 0.09,
+              width: double.infinity, // Take full available width
               fontSize: FontSize.s12,
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
+
 
   Widget _buildInvoiceNumberSearch() {
     return Padding(
@@ -215,7 +234,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               
             
             height: 45,
-            width: 200,
+            width: double.infinity,
             circleRadius  : 7,
             child: TextFormField(
               controller: invoiceNumberController,
@@ -327,7 +346,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           SizedBox(height: 8 ),
           BuildBoxShadowContainer(
             height: 45,
-            width: 120,
+            width: double.infinity,
             circleRadius: 7,
             child: DropdownButtonFormField<String>(
               value: selectedStatus,
@@ -568,7 +587,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               
             
             height: 45,
-            width: 180,
+            width: double.infinity,
             circleRadius:7,
             child: TextFormField(
               controller: searchTextController,

@@ -160,95 +160,118 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                 const SizedBox(
                   height: 15,
                 ),
-                SizedBox(
-                  height: 90,
-                  child: Row(
-                    // scrollDirection: Axis.horizontal,
-                    // physics: const BouncingScrollPhysics(),
-                    children: [
-                      // Filter Category
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              "Search Category",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            height: 45,
-                            width: 250,
-                            child: BuildBoxShadowContainer(
-                              circleRadius: 7,
-                              alignment: Alignment.centerLeft,
-                              margin: const EdgeInsets.only(left: 5),
-                              padding: const EdgeInsets.only(left: 15),
-                              child: TextField(
-                                controller: _searchController,
-                                decoration: InputDecoration(
-                                  hintText: 'Type to search...',
-                                  hintStyle: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.27,
-                                    ColorManager.textColor.withOpacity(.5),
-                                  ),
-                                  border: InputBorder.none,
-                                  suffixIcon: _searchController.text.isNotEmpty
-                                      ? IconButton(
-                                          icon: Icon(Icons.clear, size: 18),
-                                          onPressed: () {
-                                            _searchController.clear();
-                                            resetSearch();
-                                          },
-                                        )
-                                      : null,
-                                ),
-                                onChanged: (value) {
-                                  if (value.isEmpty) {
-                                    resetSearch();
-                                  } else {
-                                    searchCategory(1);
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      Padding(
-                        padding: const EdgeInsets.only(left: 10.0, top: 30),
-                        child: CustomRoundButton(
-                          title: "Search",
-                          fct: () => {searchCategory(1)},
-                          height: 45,
-                          width: size.width * 0.09,
-                          fontSize: FontSize.s12,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 10.0, top: 30),
-                        child: CustomRoundButton(
-                          title: "Reset",
-                          boxColor: Colors.white,
-                          textColor: ColorManager.kPrimaryColor,
-                          fct: resetSearch,
-                          height: 45,
-                          width: size.width * 0.09,
-                          fontSize: FontSize.s12,
-                        ),
-                      ),
-                    ],
-                  ),
+    SizedBox(
+  height: 90,
+  child: Row(
+    children: [
+      // Filter Category - Takes available space
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                "Search Category",
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s14,
+                  0.27,
+                  Colors.black.withOpacity(0.6),
                 ),
+              ),
+            ),
+            SizedBox(
+              height: 45,
+              child: BuildBoxShadowContainer(
+                circleRadius: 7,
+                alignment: Alignment.centerLeft,
+                margin: const EdgeInsets.only(left: 5),
+                padding: const EdgeInsets.only(left: 15),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Type to search...',
+                    hintStyle: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s12,
+                      0.27,
+                      ColorManager.textColor.withOpacity(.5),
+                    ),
+                    border: InputBorder.none,
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              resetSearch();
+                            },
+                          )
+                        : null,
+                  ),
+                  onChanged: (value) {
+                    if (value.isEmpty) {
+                      resetSearch();
+                    } else {
+                      searchCategory(1);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      const SizedBox(width: 10),
+      
+      // Empty space to maintain equal spacing
+      Expanded(
+        child: Container(), // Empty container for spacing
+      ),
+
+      const SizedBox(width: 10),
+
+      // Search button
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 35), // Space to align with the text field
+            CustomRoundButton(
+              title: "Search",
+              fct: () => {searchCategory(1)},
+              height: 45,
+              width: double.infinity, // Take full width of the container
+              fontSize: FontSize.s12,
+            ),
+          ],
+        ),
+      ),
+
+      const SizedBox(width: 10),
+
+      // Reset button
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 35), // Space to align with the text field
+            CustomRoundButton(
+              title: "Reset",
+              boxColor: Colors.white,
+              textColor: ColorManager.kPrimaryColor,
+              fct: resetSearch,
+              height: 45,
+              width: double.infinity, // Take full width of the container
+              fontSize: FontSize.s12,
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+),
                 const SizedBox(height: 20),
                 Expanded(
                   child:

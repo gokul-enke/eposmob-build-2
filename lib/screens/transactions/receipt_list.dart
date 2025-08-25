@@ -206,34 +206,80 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     );
   }
 
-  Widget _buildSearchBar(Size size) {
-    return SizedBox(
-      height: 90,
-      child: Row(
-        children: [
-          _buildSearchTextField(),
-          _buildReceiptNumberSearch(),
-          _buildPaymentReferenceSearch(),
-          _buildStatusFilter(),
-          _buildPaymentMethodSearch(),
-        
-          Padding(
-             padding: const EdgeInsets.only(left: 10.0, top: 42),
-            child: CustomRoundButton(
-              title: "Reset",
-              boxColor: Colors.white,
-              textColor: ColorManager.kPrimaryColor,
-              fct: resetSearch,
-              height: 45,
-              width: size.width * 0.09,
-              fontSize: FontSize.s12,
+Widget _buildSearchBar(Size size) {
+  return Column(
+    children: [
+      // First row with exactly 4 fields
+      SizedBox(
+        height: 90,
+        child: Row(
+          children: [
+            // First field
+            Expanded(
+              flex: 1,
+              child: _buildSearchTextField(),
             ),
-          ),
-        ],
+            
+            // Second field
+            Expanded(
+              flex: 1,
+              child: _buildReceiptNumberSearch(),
+            ),
+            
+            // Third field
+            Expanded(
+              flex: 1,
+              child: _buildPaymentReferenceSearch(),
+            ),
+            
+            // Fourth field
+            Expanded(
+              flex: 1,
+              child: _buildStatusFilter(),
+            ),
+          ],
+        ),
       ),
-    );
-  }
-  Widget _buildReceiptNumberSearch() {
+      
+      // Second row with the 5th field and reset button
+      SizedBox(
+        height: 90,
+        child: Row(
+          children: [
+            // Fifth field
+            Expanded(
+              flex: 1,
+              child: _buildPaymentMethodSearch(),
+            ),
+            
+            // Add empty expanded widgets to fill space
+            Expanded(flex: 2, child: Container()),
+            
+            // Reset Button (same width as other fields)
+            Expanded(
+              flex: 1,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 10.0, top: 42),
+                child: CustomRoundButton(
+                  title: "Reset",
+                  boxColor: Colors.white,
+                  textColor: ColorManager.kPrimaryColor,
+                  fct: resetSearch,
+                  height: 45,
+                  width: double.infinity,
+                  fontSize: FontSize.s12,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+// Update all field widgets to use full width
+Widget _buildReceiptNumberSearch() {
   return Padding(
     padding: const EdgeInsets.only(left: 10.0),
     child: Column(
@@ -249,15 +295,13 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
         ),
         SizedBox(height: 8,),
         BuildBoxShadowContainer(
-          
-        
           height: 45,
-          width: 180,
+          width: double.infinity, // Take full available width
           circleRadius: 7,
           child: TextFormField(
-            controller: receiptNumberController, // You'll need to define this controller
+            controller: receiptNumberController,
             onChanged: (value) {
-              searchReceipts(); // Or a specific method for receipt number search
+              searchReceipts();
             },
             cursorColor: ColorManager.kPrimaryColor,
             cursorHeight: 13,
@@ -292,14 +336,13 @@ Widget _buildPaymentReferenceSearch() {
         ),
         SizedBox(height: 8),
         BuildBoxShadowContainer(
-          
           circleRadius: 7,
           height: 45,
-          width: 180,
+          width: double.infinity, // Take full available width
           child: TextFormField(
-            controller: paymentReferenceController, // You'll need to define this controller
+            controller: paymentReferenceController,
             onChanged: (value) {
-              searchReceipts(); // Or a specific method for payment reference search
+              searchReceipts();
             },
             cursorColor: ColorManager.kPrimaryColor,
             cursorHeight: 13,
@@ -317,7 +360,8 @@ Widget _buildPaymentReferenceSearch() {
     ),
   );
 }
-  Widget _buildStatusFilter() {
+
+Widget _buildStatusFilter() {
   return Padding(
     padding: const EdgeInsets.only(left: 10.0),
     child: Column(
@@ -334,9 +378,8 @@ Widget _buildPaymentReferenceSearch() {
         SizedBox(height: 8),
         BuildBoxShadowContainer(
           circleRadius: 7,
-        
           height: 45,
-          width: 120,
+          width: double.infinity, // Take full available width
           child: DropdownButtonFormField<String>(
             value: selectedStatus,
             decoration: decoration.copyWith(
@@ -370,7 +413,6 @@ Widget _buildPaymentReferenceSearch() {
                       0.18, ColorManager.textColor),
                 ),
               ),
-              
             ],
             onChanged: (value) {
               setState(() {
@@ -384,7 +426,8 @@ Widget _buildPaymentReferenceSearch() {
     ),
   );
 }
-  Widget _buildPaymentMethodSearch() {
+
+Widget _buildPaymentMethodSearch() {
   return Padding(
     padding: const EdgeInsets.only(left: 10.0),
     child: Column(
@@ -400,11 +443,9 @@ Widget _buildPaymentReferenceSearch() {
         ),
         SizedBox(height: 8),
         BuildBoxShadowContainer(
-          
           circleRadius: 7,
           height: 45,
-        
-          width: 135,
+          width: double.infinity, // Take full available width
           child: DropdownButtonFormField<String>(
             value: paymentMethod,
             decoration: decoration.copyWith(
@@ -438,7 +479,6 @@ Widget _buildPaymentReferenceSearch() {
                       0.18, ColorManager.textColor),
                 ),
               ),
-              
             ],
             onChanged: (value) {
               setState(() {
@@ -453,48 +493,46 @@ Widget _buildPaymentReferenceSearch() {
   );
 }
 
-  Widget _buildSearchTextField() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Name",
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
+Widget _buildSearchTextField() {
+  return Padding(
+    padding: const EdgeInsets.only(left: 10.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "Name",
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                0.27, Colors.black.withOpacity(0.6)),
+          ),
+        ),
+        SizedBox(height: 8,),
+        BuildBoxShadowContainer(
+          height: 45,
+          width: double.infinity, // Take full available width
+          circleRadius:7,
+          child: TextFormField(
+            controller: searchTextController,
+            onChanged: (value) {
+              searchReceipts();
+            },
+            cursorColor: ColorManager.kPrimaryColor,
+            cursorHeight: 13,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                0.18, ColorManager.textColor),
+            decoration: decoration.copyWith(
+              hintText: "Name",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+              prefixIconColor: Colors.black,
             ),
           ),
-          SizedBox(height: 8,),
-          BuildBoxShadowContainer(
-            
-    
-            height: 45,
-            width: 180,
-            circleRadius:7,
-            child: TextFormField(
-              controller: searchTextController,
-              onChanged: (value) {
-                searchReceipts();
-              },
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                  0.18, ColorManager.textColor),
-              decoration: decoration.copyWith(
-                hintText: "Name",
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s10, 0.18, ColorManager.textColor),
-                prefixIconColor: Colors.black,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   void _showReceiptDetails(Receipt receipt) {
   showDialog(

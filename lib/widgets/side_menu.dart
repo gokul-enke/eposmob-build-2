@@ -207,7 +207,6 @@ class _SideMenuState extends State<SideMenu> {
                 iconPath: ImageAssets.homeIcon,
                 title: 'Home',
                 onTap: () {
-                  // debugPrint(" Billing, ${sideBarController.index.value}");
                   sideBarController.index.value = 46;
                 },
                 selected: sideBarController.index.value == 46,
@@ -479,7 +478,7 @@ class _SideMenuState extends State<SideMenu> {
               // debugPrint(" 'Logout',${sideBarController.index.value}");
             },
             selected: false,
-          ),
+           ),
           const SizedBox(
             height: 10,
           ),
