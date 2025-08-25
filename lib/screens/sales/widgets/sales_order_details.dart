@@ -311,6 +311,12 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
           String? discountAmount = orderDetailsModelData?.cart?.priceSummary?.discount?.toString() ?? "0.00";
           String storeName = orderDetailsModelData?.cart?.storeName ?? "Store";
           String orderDate = orderDetailsModelData?.orderDate ?? "";
+          
+          // Extract customer details
+          String? customerName = customerDetails?.name;
+          String? customerPhone = customerDetails?.phone;
+          String? customerEmail = customerDetails?.email;
+          String? customerAddress = customerDetails?.address?.join(', ');
 
           Navigator.push(
             context,
@@ -323,6 +329,10 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 discountAmount: discountAmount,
                 orderDate: orderDate,
                 orderNumber: orderNumber,
+                customerName: customerName,
+                customerPhone: customerPhone,
+                customerEmail: customerEmail,
+                customerAddress: customerAddress,
               ),
             ),
           );
