@@ -1160,7 +1160,7 @@ class StandardPrinter {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(
-            'CART TOTAL:',
+            'TOTAL:',
             style: pw.TextStyle(
               fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
               fontWeight: pw.FontWeight.bold,
