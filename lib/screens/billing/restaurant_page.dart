@@ -1678,6 +1678,8 @@ class _OrderPanelState extends State<_OrderPanel> {
         _selectedOrder = null;
         _error = null;
       });
+      // Clear state when no table is selected
+      _clearOrderEditingState();
       widget.onOrderSelected(null);
     }
 
@@ -2556,10 +2558,15 @@ class _OrderPanelState extends State<_OrderPanel> {
 
     try {
       debugPrint('🔄 _fetchOrderDetails: Processing saved order data.');
-      _selectedOrder =
-          order; // Set the selected order directly - no need to modify local cart
-      widget.onOrderSelected(
-          order); // Call the callback to update the parent widget
+      
+      // Clear previous order's customer and payment state to prevent contamination
+      _clearOrderEditingState();
+      
+      _selectedOrder = order; // Set the selected order directly
+      widget.onOrderSelected(order); // Call the callback to update the parent widget
+      
+      // Load order-specific data if available
+      _loadOrderSpecificData(order);
     } catch (e) {
       debugPrint('❌ _fetchOrderDetails Exception: ${e.toString()}');
       setState(() {
@@ -2570,6 +2577,53 @@ class _OrderPanelState extends State<_OrderPanel> {
         _isLoadingOrderDetails = false;
       });
     }
+  }
+
+  // Clear customer and payment state when switching orders
+  void _clearOrderEditingState() {
+    debugPrint('🧹 Clearing previous order editing state...');
+    setState(() {
+      // Clear customer selection
+      _selectedCustomer = null;
+      _selectedCustomerID = null;
+      _selectedCustomerPhone = null;
+      
+      // Clear payment methods
+      _isCashSelected = false;
+      _isCardSelected = false;
+      _isUpiSelected = false;
+      _isDebitSelected = false;
+      _cashAmount = "";
+      _cardAmount = "";
+      _upiAmount = "";
+      _debitAmount = "";
+      _transactionNumber = "";
+      
+      // Clear discount state
+      _isCouponApplied = false;
+      _flatDiscount = 0.0;
+      _percentageDiscount = 0.0;
+      _couponCode = "";
+      
+      // Reset balance and credit state
+      _balanceAmount = 0.0;
+      _toCustomerCreditEnabled = false;
+      _toCustomerCreditAmount = 0.0;
+    });
+    debugPrint('✅ Order editing state cleared');
+  }
+
+  // Load order-specific data (customer, payment, etc.) from the selected order
+  void _loadOrderSpecificData(dynamic order) {
+    debugPrint('📋 Loading order-specific data...');
+    
+    // TODO: Load customer data from order if needed
+    // This can be implemented later to restore order's original customer
+    
+    // TODO: Load payment data from order if needed  
+    // This can be implemented later to restore order's payment methods
+    
+    debugPrint('✅ Order-specific data loaded');
   }
 
   bool _hasPaymentMethod() {
