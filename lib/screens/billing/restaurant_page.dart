@@ -33,9 +33,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
   String? _activeTableId;
   int? _activeCategoryId;
   dynamic _selectedOrderFromOrderPanel; // New state to hold selected order
-  int? _refreshCounter; // Counter to trigger refreshes without creating new objects
-  final GlobalKey<_OrderPanelState> _orderPanelKey = GlobalKey<_OrderPanelState>(); // Key to access OrderPanel methods
-  bool _isLoadingSendToKitchen = false; // Loading state for Send to Kitchen button
+  int?
+      _refreshCounter; // Counter to trigger refreshes without creating new objects
+  final GlobalKey<_OrderPanelState> _orderPanelKey =
+      GlobalKey<_OrderPanelState>(); // Key to access OrderPanel methods
+  bool _isLoadingSendToKitchen =
+      false; // Loading state for Send to Kitchen button
 
   @override
   void initState() {
@@ -152,7 +155,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
             key: _orderPanelKey, // Add key to access methods
             tableId: _activeTableId,
             screenSize: screenSize,
-            onSendToKitchen: _sendOrderToKitchenWithLoading, // Use wrapper method
+            onSendToKitchen:
+                _sendOrderToKitchenWithLoading, // Use wrapper method
             onNewOrder: _handleNewOrder, // Pass the new callback
             onOrderSelected: (order) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -166,7 +170,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
             selectedOrderFromParent:
                 _selectedOrderFromOrderPanel, // Pass the selected order
             refreshCounter: _refreshCounter, // Pass refresh counter
-            isLoadingSendToKitchen: _isLoadingSendToKitchen, // Pass loading state
+            isLoadingSendToKitchen:
+                _isLoadingSendToKitchen, // Pass loading state
           ),
         ),
       ],
@@ -203,7 +208,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   tableId: _activeTableId,
                   isCompact: true,
                   screenSize: screenSize,
-                  onSendToKitchen: _sendOrderToKitchenWithLoading, // Use wrapper method
+                  onSendToKitchen:
+                      _sendOrderToKitchenWithLoading, // Use wrapper method
                   onNewOrder: _handleNewOrder, // Pass the new callback
                   onOrderSelected: (order) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -217,7 +223,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   selectedOrderFromParent:
                       _selectedOrderFromOrderPanel, // Pass the selected order
                   refreshCounter: _refreshCounter, // Pass refresh counter
-                  isLoadingSendToKitchen: _isLoadingSendToKitchen, // Pass loading state
+                  isLoadingSendToKitchen:
+                      _isLoadingSendToKitchen, // Pass loading state
                 ),
               ),
             ],
@@ -250,26 +257,29 @@ class _RestaurantPageState extends State<RestaurantPage> {
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
 
       // Only call API when editing an existing saved order
       final bool isEditingExistingOrder = _selectedOrderFromOrderPanel != null;
 
       if (isEditingExistingOrder) {
         // Use the cart_id from the selected saved order
-        int? targetCartId = int.tryParse((
-              _selectedOrderFromOrderPanel['cart']?['id'] ??
-              _selectedOrderFromOrderPanel['cart_id']
-            )
+        int? targetCartId = int.tryParse((_selectedOrderFromOrderPanel['cart']
+                        ?['id'] ??
+                    _selectedOrderFromOrderPanel['cart_id'])
                 ?.toString() ??
             '');
-        
+
         // Get the customer ID from the selected order (not the logged-in user ID)
-        final customerId = _selectedOrderFromOrderPanel['cart']?['customer_id'] ?? 
-                          _selectedOrderFromOrderPanel['customer_id'] ?? 
-                          authModel.userId ?? 1;
-        
-        debugPrint('🔄 Editing existing order - Using cart_id: $targetCartId, customerId: $customerId');
+        final customerId = _selectedOrderFromOrderPanel['cart']
+                ?['customer_id'] ??
+            _selectedOrderFromOrderPanel['customer_id'] ??
+            authModel.userId ??
+            1;
+
+        debugPrint(
+            '🔄 Editing existing order - Using cart_id: $targetCartId, customerId: $customerId');
 
         debugPrint('➡️ Calling CartProvider.addToCartAPI');
         final addResponse = await cartProvider.addToCartAPI(
@@ -285,7 +295,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         // Check if the API call was successful
         if (addResponse != null &&
             (addResponse['status']?.toLowerCase() == 'success' ||
-             addResponse['status']?.toLowerCase() == 'sucesss')) {
+                addResponse['status']?.toLowerCase() == 'sucesss')) {
           if (mounted) {
             showScaffold(
               context: context,
@@ -298,7 +308,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
               _refreshCounter = (_refreshCounter ?? 0) + 1;
             });
             _orderPanelKey.currentState?.refreshSavedOrdersSilently();
-            
+
             // Ensure parent widget also updates its state
             if (mounted) {
               setState(() {});
@@ -309,17 +319,21 @@ class _RestaurantPageState extends State<RestaurantPage> {
           if (mounted) {
             showScaffoldError(
               context: context,
-              message: 'Failed to add ${product.productName}: ${addResponse?['message'] ?? 'Unknown error'}',
+              message:
+                  'Failed to add ${product.productName}: ${addResponse?['message'] ?? 'Unknown error'}',
             );
           }
         }
       } else {
         // New order: strictly local cart only (no API here)
-        debugPrint('🛒 Adding product to local cart via LocalProductProvider (new order)');
+        debugPrint(
+            '🛒 Adding product to local cart via LocalProductProvider (new order)');
         localProductProvider.addToCart(
           product: product,
           quantity: quantity,
-          price: product.price?.price != null ? double.tryParse(product.price!.price!) : null,
+          price: product.price?.price != null
+              ? double.tryParse(product.price!.price!)
+              : null,
           mrp: product.mrp != null ? double.tryParse(product.mrp!) : null,
         );
 
@@ -353,7 +367,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
 
       // Get cart data from the local provider instead of cart provider
       final cartItems = localProductProvider.getCartItems();
@@ -420,8 +435,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
         // Refresh saved orders for the currently opened table
         if (mounted && _activeTableId != null) {
-          debugPrint('🔄 Refreshing saved orders after sending order to kitchen');
-          await Future.delayed(const Duration(milliseconds: 1000)); // Wait for server to process
+          debugPrint(
+              '🔄 Refreshing saved orders after sending order to kitchen');
+          await Future.delayed(
+              const Duration(milliseconds: 1000)); // Wait for server to process
           _orderPanelKey.currentState?.refreshSavedOrders();
         }
       } else {
@@ -441,7 +458,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   Future<void> _handleNewOrder() async {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
-    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
 
     // Clear the local cart first
     if (localProductProvider.cartItems.isNotEmpty) {
@@ -856,7 +874,7 @@ class _TablesPanel extends StatelessWidget {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   decoration: BoxDecoration(
-                    color:_getTableBackgroundColor(table.status),
+                    color: _getTableBackgroundColor(table.status),
                     border: isActive
                         ? Border.all(color: const Color(0xFF2563EB), width: 3)
                         : Border.all(color: Colors.grey.shade200, width: 1),
@@ -1631,7 +1649,8 @@ class _OrderPanelState extends State<_OrderPanel> {
   bool _isLoadingOrders = false;
   bool _isLoadingOrderDetails = false;
   String? _error;
-  Set<String> _loadingCartItems = {}; // Track which cart items are being updated
+  Set<String> _loadingCartItems =
+      {}; // Track which cart items are being updated
   bool _isLoadingConfirm = false; // Loading state for Confirm button
 
   // Payment Method Variables
@@ -1669,7 +1688,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         _fetchCustomers();
       });
     }
-    
+
     if (widget.tableId != oldWidget.tableId && widget.tableId != null) {
       _fetchSavedOrders();
     } else if (widget.tableId == null) {
@@ -1736,7 +1755,8 @@ class _OrderPanelState extends State<_OrderPanel> {
   // Public method to refresh saved orders from external calls
   void refreshSavedOrders() {
     if (widget.tableId != null) {
-      debugPrint('🔄 External refresh of saved orders triggered for table: ${widget.tableId}');
+      debugPrint(
+          '🔄 External refresh of saved orders triggered for table: ${widget.tableId}');
       _fetchSavedOrders();
     }
   }
@@ -1744,7 +1764,8 @@ class _OrderPanelState extends State<_OrderPanel> {
   // Public method to refresh saved orders silently (no loading spinner)
   void refreshSavedOrdersSilently() {
     if (widget.tableId != null) {
-      debugPrint('🔄 External silent refresh of saved orders triggered for table: ${widget.tableId}');
+      debugPrint(
+          '🔄 External silent refresh of saved orders triggered for table: ${widget.tableId}');
       _refreshSavedOrdersSilently();
     }
   }
@@ -1752,12 +1773,13 @@ class _OrderPanelState extends State<_OrderPanel> {
   Future<void> _fetchCustomers() async {
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
-      final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
-      
+      final customerProvider =
+          Provider.of<CustomerProvider>(context, listen: false);
+
       await customerProvider.loadAllCustomers(
         authModel.token ?? '',
       );
-      
+
       setState(() {
         _customers = customerProvider.customerList ?? [];
       });
@@ -1768,7 +1790,7 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   void _showPaymentMethodModal() {
     if (_selectedOrder == null) return;
-    
+
     // Calculate current total from cart items (dynamic calculation)
     List<dynamic> cartItems = [];
     if (_selectedOrder['cart_items'] != null) {
@@ -1792,22 +1814,28 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Calculate order total dynamically from cart items
     double orderTotal = 0.0;
     for (var item in cartItems) {
-      final quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
-      final unitPrice = double.tryParse(item['unit_price']?.toString() ?? 
-                      item['price']?.toString() ?? 
-                      item['product_price']?.toString() ?? '0') ?? 0.0;
+      final quantity =
+          double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+      final unitPrice = double.tryParse(item['unit_price']?.toString() ??
+              item['price']?.toString() ??
+              item['product_price']?.toString() ??
+              '0') ??
+          0.0;
       orderTotal += quantity * unitPrice;
     }
 
     // If we still have zero total, try getting it from order total as fallback
     if (orderTotal == 0.0 && _selectedOrder['grand_total'] != null) {
-      orderTotal = double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ?? 0.0;
+      orderTotal =
+          double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
+              0.0;
     }
 
-    debugPrint('💰 Payment Modal - Cart items count: ${cartItems.length}, Order Total: ₹${orderTotal.toStringAsFixed(2)}');
-    
+    debugPrint(
+        '💰 Payment Modal - Cart items count: ${cartItems.length}, Order Total: ₹${orderTotal.toStringAsFixed(2)}');
+
     final customerPrevBalance = _selectedCustomer?.balance ?? 0.0;
-    
+
     // Auto-fill cash amount if no payment methods are currently selected
     String autoFillCashAmount = _cashAmount;
     bool autoSelectCash = _isCashSelected;
@@ -1819,11 +1847,12 @@ class _OrderPanelState extends State<_OrderPanel> {
       // No payment method selected, auto-fill cash with order total
       autoFillCashAmount = orderTotal.toStringAsFixed(2);
       autoSelectCash = true;
-      debugPrint('🔧 Auto-fill triggered: Cash amount set to ₹${autoFillCashAmount}, Cash selected: $autoSelectCash');
+      debugPrint(
+          '🔧 Auto-fill triggered: Cash amount set to ₹${autoFillCashAmount}, Cash selected: $autoSelectCash');
     } else {
       debugPrint('🔧 Auto-fill skipped: Payment methods already selected');
     }
-    
+
     showDialog(
       context: context,
       builder: (context) => PaymentMethodModal(
@@ -1838,7 +1867,8 @@ class _OrderPanelState extends State<_OrderPanel> {
         initialTransactionNumber: _transactionNumber,
         cartTotal: orderTotal,
         customerPrevBalance: customerPrevBalance,
-        onPaymentMethodSelected: (isCash, isCard, isUpi, isDebit, cash, card, upi, debit, transaction, toCustomerCredit) {
+        onPaymentMethodSelected: (isCash, isCard, isUpi, isDebit, cash, card,
+            upi, debit, transaction, toCustomerCredit) {
           setState(() {
             _isCashSelected = isCash;
             _isCardSelected = isCard;
@@ -1852,15 +1882,17 @@ class _OrderPanelState extends State<_OrderPanel> {
             _toCustomerCreditEnabled = toCustomerCredit;
             // Capture the actual customer credit amount from the debit parameter
             _toCustomerCreditAmount = double.tryParse(debit) ?? 0.0;
-            
+
             debugPrint('💳 Payment Method Updated:');
-            debugPrint('  - To Customer Credit Enabled: $_toCustomerCreditEnabled');
-            debugPrint('  - Customer Credit Amount: ₹${_toCustomerCreditAmount.toStringAsFixed(2)}');
-            
+            debugPrint(
+                '  - To Customer Credit Enabled: $_toCustomerCreditEnabled');
+            debugPrint(
+                '  - Customer Credit Amount: ₹${_toCustomerCreditAmount.toStringAsFixed(2)}');
+
             // Calculate balance
-            final totalPaid = (double.tryParse(cash) ?? 0.0) + 
-                             (double.tryParse(card) ?? 0.0) + 
-                             (double.tryParse(upi) ?? 0.0);
+            final totalPaid = (double.tryParse(cash) ?? 0.0) +
+                (double.tryParse(card) ?? 0.0) +
+                (double.tryParse(upi) ?? 0.0);
             _balanceAmount = totalPaid - orderTotal;
           });
         },
@@ -1889,7 +1921,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                 filteredCustomers = _customers.where((customer) {
                   final name = (customer.name ?? '').toLowerCase();
                   final phone = (customer.phone ?? '').toLowerCase();
-                  return name.contains(searchQuery) || phone.contains(searchQuery);
+                  return name.contains(searchQuery) ||
+                      phone.contains(searchQuery);
                 }).toList();
               }
             });
@@ -1897,7 +1930,8 @@ class _OrderPanelState extends State<_OrderPanel> {
 
           return Dialog(
             backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             elevation: 10,
             child: Container(
               width: 500,
@@ -1981,7 +2015,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                   ),
                   // Search Bar
                   Container(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.grey.shade50,
@@ -2002,9 +2036,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                             0.21,
                             const Color(0xFF64748B),
                           ),
-                          prefixIcon: Icon(
+                          prefixIcon: const Icon(
                             Icons.search,
-                            color: const Color(0xFF64748B),
+                            color: Color(0xFF64748B),
                             size: 20,
                           ),
                           suffixIcon: searchQuery.isNotEmpty
@@ -2018,9 +2052,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                                     borderRadius: BorderRadius.circular(20),
                                     child: Container(
                                       padding: const EdgeInsets.all(8),
-                                      child: Icon(
+                                      child: const Icon(
                                         Icons.clear,
-                                        color: const Color(0xFF64748B),
+                                        color: Color(0xFF64748B),
                                         size: 18,
                                       ),
                                     ),
@@ -2049,7 +2083,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (filteredCustomers.isEmpty && searchQuery.isNotEmpty)
+                          if (filteredCustomers.isEmpty &&
+                              searchQuery.isNotEmpty)
                             // No search results
                             Container(
                               padding: const EdgeInsets.symmetric(vertical: 40),
@@ -2058,7 +2093,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                                   Container(
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFF59E0B).withOpacity(0.1),
+                                      color: const Color(0xFFF59E0B)
+                                          .withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: const Icon(
@@ -2099,7 +2135,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                                   Container(
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF64748B).withOpacity(0.1),
+                                      color: const Color(0xFF64748B)
+                                          .withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: const Icon(
@@ -2126,23 +2163,38 @@ class _OrderPanelState extends State<_OrderPanel> {
                                         Navigator.of(context).pop();
                                         // Check if search query is a 10-digit number
                                         String phoneToPreFill = '';
-                                        if (searchQuery.length == 10 && RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
+                                        if (searchQuery.length == 10 &&
+                                            RegExp(r'^[0-9]+$')
+                                                .hasMatch(searchQuery)) {
                                           phoneToPreFill = searchQuery;
                                         }
-                                        showAddCustomerModal(context, MediaQuery.of(context).size, mobileNumber: phoneToPreFill).then((result) {
-                                          if (result != null && result['status'] == 'success') {
+                                        showAddCustomerModal(context,
+                                                MediaQuery.of(context).size,
+                                                mobileNumber: phoneToPreFill)
+                                            .then((result) {
+                                          if (result != null &&
+                                              result['status'] == 'success') {
                                             _fetchCustomers().then((_) {
                                               // Find and auto-select the newly added customer by phone
-                                              final addedPhone = result['phone'];
-                                              final matchingCustomer = _customers.firstWhere(
-                                                (customer) => customer.phone == addedPhone,
-                                                orElse: () => CustomerListModelData(),
+                                              final addedPhone =
+                                                  result['phone'];
+                                              final matchingCustomer =
+                                                  _customers.firstWhere(
+                                                (customer) =>
+                                                    customer.phone ==
+                                                    addedPhone,
+                                                orElse: () =>
+                                                    CustomerListModelData(),
                                               );
-                                              if (matchingCustomer.phone == addedPhone) {
+                                              if (matchingCustomer.phone ==
+                                                  addedPhone) {
                                                 setState(() {
-                                                  _selectedCustomer = matchingCustomer;
-                                                  _selectedCustomerID = matchingCustomer.id;
-                                                  _selectedCustomerPhone = matchingCustomer.phone;
+                                                  _selectedCustomer =
+                                                      matchingCustomer;
+                                                  _selectedCustomerID =
+                                                      matchingCustomer.id;
+                                                  _selectedCustomerPhone =
+                                                      matchingCustomer.phone;
                                                 });
                                               }
                                             });
@@ -2152,13 +2204,16 @@ class _OrderPanelState extends State<_OrderPanel> {
                                       borderRadius: BorderRadius.circular(12),
                                       child: Container(
                                         height: 48,
-                                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 24),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFF2563EB),
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: const Color(0xFF2563EB).withOpacity(0.3),
+                                              color: const Color(0xFF2563EB)
+                                                  .withOpacity(0.3),
                                               blurRadius: 8,
                                               offset: const Offset(0, 2),
                                             ),
@@ -2166,7 +2221,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
                                             const Icon(
                                               Icons.person_add,
@@ -2195,7 +2251,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                             // Customer list
                             Flexible(
                               child: Container(
-                                constraints: const BoxConstraints(maxHeight: 320),
+                                constraints:
+                                    const BoxConstraints(maxHeight: 320),
                                 decoration: BoxDecoration(
                                   color: Colors.grey.shade50,
                                   borderRadius: BorderRadius.circular(12),
@@ -2208,15 +2265,19 @@ class _OrderPanelState extends State<_OrderPanel> {
                                   shrinkWrap: true,
                                   padding: const EdgeInsets.all(8),
                                   itemCount: filteredCustomers.length,
-                                  separatorBuilder: (_, __) => const SizedBox(height: 4),
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: 4),
                                   itemBuilder: (context, index) {
                                     final customer = filteredCustomers[index];
-                                    final isSelected = _selectedCustomer?.id == customer.id;
-                                    
+                                    final isSelected =
+                                        _selectedCustomer?.id == customer.id;
+
                                     // Highlight search terms
-                                    String highlightedName = customer.name ?? 'Unknown';
-                                    String highlightedPhone = customer.phone ?? '';
-                                    
+                                    String highlightedName =
+                                        customer.name ?? 'Unknown';
+                                    String highlightedPhone =
+                                        customer.phone ?? '';
+
                                     return Material(
                                       color: Colors.transparent,
                                       child: InkWell(
@@ -2224,32 +2285,41 @@ class _OrderPanelState extends State<_OrderPanel> {
                                           setState(() {
                                             _selectedCustomer = customer;
                                             _selectedCustomerID = customer.id;
-                                            _selectedCustomerPhone = customer.phone;
+                                            _selectedCustomerPhone =
+                                                customer.phone;
                                           });
                                           Navigator.of(context).pop();
                                         },
                                         borderRadius: BorderRadius.circular(8),
                                         child: AnimatedContainer(
-                                          duration: const Duration(milliseconds: 200),
+                                          duration:
+                                              const Duration(milliseconds: 200),
                                           padding: const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
-                                            color: isSelected 
-                                                ? const Color(0xFF2563EB).withOpacity(0.1)
+                                            color: isSelected
+                                                ? const Color(0xFF2563EB)
+                                                    .withOpacity(0.1)
                                                 : Colors.white,
                                             border: Border.all(
-                                              color: isSelected 
+                                              color: isSelected
                                                   ? const Color(0xFF2563EB)
                                                   : Colors.grey.shade200,
                                               width: 1.5,
                                             ),
-                                            borderRadius: BorderRadius.circular(8),
-                                            boxShadow: isSelected ? [
-                                              BoxShadow(
-                                                color: const Color(0xFF2563EB).withOpacity(0.1),
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ] : null,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            boxShadow: isSelected
+                                                ? [
+                                                    BoxShadow(
+                                                      color: const Color(
+                                                              0xFF2563EB)
+                                                          .withOpacity(0.1),
+                                                      blurRadius: 4,
+                                                      offset:
+                                                          const Offset(0, 2),
+                                                    ),
+                                                  ]
+                                                : null,
                                           ),
                                           child: Row(
                                             children: [
@@ -2257,14 +2327,17 @@ class _OrderPanelState extends State<_OrderPanel> {
                                                 width: 40,
                                                 height: 40,
                                                 decoration: BoxDecoration(
-                                                  color: isSelected 
+                                                  color: isSelected
                                                       ? const Color(0xFF2563EB)
                                                       : const Color(0xFF64748B),
-                                                  borderRadius: BorderRadius.circular(20),
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
                                                 ),
                                                 child: Center(
                                                   child: Text(
-                                                    (customer.name ?? 'U').substring(0, 1).toUpperCase(),
+                                                    (customer.name ?? 'U')
+                                                        .substring(0, 1)
+                                                        .toUpperCase(),
                                                     style: buildCustomStyle(
                                                       FontWeightManager.bold,
                                                       FontSize.s14,
@@ -2277,27 +2350,34 @@ class _OrderPanelState extends State<_OrderPanel> {
                                               const SizedBox(width: 12),
                                               Expanded(
                                                 child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
                                                       highlightedName,
                                                       style: buildCustomStyle(
-                                                        FontWeightManager.semiBold,
+                                                        FontWeightManager
+                                                            .semiBold,
                                                         FontSize.s14,
                                                         0.21,
-                                                        isSelected 
-                                                            ? const Color(0xFF2563EB)
-                                                            : const Color(0xFF1E293B),
+                                                        isSelected
+                                                            ? const Color(
+                                                                0xFF2563EB)
+                                                            : const Color(
+                                                                0xFF1E293B),
                                                       ),
                                                     ),
-                                                    if (highlightedPhone.isNotEmpty)
+                                                    if (highlightedPhone
+                                                        .isNotEmpty)
                                                       Text(
                                                         highlightedPhone,
                                                         style: buildCustomStyle(
-                                                          FontWeightManager.medium,
+                                                          FontWeightManager
+                                                              .medium,
                                                           FontSize.s12,
                                                           0.21,
-                                                          const Color(0xFF64748B),
+                                                          const Color(
+                                                              0xFF64748B),
                                                         ),
                                                       ),
                                                   ],
@@ -2305,10 +2385,14 @@ class _OrderPanelState extends State<_OrderPanel> {
                                               ),
                                               if (isSelected)
                                                 Container(
-                                                  padding: const EdgeInsets.all(4),
+                                                  padding:
+                                                      const EdgeInsets.all(4),
                                                   decoration: BoxDecoration(
-                                                    color: const Color(0xFF059669),
-                                                    borderRadius: BorderRadius.circular(12),
+                                                    color:
+                                                        const Color(0xFF059669),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12),
                                                   ),
                                                   child: const Icon(
                                                     Icons.check,
@@ -2352,11 +2436,16 @@ class _OrderPanelState extends State<_OrderPanel> {
                           Navigator.of(context).pop();
                           // Check if search query is a 10-digit number
                           String phoneToPreFill = '';
-                          if (searchQuery.length == 10 && RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
+                          if (searchQuery.length == 10 &&
+                              RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
                             phoneToPreFill = searchQuery;
                           }
-                          showAddCustomerModal(context, MediaQuery.of(context).size, mobileNumber: phoneToPreFill).then((result) {
-                            if (result != null && result['status'] == 'success') {
+                          showAddCustomerModal(
+                                  context, MediaQuery.of(context).size,
+                                  mobileNumber: phoneToPreFill)
+                              .then((result) {
+                            if (result != null &&
+                                result['status'] == 'success') {
                               _fetchCustomers().then((_) {
                                 // Find and auto-select the newly added customer by phone
                                 final addedPhone = result['phone'];
@@ -2368,7 +2457,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                                   setState(() {
                                     _selectedCustomer = matchingCustomer;
                                     _selectedCustomerID = matchingCustomer.id;
-                                    _selectedCustomerPhone = matchingCustomer.phone;
+                                    _selectedCustomerPhone =
+                                        matchingCustomer.phone;
                                   });
                                 }
                               });
@@ -2389,9 +2479,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.person_add,
-                                color: const Color(0xFF64748B),
+                                color: Color(0xFF64748B),
                                 size: 16,
                               ),
                               const SizedBox(width: 8),
@@ -2421,13 +2511,14 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   void _showDiscountModal() {
     if (_selectedOrder == null) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => CouponModal(
         initialCouponCode: _couponCode,
         isCouponApplied: _isCouponApplied,
-        onCouponAction: (couponCode, isApplied, {flatDiscount, percentageDiscount}) {
+        onCouponAction: (couponCode, isApplied,
+            {flatDiscount, percentageDiscount}) {
           setState(() {
             _couponCode = couponCode;
             _isCouponApplied = isApplied;
@@ -2442,7 +2533,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   // Method to refresh saved orders without clearing the selected order (for when editing)
   Future<void> refreshSavedOrdersKeepingSelection() async {
     final currentSelectedOrder = _selectedOrder; // Store current selection
-    
+
     setState(() {
       _isLoadingOrders = true;
       _error = null;
@@ -2463,18 +2554,21 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('✅ listSavedOrders Response: $response');
       if (response['status'] == 'success') {
         final newOrders = response['orders'] as List<dynamic>;
-        
+
         setState(() {
           _savedOrders = newOrders;
-          
+
           // If we had a selected order, try to find and update it with fresh data
           if (currentSelectedOrder != null) {
-            final currentOrderId = currentSelectedOrder['id'] ?? currentSelectedOrder['order_id'];
+            final currentOrderId =
+                currentSelectedOrder['id'] ?? currentSelectedOrder['order_id'];
             final updatedOrder = newOrders.firstWhere(
-              (order) => order['id'] == currentOrderId || order['order_id'] == currentOrderId,
+              (order) =>
+                  order['id'] == currentOrderId ||
+                  order['order_id'] == currentOrderId,
               orElse: () => null,
             );
-            
+
             if (updatedOrder != null) {
               _selectedOrder = updatedOrder; // Update with fresh data
               widget.onOrderSelected(updatedOrder); // Notify parent widget
@@ -2482,7 +2576,8 @@ class _OrderPanelState extends State<_OrderPanel> {
             } else {
               // Keep the current selection - don't clear it immediately
               // The order might just be processing on the server
-              debugPrint('⚠️ Selected order not found in updated list, keeping current selection');
+              debugPrint(
+                  '⚠️ Selected order not found in updated list, keeping current selection');
               // Only clear if we're sure the order is gone (you can add more logic here if needed)
             }
           }
@@ -2506,7 +2601,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   // Silent refresh method for background updates (no loading spinner)
   Future<void> _refreshSavedOrdersSilently() async {
     final currentSelectedOrder = _selectedOrder; // Store current selection
-    
+
     final authModel = Provider.of<AuthModel>(context, listen: false);
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
@@ -2521,29 +2616,34 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('✅ listSavedOrders Response (silent): $response');
       if (response['status'] == 'success') {
         final newOrders = response['orders'] as List<dynamic>;
-        
+
         setState(() {
           _savedOrders = newOrders;
-          
+
           // If we had a selected order, try to find and update it with fresh data
           if (currentSelectedOrder != null) {
-            final currentOrderId = currentSelectedOrder['id'] ?? currentSelectedOrder['order_id'];
+            final currentOrderId =
+                currentSelectedOrder['id'] ?? currentSelectedOrder['order_id'];
             final updatedOrder = newOrders.firstWhere(
-              (order) => order['id'] == currentOrderId || order['order_id'] == currentOrderId,
+              (order) =>
+                  order['id'] == currentOrderId ||
+                  order['order_id'] == currentOrderId,
               orElse: () => null,
             );
-            
+
             if (updatedOrder != null) {
               _selectedOrder = updatedOrder; // Update with fresh data
               widget.onOrderSelected(updatedOrder); // Notify parent widget
               debugPrint('✅ Updated selected order with fresh data (silent)');
             } else {
-              debugPrint('⚠️ Selected order not found in updated list (silent)');
+              debugPrint(
+                  '⚠️ Selected order not found in updated list (silent)');
             }
           }
         });
       } else {
-        debugPrint('⚠️ Failed to refresh saved orders (silent): ${response['message']}');
+        debugPrint(
+            '⚠️ Failed to refresh saved orders (silent): ${response['message']}');
       }
     } catch (e) {
       debugPrint('❌ Error in silent refresh: ${e.toString()}');
@@ -2558,13 +2658,14 @@ class _OrderPanelState extends State<_OrderPanel> {
 
     try {
       debugPrint('🔄 _fetchOrderDetails: Processing saved order data.');
-      
+
       // Clear previous order's customer and payment state to prevent contamination
       _clearOrderEditingState();
-      
+
       _selectedOrder = order; // Set the selected order directly
-      widget.onOrderSelected(order); // Call the callback to update the parent widget
-      
+      widget.onOrderSelected(
+          order); // Call the callback to update the parent widget
+
       // Load order-specific data if available
       _loadOrderSpecificData(order);
     } catch (e) {
@@ -2587,7 +2688,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       _selectedCustomer = null;
       _selectedCustomerID = null;
       _selectedCustomerPhone = null;
-      
+
       // Clear payment methods
       _isCashSelected = false;
       _isCardSelected = false;
@@ -2598,13 +2699,13 @@ class _OrderPanelState extends State<_OrderPanel> {
       _upiAmount = "";
       _debitAmount = "";
       _transactionNumber = "";
-      
+
       // Clear discount state
       _isCouponApplied = false;
       _flatDiscount = 0.0;
       _percentageDiscount = 0.0;
       _couponCode = "";
-      
+
       // Reset balance and credit state
       _balanceAmount = 0.0;
       _toCustomerCreditEnabled = false;
@@ -2616,18 +2717,21 @@ class _OrderPanelState extends State<_OrderPanel> {
   // Load order-specific data (customer, payment, etc.) from the selected order
   void _loadOrderSpecificData(dynamic order) {
     debugPrint('📋 Loading order-specific data...');
-    
+
     // TODO: Load customer data from order if needed
     // This can be implemented later to restore order's original customer
-    
-    // TODO: Load payment data from order if needed  
+
+    // TODO: Load payment data from order if needed
     // This can be implemented later to restore order's payment methods
-    
+
     debugPrint('✅ Order-specific data loaded');
   }
 
   bool _hasPaymentMethod() {
-    return _isCashSelected || _isCardSelected || _isUpiSelected || _isDebitSelected;
+    return _isCashSelected ||
+        _isCardSelected ||
+        _isUpiSelected ||
+        _isDebitSelected;
   }
 
   bool _hasDiscount() {
@@ -2662,26 +2766,32 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Calculate order total dynamically from cart items
     double orderTotal = 0.0;
     for (var item in cartItems) {
-      final quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
-      final unitPrice = double.tryParse(item['unit_price']?.toString() ?? 
-                      item['price']?.toString() ?? 
-                      item['product_price']?.toString() ?? '0') ?? 0.0;
+      final quantity =
+          double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+      final unitPrice = double.tryParse(item['unit_price']?.toString() ??
+              item['price']?.toString() ??
+              item['product_price']?.toString() ??
+              '0') ??
+          0.0;
       orderTotal += quantity * unitPrice;
     }
 
     // If we still have zero total, try getting it from order total as fallback
     if (orderTotal == 0.0 && _selectedOrder['grand_total'] != null) {
-      orderTotal = double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ?? 0.0;
+      orderTotal =
+          double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
+              0.0;
     }
 
-    debugPrint('💰 Payment Summary - Cart items count: ${cartItems.length}, Order Total: ₹${orderTotal.toStringAsFixed(2)}');
+    debugPrint(
+        '💰 Payment Summary - Cart items count: ${cartItems.length}, Order Total: ₹${orderTotal.toStringAsFixed(2)}');
 
     final customerBalance = _selectedCustomer?.balance ?? 0.0;
     final cashAmount = double.tryParse(_cashAmount) ?? 0.0;
     final cardAmount = double.tryParse(_cardAmount) ?? 0.0;
     final upiAmount = double.tryParse(_upiAmount) ?? 0.0;
     final totalPaidAmount = cashAmount + cardAmount + upiAmount;
-    
+
     debugPrint('\n🧮 === RESTAURANT PAGE BALANCE CALCULATION START ===');
     debugPrint('💰 Input Values:');
     debugPrint('  - Order Total: ₹${orderTotal.toStringAsFixed(2)}');
@@ -2691,33 +2801,38 @@ class _OrderPanelState extends State<_OrderPanel> {
     debugPrint('  - UPI Amount: ₹${upiAmount.toStringAsFixed(2)}');
     debugPrint('  - Total Paid Amount: ₹${totalPaidAmount.toStringAsFixed(2)}');
     debugPrint('  - To Customer Credit Enabled: $_toCustomerCreditEnabled');
-    debugPrint('  - Customer Credit Amount: ₹${_toCustomerCreditAmount.toStringAsFixed(2)}');
-    
+    debugPrint(
+        '  - Customer Credit Amount: ₹${_toCustomerCreditAmount.toStringAsFixed(2)}');
+
     // Calculate balance using the same logic as billing_page.dart
     double cashBalance = 0.0;
-    
+
     if (_toCustomerCreditEnabled && _selectedCustomer != null) {
-      debugPrint('🔛 RESTAURANT PAGE: Toggle is ON - Calculating with customer credit consideration');
-      
+      debugPrint(
+          '🔛 RESTAURANT PAGE: Toggle is ON - Calculating with customer credit consideration');
+
       if (customerBalance < 0) {
         // Customer has debt - use transaction excess logic for consistency with auto-fill
         debugPrint('💳 Customer has debt - using transaction excess logic');
         final transactionExcess = totalPaidAmount - orderTotal;
-        debugPrint('💰 Transaction excess: ₹${transactionExcess.toStringAsFixed(2)}');
-        
+        debugPrint(
+            '💰 Transaction excess: ₹${transactionExcess.toStringAsFixed(2)}');
+
         if (transactionExcess > 0) {
           // Get the actual customer credit amount being allocated
           double actualCustomerCredit = _toCustomerCreditAmount;
-          
+
           // Clamp customer credit to available excess
           if (actualCustomerCredit > transactionExcess) {
             actualCustomerCredit = transactionExcess;
-            debugPrint('  - Clamped customer credit to transaction excess: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+            debugPrint(
+                '  - Clamped customer credit to transaction excess: ₹${actualCustomerCredit.toStringAsFixed(2)}');
           }
-          
+
           // Cash balance = transaction excess - customer credit
           cashBalance = transactionExcess - actualCustomerCredit;
-          debugPrint('  - Balance = Transaction Excess (₹${transactionExcess.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
+          debugPrint(
+              '  - Balance = Transaction Excess (₹${transactionExcess.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
         } else {
           cashBalance = 0.0;
           debugPrint('  - No transaction excess, balance = 0');
@@ -2729,53 +2844,62 @@ class _OrderPanelState extends State<_OrderPanel> {
         double netDue = orderTotal - customerBalance;
         debugPrint('💰 Net Due calculation:');
         debugPrint('  - Purchase Total: ₹${orderTotal.toStringAsFixed(2)}');
-        debugPrint('  - Customer Prev Balance: ₹${customerBalance.toStringAsFixed(2)}');
+        debugPrint(
+            '  - Customer Prev Balance: ₹${customerBalance.toStringAsFixed(2)}');
         debugPrint('  - Net Due: ₹${netDue.toStringAsFixed(2)}');
-        
+
         // Available balance = Total Collected - Net Due
         double availableBalance = totalPaidAmount - netDue;
-        debugPrint('  - Total Collected: ₹${totalPaidAmount.toStringAsFixed(2)}');
-        debugPrint('  - Available Balance: ₹${availableBalance.toStringAsFixed(2)}');
-        
+        debugPrint(
+            '  - Total Collected: ₹${totalPaidAmount.toStringAsFixed(2)}');
+        debugPrint(
+            '  - Available Balance: ₹${availableBalance.toStringAsFixed(2)}');
+
         if (availableBalance > 0) {
           // Get the actual customer credit amount being allocated
           double actualCustomerCredit = _toCustomerCreditAmount;
-          
+
           // Clamp customer credit to available balance
           if (actualCustomerCredit > availableBalance) {
             actualCustomerCredit = availableBalance;
-            debugPrint('  - Clamped customer credit to available balance: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+            debugPrint(
+                '  - Clamped customer credit to available balance: ₹${actualCustomerCredit.toStringAsFixed(2)}');
           }
-          
+
           // Cash balance = available balance - customer credit
           cashBalance = availableBalance - actualCustomerCredit;
-          debugPrint('  - Balance = Available Balance (₹${availableBalance.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
+          debugPrint(
+              '  - Balance = Available Balance (₹${availableBalance.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
         } else {
           cashBalance = 0.0;
           debugPrint('  - No available balance, balance = 0');
         }
       }
     } else {
-      debugPrint('🔴 RESTAURANT PAGE: Toggle is OFF - Using simple calculation');
+      debugPrint(
+          '🔴 RESTAURANT PAGE: Toggle is OFF - Using simple calculation');
       // Toggle OFF: Simple calculation without previous balance
       cashBalance = totalPaidAmount - orderTotal;
-      debugPrint('  - Balance = Total Collected (₹${totalPaidAmount.toStringAsFixed(2)}) - Cart Total (₹${orderTotal.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
+      debugPrint(
+          '  - Balance = Total Collected (₹${totalPaidAmount.toStringAsFixed(2)}) - Cart Total (₹${orderTotal.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
     }
-    
+
     // Store the raw balance before clamping for comparison
     double rawBalance = cashBalance;
-    
+
     // Clamp cash balance to never show negative values in UI
     // Negative balance means insufficient payment, but cash drawer can't give negative money
     if (cashBalance < 0) {
-      debugPrint('🚫 RESTAURANT PAGE: Clamping negative cash balance (₹${cashBalance.toStringAsFixed(2)}) to 0 for UI display');
+      debugPrint(
+          '🚫 RESTAURANT PAGE: Clamping negative cash balance (₹${cashBalance.toStringAsFixed(2)}) to 0 for UI display');
       cashBalance = 0.0;
     }
-    
+
     debugPrint('💵 Final cash balance: ₹${cashBalance.toStringAsFixed(2)}');
-    debugPrint('💵 Raw balance (before clamping): ₹${rawBalance.toStringAsFixed(2)}');
+    debugPrint(
+        '💵 Raw balance (before clamping): ₹${rawBalance.toStringAsFixed(2)}');
     debugPrint('🧮 === RESTAURANT PAGE BALANCE CALCULATION END ===\n');
-    
+
     // Hide discount calculations for now
     // final discountAmount = _flatDiscount + (orderTotal * _percentageDiscount / 100);
     // final finalOrderTotal = orderTotal - discountAmount;
@@ -2803,9 +2927,9 @@ class _OrderPanelState extends State<_OrderPanel> {
           // Header
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.account_balance_wallet,
-                color: const Color(0xFF2563EB),
+                color: Color(0xFF2563EB),
                 size: 18,
               ),
               const SizedBox(width: 8),
@@ -2821,14 +2945,14 @@ class _OrderPanelState extends State<_OrderPanel> {
             ],
           ),
           const SizedBox(height: 12),
-          
+
           // Summary rows
           _buildSummaryRow(
             'Order Total',
             '₹${orderTotal.toStringAsFixed(2)}',
             color: const Color(0xFF64748B),
           ),
-          
+
           // Hide discount section for now
           // if (_hasDiscount()) ...[
           //   _buildSummaryRow(
@@ -2843,7 +2967,7 @@ class _OrderPanelState extends State<_OrderPanel> {
           //     isBold: true,
           //   ),
           // ],
-          
+
           if (_selectedCustomer != null) ...[
             const SizedBox(height: 8),
             Container(
@@ -2854,12 +2978,12 @@ class _OrderPanelState extends State<_OrderPanel> {
             _buildSummaryRow(
               'Customer Balance',
               '₹${customerBalance.toStringAsFixed(2)}',
-              color: customerBalance >= 0 
-                  ? const Color(0xFF059669) 
+              color: customerBalance >= 0
+                  ? const Color(0xFF059669)
                   : const Color(0xFFDC2626),
             ),
           ],
-          
+
           if (_hasPaymentMethod()) ...[
             const SizedBox(height: 8),
             Container(
@@ -2874,11 +2998,11 @@ class _OrderPanelState extends State<_OrderPanel> {
             ),
             _buildSummaryRow(
               'Balance',
-              rawBalance >= 0 
-                  ? '₹${rawBalance.toStringAsFixed(2)}' 
+              rawBalance >= 0
+                  ? '₹${rawBalance.toStringAsFixed(2)}'
                   : 'Short: ₹${(-rawBalance).toStringAsFixed(2)}',
-              color: rawBalance >= 0 
-                  ? const Color(0xFF059669) 
+              color: rawBalance >= 0
+                  ? const Color(0xFF059669)
                   : const Color(0xFFDC2626),
               isBold: true,
             ),
@@ -2890,8 +3014,7 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   Widget _buildSummaryRow(
     String label,
-    String amount,
-    {
+    String amount, {
     required Color color,
     bool isBold = false,
   }) {
@@ -3011,7 +3134,8 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   Widget _buildCurrentCartView(List<LocalCartItem> cartItems) {
     // Use LocalProductProvider instead of CartProvider for current cart display
-    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
     final total = localProductProvider.cartTotal;
 
     return Container(
@@ -3330,19 +3454,25 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Calculate current total from cart items (dynamic calculation)
     double total = 0.0;
     for (var item in cartItems) {
-      final quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
-      final unitPrice = double.tryParse(item['unit_price']?.toString() ?? 
-                      item['price']?.toString() ?? 
-                      item['product_price']?.toString() ?? '0') ?? 0.0;
+      final quantity =
+          double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+      final unitPrice = double.tryParse(item['unit_price']?.toString() ??
+              item['price']?.toString() ??
+              item['product_price']?.toString() ??
+              '0') ??
+          0.0;
       total += quantity * unitPrice;
     }
 
     // If we still have zero total, try getting it from order total as fallback
     if (total == 0.0 && _selectedOrder['grand_total'] != null) {
-      total = double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ?? 0.0;
+      total =
+          double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
+              0.0;
     }
 
-    debugPrint('📊 Cart items count: ${cartItems.length}, Total: ₹${total.toStringAsFixed(2)}');
+    debugPrint(
+        '📊 Cart items count: ${cartItems.length}, Total: ₹${total.toStringAsFixed(2)}');
 
     return Container(
       margin: const EdgeInsets.all(8),
@@ -3584,11 +3714,11 @@ class _OrderPanelState extends State<_OrderPanel> {
                         duration: const Duration(milliseconds: 200),
                         height: widget.isCompact ? 44 : 48,
                         decoration: BoxDecoration(
-                          color: _hasPaymentMethod() 
+                          color: _hasPaymentMethod()
                               ? const Color(0xFF2563EB).withOpacity(0.1)
                               : Colors.grey.shade100,
                           border: Border.all(
-                            color: _hasPaymentMethod() 
+                            color: _hasPaymentMethod()
                                 ? const Color(0xFF2563EB)
                                 : Colors.grey.shade300,
                             width: 1.5,
@@ -3602,7 +3732,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                             children: [
                               Icon(
                                 Icons.payment,
-                                color: _hasPaymentMethod() 
+                                color: _hasPaymentMethod()
                                     ? const Color(0xFF2563EB)
                                     : const Color(0xFF64748B),
                                 size: widget.isCompact ? 14 : 16,
@@ -3613,9 +3743,11 @@ class _OrderPanelState extends State<_OrderPanel> {
                                   _hasPaymentMethod() ? 'Paid' : 'Payment',
                                   style: buildCustomStyle(
                                       FontWeightManager.semiBold,
-                                      widget.isCompact ? FontSize.s11 : FontSize.s12,
+                                      widget.isCompact
+                                          ? FontSize.s11
+                                          : FontSize.s12,
                                       0.21,
-                                      _hasPaymentMethod() 
+                                      _hasPaymentMethod()
                                           ? const Color(0xFF2563EB)
                                           : const Color(0xFF64748B)),
                                   overflow: TextOverflow.ellipsis,
@@ -3641,11 +3773,11 @@ class _OrderPanelState extends State<_OrderPanel> {
                         duration: const Duration(milliseconds: 200),
                         height: widget.isCompact ? 44 : 48,
                         decoration: BoxDecoration(
-                          color: _selectedCustomer != null 
+                          color: _selectedCustomer != null
                               ? const Color(0xFF059669).withOpacity(0.1)
                               : Colors.grey.shade100,
                           border: Border.all(
-                            color: _selectedCustomer != null 
+                            color: _selectedCustomer != null
                                 ? const Color(0xFF059669)
                                 : Colors.grey.shade300,
                             width: 1.5,
@@ -3659,7 +3791,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                             children: [
                               Icon(
                                 Icons.person,
-                                color: _selectedCustomer != null 
+                                color: _selectedCustomer != null
                                     ? const Color(0xFF059669)
                                     : const Color(0xFF64748B),
                                 size: widget.isCompact ? 14 : 16,
@@ -3667,14 +3799,19 @@ class _OrderPanelState extends State<_OrderPanel> {
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
-                                  _selectedCustomer != null 
-                                      ? (_selectedCustomer!.name?.split(' ').first ?? 'Customer')
+                                  _selectedCustomer != null
+                                      ? (_selectedCustomer!.name
+                                              ?.split(' ')
+                                              .first ??
+                                          'Customer')
                                       : 'Customer',
                                   style: buildCustomStyle(
                                       FontWeightManager.semiBold,
-                                      widget.isCompact ? FontSize.s11 : FontSize.s12,
+                                      widget.isCompact
+                                          ? FontSize.s11
+                                          : FontSize.s12,
                                       0.21,
-                                      _selectedCustomer != null 
+                                      _selectedCustomer != null
                                           ? const Color(0xFF059669)
                                           : const Color(0xFF64748B)),
                                   overflow: TextOverflow.ellipsis,
@@ -3699,11 +3836,11 @@ class _OrderPanelState extends State<_OrderPanel> {
                 //         duration: const Duration(milliseconds: 200),
                 //         height: widget.isCompact ? 44 : 48,
                 //         decoration: BoxDecoration(
-                //           color: _hasDiscount() 
+                //           color: _hasDiscount()
                 //               ? const Color(0xFFD97706).withOpacity(0.1)
                 //               : Colors.grey.shade100,
                 //           border: Border.all(
-                //             color: _hasDiscount() 
+                //             color: _hasDiscount()
                 //                 ? const Color(0xFFD97706)
                 //                 : Colors.grey.shade300,
                 //             width: 1.5,
@@ -3717,7 +3854,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                 //             children: [
                 //               Icon(
                 //                 Icons.discount,
-                //                 color: _hasDiscount() 
+                //                 color: _hasDiscount()
                 //                     ? const Color(0xFFD97706)
                 //                     : const Color(0xFF64748B),
                 //                 size: widget.isCompact ? 14 : 16,
@@ -3730,7 +3867,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                 //                       FontWeightManager.semiBold,
                 //                       widget.isCompact ? FontSize.s11 : FontSize.s12,
                 //                       0.21,
-                //                       _hasDiscount() 
+                //                       _hasDiscount()
                 //                           ? const Color(0xFFD97706)
                 //                           : const Color(0xFF64748B)),
                 //                   overflow: TextOverflow.ellipsis,
@@ -3840,20 +3977,29 @@ class _OrderPanelState extends State<_OrderPanel> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: (cartItems.isEmpty || !allItemsReadyOrServed || _isLoadingConfirm) ? null : () => _confirmOrder(),
+                      onTap: (cartItems.isEmpty ||
+                              !allItemsReadyOrServed ||
+                              _isLoadingConfirm)
+                          ? null
+                          : () => _confirmOrder(),
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         height: widget.isCompact ? 44 : 48,
                         decoration: BoxDecoration(
-                          color: (cartItems.isEmpty || !allItemsReadyOrServed || _isLoadingConfirm)
+                          color: (cartItems.isEmpty ||
+                                  !allItemsReadyOrServed ||
+                                  _isLoadingConfirm)
                               ? const Color(0xFF94A3B8)
                               : const Color(0xFF2563EB),
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: (cartItems.isNotEmpty && allItemsReadyOrServed && !_isLoadingConfirm)
+                          boxShadow: (cartItems.isNotEmpty &&
+                                  allItemsReadyOrServed &&
+                                  !_isLoadingConfirm)
                               ? [
                                   BoxShadow(
-                                    color: const Color(0xFF2563EB).withOpacity(0.3),
+                                    color: const Color(0xFF2563EB)
+                                        .withOpacity(0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -3865,9 +4011,10 @@ class _OrderPanelState extends State<_OrderPanel> {
                               ? SizedBox(
                                   width: widget.isCompact ? 16 : 20,
                                   height: widget.isCompact ? 16 : 20,
-                                  child: CircularProgressIndicator(
+                                  child: const CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
                                   ),
                                 )
                               : Row(
@@ -3883,7 +4030,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                                       'Confirm',
                                       style: buildCustomStyle(
                                           FontWeightManager.semiBold,
-                                          widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                          widget.isCompact
+                                              ? FontSize.s13
+                                              : FontSize.s14,
                                           0.21,
                                           Colors.white),
                                     ),
@@ -3906,7 +4055,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   Future<void> _updateCartItemQuantityWithLoading(
       dynamic cartItem, double newQuantity, String action) async {
     final loadingKey = '${cartItem['id']}_$action';
-    
+
     setState(() {
       _loadingCartItems.add(loadingKey);
     });
@@ -3925,7 +4074,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   // Wrapper method for cart item removal with loading state
   Future<void> _removeCartItemWithLoading(dynamic cartItem) async {
     final loadingKey = '${cartItem['id']}_remove';
-    
+
     setState(() {
       _loadingCartItems.add(loadingKey);
     });
@@ -3956,9 +4105,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
       // Get customer ID from the order data (same logic as add menu item)
-      final customerId = _selectedOrder['cart']?['customer_id'] ?? 
-                        _selectedOrder['customer_id'] ?? 
-                        1;
+      final customerId = _selectedOrder['cart']?['customer_id'] ??
+          _selectedOrder['customer_id'] ??
+          1;
       final orderCartId = int.tryParse(
           (_selectedOrder['cart']?['id'] ?? _selectedOrder['cart_id'])
                   ?.toString() ??
@@ -3995,7 +4144,8 @@ class _OrderPanelState extends State<_OrderPanel> {
         debugPrint('✅ addToCartAPI Response: $response');
       } else if (newQuantity <= currentQuantity) {
         // Decrement quantity or remove item (including 0) - use decrementCartItemQuantityAPI
-        String actionType = newQuantity == 0 ? 'remove (set to 0)' : 'decrement';
+        String actionType =
+            newQuantity == 0 ? 'remove (set to 0)' : 'decrement';
         debugPrint(
             '➡️ Calling CartProvider.decrementCartItemQuantityAPI for $actionType');
         debugPrint(
@@ -4055,15 +4205,15 @@ class _OrderPanelState extends State<_OrderPanel> {
           (response['status']?.toLowerCase() == 'success' ||
               response['status']?.toLowerCase() == 'sucesss')) {
         // Success - optimistic update was correct, just show success message
-        String successMessage = newQuantity == 0 
+        String successMessage = newQuantity == 0
             ? 'Item removed successfully'
             : 'Item quantity updated successfully';
-        
+
         showScaffold(
           context: context,
           message: successMessage,
         );
-        
+
         // Only refresh the saved orders list in the background to update totals
         // without affecting the current view (silent refresh without loading spinner)
         Future.delayed(const Duration(milliseconds: 1000), () {
@@ -4106,7 +4256,8 @@ class _OrderPanelState extends State<_OrderPanel> {
           }
         });
 
-        String errorAction = newQuantity == 0 ? 'remove item' : 'update quantity';
+        String errorAction =
+            newQuantity == 0 ? 'remove item' : 'update quantity';
         showScaffoldError(
           context: context,
           message:
@@ -4128,9 +4279,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
       // Get customer ID from the order data (consistent with other methods)
-      final customerId = _selectedOrder['cart']?['customer_id'] ?? 
-                        _selectedOrder['customer_id'] ?? 
-                        1;
+      final customerId = _selectedOrder['cart']?['customer_id'] ??
+          _selectedOrder['customer_id'] ??
+          1;
       final orderCartId = int.tryParse(
           (_selectedOrder['cart']?['id'] ?? _selectedOrder['cart_id'])
                   ?.toString() ??
@@ -4161,13 +4312,13 @@ class _OrderPanelState extends State<_OrderPanel> {
       // Check if the response indicates success
       if (response != null &&
           (response['status']?.toLowerCase() == 'success' ||
-           response['status']?.toLowerCase() == 'sucesss')) {
+              response['status']?.toLowerCase() == 'sucesss')) {
         // Success - optimistic update was correct, just show success message
         showScaffold(
           context: context,
           message: 'Item removed successfully',
         );
-        
+
         // Only refresh the saved orders list in the background to update totals
         // without affecting the current view (silent refresh without loading spinner)
         Future.delayed(const Duration(milliseconds: 1000), () {
@@ -4181,7 +4332,8 @@ class _OrderPanelState extends State<_OrderPanel> {
 
         showScaffoldError(
           context: context,
-          message: 'Failed to remove item: ${response?['message'] ?? 'Server returned error response'}',
+          message:
+              'Failed to remove item: ${response?['message'] ?? 'Server returned error response'}',
         );
       }
     } catch (e) {
@@ -4325,25 +4477,32 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('🔄 Confirming order: $orderNumber (ID: $orderId)');
 
       // Get order details for API call
-      final customerId = _selectedCustomer?.id ?? _selectedOrder['customer_id'] ?? authModel.userId ?? 1;
-      final customerPhone = _selectedCustomer?.phone ?? _selectedOrder['customer_phone'] ?? '';
+      final customerId = _selectedCustomer?.id ??
+          _selectedOrder['customer_id'] ??
+          authModel.userId ??
+          1;
+      final customerPhone =
+          _selectedCustomer?.phone ?? _selectedOrder['customer_phone'] ?? '';
       final totalPrice = _selectedOrder['grand_total']?.toString() ?? '0';
-      final transactionId = _transactionNumber.isNotEmpty ? _transactionNumber : (_selectedOrder['transaction_number'] ?? '');
-      final comment = _selectedOrder['comment'] ?? 'Order confirmed from restaurant';
-      
+      final transactionId = _transactionNumber.isNotEmpty
+          ? _transactionNumber
+          : (_selectedOrder['transaction_number'] ?? '');
+      final comment =
+          _selectedOrder['comment'] ?? 'Order confirmed from restaurant';
+
       // Prepare payment method data
       String? paymentMethod;
       String? paidAmount;
       List<String> paymentMethods = [];
       List<Map<String, dynamic>> paidMethods = [];
-      
+
       if (_hasPaymentMethod()) {
         // Multi-payment handling
         List<String> selectedMethods = [];
         if (_isCashSelected) selectedMethods.add('CASH');
         if (_isCardSelected) selectedMethods.add('CARD');
         if (_isUpiSelected) selectedMethods.add('UPI');
-        
+
         if (selectedMethods.length > 1) {
           // Multi-payment: store as JSON
           Map<String, dynamic> multiPaymentData = {
@@ -4356,24 +4515,33 @@ class _OrderPanelState extends State<_OrderPanel> {
             "isMultiPayment": true
           };
           paymentMethod = json.encode(multiPaymentData);
-          
+
           // Calculate total paid amount
           final cashAmount = double.tryParse(_cashAmount) ?? 0.0;
           final cardAmount = double.tryParse(_cardAmount) ?? 0.0;
           final upiAmount = double.tryParse(_upiAmount) ?? 0.0;
           paidAmount = (cashAmount + cardAmount + upiAmount).toString();
-          
+
           // Prepare paidMethods array
           if (_isCashSelected) {
-            paidMethods.add({"method": "CASH", "amount": double.tryParse(_cashAmount) ?? 0.0});
+            paidMethods.add({
+              "method": "CASH",
+              "amount": double.tryParse(_cashAmount) ?? 0.0
+            });
           }
           if (_isCardSelected) {
-            paidMethods.add({"method": "CARD", "amount": double.tryParse(_cardAmount) ?? 0.0});
+            paidMethods.add({
+              "method": "CARD",
+              "amount": double.tryParse(_cardAmount) ?? 0.0
+            });
           }
           if (_isUpiSelected) {
-            paidMethods.add({"method": "UPI", "amount": double.tryParse(_upiAmount) ?? 0.0});
+            paidMethods.add({
+              "method": "UPI",
+              "amount": double.tryParse(_upiAmount) ?? 0.0
+            });
           }
-          
+
           paymentMethods = selectedMethods;
         } else {
           // Single payment method
@@ -4387,7 +4555,7 @@ class _OrderPanelState extends State<_OrderPanel> {
           }
         }
       }
-      
+
       // Calculate balance amount
       final totalPaid = double.tryParse(paidAmount ?? '0') ?? 0.0;
       final orderAmount = double.tryParse(totalPrice) ?? 0.0;
@@ -4421,9 +4589,9 @@ class _OrderPanelState extends State<_OrderPanel> {
 
       debugPrint('✅ Confirm order response: $response');
 
-      if (response != null && 
-          (response['status']?.toLowerCase() == 'success' || 
-           response['status']?.toLowerCase() == 'sucesss')) {
+      if (response != null &&
+          (response['status']?.toLowerCase() == 'success' ||
+              response['status']?.toLowerCase() == 'sucesss')) {
         showScaffold(
           context: context,
           message: 'Order $orderNumber confirmed successfully!',
@@ -4440,7 +4608,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       } else {
         showScaffoldError(
           context: context,
-          message: 'Failed to confirm order: ${response?['message'] ?? 'Unknown error'}',
+          message:
+              'Failed to confirm order: ${response?['message'] ?? 'Unknown error'}',
         );
       }
     } catch (e) {
@@ -4527,11 +4696,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                 ),
                 child: Text(
                   '₹${totalPrice.toStringAsFixed(0)}',
-                  style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      FontSize.s12,
-                      0.21,
-                      const Color(0xFF059669)),
+                  style: buildCustomStyle(FontWeightManager.bold, FontSize.s12,
+                      0.21, const Color(0xFF059669)),
                 ),
               ),
             ],
@@ -4592,11 +4758,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                       alignment: Alignment.center,
                       child: Text(
                         quantity.toStringAsFixed(0),
-                        style: buildCustomStyle(
-                            FontWeightManager.bold,
-                            FontSize.s14,
-                            0.21,
-                            const Color(0xFF1E293B)),
+                        style: buildCustomStyle(FontWeightManager.bold,
+                            FontSize.s14, 0.21, const Color(0xFF1E293B)),
                       ),
                     ),
                     Material(
@@ -4698,17 +4861,21 @@ class _OrderPanelState extends State<_OrderPanel> {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: (cartItems.isEmpty || widget.isLoadingSendToKitchen) ? null : () => widget.onSendToKitchen(),
+                  onTap: (cartItems.isEmpty || widget.isLoadingSendToKitchen)
+                      ? null
+                      : () => widget.onSendToKitchen(),
                   borderRadius: BorderRadius.circular(12),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     height: widget.isCompact ? 44 : 48,
                     decoration: BoxDecoration(
-                      color: (cartItems.isEmpty || widget.isLoadingSendToKitchen)
-                          ? const Color(0xFF94A3B8)
-                          : const Color(0xFF059669),
+                      color:
+                          (cartItems.isEmpty || widget.isLoadingSendToKitchen)
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF059669),
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: (cartItems.isNotEmpty && !widget.isLoadingSendToKitchen)
+                      boxShadow: (cartItems.isNotEmpty &&
+                              !widget.isLoadingSendToKitchen)
                           ? [
                               BoxShadow(
                                 color: const Color(0xFF059669).withOpacity(0.3),
@@ -4723,9 +4890,10 @@ class _OrderPanelState extends State<_OrderPanel> {
                           ? SizedBox(
                               width: widget.isCompact ? 16 : 20,
                               height: widget.isCompact ? 16 : 20,
-                              child: CircularProgressIndicator(
+                              child: const CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
                           : Row(
@@ -4741,7 +4909,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                                   'Send to Kitchen',
                                   style: buildCustomStyle(
                                       FontWeightManager.semiBold,
-                                      widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                      widget.isCompact
+                                          ? FontSize.s13
+                                          : FontSize.s14,
                                       0.21,
                                       Colors.white),
                                 ),
@@ -4767,11 +4937,12 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
 
     try {
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
 
       debugPrint(
           '🔄 _updateCurrentCartItemQuantity: Updating quantity for ${cartItem.product.productName} to ${newQuantity.toInt()}');
-      
+
       // Use LocalProductProvider to set the exact quantity
       localProductProvider.setCartItemQuantity(
         cartItem.product.productId!,
@@ -4793,11 +4964,12 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   Future<void> _removeCurrentCartItem(LocalCartItem cartItem) async {
     try {
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
 
       debugPrint(
           '🗑️ _removeCurrentCartItem: Removing ${cartItem.product.productName} from cart');
-      
+
       // Use LocalProductProvider to remove the item
       localProductProvider.removeFromCart(
         cartItem.product.productId!,
@@ -4818,11 +4990,12 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   Future<void> _clearCurrentCart() async {
     try {
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
 
       if (localProductProvider.cartItems.isNotEmpty) {
         debugPrint('🗑️ _clearCurrentCart: Clearing local cart');
-        
+
         // Use LocalProductProvider to clear the cart
         localProductProvider.clearCart();
 
@@ -4937,20 +5110,23 @@ class _OrderPanelState extends State<_OrderPanel> {
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: _loadingCartItems.contains('${cartItem['id']}_decrease') 
-                            ? null 
-                            : () => _updateCartItemQuantityWithLoading(cartItem, quantity - 1, 'decrease'),
+                        onTap: _loadingCartItems
+                                .contains('${cartItem['id']}_decrease')
+                            ? null
+                            : () => _updateCartItemQuantityWithLoading(
+                                cartItem, quantity - 1, 'decrease'),
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          child: _loadingCartItems.contains('${cartItem['id']}_decrease')
+                          child: _loadingCartItems
+                                  .contains('${cartItem['id']}_decrease')
                               ? SizedBox(
                                   width: widget.isCompact ? 16 : 18,
                                   height: widget.isCompact ? 16 : 18,
-                                  child: CircularProgressIndicator(
+                                  child: const CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(
-                                      const Color(0xFFDC2626),
+                                      Color(0xFFDC2626),
                                     ),
                                   ),
                                 )
@@ -4977,20 +5153,23 @@ class _OrderPanelState extends State<_OrderPanel> {
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: _loadingCartItems.contains('${cartItem['id']}_increase') 
-                            ? null 
-                            : () => _updateCartItemQuantityWithLoading(cartItem, quantity + 1, 'increase'),
+                        onTap: _loadingCartItems
+                                .contains('${cartItem['id']}_increase')
+                            ? null
+                            : () => _updateCartItemQuantityWithLoading(
+                                cartItem, quantity + 1, 'increase'),
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          child: _loadingCartItems.contains('${cartItem['id']}_increase')
+                          child: _loadingCartItems
+                                  .contains('${cartItem['id']}_increase')
                               ? SizedBox(
                                   width: widget.isCompact ? 16 : 18,
                                   height: widget.isCompact ? 16 : 18,
-                                  child: CircularProgressIndicator(
+                                  child: const CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(
-                                      const Color(0xFF059669),
+                                      Color(0xFF059669),
                                     ),
                                   ),
                                 )
@@ -5010,9 +5189,10 @@ class _OrderPanelState extends State<_OrderPanel> {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: _loadingCartItems.contains('${cartItem['id']}_remove') 
-                        ? null 
-                        : () => _removeCartItemWithLoading(cartItem),
+                    onTap:
+                        _loadingCartItems.contains('${cartItem['id']}_remove')
+                            ? null
+                            : () => _removeCartItemWithLoading(cartItem),
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
                       padding: const EdgeInsets.all(8),
@@ -5020,22 +5200,23 @@ class _OrderPanelState extends State<_OrderPanel> {
                         color: const Color(0xFFDC2626).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: _loadingCartItems.contains('${cartItem['id']}_remove')
-                          ? SizedBox(
-                              width: widget.isCompact ? 16 : 18,
-                              height: widget.isCompact ? 16 : 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  const Color(0xFFDC2626),
+                      child:
+                          _loadingCartItems.contains('${cartItem['id']}_remove')
+                              ? SizedBox(
+                                  width: widget.isCompact ? 16 : 18,
+                                  height: widget.isCompact ? 16 : 18,
+                                  child: const CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Color(0xFFDC2626),
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.delete_outline,
+                                  size: widget.isCompact ? 16 : 18,
+                                  color: const Color(0xFFDC2626),
                                 ),
-                              ),
-                            )
-                          : Icon(
-                              Icons.delete_outline,
-                              size: widget.isCompact ? 16 : 18,
-                              color: const Color(0xFFDC2626),
-                            ),
                     ),
                   ),
                 ),
