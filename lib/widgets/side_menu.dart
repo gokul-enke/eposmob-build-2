@@ -32,10 +32,10 @@ class CollapsibleSidebar extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _CollapsibleSidebarState createState() => _CollapsibleSidebarState();
+  CollapsibleSidebarState createState() => CollapsibleSidebarState();
 }
 
-class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
+class CollapsibleSidebarState extends State<CollapsibleSidebar> {
   bool _isExpanded = true;
   final double _expandedWidth = 200;
   final double _collapsedWidth = 40;
@@ -155,8 +155,8 @@ class _SideMenuState extends State<SideMenu> {
           IconButton(
             icon: const Icon(Icons.menu),
             onPressed: () {
-              final _CollapsibleSidebarState? sidebarState =
-                  context.findAncestorStateOfType<_CollapsibleSidebarState>();
+              final CollapsibleSidebarState? sidebarState =
+                  context.findAncestorStateOfType<CollapsibleSidebarState>();
               sidebarState?._toggleSidebar();
             },
           ),
@@ -212,8 +212,8 @@ class _SideMenuState extends State<SideMenu> {
                 selected: sideBarController.index.value == 46,
               ),
             ),
-          // if (_hasAnyRole(['attender', 'sales_executive']))
-          if (_hasRole('attender'))
+          if (_hasAnyRole(['attender', 'sales_executive']))
+          // if (_hasRole('attender'))
             Obx(
               () => DrawerListTile(
                 iconPath: ImageAssets.barcodeIcon,
@@ -224,8 +224,8 @@ class _SideMenuState extends State<SideMenu> {
                 selected: sideBarController.index.value == 55,
               ),
             ),
-          // if (_hasAnyRole(['kitchen_master', 'sales_executive']))
-          if (_hasRole('kitchen_master'))
+          if (_hasAnyRole(['kitchen_master', 'sales_executive']))
+          // if (_hasRole('kitchen_master'))
             Obx(
               () => DrawerListTile(
                 iconPath: ImageAssets.barcodeIcon,
@@ -478,7 +478,7 @@ class _SideMenuState extends State<SideMenu> {
               // debugPrint(" 'Logout',${sideBarController.index.value}");
             },
             selected: false,
-           ),
+          ),
           const SizedBox(
             height: 10,
           ),
