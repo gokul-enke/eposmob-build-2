@@ -2072,6 +2072,18 @@ class BillingPageState extends State<BillingPage>
                 "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
             title: "Net amount",
             color: ColorManager.textColor,
+            firstRowTextStyle: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s15,
+              0.18,
+              ColorManager.textColor,
+            ),
+            secondRowTextStyle: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s15,
+              0.18,
+              ColorManager.textColor,
+            ),
           ),
           (Provider.of<AppSettingsProvider>(context, listen: false)
                       .appSettings
@@ -2082,12 +2094,36 @@ class BillingPageState extends State<BillingPage>
                       "INR ${AmountHelper.roundOffAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
                   title: "Discount",
                   color: ColorManager.kButtonGreen,
+                  firstRowTextStyle: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s15,
+                    0.18,
+                    ColorManager.kButtonGreen,
+                  ),
+                  secondRowTextStyle: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s15,
+                    0.18,
+                    ColorManager.kButtonGreen,
+                  ),
                 )
               : BuildPaymentRow(
                   amount:
                       "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
                   title: "Discount",
                   color: ColorManager.kButtonGreen,
+                  firstRowTextStyle: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s15,
+                    0.18,
+                    ColorManager.kButtonGreen,
+                  ),
+                  secondRowTextStyle: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s15,
+                    0.18,
+                    ColorManager.kButtonGreen,
+                  ),
                 ),
           const Divider(thickness: 2),
           BuildPaymentRow(
@@ -2136,6 +2172,18 @@ class BillingPageState extends State<BillingPage>
               "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
           title: "Net amount",
           color: ColorManager.textColor,
+          firstRowTextStyle: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s15,
+            0.18,
+            ColorManager.textColor,
+          ),
+          secondRowTextStyle: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s15,
+            0.18,
+            ColorManager.textColor,
+          ),
         ),
         const BuildPaymentRow(
           amount: "INR 0.00",
@@ -2147,6 +2195,18 @@ class BillingPageState extends State<BillingPage>
               "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
           title: "Discount",
           color: ColorManager.textColor,
+          firstRowTextStyle: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s15,
+            0.18,
+            ColorManager.textColor,
+          ),
+          secondRowTextStyle: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s15,
+            0.18,
+            ColorManager.textColor,
+          ),
         ),
         GestureDetector(
           child: BuildPaymentRow(
@@ -4241,7 +4301,7 @@ class BillingPageState extends State<BillingPage>
                     icon: isCouponApplied
                         ? Icons.discount
                         : Icons.local_offer_outlined,
-                    label: isCouponApplied ? 'Applied' : 'Coupon',
+                    label: isCouponApplied ? 'Applied' : 'Discount',
                     color: isCouponApplied
                         ? ColorManager.kButtonGreen
                         : ColorManager.kButtonYellow,
@@ -4263,7 +4323,7 @@ class BillingPageState extends State<BillingPage>
                         'Total Paid: ',
                         style: buildCustomStyle(
                           FontWeightManager.medium,
-                          FontSize.s13,
+                          FontSize.s15,
                           0.14,
                           ColorManager.textColor,
                         ),
@@ -4272,7 +4332,7 @@ class BillingPageState extends State<BillingPage>
                         'INR ${totalPaid.toStringAsFixed(2)}',
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
-                          FontSize.s13,
+                          FontSize.s15,
                           0.14,
                           ColorManager.kPrimaryColor,
                         ),
@@ -4286,7 +4346,7 @@ class BillingPageState extends State<BillingPage>
                         'Balance: ',
                         style: buildCustomStyle(
                           FontWeightManager.medium,
-                          FontSize.s13,
+                          FontSize.s15,
                           0.14,
                           ColorManager.textColor,
                         ),
@@ -4295,7 +4355,7 @@ class BillingPageState extends State<BillingPage>
                         'INR ${balance.toStringAsFixed(2)}',
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
-                          FontSize.s13,
+                          FontSize.s15,
                           0.14,
                           balance > 0
                               ? ColorManager.kButtonGreen
