@@ -211,13 +211,25 @@ class HiveGetProduct extends HiveObject {
   final HiveProductPrice? price;
 
   @HiveField(12)
-  final List<HiveAttachment>? attachment;
+  final String? mrp;
 
   @HiveField(13)
-  final String? sku;
+  final String? purchasePrice;
 
   @HiveField(14)
+  final List<HiveAttachment>? attachment;
+
+  @HiveField(15)
+  final String? sku;
+
+  @HiveField(16)
   bool isSelected = false;
+
+  @HiveField(17)
+  final String? offerPrice;
+
+  @HiveField(18)
+  final String? productLocation;
 
   HiveGetProduct({
     this.productId,
@@ -229,12 +241,16 @@ class HiveGetProduct extends HiveObject {
     this.numberOfProductsAvailable,
     this.rating,
     this.price,
+    this.mrp,
+    this.purchasePrice,
     this.unit,
     this.currency,
     this.description,
     this.attachment,
     this.sku,
     this.isSelected = false,
+    this.offerPrice,
+    this.productLocation,
   });
 
   // Convert from app model to Hive model
@@ -256,11 +272,15 @@ class HiveGetProduct extends HiveObject {
       price: product.price != null
           ? HiveProductPrice.fromProductPrice(product.price!)
           : null,
+      mrp: product.mrp?.toString(),
+      purchasePrice: product.purchasePrice,
       attachment: product.attachment
           ?.map((e) => HiveAttachment.fromAttachment(e))
           .toList(),
       sku: product.sku,
       isSelected: product.isSelected,
+      offerPrice: product.offerPrice?.toString(),
+      productLocation: product.productLocation?.toString(),
     );
   }
 
@@ -279,8 +299,12 @@ class HiveGetProduct extends HiveObject {
       currency: currency,
       description: description,
       price: price?.toProductPrice(),
+      mrp: mrp,
+      purchasePrice: purchasePrice,
       attachment: attachment?.map((e) => e.toAttachment()).toList(),
       sku: sku,
+      offerPrice: offerPrice,
+      productLocation: productLocation,
     )..isSelected = isSelected;
   }
 }
@@ -385,6 +409,15 @@ class HiveAttachment extends HiveObject {
   @HiveField(9)
   final String? description;
 
+  @HiveField(10)
+  final String? createdAt;
+
+  @HiveField(11)
+  final String? updatedAt;
+
+  @HiveField(12)
+  final String? file;
+
   HiveAttachment({
     this.id,
     this.productId,
@@ -396,6 +429,9 @@ class HiveAttachment extends HiveObject {
     this.status,
     this.alt,
     this.description,
+    this.createdAt,
+    this.updatedAt,
+    this.file,
   });
 
   factory HiveAttachment.fromAttachment(Attachment attachment) {
@@ -410,6 +446,9 @@ class HiveAttachment extends HiveObject {
       status: attachment.status,
       alt: attachment.alt,
       description: attachment.description,
+      createdAt: attachment.createdAt,
+      updatedAt: attachment.updatedAt,
+      file: attachment.file?.toString(),
     );
   }
 
@@ -425,6 +464,9 @@ class HiveAttachment extends HiveObject {
       status: status,
       alt: alt,
       description: description,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      file: file,
     );
   }
 }

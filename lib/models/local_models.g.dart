@@ -122,13 +122,14 @@ class HiveSavedOrderAdapter extends TypeAdapter<HiveSavedOrder> {
       deliveryTime: fields[19] as String?,
       flatDiscount: fields[20] as double?,
       percentageDiscount: fields[21] as double?,
+      toCustomerCredit: fields[22] as bool?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveSavedOrder obj) {
     writer
-      ..writeByte(22)
+      ..writeByte(23)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -172,7 +173,9 @@ class HiveSavedOrderAdapter extends TypeAdapter<HiveSavedOrder> {
       ..writeByte(20)
       ..write(obj.flatDiscount)
       ..writeByte(21)
-      ..write(obj.percentageDiscount);
+      ..write(obj.percentageDiscount)
+      ..writeByte(22)
+      ..write(obj.toCustomerCredit);
   }
 
   @override
@@ -252,19 +255,23 @@ class HiveGetProductAdapter extends TypeAdapter<HiveGetProduct> {
       numberOfProductsAvailable: fields[6] as String?,
       rating: fields[7] as String?,
       price: fields[11] as HiveProductPrice?,
+      mrp: fields[12] as String?,
+      purchasePrice: fields[13] as String?,
       unit: fields[8] as String?,
       currency: fields[9] as String?,
       description: fields[10] as String?,
-      attachment: (fields[12] as List?)?.cast<HiveAttachment>(),
-      sku: fields[13] as String?,
-      isSelected: fields[14] as bool,
+      attachment: (fields[14] as List?)?.cast<HiveAttachment>(),
+      sku: fields[15] as String?,
+      isSelected: fields[16] as bool,
+      offerPrice: fields[17] as String?,
+      productLocation: fields[18] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveGetProduct obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.productId)
       ..writeByte(1)
@@ -290,11 +297,19 @@ class HiveGetProductAdapter extends TypeAdapter<HiveGetProduct> {
       ..writeByte(11)
       ..write(obj.price)
       ..writeByte(12)
-      ..write(obj.attachment)
+      ..write(obj.mrp)
       ..writeByte(13)
-      ..write(obj.sku)
+      ..write(obj.purchasePrice)
       ..writeByte(14)
-      ..write(obj.isSelected);
+      ..write(obj.attachment)
+      ..writeByte(15)
+      ..write(obj.sku)
+      ..writeByte(16)
+      ..write(obj.isSelected)
+      ..writeByte(17)
+      ..write(obj.offerPrice)
+      ..writeByte(18)
+      ..write(obj.productLocation);
   }
 
   @override
@@ -409,13 +424,16 @@ class HiveAttachmentAdapter extends TypeAdapter<HiveAttachment> {
       status: fields[7] as String?,
       alt: fields[8] as String?,
       description: fields[9] as String?,
+      createdAt: fields[10] as String?,
+      updatedAt: fields[11] as String?,
+      file: fields[12] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveAttachment obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -435,7 +453,13 @@ class HiveAttachmentAdapter extends TypeAdapter<HiveAttachment> {
       ..writeByte(8)
       ..write(obj.alt)
       ..writeByte(9)
-      ..write(obj.description);
+      ..write(obj.description)
+      ..writeByte(10)
+      ..write(obj.createdAt)
+      ..writeByte(11)
+      ..write(obj.updatedAt)
+      ..writeByte(12)
+      ..write(obj.file);
   }
 
   @override
