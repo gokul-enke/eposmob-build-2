@@ -32,6 +32,9 @@ class StockProvider extends ChangeNotifier {
   // Filter properties
   String? _stockFilterName;
   String? _stockFilterCategory;
+  String? _stockFilterBarcode;
+  String? _stockFilterRack;
+  String? _stockFilterStore;
 
   // Loading state
   bool _stockIsLoading = false;
@@ -50,6 +53,9 @@ class StockProvider extends ChangeNotifier {
   int get stockItemsPerPage => _stockItemsPerPage;
   String? get stockFilterCategory => _stockFilterCategory;
   String? get stockFilterName => _stockFilterName;
+  String? get stockFilterBarcode => _stockFilterBarcode;
+  String? get stockFilterRack => _stockFilterRack;
+  String? get stockFilterStore => _stockFilterStore;
   bool get stockIsLoading => _stockIsLoading;
 
   /// Search stocks locally by name
@@ -75,6 +81,22 @@ class StockProvider extends ChangeNotifier {
 
     uniqueCategories.sort();
     return ["All Categories", ...uniqueCategories];
+  }
+
+  /// Extract unique stores from loaded stocks
+  List<String> getUniqueStores() {
+    if (_allStocks == null || _allStocks!.isEmpty) {
+      return ["All Stores"];
+    }
+
+    final uniqueStores = _allStocks!
+        .map((stock) => stock.storeName ?? "")
+        .where((store) => store.isNotEmpty)
+        .toSet()
+        .toList();
+
+    uniqueStores.sort();
+    return ["All Stores", ...uniqueStores];
   }
 
   /// *********************** ADD TO STOCK API ***************************************************
@@ -331,6 +353,9 @@ class StockProvider extends ChangeNotifier {
   void applyStockFiltersLocally({
     String? filterName,
     String? filterCategory,
+    String? filterBarcode,
+    String? filterRack,
+    String? filterStore,
     int page = 1,
   }) {
     if (_allStocks == null || _allStocks!.isEmpty) {
@@ -345,11 +370,15 @@ class StockProvider extends ChangeNotifier {
     // Save filter values
     _stockFilterName = filterName;
     _stockFilterCategory = filterCategory;
+    _stockFilterBarcode = filterBarcode;
+    _stockFilterRack = filterRack;
+    _stockFilterStore = filterStore;
     _stockCurrentPage = page;
 
     // Apply filters
     List<stock_models.ListStockModelData> filteredList = [..._allStocks!];
 
+    // Apply name filter
     if (filterName != null && filterName.isNotEmpty) {
       filteredList = filteredList
           .where((stock) =>
@@ -363,11 +392,42 @@ class StockProvider extends ChangeNotifier {
     // Apply category filter
     if (filterCategory != null &&
         filterCategory.isNotEmpty &&
-        filterCategory != "0") {
+        filterCategory != "All Categories") {
       filteredList = filteredList
           .where((stock) =>
               stock.categoryName != null &&
               stock.categoryName!.toLowerCase() == filterCategory.toLowerCase())
+          .toList();
+    }
+
+    // Apply barcode filter
+    if (filterBarcode != null && filterBarcode.isNotEmpty) {
+      filteredList = filteredList
+          .where((stock) =>
+              stock.barCode != null &&
+              stock.barCode!
+                  .toLowerCase()
+                  .contains(filterBarcode.toLowerCase()))
+          .toList();
+    }
+
+    // Apply rack filter
+    if (filterRack != null && filterRack.isNotEmpty) {
+      filteredList = filteredList
+          .where((stock) =>
+              stock.rack != null &&
+              stock.rack!.toLowerCase().contains(filterRack.toLowerCase()))
+          .toList();
+    }
+
+    // Apply store filter
+    if (filterStore != null &&
+        filterStore.isNotEmpty &&
+        filterStore != "All Stores") {
+      filteredList = filteredList
+          .where((stock) =>
+              stock.storeName != null &&
+              stock.storeName!.toLowerCase() == filterStore.toLowerCase())
           .toList();
     }
 
@@ -402,6 +462,9 @@ class StockProvider extends ChangeNotifier {
   void resetStockFilters() {
     _stockFilterName = null;
     _stockFilterCategory = null;
+    _stockFilterBarcode = null;
+    _stockFilterRack = null;
+    _stockFilterStore = null;
     _stockCurrentPage = 1;
 
     if (_allStocks != null && _allStocks!.isNotEmpty) {
@@ -414,9 +477,13 @@ class StockProvider extends ChangeNotifier {
     if (page < 1 || page > _stockTotalPages) return;
 
     applyStockFiltersLocally(
-        filterName: _stockFilterName,
-        filterCategory: _stockFilterCategory,
-        page: page);
+      filterName: _stockFilterName,
+      filterCategory: _stockFilterCategory,
+      filterBarcode: _stockFilterBarcode,
+      filterRack: _stockFilterRack,
+      filterStore: _stockFilterStore,
+      page: page,
+    );
   }
 
   /// *********************** CALL VIEW STOCK DETAILS API ***************************************************
@@ -513,6 +580,9 @@ class StockProvider extends ChangeNotifier {
     _stockTotalPages = 1;
     _stockFilterName = null;
     _stockFilterCategory = null;
+    _stockFilterBarcode = null;
+    _stockFilterRack = null;
+    _stockFilterStore = null;
     _stockIsLoading = false;
     notifyListeners();
   }

@@ -26,10 +26,12 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
   final TextEditingController searchTextController = TextEditingController();
   final TextEditingController receiptNumberController = TextEditingController();
-  final TextEditingController paymentReferenceController = TextEditingController();
-  String? selectedStatus; 
-  String? paymentMethod; 
-  
+  final TextEditingController paymentReferenceController =
+      TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  String? selectedStatus;
+  String? paymentMethod;
 
   bool isInitialized = false;
 
@@ -43,41 +45,46 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
 
   Future<void> loadReceipts() async {
     if (isInitialized) return;
-    
+
     try {
-      final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-      
+      final String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+
       if (accessToken == null || accessToken.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Authentication token is missing")),
         );
         return;
       }
-      
+
       // Load all receipts for local pagination
-      await Provider.of<InvoiceProvider>(context, listen: false).loadAllReceipts(accessToken);
+      await Provider.of<InvoiceProvider>(context, listen: false)
+          .loadAllReceipts(accessToken);
       setState(() {
         isInitialized = true;
       });
     } catch (error) {
       debugPrint("Error loading receipts: $error");
-      showScaffold(context: context, message: "Error fetching receipts: $error");
+      showScaffold(
+          context: context, message: "Error fetching receipts: $error");
     }
   }
 
   void searchReceipts() {
     final String searchText = searchTextController.text.trim();
     debugPrint("Searching for receipts with name: '$searchText'");
-    
-    InvoiceProvider provider = Provider.of<InvoiceProvider>(context, listen: false);
+
+    InvoiceProvider provider =
+        Provider.of<InvoiceProvider>(context, listen: false);
     provider.applyReceiptFilters(
-      name: searchText,
-      receiptNumber: receiptNumberController.text,
-      paymentReference: paymentReferenceController.text,
-      receiptStatus: selectedStatus,
-      paymentMethod: paymentMethod,
-      page: 1
-      );
+        name: searchText,
+        receiptNumber: receiptNumberController.text,
+        paymentReference: paymentReferenceController.text,
+        receiptStatus: selectedStatus,
+        phone: phoneController.text,
+        email: emailController.text,
+        paymentMethod: paymentMethod,
+        page: 1);
   }
 
   void resetSearch() {
@@ -85,6 +92,8 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       searchTextController.clear();
       receiptNumberController.clear();
       paymentReferenceController.clear();
+      phoneController.clear();
+      emailController.clear();
       selectedStatus = null;
       paymentMethod = null;
     });
@@ -92,10 +101,12 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
   }
 
   Future<void> refreshData() async {
-    final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    final String? accessToken =
+        Provider.of<AuthModel>(context, listen: false).token;
     if (accessToken == null || accessToken.isEmpty) return;
-    
-    await Provider.of<InvoiceProvider>(context, listen: false).loadAllReceipts(accessToken);
+
+    await Provider.of<InvoiceProvider>(context, listen: false)
+        .loadAllReceipts(accessToken);
   }
 
   @override
@@ -164,13 +175,14 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       ],
     );
   }
-    Widget _buildStatusChip(String status) {
+
+  Widget _buildStatusChip(String status) {
     Color backgroundColor;
     Color textColor;
 
     switch (status.toUpperCase()) {
       case 'paid':
-    case 'PAID':
+      case 'PAID':
         backgroundColor = Colors.green.withOpacity(0.1);
         textColor = Colors.green;
         break;
@@ -206,447 +218,546 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     );
   }
 
-Widget _buildSearchBar(Size size) {
-  return Column(
-    children: [
-      // First row with exactly 4 fields
-      SizedBox(
-        height: 90,
-        child: Row(
-          children: [
-            // First field
-            Expanded(
-              flex: 1,
-              child: _buildSearchTextField(),
-            ),
-            
-            // Second field
-            Expanded(
-              flex: 1,
-              child: _buildReceiptNumberSearch(),
-            ),
-            
-            // Third field
-            Expanded(
-              flex: 1,
-              child: _buildPaymentReferenceSearch(),
-            ),
-            
-            // Fourth field
-            Expanded(
-              flex: 1,
-              child: _buildStatusFilter(),
-            ),
-          ],
+  Widget _buildSearchBar(Size size) {
+    return Column(
+      children: [
+        // First row with exactly 4 fields
+        SizedBox(
+          height: 90,
+          child: Row(
+            children: [
+              // first field
+              Expanded(
+                flex: 1,
+                child: _buildReceiptNumberSearch(),
+              ),
+
+              // Second field
+              Expanded(
+                flex: 1,
+                child: _buildPaymentReferenceSearch(),
+              ),
+
+              // Third field
+              Expanded(
+                flex: 1,
+                child: _buildSearchTextField(),
+              ),
+
+              // Fourth field
+              Expanded(
+                flex: 1,
+                child: _buildPhoneSearch(),
+              ),
+            ],
+          ),
         ),
-      ),
-      
-      // Second row with the 5th field and reset button
-      SizedBox(
-        height: 90,
-        child: Row(
-          children: [
-            // Fifth field
-            Expanded(
+
+        // Second row with the 5th field and reset button
+        SizedBox(
+          height: 90,
+          child: Row(
+            children: [
+              // Fifth field
+              Expanded(
               flex: 1,
-              child: _buildPaymentMethodSearch(),
+              child: _buildEmailSearch(),
             ),
-            
-            // Add empty expanded widgets to fill space
-            Expanded(flex: 2, child: Container()),
-            
-            // Reset Button (same width as other fields)
-            Expanded(
-              flex: 1,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 10.0, top: 42),
-                child: CustomRoundButton(
-                  title: "Reset",
-                  boxColor: Colors.white,
-                  textColor: ColorManager.kPrimaryColor,
-                  fct: resetSearch,
-                  height: 45,
-                  width: double.infinity,
-                  fontSize: FontSize.s12,
+
+              // sixth field
+              Expanded(
+                flex: 1,
+                child: _buildStatusFilter(),
+              ),
+
+              //seventh field
+
+              Expanded(
+                flex: 1,
+                child: _buildPaymentMethodSearch(),
+              ),
+
+              // Eighth field - Reset Button
+         
+              Expanded(
+                flex: 1,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 10.0, top: 42),
+                  child: CustomRoundButton(
+                    title: "Reset",
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    fct: resetSearch,
+                    height: 45,
+                    width: double.infinity,
+                    fontSize: FontSize.s12,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    ],
+      ],
+    );
+  }
+
+  Widget _buildPhoneSearch() {
+  return Padding(
+    padding: const EdgeInsets.only(left: 10.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "Phone",
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                0.27, Colors.black.withOpacity(0.6)),
+          ),
+        ),
+        SizedBox(height: 8),
+        BuildBoxShadowContainer(
+          height: 45,
+          width: double.infinity,
+          circleRadius: 7,
+          child: TextFormField(
+            controller: phoneController,
+            onChanged: (value) {
+              searchReceipts();
+            },
+            cursorColor: ColorManager.kPrimaryColor,
+            cursorHeight: 13,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                0.18, ColorManager.textColor),
+            decoration: decoration.copyWith(
+              hintText: "Phone Number",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+              prefixIconColor: Colors.black,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildEmailSearch() {
+  return Padding(
+    padding: const EdgeInsets.only(left: 10.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "Email",
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                0.27, Colors.black.withOpacity(0.6)),
+          ),
+        ),
+        SizedBox(height: 8),
+        BuildBoxShadowContainer(
+          height: 45,
+          width: double.infinity,
+          circleRadius: 7,
+          child: TextFormField(
+            controller: emailController,
+            onChanged: (value) {
+              searchReceipts();
+            },
+            cursorColor: ColorManager.kPrimaryColor,
+            cursorHeight: 13,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                0.18, ColorManager.textColor),
+            decoration: decoration.copyWith(
+              hintText: "Email Address",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor),
+              prefixIconColor: Colors.black,
+            ),
+          ),
+        ),
+      ],
+    ),
   );
 }
 
 // Update all field widgets to use full width
-Widget _buildReceiptNumberSearch() {
-  return Padding(
-    padding: const EdgeInsets.only(left: 10.0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            "Receipt Number",
-            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                0.27, Colors.black.withOpacity(0.6)),
-          ),
-        ),
-        SizedBox(height: 8,),
-        BuildBoxShadowContainer(
-          height: 45,
-          width: double.infinity, // Take full available width
-          circleRadius: 7,
-          child: TextFormField(
-            controller: receiptNumberController,
-            onChanged: (value) {
-              searchReceipts();
-            },
-            cursorColor: ColorManager.kPrimaryColor,
-            cursorHeight: 13,
-            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                0.18, ColorManager.textColor),
-            decoration: decoration.copyWith(
-              hintText: "Receipt No.",
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
-              prefixIconColor: Colors.black,
+  Widget _buildReceiptNumberSearch() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              "Receipt Number",
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                  0.27, Colors.black.withOpacity(0.6)),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildPaymentReferenceSearch() {
-  return Padding(
-    padding: const EdgeInsets.only(left: 10.0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            "Payment Reference",
-            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                0.27, Colors.black.withOpacity(0.6)),
+          SizedBox(
+            height: 8,
           ),
-        ),
-        SizedBox(height: 8),
-        BuildBoxShadowContainer(
-          circleRadius: 7,
-          height: 45,
-          width: double.infinity, // Take full available width
-          child: TextFormField(
-            controller: paymentReferenceController,
-            onChanged: (value) {
-              searchReceipts();
-            },
-            cursorColor: ColorManager.kPrimaryColor,
-            cursorHeight: 13,
-            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                0.18, ColorManager.textColor),
-            decoration: decoration.copyWith(
-              hintText: "Reference No.",
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
-              prefixIconColor: Colors.black,
+          BuildBoxShadowContainer(
+            height: 45,
+            width: double.infinity, // Take full available width
+            circleRadius: 7,
+            child: TextFormField(
+              controller: receiptNumberController,
+              onChanged: (value) {
+                searchReceipts();
+              },
+              cursorColor: ColorManager.kPrimaryColor,
+              cursorHeight: 13,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                  0.18, ColorManager.textColor),
+              decoration: decoration.copyWith(
+                hintText: "Receipt No.",
+                hintStyle: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s10, 0.18, ColorManager.textColor),
+                prefixIconColor: Colors.black,
+              ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildStatusFilter() {
-  return Padding(
-    padding: const EdgeInsets.only(left: 10.0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            "Status",
-            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                0.27, Colors.black.withOpacity(0.6)),
-          ),
-        ),
-        SizedBox(height: 8),
-        BuildBoxShadowContainer(
-          circleRadius: 7,
-          height: 45,
-          width: double.infinity, // Take full available width
-          child: DropdownButtonFormField<String>(
-            value: selectedStatus,
-            decoration: decoration.copyWith(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-              hintText: "All Status",
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
-            ),
-            items: [
-              DropdownMenuItem(
-                value: null,
-                child: Text(
-                  "All Status",
-                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                      0.18, ColorManager.textColor),
-                ),
-              ),
-              DropdownMenuItem(
-                value: "paid",
-                child: Text(
-                  "Paid",
-                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                      0.18, ColorManager.textColor),
-                ),
-              ),
-              DropdownMenuItem(
-                value: "pending",
-                child: Text(
-                  "Pending",
-                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                      0.18, ColorManager.textColor),
-                ),
-              ),
-            ],
-            onChanged: (value) {
-              setState(() {
-                selectedStatus = value;
-              });
-              searchReceipts();
-            },
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildPaymentMethodSearch() {
-  return Padding(
-    padding: const EdgeInsets.only(left: 10.0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            "Payment Method",
-            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                0.27, Colors.black.withOpacity(0.6)),
-          ),
-        ),
-        SizedBox(height: 8),
-        BuildBoxShadowContainer(
-          circleRadius: 7,
-          height: 45,
-          width: double.infinity, // Take full available width
-          child: DropdownButtonFormField<String>(
-            value: paymentMethod,
-            decoration: decoration.copyWith(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-              hintText: "All Payment",
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s12, 0.27, ColorManager.textColor),
-            ),
-            items: [
-              DropdownMenuItem(
-                value: null,
-                child: Text(
-                  "All Payment",
-                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                      0.18, ColorManager.textColor),
-                ),
-              ),
-              DropdownMenuItem(
-                value: "CASH",
-                child: Text(
-                  "Cash",
-                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                      0.18, ColorManager.textColor),
-                ),
-              ),
-              DropdownMenuItem(
-                value: "UPI",
-                child: Text(
-                  "UPI",
-                  style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                      0.18, ColorManager.textColor),
-                ),
-              ),
-            ],
-            onChanged: (value) {
-              setState(() {
-                paymentMethod = value;
-              });
-              searchReceipts();
-            },
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildSearchTextField() {
-  return Padding(
-    padding: const EdgeInsets.only(left: 10.0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            "Name",
-            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                0.27, Colors.black.withOpacity(0.6)),
-          ),
-        ),
-        SizedBox(height: 8,),
-        BuildBoxShadowContainer(
-          height: 45,
-          width: double.infinity, // Take full available width
-          circleRadius:7,
-          child: TextFormField(
-            controller: searchTextController,
-            onChanged: (value) {
-              searchReceipts();
-            },
-            cursorColor: ColorManager.kPrimaryColor,
-            cursorHeight: 13,
-            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                0.18, ColorManager.textColor),
-            decoration: decoration.copyWith(
-              hintText: "Name",
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
-              prefixIconColor: Colors.black,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-  void _showReceiptDetails(Receipt receipt) {
-  showDialog(
-    context: context,
-    builder: (context) => Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+        ],
       ),
-      elevation: 8,
-      backgroundColor: Colors.white,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width / 2,
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Receipt Details',
-                  style: buildCustomStyle(
-                    FontWeightManager.bold,
-                    FontSize.s24,
-                    0.36,
-                    Colors.black,
+    );
+  }
+
+  Widget _buildPaymentReferenceSearch() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              "Payment Reference",
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                  0.27, Colors.black.withOpacity(0.6)),
+            ),
+          ),
+          SizedBox(height: 8),
+          BuildBoxShadowContainer(
+            circleRadius: 7,
+            height: 45,
+            width: double.infinity, // Take full available width
+            child: TextFormField(
+              controller: paymentReferenceController,
+              onChanged: (value) {
+                searchReceipts();
+              },
+              cursorColor: ColorManager.kPrimaryColor,
+              cursorHeight: 13,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                  0.18, ColorManager.textColor),
+              decoration: decoration.copyWith(
+                hintText: "Reference No.",
+                hintStyle: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s10, 0.18, ColorManager.textColor),
+                prefixIconColor: Colors.black,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusFilter() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              "Status",
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                  0.27, Colors.black.withOpacity(0.6)),
+            ),
+          ),
+          SizedBox(height: 8),
+          BuildBoxShadowContainer(
+            circleRadius: 7,
+            height: 45,
+            width: double.infinity, // Take full available width
+            child: DropdownButtonFormField<String>(
+              value: selectedStatus,
+              decoration: decoration.copyWith(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                hintText: "All Status",
+                hintStyle: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s10, 0.18, ColorManager.textColor),
+              ),
+              items: [
+                DropdownMenuItem(
+                  value: null,
+                  child: Text(
+                    "All Status",
+                    style: buildCustomStyle(FontWeightManager.medium,
+                        FontSize.s10, 0.18, ColorManager.textColor),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.black),
-                  onPressed: () => Navigator.pop(context),
+                DropdownMenuItem(
+                  value: "paid",
+                  child: Text(
+                    "Paid",
+                    style: buildCustomStyle(FontWeightManager.medium,
+                        FontSize.s10, 0.18, ColorManager.textColor),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: "pending",
+                  child: Text(
+                    "Pending",
+                    style: buildCustomStyle(FontWeightManager.medium,
+                        FontSize.s10, 0.18, ColorManager.textColor),
+                  ),
                 ),
               ],
+              onChanged: (value) {
+                setState(() {
+                  selectedStatus = value;
+                });
+                searchReceipts();
+              },
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView(
-                shrinkWrap: true,
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  _buildDetailRow('Receipt Number', receipt.receiptNumber),
-                  _buildDetailRow('Customer Name', receipt.customer.user.name),
-                  _buildDetailRow('Amount', receipt.amount),
-                  _buildDetailRow('Payment Method', receipt.paymentMethod),
-                  _buildDetailRow('Status', receipt.receiptStatus),
-                  _buildDetailRow('Payment Reference', receipt.paymentReference),
-                  _buildDetailRow('Date', receipt.createdAt.toString()),
-                  if (receipt.company?.name != null)
-                    _buildDetailRow('Company', receipt.company!.name),
-                ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodSearch() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              "Payment Method",
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                  0.27, Colors.black.withOpacity(0.6)),
+            ),
+          ),
+          SizedBox(height: 8),
+          BuildBoxShadowContainer(
+            circleRadius: 7,
+            height: 45,
+            width: double.infinity, // Take full available width
+            child: DropdownButtonFormField<String>(
+              value: paymentMethod,
+              decoration: decoration.copyWith(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                hintText: "All Payment",
+                hintStyle: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s12, 0.27, ColorManager.textColor),
+              ),
+              items: [
+                DropdownMenuItem(
+                  value: null,
+                  child: Text(
+                    "All Payment",
+                    style: buildCustomStyle(FontWeightManager.medium,
+                        FontSize.s10, 0.18, ColorManager.textColor),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: "CASH",
+                  child: Text(
+                    "Cash",
+                    style: buildCustomStyle(FontWeightManager.medium,
+                        FontSize.s10, 0.18, ColorManager.textColor),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: "UPI",
+                  child: Text(
+                    "UPI",
+                    style: buildCustomStyle(FontWeightManager.medium,
+                        FontSize.s10, 0.18, ColorManager.textColor),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  paymentMethod = value;
+                });
+                searchReceipts();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchTextField() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              "Name",
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                  0.27, Colors.black.withOpacity(0.6)),
+            ),
+          ),
+          SizedBox(
+            height: 8,
+          ),
+          BuildBoxShadowContainer(
+            height: 45,
+            width: double.infinity, // Take full available width
+            circleRadius: 7,
+            child: TextFormField(
+              controller: searchTextController,
+              onChanged: (value) {
+                searchReceipts();
+              },
+              cursorColor: ColorManager.kPrimaryColor,
+              cursorHeight: 13,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                  0.18, ColorManager.textColor),
+              decoration: decoration.copyWith(
+                hintText: "Name",
+                hintStyle: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s10, 0.18, ColorManager.textColor),
+                prefixIconColor: Colors.black,
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                CustomRoundButton(
-                  title: "Close",
-                  boxColor: Colors.white,
-                  textColor: ColorManager.kPrimaryColor,
-                  borderColor: ColorManager.kPrimaryColor,
-                  fct: () => Navigator.pop(context),
-                  height: 45,
-                  width: 120,
-                  fontSize: FontSize.s12,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReceiptDetails(Receipt receipt) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        elevation: 8,
+        backgroundColor: Colors.white,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width / 2,
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Receipt Details',
+                    style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s24,
+                      0.36,
+                      Colors.black,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.black),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    _buildDetailRow('Receipt Number', receipt.receiptNumber),
+                    _buildDetailRow(
+                        'Customer Name', receipt.customer.user.name),
+                    _buildDetailRow('Amount', receipt.amount),
+                    _buildDetailRow('Payment Method', receipt.paymentMethod),
+                    _buildDetailRow('Status', receipt.receiptStatus),
+                    _buildDetailRow(
+                        'Payment Reference', receipt.paymentReference),
+                    _buildDetailRow('Date', receipt.createdAt.toString()),
+                    if (receipt.company?.name != null)
+                      _buildDetailRow('Company', receipt.company!.name),
+                  ],
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  CustomRoundButton(
+                    title: "Close",
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    borderColor: ColorManager.kPrimaryColor,
+                    fct: () => Navigator.pop(context),
+                    height: 45,
+                    width: 120,
+                    fontSize: FontSize.s12,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-Widget _buildDetailRow(String title, String value) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8.0),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 150,
-          child: Text(
-            title,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s14,
-              0.21,
-              Colors.black54,
+  Widget _buildDetailRow(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(
+              title,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s14,
+                0.21,
+                Colors.black54,
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Text(
-            value.isNotEmpty ? value : 'N/A',
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s14,
-              0.21,
-              Colors.black,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              value.isNotEmpty ? value : 'N/A',
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.21,
+                Colors.black,
+              ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
   Widget _buildTableHeader(String text) {
     return Padding(
@@ -685,8 +796,8 @@ Widget _buildDetailRow(String title, String value) {
       builder: (context, invoiceProvider, child) {
         final isLoading = invoiceProvider.isLoading;
         final receiptList = invoiceProvider.getListReceipt;
-        
-        return isLoading 
+
+        return isLoading
             ? const Center(child: CircularProgressIndicator.adaptive())
             : BuildBoxShadowContainer(
                 margin: const EdgeInsets.only(top: 5),
@@ -719,7 +830,8 @@ Widget _buildDetailRow(String title, String value) {
                           6: FlexColumnWidth(1.0), // Action
                         },
                         border: null,
-                        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                        defaultVerticalAlignment:
+                            TableCellVerticalAlignment.middle,
                         children: [
                           TableRow(
                             children: [
@@ -746,7 +858,8 @@ Widget _buildDetailRow(String title, String value) {
                                   Icon(
                                     Icons.receipt_long,
                                     size: 60,
-                                    color: ColorManager.kPrimaryColor.withOpacity(0.7),
+                                    color: ColorManager.kPrimaryColor
+                                        .withOpacity(0.7),
                                   ),
                                   const SizedBox(height: 15),
                                   Text(
@@ -774,7 +887,8 @@ Widget _buildDetailRow(String title, String value) {
                           : MouseRegion(
                               cursor: SystemMouseCursors.grab,
                               child: ScrollConfiguration(
-                                behavior: ScrollConfiguration.of(context).copyWith(
+                                behavior:
+                                    ScrollConfiguration.of(context).copyWith(
                                   dragDevices: {
                                     PointerDeviceKind.mouse,
                                     PointerDeviceKind.touch,
@@ -790,15 +904,20 @@ Widget _buildDetailRow(String title, String value) {
                                       0: FlexColumnWidth(2.0), // Customer Name
                                       1: FlexColumnWidth(1.0), // Receipt Number
                                       2: FlexColumnWidth(1.5), // Amount
-                                      3: FlexColumnWidth(2.0), // Payment Reference
+                                      3: FlexColumnWidth(
+                                          2.0), // Payment Reference
                                       4: FlexColumnWidth(1.5), // Status
                                       5: FlexColumnWidth(1.0), // Payment Method
                                       6: FlexColumnWidth(1.0), // Action
                                     },
                                     border: null,
-                                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                    defaultVerticalAlignment:
+                                        TableCellVerticalAlignment.middle,
                                     children: [
-                                      ...receiptList.asMap().entries.map((entry) {
+                                      ...receiptList
+                                          .asMap()
+                                          .entries
+                                          .map((entry) {
                                         final int index = entry.key;
                                         final receipt = entry.value;
                                         return TableRow(
@@ -808,23 +927,34 @@ Widget _buildDetailRow(String title, String value) {
                                                 : Colors.grey.withOpacity(0.1),
                                           ),
                                           children: [
-                                            _buildTableCell(receipt.customer.user.name.toString()),
-                                            _buildTableCell(receipt.receiptNumber),
+                                            _buildTableCell(receipt
+                                                .customer.user.name
+                                                .toString()),
+                                            _buildTableCell(
+                                                receipt.receiptNumber),
                                             _buildTableCell(receipt.amount),
-                                            _buildTableCell(receipt.paymentReference),
-                                            Center(child: _buildStatusChip(receipt.receiptStatus)),
-                                            _buildTableCell(receipt.paymentMethod),
+                                            _buildTableCell(
+                                                receipt.paymentReference),
+                                            Center(
+                                                child: _buildStatusChip(
+                                                    receipt.receiptStatus)),
+                                            _buildTableCell(
+                                                receipt.paymentMethod),
                                             Center(
                                               child: Padding(
-                                                padding: const EdgeInsets.all(8.0),
+                                                padding:
+                                                    const EdgeInsets.all(8.0),
                                                 child: BuildBoxShadowContainer(
-                                                  margin: const EdgeInsets.only(left: 5, right: 5),
+                                                  margin: const EdgeInsets.only(
+                                                      left: 5, right: 5),
                                                   circleRadius: 5,
                                                   child: IconButton(
                                                     icon: Icon(
                                                       Icons.visibility,
                                                       size: 18,
-                                                      color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                                                      color: ColorManager
+                                                          .kPrimaryColor
+                                                          .withOpacity(0.9),
                                                     ),
                                                     // onPressed: () {
                                                     //   String? token = Provider.of<AuthModel>(context, listen: false).token;
@@ -834,9 +964,11 @@ Widget _buildDetailRow(String title, String value) {
                                                     //   sideBarController.index.value = 48;
                                                     // },
                                                     onPressed: () {
-                                                        _showReceiptDetails(receipt);
-                                                      },
-                                                    constraints: const BoxConstraints(
+                                                      _showReceiptDetails(
+                                                          receipt);
+                                                    },
+                                                    constraints:
+                                                        const BoxConstraints(
                                                       minWidth: 36,
                                                       minHeight: 36,
                                                     ),

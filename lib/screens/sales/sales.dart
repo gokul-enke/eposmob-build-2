@@ -44,6 +44,8 @@ class _SalesScreenState extends State<SalesScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController storeController = TextEditingController();
+  final TextEditingController statusController = TextEditingController();
+  String? selectedStatus;
   GetStoreModelData? storeSelected;
   DateTime? selectedDate;
   Key calendarPickerKey = UniqueKey();
@@ -54,6 +56,14 @@ class _SalesScreenState extends State<SalesScreen> {
   List<OrderDetailsModelDataCartItem>? cartItems = [];
 
   bool initLoading = false;
+
+  final List<String> statusOptions = [
+ 
+  'new',
+  'pending',
+  'confirmed',
+  'cancelled'
+];
 
   @override
   void initState() {
@@ -219,6 +229,8 @@ class _SalesScreenState extends State<SalesScreen> {
           'date': DateFormat('yyyy-MM-dd').format(selectedDate!),
         if (storeController.text.isNotEmpty)
           'filterStore': storeController.text.trim(),
+        if (selectedStatus != null && selectedStatus != 'all')
+          'filterStatus': selectedStatus!.trim(), // Add status filter  
         'page': page.toString(),
       };
 
@@ -234,6 +246,7 @@ class _SalesScreenState extends State<SalesScreen> {
         filterPhone: filters['filterPhone'],
         date: filters['date'],
         filterStore: filters['filterStore'],
+        filterStatus: filters['filterStatus'],
         page: int.tryParse(filters['page'] ?? '1') ?? 1,
       );
       
@@ -264,7 +277,9 @@ class _SalesScreenState extends State<SalesScreen> {
       emailController.clear();
       phoneController.clear();
       storeController.clear();
+      statusController.clear(); 
       storeSelected = null;
+      selectedStatus = null; 
       selectedDate = null;
       calendarPickerKey = UniqueKey();
     });
@@ -437,6 +452,7 @@ class _SalesScreenState extends State<SalesScreen> {
         emailController.text.isNotEmpty ||
         phoneController.text.isNotEmpty ||
         storeController.text.isNotEmpty ||
+        statusController.text.isNotEmpty ||
         selectedDate != null;
 
     return Center(
@@ -486,9 +502,9 @@ class _SalesScreenState extends State<SalesScreen> {
               columnWidths: const {
                 0: FixedColumnWidth(1), // SI No
                 1: FlexColumnWidth(2), // Order #
-                2: FlexColumnWidth(2), // Date
-                3: FlexColumnWidth(1.5), // Items
-                4: FlexColumnWidth(3), // Customer
+                2: FlexColumnWidth(3), // Customer
+                3: FlexColumnWidth(2), // Date
+                4: FlexColumnWidth(1.5), // Items
                 5: FlexColumnWidth(2), // Amount
                 6: FlexColumnWidth(1.8), // Status
                 7: FixedColumnWidth(150), // Actions
@@ -500,9 +516,10 @@ class _SalesScreenState extends State<SalesScreen> {
                   children: [
                     _buildTableHeader('SI No'),
                     _buildTableHeader('Order #'),
+                    _buildTableHeader('Customer'),
                     _buildTableHeader('Date'),
                     _buildTableHeader('Items'),
-                    _buildTableHeader('Customer'),
+                   
                     _buildTableHeader('Amount'),
                     _buildTableHeader('Status'),
                     _buildTableHeader('Actions'),
@@ -530,9 +547,9 @@ class _SalesScreenState extends State<SalesScreen> {
                     columnWidths: const {
                       0: FixedColumnWidth(1), // SI No
                       1: FlexColumnWidth(2), // Order #
-                      2: FlexColumnWidth(2), // Date
-                      3: FlexColumnWidth(1.5), // Items
-                      4: FlexColumnWidth(3), // Customer
+                      2: FlexColumnWidth(3), // Customer
+                      3: FlexColumnWidth(2), // Date
+                      4: FlexColumnWidth(1.5), // Items
                       5: FlexColumnWidth(2), // Amount
                       6: FlexColumnWidth(1.8), // Status
                       7: FixedColumnWidth(150), // Actions
@@ -564,6 +581,11 @@ class _SalesScreenState extends State<SalesScreen> {
                             SizedBox(
                               height: 55,
                               child: _buildTableCell(
+                                  "${order.customerName ?? "NA"}"),
+                            ),
+                            SizedBox(
+                              height: 55,
+                              child: _buildTableCell(
                                   DateHelper.formatYearMonthDay(
                                       order.orderDate!)),
                             ),
@@ -571,11 +593,6 @@ class _SalesScreenState extends State<SalesScreen> {
                               height: 55,
                               child: _buildTableCell(
                                   "${order.cartItems?.length ?? 0}"),
-                            ),
-                            SizedBox(
-                              height: 55,
-                              child: _buildTableCell(
-                                  "${order.customerName ?? "NA"}"),
                             ),
                             SizedBox(
                               height: 55,
@@ -929,13 +946,91 @@ Widget build(BuildContext context) {
                             ],
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        
-                        // Empty space to maintain equal width distribution
-                        Expanded(
-                          flex: 1,
-                          child: Container(),
-                        ),
+// Add this in your filter section (after the Store filter or wherever you prefer)
+const SizedBox(width: 10),
+
+// Status Filter
+Expanded(
+  flex: 1,
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          "Status",
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s14,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+      ),
+      SizedBox(
+        height: 45,
+        child: BuildBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+          padding: const EdgeInsets.only(left: 15),
+          child: DropdownButtonFormField<String>(
+            decoration: const InputDecoration(border: InputBorder.none),
+            value: selectedStatus,
+            hint: Text(
+              'Select Status',
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.27,
+                ColorManager.textColor.withOpacity(.5),
+              ),
+            ),
+            items: [
+              DropdownMenuItem<String>(
+                value: null,
+                child: Text(
+                  'All',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s12,
+                    0.27,
+                    ColorManager.textColor.withOpacity(.5),
+                  ),
+                ),
+              ),
+              ...statusOptions.map((String status) {
+                return DropdownMenuItem<String>(
+                  value: status,
+                  child: Text(
+                    status.toUpperCase(),
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s12,
+                      0.27,
+                      ColorManager.textColor.withOpacity(.5),
+                    ),
+                  ),
+                );
+              }).toList()
+            ],
+            onChanged: (String? status) {
+              setState(() {
+                selectedStatus = status;
+                if (status != null) {
+                  statusController.text = status;
+                } else {
+                  statusController.clear();
+                }
+              });
+              searchOrders(1);
+            },
+          ),
+        ),
+      ),
+    ],
+  ),
+),
                         const SizedBox(width: 10),
                         
                         // Reset button
