@@ -31,6 +31,19 @@ class _CustomerTransactionsWidgetState
     transactions = widget.customer.transactions ?? [];
   }
 
+  // Helper method to determine if transaction is credit or debit
+  bool _isCreditTransaction(CustomerTransaction transaction) {
+    // Add your logic to determine if it's a credit transaction
+    // For example:
+    // return transaction.type?.toLowerCase() == 'credit';
+    // or based on amount sign:
+    // return transaction.amount != null && transaction.amount!.startsWith('+');
+    
+    // This is a placeholder - implement based on your data structure
+    return transaction.type?.toLowerCase() == 'credit' || 
+           (transaction.amount != null && transaction.amount!.contains('+'));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Expanded(
@@ -122,6 +135,10 @@ class _CustomerTransactionsWidgetState
     BuildContext context,
     CustomerTransaction transaction,
   ) {
+    // Determine if this is a credit or debit transaction
+    final bool isCredit = _isCreditTransaction(transaction);
+    final Color amountColor = isCredit ? ColorManager.kSuccessColor : ColorManager.kRed;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -161,7 +178,7 @@ class _CustomerTransactionsWidgetState
                   FontWeightManager.bold,
                   FontSize.s14,
                   0,
-                  _getStatusColor(transaction.status),
+                  amountColor, // Use credit/debit color
                 ),
               ),
               const SizedBox(height: 2),

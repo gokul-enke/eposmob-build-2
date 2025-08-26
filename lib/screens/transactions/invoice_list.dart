@@ -27,6 +27,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   bool isInitialized = false;
   final TextEditingController searchTextController = TextEditingController();
   final TextEditingController invoiceNumberController = TextEditingController();
+  final TextEditingController orderNumberController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
   final TextEditingController dateFromController = TextEditingController();
   final TextEditingController dateToController = TextEditingController();
   String? selectedStatus; // For the status dropdown
@@ -72,6 +75,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     provider.applyFilters(
       name: searchTextController.text,
       invoiceNumber: invoiceNumberController.text,
+      // orderNumber: orderNumberController.text,
+      phone: phoneController.text,
+      email: emailController.text,
       fromDate: dateFromController.text,
       toDate: dateToController.text,
       status: selectedStatus,
@@ -83,6 +89,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     setState(() {
       searchTextController.clear();
       invoiceNumberController.clear();
+      orderNumberController.clear();
+      phoneController.clear();
+      emailController.clear();
       dateFromController.clear();
       dateToController.clear();
       selectedStatus = null;
@@ -106,6 +115,25 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         .listAllInvoices(accessToken: accessToken);
   }
 
+  // Date selection method
+  Future<void> _selectDate(BuildContext context, {required bool isFromDate}) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    
+    if (picked != null) {
+      final formattedDate = "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
+      if (isFromDate) {
+        dateFromController.text = formattedDate;
+      } else {
+        dateToController.text = formattedDate;
+      }
+      searchInvoices();
+    }
+  }
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -170,50 +198,95 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-Widget _buildSearchBar(Size size) {
-  return SizedBox(
-    height: 90,
-    child: Row(
-      children: [
-        // Name Search Field
-        Expanded(
-          flex: 1,
-          child: _buildSearchTextField(),
-        ),
-        
-        // Invoice Number Search Field
-        Expanded(
-          flex: 1,
-          child: _buildInvoiceNumberSearch(),
-        ),
-        
-        // Status Filter
-        Expanded(
-          flex: 1,
-          child: _buildStatusFilter(),
-        ),
-        
-        // Reset Button
-        Expanded(
-          flex: 1,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 10.0, top: 42),
-            child: CustomRoundButton(
-              title: "Reset",
-              boxColor: Colors.white,
-              textColor: ColorManager.kPrimaryColor,
-              fct: resetSearch,
-              height: 45,
-              width: double.infinity, // Take full available width
-              fontSize: FontSize.s12,
+  Widget _buildSearchBar(Size size) {
+    return Column(
+
+        children: [
+          // First row of search fields
+          SizedBox(
+            height: 90,
+            child: Row(
+              children: [
+
+                Expanded(
+                  flex: 1,
+                  child: _buildInvoiceNumberSearch(),
+                ),
+                // Name Search Field
+                Expanded(
+                  flex: 1,
+                  child: _buildSearchTextField(),
+                ),
+                
+                // Invoice Number Search Field
+                
+                // // Order Number Search Field
+                // Expanded(
+                //   flex: 1,
+                //   child: _buildOrderNumberSearch(),
+                // ),
+                
+
+
+                                // Phone Search Field
+                Expanded(
+                  flex: 1,
+                  child: _buildPhoneSearch(),
+                ),
+                
+                                // Email Search Field
+                Expanded(
+                  flex: 1,
+                  child: _buildEmailSearch(),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+          // Second row of search fields
+          SizedBox(
+            height: 90,
+            child: Row(
+              children: [
 
+                                // Status Filter
+                Expanded(
+                  flex: 1,
+                  child: _buildStatusFilter(),
+                ),
+
+                
+
+                
+                // Date Range Search
+                Expanded(
+                  flex: 2,
+                  child: _buildDateRangeSearch(),
+                ),
+                
+                //SizedBox(width: 10),
+                
+                // Reset Button
+                Expanded(
+                  flex: 1,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 42,left: 10),
+                    child: CustomRoundButton(
+                      title: "Reset",
+                      boxColor: Colors.white,
+                      textColor: ColorManager.kPrimaryColor,
+                      fct: resetSearch,
+                      height: 45,
+                      width: double.infinity,
+                      fontSize: FontSize.s12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+  }
 
   Widget _buildInvoiceNumberSearch() {
     return Padding(
@@ -256,78 +329,167 @@ Widget _buildSearchBar(Size size) {
     );
   }
 
-// Widget _buildDateRangeSearch() {    // date function if need
-//   return Padding(
-//     padding: const EdgeInsets.only(left: 10.0),
-//     child: Row(
-//       children: [
-//         Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Padding(
-//               padding: const EdgeInsets.all(8.0),
-//               child: Text(
-//                 "From Date",
-//                 style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-//                     0.27, Colors.black.withOpacity(0.6)),
-//               ),
-//             ),
-//             SizedBox(
-//               height: 45,
-//               width: 120,
-//               child: TextFormField(
-//                 controller: dateFromController,
-//                 onTap: () => _selectDate(context, isFromDate: true),
-//                 readOnly: true,
-//                 cursorColor: ColorManager.kPrimaryColor,
-//                 style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-//                     0.18, ColorManager.textColor),
-//                 decoration: decoration.copyWith(
-//                   hintText: "DD/MM/YYYY",
-//                   hintStyle: buildCustomStyle(FontWeightManager.medium,
-//                       FontSize.s10, 0.18, ColorManager.textColor),
-//                   prefixIcon: Icon(Icons.calendar_today, size: 16),
-//                 ),
-//               ),
-//             ),
-//           ],
-//         ),
-//         const SizedBox(width: 10),
-//         Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Padding(
-//               padding: const EdgeInsets.all(8.0),
-//               child: Text(
-//                 "To Date",
-//                 style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-//                     0.27, Colors.black.withOpacity(0.6)),
-//               ),
-//             ),
-//             SizedBox(
-//               height: 45,
-//               width: 120,
-//               child: TextFormField(
-//                 controller: dateToController,
-//                 onTap: () => _selectDate(context, isFromDate: false),
-//                 readOnly: true,
-//                 cursorColor: ColorManager.kPrimaryColor,
-//                 style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-//                     0.18, ColorManager.textColor),
-//                 decoration: decoration.copyWith(
-//                   hintText: "DD/MM/YYYY",
-//                   hintStyle: buildCustomStyle(FontWeightManager.medium,
-//                       FontSize.s10, 0.18, ColorManager.textColor),
-//                   prefixIcon: Icon(Icons.calendar_today, size: 16),
-//                 ),
-//               ),
-//             ),
-//           ],
-//         ),
-//       ],
-//     ),
-//   );
-// }
+  Widget _buildPhoneSearch() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              "Phone",
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                  0.27, Colors.black.withOpacity(0.6)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          BuildBoxShadowContainer(
+            height: 45,
+            width: double.infinity,
+            circleRadius: 7,
+            child: TextFormField(
+              controller: phoneController,
+              onChanged: (value) => searchInvoices(),
+              cursorColor: ColorManager.kPrimaryColor,
+              cursorHeight: 13,
+              keyboardType: TextInputType.phone,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                  0.18, ColorManager.textColor),
+              decoration: decoration.copyWith(
+                hintText: "Phone",
+                hintStyle: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s10, 0.18, ColorManager.textColor),
+                prefixIconColor: Colors.black,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  } 
+
+  
+  Widget _buildEmailSearch() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              "Email",
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                  0.27, Colors.black.withOpacity(0.6)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          BuildBoxShadowContainer(
+            height: 45,
+            width: double.infinity,
+            circleRadius: 7,
+            child: TextFormField(
+              controller: emailController,
+              onChanged: (value) => searchInvoices(),
+              cursorColor: ColorManager.kPrimaryColor,
+              cursorHeight: 13,
+              keyboardType: TextInputType.emailAddress,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                  0.18, ColorManager.textColor),
+              decoration: decoration.copyWith(
+                hintText: "Email",
+                hintStyle: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s10, 0.18, ColorManager.textColor),
+                prefixIconColor: Colors.black,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  } 
+
+  Widget _buildDateRangeSearch() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    "From Date",
+                    style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                        0.27, Colors.black.withOpacity(0.6)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                BuildBoxShadowContainer(
+                  height: 45,
+                  width: double.infinity,
+                  circleRadius: 7,
+                  child: TextFormField(
+                    controller: dateFromController,
+                    onTap: () => _selectDate(context, isFromDate: true),
+                    readOnly: true,
+                    cursorColor: ColorManager.kPrimaryColor,
+                    style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                        0.18, ColorManager.textColor),
+                    decoration: decoration.copyWith(
+                      hintText: "DD/MM/YYYY",
+                      hintStyle: buildCustomStyle(FontWeightManager.medium,
+                          FontSize.s10, 0.18, ColorManager.textColor),
+                      prefixIcon: Icon(Icons.calendar_today, size: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    "To Date",
+                    style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                        0.27, Colors.black.withOpacity(0.6)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                BuildBoxShadowContainer(
+                  height: 45,
+                  width: double.infinity,
+                  circleRadius: 7,
+                  child: TextFormField(
+                    controller: dateToController,
+                    onTap: () => _selectDate(context, isFromDate: false),
+                    readOnly: true,
+                    cursorColor: ColorManager.kPrimaryColor,
+                    style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                        0.18, ColorManager.textColor),
+                    decoration: decoration.copyWith(
+                      hintText: "DD/MM/YYYY",
+                      hintStyle: buildCustomStyle(FontWeightManager.medium,
+                          FontSize.s10, 0.18, ColorManager.textColor),
+                      prefixIcon: Icon(Icons.calendar_today, size: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildStatusFilter() {
     return Padding(
@@ -394,6 +556,46 @@ Widget _buildSearchBar(Size size) {
       ),
     );
   }
+
+    //   Widget _buildOrderNumberSearch() {
+  //   return Padding(
+  //     padding: const EdgeInsets.only(left: 10.0),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Padding(
+  //           padding: const EdgeInsets.all(8.0),
+  //           child: Text(
+  //             "Order No",
+  //             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+  //                 0.27, Colors.black.withOpacity(0.6)),
+  //           ),
+  //         ),
+  //         const SizedBox(height: 8),
+  //         BuildBoxShadowContainer(
+  //           height: 45,
+  //           width: double.infinity,
+  //           circleRadius: 7,
+  //           child: TextFormField(
+  //             controller: orderNumberController,
+  //             onChanged: (value) => searchInvoices(),
+  //             cursorColor: ColorManager.kPrimaryColor,
+  //             cursorHeight: 13,
+  //             style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+  //                 0.18, ColorManager.textColor),
+  //             decoration: decoration.copyWith(
+  //               hintText: "Order No",
+  //               hintStyle: buildCustomStyle(FontWeightManager.medium,
+  //                   FontSize.s10, 0.18, ColorManager.textColor),
+  //               prefixIconColor: Colors.black,
+  //             ),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
 
   void _showInvoiceDetails(Invoice invoice) {
     showDialog(
@@ -645,12 +847,13 @@ Widget _buildSearchBar(Size size) {
                             ),
                             child: Table(
                               columnWidths: const {
-                                0: FlexColumnWidth(2.0), // Name
-                                1: FlexColumnWidth(1.5), // Invoice Number
-                                2: FlexColumnWidth(1.0), // Type
+            
+                                0: FlexColumnWidth(1.5), // Invoice Number
+                                1: FlexColumnWidth(1.0), // Amount
+                                2: FlexColumnWidth(2.0), // Name
                                 3: FlexColumnWidth(1.5), // Invoice Date
-                                4: FlexColumnWidth(1.5), // Due Date
-                                5: FlexColumnWidth(1.0), // Amount
+                                4: FlexColumnWidth(1.0), // Type
+                                5: FlexColumnWidth(1.5), // Due Date
                                 6: FlexColumnWidth(1.0), // Status
                                 7: FlexColumnWidth(1.0), // Action
                               },
@@ -660,12 +863,13 @@ Widget _buildSearchBar(Size size) {
                               children: [
                                 TableRow(
                                   children: [
-                                    _buildTableHeader("Name"),
+                                    
                                     _buildTableHeader("Invoice Number"),
-                                    _buildTableHeader("Type"),
-                                    _buildTableHeader("Invoice Date"),
-                                    _buildTableHeader("Due Date"),
                                     _buildTableHeader("Amount"),
+                                    _buildTableHeader("Name"),
+                                    _buildTableHeader("Invoice Date"),
+                                    _buildTableHeader("Type"),
+                                    _buildTableHeader("Due Date"),
                                     _buildTableHeader("Status"),
                                     _buildTableHeader("Action"),
                                   ],
@@ -695,14 +899,12 @@ Widget _buildSearchBar(Size size) {
                                         scrollDirection: Axis.vertical,
                                         child: Table(
                                           columnWidths: const {
-                                            0: FlexColumnWidth(2.0), // Name
-                                            1: FlexColumnWidth(
-                                                1.5), // Invoice Number
-                                            2: FlexColumnWidth(1.0), // Type
-                                            3: FlexColumnWidth(
-                                                1.5), // Invoice Date
-                                            4: FlexColumnWidth(1.5), // Due Date
-                                            5: FlexColumnWidth(1.0), // Amount
+                                            0: FlexColumnWidth(1.5), // Invoice Number
+                                            1: FlexColumnWidth(1.0), // Amount
+                                            2: FlexColumnWidth(2.0), // Name
+                                            3: FlexColumnWidth(1.5), // Invoice Date
+                                            4: FlexColumnWidth(1.0), // Type
+                                            5: FlexColumnWidth(1.5), // Due Date
                                             6: FlexColumnWidth(1.0), // Status
                                             7: FlexColumnWidth(1.0), // Action
                                           },
@@ -723,18 +925,18 @@ Widget _buildSearchBar(Size size) {
                                                         .withOpacity(0.1),
                                               ),
                                               children: [
-                                                _buildTableCell(invoice
-                                                    .customer.user.name
-                                                    .toString()),
+
                                                 _buildTableCell(
                                                     invoice.invoiceNumber),
-                                                _buildTableCell(invoice.type),
+                                                 _buildTableCell(
+                                                    invoice.amount.toString()),    
+                                                _buildTableCell(invoice.customer.user.name.toString()),
                                                 _buildTableCell(
                                                     invoice.invoiceDate),
+                                                _buildTableCell(invoice.type),
+                                             
                                                 _buildTableCell(
                                                     invoice.dueDate),
-                                                _buildTableCell(
-                                                    invoice.amount.toString()),
                                                 Center(child: _buildStatusChip(invoice.status)),
                                                 Center(
                                                   child: Padding(
