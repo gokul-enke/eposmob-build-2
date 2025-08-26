@@ -35,6 +35,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   dynamic _selectedOrderFromOrderPanel; // New state to hold selected order
   int? _refreshCounter; // Counter to trigger refreshes without creating new objects
   final GlobalKey<_OrderPanelState> _orderPanelKey = GlobalKey<_OrderPanelState>(); // Key to access OrderPanel methods
+  bool _isLoadingSendToKitchen = false; // Loading state for Send to Kitchen button
 
   @override
   void initState() {
@@ -151,7 +152,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             key: _orderPanelKey, // Add key to access methods
             tableId: _activeTableId,
             screenSize: screenSize,
-            onSendToKitchen: _sendOrderToKitchen, // Pass the new callback
+            onSendToKitchen: _sendOrderToKitchenWithLoading, // Use wrapper method
             onNewOrder: _handleNewOrder, // Pass the new callback
             onOrderSelected: (order) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -165,6 +166,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             selectedOrderFromParent:
                 _selectedOrderFromOrderPanel, // Pass the selected order
             refreshCounter: _refreshCounter, // Pass refresh counter
+            isLoadingSendToKitchen: _isLoadingSendToKitchen, // Pass loading state
           ),
         ),
       ],
@@ -201,7 +203,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   tableId: _activeTableId,
                   isCompact: true,
                   screenSize: screenSize,
-                  onSendToKitchen: _sendOrderToKitchen, // Pass the new callback
+                  onSendToKitchen: _sendOrderToKitchenWithLoading, // Use wrapper method
                   onNewOrder: _handleNewOrder, // Pass the new callback
                   onOrderSelected: (order) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -215,6 +217,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   selectedOrderFromParent:
                       _selectedOrderFromOrderPanel, // Pass the selected order
                   refreshCounter: _refreshCounter, // Pass refresh counter
+                  isLoadingSendToKitchen: _isLoadingSendToKitchen, // Pass loading state
                 ),
               ),
             ],
@@ -260,11 +263,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
             )
                 ?.toString() ??
             '');
-        debugPrint('🔄 Editing existing order - Using cart_id from selected order: $targetCartId');
+        
+        // Get the customer ID from the selected order (not the logged-in user ID)
+        final customerId = _selectedOrderFromOrderPanel['cart']?['customer_id'] ?? 
+                          _selectedOrderFromOrderPanel['customer_id'] ?? 
+                          authModel.userId ?? 1;
+        
+        debugPrint('🔄 Editing existing order - Using cart_id: $targetCartId, customerId: $customerId');
 
         debugPrint('➡️ Calling CartProvider.addToCartAPI');
         final addResponse = await cartProvider.addToCartAPI(
-          customerId: authModel.userId ?? 1,
+          customerId: int.parse(customerId.toString()),
           productId: product.productId!,
           quantity: quantity,
           accessToken: authModel.token ?? '',
@@ -273,22 +282,35 @@ class _RestaurantPageState extends State<RestaurantPage> {
         );
         debugPrint('✅ addToCartAPI Response: $addResponse');
 
-        if (mounted) {
-          showScaffold(
-            context: context,
-            message: 'Added ${product.productName} to existing order',
-          );
-
-          // Wait for server update then refresh the selected order and list
-          await Future.delayed(const Duration(milliseconds: 1000));
-          setState(() {
-            _refreshCounter = (_refreshCounter ?? 0) + 1;
-          });
-          _orderPanelKey.currentState?.refreshSavedOrdersKeepingSelection();
-          
-          // Ensure parent widget also updates its state
+        // Check if the API call was successful
+        if (addResponse != null &&
+            (addResponse['status']?.toLowerCase() == 'success' ||
+             addResponse['status']?.toLowerCase() == 'sucesss')) {
           if (mounted) {
-            setState(() {});
+            showScaffold(
+              context: context,
+              message: 'Added ${product.productName} to existing order',
+            );
+
+            // Wait for server update then refresh the selected order and list silently
+            await Future.delayed(const Duration(milliseconds: 1000));
+            setState(() {
+              _refreshCounter = (_refreshCounter ?? 0) + 1;
+            });
+            _orderPanelKey.currentState?.refreshSavedOrdersSilently();
+            
+            // Ensure parent widget also updates its state
+            if (mounted) {
+              setState(() {});
+            }
+          }
+        } else {
+          // API call failed, show error message
+          if (mounted) {
+            showScaffoldError(
+              context: context,
+              message: 'Failed to add ${product.productName}: ${addResponse?['message'] ?? 'Unknown error'}',
+            );
           }
         }
       } else {
@@ -448,6 +470,22 @@ class _RestaurantPageState extends State<RestaurantPage> {
       context: context,
       message: 'New order started. Cart cleared and table deselected.',
     );
+  }
+
+  Future<void> _sendOrderToKitchenWithLoading() async {
+    setState(() {
+      _isLoadingSendToKitchen = true;
+    });
+
+    try {
+      await _sendOrderToKitchen();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingSendToKitchen = false;
+        });
+      }
+    }
   }
 }
 
@@ -1568,6 +1606,7 @@ class _OrderPanel extends StatefulWidget {
   final dynamic
       selectedOrderFromParent; // Add this to track parent's selected order
   final int? refreshCounter; // Add refresh counter
+  final bool isLoadingSendToKitchen; // Loading state for Send to Kitchen button
 
   const _OrderPanel({
     super.key, // Add key parameter
@@ -1579,6 +1618,7 @@ class _OrderPanel extends StatefulWidget {
     required this.onOrderSelected, // Make it required
     this.selectedOrderFromParent, // Add this parameter
     this.refreshCounter, // Add refresh counter parameter
+    this.isLoadingSendToKitchen = false, // Add loading state parameter
   });
 
   @override
@@ -1591,6 +1631,8 @@ class _OrderPanelState extends State<_OrderPanel> {
   bool _isLoadingOrders = false;
   bool _isLoadingOrderDetails = false;
   String? _error;
+  Set<String> _loadingCartItems = {}; // Track which cart items are being updated
+  bool _isLoadingConfirm = false; // Loading state for Confirm button
 
   // Payment Method Variables
   bool _isCashSelected = false;
@@ -1694,6 +1736,14 @@ class _OrderPanelState extends State<_OrderPanel> {
     if (widget.tableId != null) {
       debugPrint('🔄 External refresh of saved orders triggered for table: ${widget.tableId}');
       _fetchSavedOrders();
+    }
+  }
+
+  // Public method to refresh saved orders silently (no loading spinner)
+  void refreshSavedOrdersSilently() {
+    if (widget.tableId != null) {
+      debugPrint('🔄 External silent refresh of saved orders triggered for table: ${widget.tableId}');
+      _refreshSavedOrdersSilently();
     }
   }
 
@@ -2448,6 +2498,53 @@ class _OrderPanelState extends State<_OrderPanel> {
       setState(() {
         _isLoadingOrders = false;
       });
+    }
+  }
+
+  // Silent refresh method for background updates (no loading spinner)
+  Future<void> _refreshSavedOrdersSilently() async {
+    final currentSelectedOrder = _selectedOrder; // Store current selection
+    
+    final authModel = Provider.of<AuthModel>(context, listen: false);
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+    debugPrint(
+        '🔄 _refreshSavedOrdersSilently: Sending request with tableId: ${widget.tableId}');
+    try {
+      debugPrint('➡️ Calling CartProvider.listSavedOrders (silent)');
+      final response = await cartProvider.listSavedOrders(
+        accessToken: authModel.token ?? '',
+        tableId: widget.tableId,
+      );
+      debugPrint('✅ listSavedOrders Response (silent): $response');
+      if (response['status'] == 'success') {
+        final newOrders = response['orders'] as List<dynamic>;
+        
+        setState(() {
+          _savedOrders = newOrders;
+          
+          // If we had a selected order, try to find and update it with fresh data
+          if (currentSelectedOrder != null) {
+            final currentOrderId = currentSelectedOrder['id'] ?? currentSelectedOrder['order_id'];
+            final updatedOrder = newOrders.firstWhere(
+              (order) => order['id'] == currentOrderId || order['order_id'] == currentOrderId,
+              orElse: () => null,
+            );
+            
+            if (updatedOrder != null) {
+              _selectedOrder = updatedOrder; // Update with fresh data
+              widget.onOrderSelected(updatedOrder); // Notify parent widget
+              debugPrint('✅ Updated selected order with fresh data (silent)');
+            } else {
+              debugPrint('⚠️ Selected order not found in updated list (silent)');
+            }
+          }
+        });
+      } else {
+        debugPrint('⚠️ Failed to refresh saved orders (silent): ${response['message']}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error in silent refresh: ${e.toString()}');
     }
   }
 
@@ -3689,17 +3786,17 @@ class _OrderPanelState extends State<_OrderPanel> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: (cartItems.isEmpty || !allItemsReadyOrServed) ? null : () => _confirmOrder(),
+                      onTap: (cartItems.isEmpty || !allItemsReadyOrServed || _isLoadingConfirm) ? null : () => _confirmOrder(),
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         height: widget.isCompact ? 44 : 48,
                         decoration: BoxDecoration(
-                          color: (cartItems.isEmpty || !allItemsReadyOrServed)
+                          color: (cartItems.isEmpty || !allItemsReadyOrServed || _isLoadingConfirm)
                               ? const Color(0xFF94A3B8)
                               : const Color(0xFF2563EB),
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: (cartItems.isNotEmpty && allItemsReadyOrServed)
+                          boxShadow: (cartItems.isNotEmpty && allItemsReadyOrServed && !_isLoadingConfirm)
                               ? [
                                   BoxShadow(
                                     color: const Color(0xFF2563EB).withOpacity(0.3),
@@ -3710,25 +3807,34 @@ class _OrderPanelState extends State<_OrderPanel> {
                               : [],
                         ),
                         child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.check_circle,
-                                color: Colors.white,
-                                size: widget.isCompact ? 16 : 18,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Confirm',
-                                style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    widget.isCompact ? FontSize.s13 : FontSize.s14,
-                                    0.21,
-                                    Colors.white),
-                              ),
-                            ],
-                          ),
+                          child: _isLoadingConfirm
+                              ? SizedBox(
+                                  width: widget.isCompact ? 16 : 20,
+                                  height: widget.isCompact ? 16 : 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: Colors.white,
+                                      size: widget.isCompact ? 16 : 18,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Confirm',
+                                      style: buildCustomStyle(
+                                          FontWeightManager.semiBold,
+                                          widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                          0.21,
+                                          Colors.white),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ),
                     ),
@@ -3742,13 +3848,52 @@ class _OrderPanelState extends State<_OrderPanel> {
     );
   }
 
+  // Wrapper method for quantity updates with loading state
+  Future<void> _updateCartItemQuantityWithLoading(
+      dynamic cartItem, double newQuantity, String action) async {
+    final loadingKey = '${cartItem['id']}_$action';
+    
+    setState(() {
+      _loadingCartItems.add(loadingKey);
+    });
+
+    try {
+      await _updateCartItemQuantity(cartItem, newQuantity);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingCartItems.remove(loadingKey);
+        });
+      }
+    }
+  }
+
+  // Wrapper method for cart item removal with loading state
+  Future<void> _removeCartItemWithLoading(dynamic cartItem) async {
+    final loadingKey = '${cartItem['id']}_remove';
+    
+    setState(() {
+      _loadingCartItems.add(loadingKey);
+    });
+
+    try {
+      await _removeCartItem(cartItem);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingCartItems.remove(loadingKey);
+        });
+      }
+    }
+  }
+
   Future<void> _updateCartItemQuantity(
       dynamic cartItem, double newQuantity) async {
     final currentQuantity =
         double.tryParse(cartItem['quantity'].toString()) ?? 0.0;
 
-    if (newQuantity <= 0) {
-      await _removeCartItem(cartItem);
+    if (newQuantity < 0) {
+      // Don't allow negative quantities
       return;
     }
 
@@ -3756,8 +3901,10 @@ class _OrderPanelState extends State<_OrderPanel> {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
-      // Get customer ID from the order data
-      final customerId = _selectedOrder['cart']?['customer_id'] ?? 1;
+      // Get customer ID from the order data (same logic as add menu item)
+      final customerId = _selectedOrder['cart']?['customer_id'] ?? 
+                        _selectedOrder['customer_id'] ?? 
+                        1;
       final orderCartId = int.tryParse(
           (_selectedOrder['cart']?['id'] ?? _selectedOrder['cart_id'])
                   ?.toString() ??
@@ -3781,6 +3928,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         debugPrint('➡️ Calling CartProvider.addToCartAPI for increment');
         debugPrint(
             '📦 addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: $deltaQuantity, unitPrice: $unitPrice, cartId: $orderCartId}');
+        debugPrint('🔍 Customer ID source: _selectedOrder data structure');
 
         response = await cartProvider.addToCartAPI(
           customerId: int.parse(customerId.toString()),
@@ -3791,19 +3939,21 @@ class _OrderPanelState extends State<_OrderPanel> {
           cartId: orderCartId,
         );
         debugPrint('✅ addToCartAPI Response: $response');
-      } else if (newQuantity < currentQuantity) {
-        // Decrement quantity - use decrementCartItemQuantityAPI
+      } else if (newQuantity <= currentQuantity) {
+        // Decrement quantity or remove item (including 0) - use decrementCartItemQuantityAPI
+        String actionType = newQuantity == 0 ? 'remove (set to 0)' : 'decrement';
         debugPrint(
-            '➡️ Calling CartProvider.decrementCartItemQuantityAPI for decrement');
+            '➡️ Calling CartProvider.decrementCartItemQuantityAPI for $actionType');
         debugPrint(
             '📦 decrementCartItemQuantityAPI Request Body: {customerId: $customerId, cartItemId: ${cartItem['id']}, quantity: ${newQuantity.toInt()}, cartId: $orderCartId}');
+        debugPrint('🔍 Customer ID source: _selectedOrder data structure');
 
         response = await cartProvider.decrementCartItemQuantityAPI(
           customerId: int.parse(customerId.toString()),
           productId:
               int.parse(cartItem['id'].toString()), // This is cart_item_id
           cartId: orderCartId,
-          quantity: newQuantity.toInt(),
+          quantity: newQuantity.toInt(), // Can be 0 for removal
           accessToken: authModel.token ?? '',
         );
         debugPrint('✅ decrementCartItemQuantityAPI Response: $response');
@@ -3828,13 +3978,20 @@ class _OrderPanelState extends State<_OrderPanel> {
           cartItemsList = [];
         }
 
-        for (var item in cartItemsList) {
-          if (item['id'].toString() == cartItem['id'].toString()) {
-            item['quantity'] = newQuantity.toString();
-            item['total_price'] =
-                (newQuantity * double.parse(item['unit_price'].toString()))
-                    .toString();
-            break;
+        if (newQuantity == 0) {
+          // Remove the item completely when quantity is 0
+          cartItemsList.removeWhere(
+              (item) => item['id'].toString() == cartItem['id'].toString());
+        } else {
+          // Update the quantity for non-zero values
+          for (var item in cartItemsList) {
+            if (item['id'].toString() == cartItem['id'].toString()) {
+              item['quantity'] = newQuantity.toString();
+              item['total_price'] =
+                  (newQuantity * double.parse(item['unit_price'].toString()))
+                      .toString();
+              break;
+            }
           }
         }
       });
@@ -3843,23 +4000,23 @@ class _OrderPanelState extends State<_OrderPanel> {
       if (response != null &&
           (response['status']?.toLowerCase() == 'success' ||
               response['status']?.toLowerCase() == 'sucesss')) {
-        // Try to refresh the order details, but don't fail if it doesn't work
-        try {
-          await _refreshOrderDetails();
-        } catch (e) {
-          debugPrint(
-              '⚠️ Could not refresh order details, but update was successful: $e');
-        }
-
-        // Also refresh the saved orders list to show updated totals (keeping current selection)
-        debugPrint('🔄 Refreshing saved orders after updating cart item quantity');
-        await Future.delayed(const Duration(milliseconds: 500));
-        await refreshSavedOrdersKeepingSelection();
-
+        // Success - optimistic update was correct, just show success message
+        String successMessage = newQuantity == 0 
+            ? 'Item removed successfully'
+            : 'Item quantity updated successfully';
+        
         showScaffold(
           context: context,
-          message: 'Item quantity updated successfully',
+          message: successMessage,
         );
+        
+        // Only refresh the saved orders list in the background to update totals
+        // without affecting the current view (silent refresh without loading spinner)
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (mounted) {
+            _refreshSavedOrdersSilently();
+          }
+        });
       } else {
         // Revert the optimistic update
         setState(() {
@@ -3874,29 +4031,39 @@ class _OrderPanelState extends State<_OrderPanel> {
             cartItemsList = [];
           }
 
-          for (var item in cartItemsList) {
-            if (item['id'].toString() == cartItem['id'].toString()) {
-              item['quantity'] =
-                  currentQuantity.toString(); // Revert to original
-              item['total_price'] = (currentQuantity *
-                      double.parse(item['unit_price'].toString()))
-                  .toString(); // Revert to original
-              break;
+          if (newQuantity == 0) {
+            // If removal failed, re-add the item with original quantity
+            bool itemExists = cartItemsList.any(
+                (item) => item['id'].toString() == cartItem['id'].toString());
+            if (!itemExists) {
+              cartItemsList.add(cartItem); // Re-add the removed item
+            }
+          } else {
+            // If quantity update failed, revert to original quantity
+            for (var item in cartItemsList) {
+              if (item['id'].toString() == cartItem['id'].toString()) {
+                item['quantity'] = currentQuantity.toString();
+                item['total_price'] = (currentQuantity *
+                        double.parse(item['unit_price'].toString()))
+                    .toString();
+                break;
+              }
             }
           }
         });
 
+        String errorAction = newQuantity == 0 ? 'remove item' : 'update quantity';
         showScaffoldError(
           context: context,
           message:
-              'Failed to update quantity: ${response?['message'] ?? 'Unknown error'}',
+              'Failed to $errorAction: ${response?['message'] ?? 'Unknown error'}',
         );
       }
     } catch (e) {
-      debugPrint('❌ Error updating cart item quantity: ${e.toString()}');
+      debugPrint('❌ Error updating cart item: ${e.toString()}');
       showScaffoldError(
         context: context,
-        message: 'Failed to update quantity: ${e.toString()}',
+        message: 'Failed to update cart item: ${e.toString()}',
       );
     }
   }
@@ -3906,22 +4073,28 @@ class _OrderPanelState extends State<_OrderPanel> {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
-      // Get customer ID from the order data
-      final customerId = _selectedOrder['cart']['customer_id'] ?? 1;
-      final cartId = int.tryParse(_selectedOrder['cart_id'].toString());
+      // Get customer ID from the order data (consistent with other methods)
+      final customerId = _selectedOrder['cart']?['customer_id'] ?? 
+                        _selectedOrder['customer_id'] ?? 
+                        1;
+      final orderCartId = int.tryParse(
+          (_selectedOrder['cart']?['id'] ?? _selectedOrder['cart_id'])
+                  ?.toString() ??
+              '');
 
       debugPrint(
-          '🗑️ Removing cart item: Sending request with customerId: $customerId, cartItemId: ${cartItem['id']}');
-      // Use the cart API to remove item with correct cart_item_id
-      final response = await cartProvider.removeFromCartAPI(
+          '🗑️ Removing cart item (using unified API): Sending request with customerId: $customerId, cartItemId: ${cartItem['id']}');
+      // Use the unified decrementCartItemQuantityAPI with quantity 0 for removal
+      final response = await cartProvider.decrementCartItemQuantityAPI(
         customerId: int.parse(customerId.toString()),
         productId:
             int.parse(cartItem['id'].toString()), // Send cart_item_id here
+        cartId: orderCartId,
+        quantity: 0, // Set quantity to 0 for removal
         accessToken: authModel.token ?? '',
-        cartId: cartId,
       );
 
-      debugPrint('🗑️ Remove response: $response');
+      debugPrint('🗑️ Remove response (unified API): $response');
 
       // Update the UI optimistically first
       setState(() {
@@ -3932,31 +4105,29 @@ class _OrderPanelState extends State<_OrderPanel> {
       });
 
       // Check if the response indicates success
-      if (response != null) {
-        // Try to refresh the order details, but don't fail if it doesn't work
-        try {
-          await _refreshOrderDetails();
-        } catch (e) {
-          debugPrint(
-              '⚠️ Could not refresh order details, but removal was successful: $e');
-        }
-
-        // Also refresh the saved orders list to show updated totals (keeping current selection)
-        debugPrint('🔄 Refreshing saved orders after removing cart item');
-        await Future.delayed(const Duration(milliseconds: 500));
-        await refreshSavedOrdersKeepingSelection();
-
+      if (response != null &&
+          (response['status']?.toLowerCase() == 'success' ||
+           response['status']?.toLowerCase() == 'sucesss')) {
+        // Success - optimistic update was correct, just show success message
         showScaffold(
           context: context,
           message: 'Item removed successfully',
         );
+        
+        // Only refresh the saved orders list in the background to update totals
+        // without affecting the current view (silent refresh without loading spinner)
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (mounted) {
+            _refreshSavedOrdersSilently();
+          }
+        });
       } else {
-        // Revert the optimistic update by refreshing saved orders (keeping current selection)
-        await refreshSavedOrdersKeepingSelection();
+        // Revert the optimistic update by refreshing saved orders silently
+        await _refreshSavedOrdersSilently();
 
         showScaffoldError(
           context: context,
-          message: 'Failed to remove item: Server returned empty response',
+          message: 'Failed to remove item: ${response?['message'] ?? 'Server returned error response'}',
         );
       }
     } catch (e) {
@@ -4083,6 +4254,11 @@ class _OrderPanelState extends State<_OrderPanel> {
       );
       return;
     }
+
+    // Set loading state
+    setState(() {
+      _isLoadingConfirm = true;
+    });
 
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
@@ -4219,6 +4395,13 @@ class _OrderPanelState extends State<_OrderPanel> {
         context: context,
         message: 'Failed to confirm order: ${e.toString()}',
       );
+    } finally {
+      // Clear loading state
+      if (mounted) {
+        setState(() {
+          _isLoadingConfirm = false;
+        });
+      }
     }
   }
 
@@ -4461,18 +4644,17 @@ class _OrderPanelState extends State<_OrderPanel> {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap:
-                      cartItems.isEmpty ? null : () => widget.onSendToKitchen(),
+                  onTap: (cartItems.isEmpty || widget.isLoadingSendToKitchen) ? null : () => widget.onSendToKitchen(),
                   borderRadius: BorderRadius.circular(12),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     height: widget.isCompact ? 44 : 48,
                     decoration: BoxDecoration(
-                      color: cartItems.isEmpty
+                      color: (cartItems.isEmpty || widget.isLoadingSendToKitchen)
                           ? const Color(0xFF94A3B8)
                           : const Color(0xFF059669),
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: cartItems.isNotEmpty
+                      boxShadow: (cartItems.isNotEmpty && !widget.isLoadingSendToKitchen)
                           ? [
                               BoxShadow(
                                 color: const Color(0xFF059669).withOpacity(0.3),
@@ -4483,25 +4665,34 @@ class _OrderPanelState extends State<_OrderPanel> {
                           : [],
                     ),
                     child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.send,
-                            color: Colors.white,
-                            size: widget.isCompact ? 16 : 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Send to Kitchen',
-                            style: buildCustomStyle(
-                                FontWeightManager.semiBold,
-                                widget.isCompact ? FontSize.s13 : FontSize.s14,
-                                0.21,
-                                Colors.white),
-                          ),
-                        ],
-                      ),
+                      child: widget.isLoadingSendToKitchen
+                          ? SizedBox(
+                              width: widget.isCompact ? 16 : 20,
+                              height: widget.isCompact ? 16 : 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.send,
+                                  color: Colors.white,
+                                  size: widget.isCompact ? 16 : 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Send to Kitchen',
+                                  style: buildCustomStyle(
+                                      FontWeightManager.semiBold,
+                                      widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                      0.21,
+                                      Colors.white),
+                                ),
+                              ],
+                            ),
                     ),
                   ),
                 ),
@@ -4692,16 +4883,28 @@ class _OrderPanelState extends State<_OrderPanel> {
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () =>
-                            _updateCartItemQuantity(cartItem, quantity - 1),
+                        onTap: _loadingCartItems.contains('${cartItem['id']}_decrease') 
+                            ? null 
+                            : () => _updateCartItemQuantityWithLoading(cartItem, quantity - 1, 'decrease'),
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          child: Icon(
-                            Icons.remove,
-                            size: widget.isCompact ? 16 : 18,
-                            color: const Color(0xFFDC2626),
-                          ),
+                          child: _loadingCartItems.contains('${cartItem['id']}_decrease')
+                              ? SizedBox(
+                                  width: widget.isCompact ? 16 : 18,
+                                  height: widget.isCompact ? 16 : 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      const Color(0xFFDC2626),
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.remove,
+                                  size: widget.isCompact ? 16 : 18,
+                                  color: const Color(0xFFDC2626),
+                                ),
                         ),
                       ),
                     ),
@@ -4720,16 +4923,28 @@ class _OrderPanelState extends State<_OrderPanel> {
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () =>
-                            _updateCartItemQuantity(cartItem, quantity + 1),
+                        onTap: _loadingCartItems.contains('${cartItem['id']}_increase') 
+                            ? null 
+                            : () => _updateCartItemQuantityWithLoading(cartItem, quantity + 1, 'increase'),
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          child: Icon(
-                            Icons.add,
-                            size: widget.isCompact ? 16 : 18,
-                            color: const Color(0xFF059669),
-                          ),
+                          child: _loadingCartItems.contains('${cartItem['id']}_increase')
+                              ? SizedBox(
+                                  width: widget.isCompact ? 16 : 18,
+                                  height: widget.isCompact ? 16 : 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      const Color(0xFF059669),
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.add,
+                                  size: widget.isCompact ? 16 : 18,
+                                  color: const Color(0xFF059669),
+                                ),
                         ),
                       ),
                     ),
@@ -4741,7 +4956,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => _removeCartItem(cartItem),
+                    onTap: _loadingCartItems.contains('${cartItem['id']}_remove') 
+                        ? null 
+                        : () => _removeCartItemWithLoading(cartItem),
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
                       padding: const EdgeInsets.all(8),
@@ -4749,11 +4966,22 @@ class _OrderPanelState extends State<_OrderPanel> {
                         color: const Color(0xFFDC2626).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(
-                        Icons.delete_outline,
-                        size: widget.isCompact ? 16 : 18,
-                        color: const Color(0xFFDC2626),
-                      ),
+                      child: _loadingCartItems.contains('${cartItem['id']}_remove')
+                          ? SizedBox(
+                              width: widget.isCompact ? 16 : 18,
+                              height: widget.isCompact ? 16 : 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  const Color(0xFFDC2626),
+                                ),
+                              ),
+                            )
+                          : Icon(
+                              Icons.delete_outline,
+                              size: widget.isCompact ? 16 : 18,
+                              color: const Color(0xFFDC2626),
+                            ),
                     ),
                   ),
                 ),
