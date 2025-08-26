@@ -1,12 +1,15 @@
 import 'dart:ui';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/customer_provider.dart';
 
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/restaurant/table_model.dart';
+import 'package:pos_machine/models/customer_list.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart'; // Import CartProvider
 
@@ -15,6 +18,9 @@ import '../../components/build_dialog_box.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import '../../screens/customers/add_customer_modal.dart';
+import '../../screens/billing/widgets/payment_method_modal.dart';
+import '../../screens/billing/widgets/coupon_modal.dart';
 
 class RestaurantPage extends StatefulWidget {
   const RestaurantPage({super.key});
@@ -279,6 +285,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
             _refreshCounter = (_refreshCounter ?? 0) + 1;
           });
           _orderPanelKey.currentState?.refreshSavedOrdersKeepingSelection();
+          
+          // Ensure parent widget also updates its state
+          if (mounted) {
+            setState(() {});
+          }
         }
       } else {
         // New order: strictly local cart only (no API here)
@@ -1259,20 +1270,20 @@ class _MenuPanel extends StatelessWidget {
       isAvailable = item.stock!.any((stock) => (stock.quantity ?? 0) > 0);
     }
 
-    // Find primary image
-    String? primaryImage;
-    if (item.attachment != null && item.attachment!.isNotEmpty) {
-      for (var attachment in item.attachment!) {
-        if (attachment.isPrimary == 1) {
-          primaryImage = attachment.filePath;
-          break;
-        }
-      }
-      // If no primary image found, use the first one
-      if (primaryImage == null && item.attachment!.isNotEmpty) {
-        primaryImage = item.attachment!.first.filePath;
-      }
-    }
+    // Find primary image - COMMENTED OUT (images not displayed)
+    // String? primaryImage;
+    // if (item.attachment != null && item.attachment!.isNotEmpty) {
+    //   for (var attachment in item.attachment!) {
+    //     if (attachment.isPrimary == 1) {
+    //       primaryImage = attachment.filePath;
+    //       break;
+    //     }
+    //   }
+    //   // If no primary image found, use the first one
+    //   if (primaryImage == null && item.attachment!.isNotEmpty) {
+    //     primaryImage = item.attachment!.first.filePath;
+    //   }
+    // }
 
     return Container(
       decoration: BoxDecoration(
@@ -1310,28 +1321,28 @@ class _MenuPanel extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Product image
-                    if (primaryImage != null)
-                      Container(
-                        height: compact ? 50 : 60,
-                        width: double.infinity,
-                        margin: EdgeInsets.only(bottom: compact ? 4 : 6),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.grey.shade100,
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            primaryImage,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Icon(
-                                Icons.image_not_supported,
-                                size: compact ? 24 : 30,
-                                color: Colors.grey),
-                          ),
-                        ),
-                      ),
+                    // Product image - COMMENTED OUT
+                    // if (primaryImage != null)
+                    //   Container(
+                    //     height: compact ? 50 : 60,
+                    //     width: double.infinity,
+                    //     margin: EdgeInsets.only(bottom: compact ? 4 : 6),
+                    //     decoration: BoxDecoration(
+                    //       borderRadius: BorderRadius.circular(8),
+                    //       color: Colors.grey.shade100,
+                    //     ),
+                    //     child: ClipRRect(
+                    //       borderRadius: BorderRadius.circular(8),
+                    //       child: Image.network(
+                    //         primaryImage,
+                    //         fit: BoxFit.cover,
+                    //         errorBuilder: (context, error, stackTrace) => Icon(
+                    //             Icons.image_not_supported,
+                    //             size: compact ? 24 : 30,
+                    //             color: Colors.grey),
+                    //       ),
+                    //     ),
+                    //   ),
                     // Header with name and price
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1581,9 +1592,42 @@ class _OrderPanelState extends State<_OrderPanel> {
   bool _isLoadingOrderDetails = false;
   String? _error;
 
+  // Payment Method Variables
+  bool _isCashSelected = false;
+  bool _isCardSelected = false;
+  bool _isUpiSelected = false;
+  bool _isDebitSelected = false;
+  String _cashAmount = "";
+  String _cardAmount = "";
+  String _upiAmount = "";
+  String _debitAmount = "";
+  String _transactionNumber = "";
+  double _balanceAmount = 0.0;
+  bool _toCustomerCreditEnabled = false;
+  double _toCustomerCreditAmount = 0.0; // Store the actual credit amount
+
+  // Customer Selection Variables
+  CustomerListModelData? _selectedCustomer;
+  int? _selectedCustomerID;
+  String? _selectedCustomerPhone;
+  List<CustomerListModelData> _customers = [];
+
+  // Discount Variables
+  bool _isCouponApplied = false;
+  double _flatDiscount = 0.0;
+  double _percentageDiscount = 0.0;
+  String _couponCode = "";
+
   @override
   void didUpdateWidget(covariant _OrderPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Initialize customers when first loaded - defer to avoid setState during build
+    if (_customers.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fetchCustomers();
+      });
+    }
+    
     if (widget.tableId != oldWidget.tableId && widget.tableId != null) {
       _fetchSavedOrders();
     } else if (widget.tableId == null) {
@@ -1653,6 +1697,696 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
   }
 
+  Future<void> _fetchCustomers() async {
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
+      
+      await customerProvider.loadAllCustomers(
+        authModel.token ?? '',
+      );
+      
+      setState(() {
+        _customers = customerProvider.customerList ?? [];
+      });
+    } catch (e) {
+      debugPrint('Error fetching customers: $e');
+    }
+  }
+
+  void _showPaymentMethodModal() {
+    if (_selectedOrder == null) return;
+    
+    // Calculate current total from cart items (dynamic calculation)
+    List<dynamic> cartItems = [];
+    if (_selectedOrder['cart_items'] != null) {
+      if (_selectedOrder['cart_items']['cart_items'] is List) {
+        cartItems = _selectedOrder['cart_items']['cart_items'];
+      } else if (_selectedOrder['cart_items'] is List) {
+        cartItems = _selectedOrder['cart_items'];
+      }
+    } else if (_selectedOrder['cart'] != null) {
+      if (_selectedOrder['cart']['cart_items'] is List) {
+        cartItems = _selectedOrder['cart']['cart_items'];
+      } else if (_selectedOrder['cart']['items'] is List) {
+        cartItems = _selectedOrder['cart']['items'];
+      }
+    } else if (_selectedOrder['items'] is List) {
+      cartItems = _selectedOrder['items'];
+    } else if (_selectedOrder['order_items'] is List) {
+      cartItems = _selectedOrder['order_items'];
+    }
+
+    // Calculate order total dynamically from cart items
+    double orderTotal = 0.0;
+    for (var item in cartItems) {
+      final quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+      final unitPrice = double.tryParse(item['unit_price']?.toString() ?? 
+                      item['price']?.toString() ?? 
+                      item['product_price']?.toString() ?? '0') ?? 0.0;
+      orderTotal += quantity * unitPrice;
+    }
+
+    // If we still have zero total, try getting it from order total as fallback
+    if (orderTotal == 0.0 && _selectedOrder['grand_total'] != null) {
+      orderTotal = double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ?? 0.0;
+    }
+
+    debugPrint('💰 Payment Modal - Cart items count: ${cartItems.length}, Order Total: ₹${orderTotal.toStringAsFixed(2)}');
+    
+    final customerPrevBalance = _selectedCustomer?.balance ?? 0.0;
+    
+    // Auto-fill cash amount if no payment methods are currently selected
+    String autoFillCashAmount = _cashAmount;
+    bool autoSelectCash = _isCashSelected;
+
+    if (!_isCashSelected &&
+        !_isCardSelected &&
+        !_isUpiSelected &&
+        !_isDebitSelected) {
+      // No payment method selected, auto-fill cash with order total
+      autoFillCashAmount = orderTotal.toStringAsFixed(2);
+      autoSelectCash = true;
+      debugPrint('🔧 Auto-fill triggered: Cash amount set to ₹${autoFillCashAmount}, Cash selected: $autoSelectCash');
+    } else {
+      debugPrint('🔧 Auto-fill skipped: Payment methods already selected');
+    }
+    
+    showDialog(
+      context: context,
+      builder: (context) => PaymentMethodModal(
+        initialIsCashSelected: autoSelectCash,
+        initialIsCardSelected: _isCardSelected,
+        initialIsUpiSelected: _isUpiSelected,
+        initialIsDebitSelected: _isDebitSelected,
+        initialCashAmount: autoFillCashAmount,
+        initialCardAmount: _cardAmount,
+        initialUpiAmount: _upiAmount,
+        initialDebitAmount: _debitAmount,
+        initialTransactionNumber: _transactionNumber,
+        cartTotal: orderTotal,
+        customerPrevBalance: customerPrevBalance,
+        onPaymentMethodSelected: (isCash, isCard, isUpi, isDebit, cash, card, upi, debit, transaction, toCustomerCredit) {
+          setState(() {
+            _isCashSelected = isCash;
+            _isCardSelected = isCard;
+            _isUpiSelected = isUpi;
+            _isDebitSelected = isDebit;
+            _cashAmount = cash;
+            _cardAmount = card;
+            _upiAmount = upi;
+            _debitAmount = debit;
+            _transactionNumber = transaction;
+            _toCustomerCreditEnabled = toCustomerCredit;
+            // Capture the actual customer credit amount from the debit parameter
+            _toCustomerCreditAmount = double.tryParse(debit) ?? 0.0;
+            
+            debugPrint('💳 Payment Method Updated:');
+            debugPrint('  - To Customer Credit Enabled: $_toCustomerCreditEnabled');
+            debugPrint('  - Customer Credit Amount: ₹${_toCustomerCreditAmount.toStringAsFixed(2)}');
+            
+            // Calculate balance
+            final totalPaid = (double.tryParse(cash) ?? 0.0) + 
+                             (double.tryParse(card) ?? 0.0) + 
+                             (double.tryParse(upi) ?? 0.0);
+            _balanceAmount = totalPaid - orderTotal;
+          });
+        },
+      ),
+    );
+  }
+
+  void _showCustomerSelectionModal() {
+    // Local state for search
+    String searchQuery = '';
+    List<CustomerListModelData> filteredCustomers = _customers;
+    final TextEditingController searchController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          // Filter customers based on search query
+          void filterCustomers(String query) {
+            setModalState(() {
+              searchQuery = query.toLowerCase();
+              if (searchQuery.isEmpty) {
+                filteredCustomers = _customers;
+              } else {
+                filteredCustomers = _customers.where((customer) {
+                  final name = (customer.name ?? '').toLowerCase();
+                  final phone = (customer.phone ?? '').toLowerCase();
+                  return name.contains(searchQuery) || phone.contains(searchQuery);
+                }).toList();
+              }
+            });
+          }
+
+          return Dialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            elevation: 10,
+            child: Container(
+              width: 500,
+              constraints: const BoxConstraints(maxHeight: 650),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
+                      ),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.grey.shade100,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.people,
+                                color: Color(0xFF2563EB),
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Select Customer',
+                              style: buildCustomStyle(
+                                FontWeightManager.bold,
+                                FontSize.s18,
+                                0.30,
+                                const Color(0xFF1E293B),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => Navigator.of(context).pop(),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              child: Icon(
+                                Icons.close,
+                                color: Colors.grey.shade600,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Search Bar
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.grey.shade200,
+                          width: 1,
+                        ),
+                      ),
+                      child: TextField(
+                        controller: searchController,
+                        onChanged: filterCustomers,
+                        decoration: InputDecoration(
+                          hintText: 'Search by name or phone number...',
+                          hintStyle: buildCustomStyle(
+                            FontWeightManager.medium,
+                            FontSize.s14,
+                            0.21,
+                            const Color(0xFF64748B),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: const Color(0xFF64748B),
+                            size: 20,
+                          ),
+                          suffixIcon: searchQuery.isNotEmpty
+                              ? Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () {
+                                      searchController.clear();
+                                      filterCustomers('');
+                                    },
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      child: Icon(
+                                        Icons.clear,
+                                        color: const Color(0xFF64748B),
+                                        size: 18,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s14,
+                          0.21,
+                          const Color(0xFF1E293B),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Content
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (filteredCustomers.isEmpty && searchQuery.isNotEmpty)
+                            // No search results
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 40),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF59E0B).withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: const Icon(
+                                      Icons.search_off,
+                                      size: 48,
+                                      color: Color(0xFFF59E0B),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No customers found',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.semiBold,
+                                      FontSize.s16,
+                                      0.21,
+                                      const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Try searching with different keywords',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s14,
+                                      0.21,
+                                      const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else if (filteredCustomers.isEmpty)
+                            // No customers at all
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 40),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF64748B).withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: const Icon(
+                                      Icons.person_outline,
+                                      size: 48,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No customers found',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.semiBold,
+                                      FontSize.s16,
+                                      0.21,
+                                      const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        Navigator.of(context).pop();
+                                        // Check if search query is a 10-digit number
+                                        String phoneToPreFill = '';
+                                        if (searchQuery.length == 10 && RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
+                                          phoneToPreFill = searchQuery;
+                                        }
+                                        showAddCustomerModal(context, MediaQuery.of(context).size, mobileNumber: phoneToPreFill).then((result) {
+                                          if (result != null && result['status'] == 'success') {
+                                            _fetchCustomers().then((_) {
+                                              // Find and auto-select the newly added customer by phone
+                                              final addedPhone = result['phone'];
+                                              final matchingCustomer = _customers.firstWhere(
+                                                (customer) => customer.phone == addedPhone,
+                                                orElse: () => CustomerListModelData(),
+                                              );
+                                              if (matchingCustomer.phone == addedPhone) {
+                                                setState(() {
+                                                  _selectedCustomer = matchingCustomer;
+                                                  _selectedCustomerID = matchingCustomer.id;
+                                                  _selectedCustomerPhone = matchingCustomer.phone;
+                                                });
+                                              }
+                                            });
+                                          }
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        height: 48,
+                                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF2563EB),
+                                          borderRadius: BorderRadius.circular(12),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF2563EB).withOpacity(0.3),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(
+                                              Icons.person_add,
+                                              color: Colors.white,
+                                              size: 16,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'Add New Customer',
+                                              style: buildCustomStyle(
+                                                FontWeightManager.semiBold,
+                                                FontSize.s14,
+                                                0.21,
+                                                Colors.white,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            // Customer list
+                            Flexible(
+                              child: Container(
+                                constraints: const BoxConstraints(maxHeight: 320),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.grey.shade200,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: ListView.separated(
+                                  shrinkWrap: true,
+                                  padding: const EdgeInsets.all(8),
+                                  itemCount: filteredCustomers.length,
+                                  separatorBuilder: (_, __) => const SizedBox(height: 4),
+                                  itemBuilder: (context, index) {
+                                    final customer = filteredCustomers[index];
+                                    final isSelected = _selectedCustomer?.id == customer.id;
+                                    
+                                    // Highlight search terms
+                                    String highlightedName = customer.name ?? 'Unknown';
+                                    String highlightedPhone = customer.phone ?? '';
+                                    
+                                    return Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedCustomer = customer;
+                                            _selectedCustomerID = customer.id;
+                                            _selectedCustomerPhone = customer.phone;
+                                          });
+                                          Navigator.of(context).pop();
+                                        },
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 200),
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: isSelected 
+                                                ? const Color(0xFF2563EB).withOpacity(0.1)
+                                                : Colors.white,
+                                            border: Border.all(
+                                              color: isSelected 
+                                                  ? const Color(0xFF2563EB)
+                                                  : Colors.grey.shade200,
+                                              width: 1.5,
+                                            ),
+                                            borderRadius: BorderRadius.circular(8),
+                                            boxShadow: isSelected ? [
+                                              BoxShadow(
+                                                color: const Color(0xFF2563EB).withOpacity(0.1),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ] : null,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 40,
+                                                height: 40,
+                                                decoration: BoxDecoration(
+                                                  color: isSelected 
+                                                      ? const Color(0xFF2563EB)
+                                                      : const Color(0xFF64748B),
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    (customer.name ?? 'U').substring(0, 1).toUpperCase(),
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.bold,
+                                                      FontSize.s14,
+                                                      0.21,
+                                                      Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      highlightedName,
+                                                      style: buildCustomStyle(
+                                                        FontWeightManager.semiBold,
+                                                        FontSize.s14,
+                                                        0.21,
+                                                        isSelected 
+                                                            ? const Color(0xFF2563EB)
+                                                            : const Color(0xFF1E293B),
+                                                      ),
+                                                    ),
+                                                    if (highlightedPhone.isNotEmpty)
+                                                      Text(
+                                                        highlightedPhone,
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager.medium,
+                                                          FontSize.s12,
+                                                          0.21,
+                                                          const Color(0xFF64748B),
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                              ),
+                                              if (isSelected)
+                                                Container(
+                                                  padding: const EdgeInsets.all(4),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFF059669),
+                                                    borderRadius: BorderRadius.circular(12),
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.check,
+                                                    color: Colors.white,
+                                                    size: 16,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Footer - Always show Add New Customer button
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
+                      ),
+                      border: Border(
+                        top: BorderSide(
+                          color: Colors.grey.shade100,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          // Check if search query is a 10-digit number
+                          String phoneToPreFill = '';
+                          if (searchQuery.length == 10 && RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
+                            phoneToPreFill = searchQuery;
+                          }
+                          showAddCustomerModal(context, MediaQuery.of(context).size, mobileNumber: phoneToPreFill).then((result) {
+                            if (result != null && result['status'] == 'success') {
+                              _fetchCustomers().then((_) {
+                                // Find and auto-select the newly added customer by phone
+                                final addedPhone = result['phone'];
+                                final matchingCustomer = _customers.firstWhere(
+                                  (customer) => customer.phone == addedPhone,
+                                  orElse: () => CustomerListModelData(),
+                                );
+                                if (matchingCustomer.phone == addedPhone) {
+                                  setState(() {
+                                    _selectedCustomer = matchingCustomer;
+                                    _selectedCustomerID = matchingCustomer.id;
+                                    _selectedCustomerPhone = matchingCustomer.phone;
+                                  });
+                                }
+                              });
+                            }
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            border: Border.all(
+                              color: Colors.grey.shade300,
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.person_add,
+                                color: const Color(0xFF64748B),
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Add New Customer',
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s14,
+                                  0.21,
+                                  const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showDiscountModal() {
+    if (_selectedOrder == null) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => CouponModal(
+        initialCouponCode: _couponCode,
+        isCouponApplied: _isCouponApplied,
+        onCouponAction: (couponCode, isApplied, {flatDiscount, percentageDiscount}) {
+          setState(() {
+            _couponCode = couponCode;
+            _isCouponApplied = isApplied;
+            _flatDiscount = flatDiscount ?? 0.0;
+            _percentageDiscount = percentageDiscount ?? 0.0;
+          });
+        },
+      ),
+    );
+  }
+
   // Method to refresh saved orders without clearing the selected order (for when editing)
   Future<void> refreshSavedOrdersKeepingSelection() async {
     final currentSelectedOrder = _selectedOrder; // Store current selection
@@ -1691,6 +2425,7 @@ class _OrderPanelState extends State<_OrderPanel> {
             
             if (updatedOrder != null) {
               _selectedOrder = updatedOrder; // Update with fresh data
+              widget.onOrderSelected(updatedOrder); // Notify parent widget
               debugPrint('✅ Updated selected order with fresh data');
             } else {
               // Keep the current selection - don't clear it immediately
@@ -1738,6 +2473,303 @@ class _OrderPanelState extends State<_OrderPanel> {
         _isLoadingOrderDetails = false;
       });
     }
+  }
+
+  bool _hasPaymentMethod() {
+    return _isCashSelected || _isCardSelected || _isUpiSelected || _isDebitSelected;
+  }
+
+  bool _hasDiscount() {
+    return _isCouponApplied || _flatDiscount > 0 || _percentageDiscount > 0;
+  }
+
+  Widget _buildPaymentSummary() {
+    if (_selectedOrder == null) {
+      return const SizedBox.shrink();
+    }
+
+    // Calculate current total from cart items (dynamic calculation)
+    List<dynamic> cartItems = [];
+    if (_selectedOrder['cart_items'] != null) {
+      if (_selectedOrder['cart_items']['cart_items'] is List) {
+        cartItems = _selectedOrder['cart_items']['cart_items'];
+      } else if (_selectedOrder['cart_items'] is List) {
+        cartItems = _selectedOrder['cart_items'];
+      }
+    } else if (_selectedOrder['cart'] != null) {
+      if (_selectedOrder['cart']['cart_items'] is List) {
+        cartItems = _selectedOrder['cart']['cart_items'];
+      } else if (_selectedOrder['cart']['items'] is List) {
+        cartItems = _selectedOrder['cart']['items'];
+      }
+    } else if (_selectedOrder['items'] is List) {
+      cartItems = _selectedOrder['items'];
+    } else if (_selectedOrder['order_items'] is List) {
+      cartItems = _selectedOrder['order_items'];
+    }
+
+    // Calculate order total dynamically from cart items
+    double orderTotal = 0.0;
+    for (var item in cartItems) {
+      final quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+      final unitPrice = double.tryParse(item['unit_price']?.toString() ?? 
+                      item['price']?.toString() ?? 
+                      item['product_price']?.toString() ?? '0') ?? 0.0;
+      orderTotal += quantity * unitPrice;
+    }
+
+    // If we still have zero total, try getting it from order total as fallback
+    if (orderTotal == 0.0 && _selectedOrder['grand_total'] != null) {
+      orderTotal = double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ?? 0.0;
+    }
+
+    debugPrint('💰 Payment Summary - Cart items count: ${cartItems.length}, Order Total: ₹${orderTotal.toStringAsFixed(2)}');
+
+    final customerBalance = _selectedCustomer?.balance ?? 0.0;
+    final cashAmount = double.tryParse(_cashAmount) ?? 0.0;
+    final cardAmount = double.tryParse(_cardAmount) ?? 0.0;
+    final upiAmount = double.tryParse(_upiAmount) ?? 0.0;
+    final totalPaidAmount = cashAmount + cardAmount + upiAmount;
+    
+    debugPrint('\n🧮 === RESTAURANT PAGE BALANCE CALCULATION START ===');
+    debugPrint('💰 Input Values:');
+    debugPrint('  - Order Total: ₹${orderTotal.toStringAsFixed(2)}');
+    debugPrint('  - Customer Balance: ₹${customerBalance.toStringAsFixed(2)}');
+    debugPrint('  - Cash Amount: ₹${cashAmount.toStringAsFixed(2)}');
+    debugPrint('  - Card Amount: ₹${cardAmount.toStringAsFixed(2)}');
+    debugPrint('  - UPI Amount: ₹${upiAmount.toStringAsFixed(2)}');
+    debugPrint('  - Total Paid Amount: ₹${totalPaidAmount.toStringAsFixed(2)}');
+    debugPrint('  - To Customer Credit Enabled: $_toCustomerCreditEnabled');
+    debugPrint('  - Customer Credit Amount: ₹${_toCustomerCreditAmount.toStringAsFixed(2)}');
+    
+    // Calculate balance using the same logic as billing_page.dart
+    double cashBalance = 0.0;
+    
+    if (_toCustomerCreditEnabled && _selectedCustomer != null) {
+      debugPrint('🔛 RESTAURANT PAGE: Toggle is ON - Calculating with customer credit consideration');
+      
+      if (customerBalance < 0) {
+        // Customer has debt - use transaction excess logic for consistency with auto-fill
+        debugPrint('💳 Customer has debt - using transaction excess logic');
+        final transactionExcess = totalPaidAmount - orderTotal;
+        debugPrint('💰 Transaction excess: ₹${transactionExcess.toStringAsFixed(2)}');
+        
+        if (transactionExcess > 0) {
+          // Get the actual customer credit amount being allocated
+          double actualCustomerCredit = _toCustomerCreditAmount;
+          
+          // Clamp customer credit to available excess
+          if (actualCustomerCredit > transactionExcess) {
+            actualCustomerCredit = transactionExcess;
+            debugPrint('  - Clamped customer credit to transaction excess: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+          }
+          
+          // Cash balance = transaction excess - customer credit
+          cashBalance = transactionExcess - actualCustomerCredit;
+          debugPrint('  - Balance = Transaction Excess (₹${transactionExcess.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
+        } else {
+          cashBalance = 0.0;
+          debugPrint('  - No transaction excess, balance = 0');
+        }
+      } else {
+        // Customer has positive/zero balance - use Net Due logic
+        debugPrint('💵 Customer has credit/zero balance - using Net Due logic');
+        // Net Due = Purchase Total - Customer Previous Balance
+        double netDue = orderTotal - customerBalance;
+        debugPrint('💰 Net Due calculation:');
+        debugPrint('  - Purchase Total: ₹${orderTotal.toStringAsFixed(2)}');
+        debugPrint('  - Customer Prev Balance: ₹${customerBalance.toStringAsFixed(2)}');
+        debugPrint('  - Net Due: ₹${netDue.toStringAsFixed(2)}');
+        
+        // Available balance = Total Collected - Net Due
+        double availableBalance = totalPaidAmount - netDue;
+        debugPrint('  - Total Collected: ₹${totalPaidAmount.toStringAsFixed(2)}');
+        debugPrint('  - Available Balance: ₹${availableBalance.toStringAsFixed(2)}');
+        
+        if (availableBalance > 0) {
+          // Get the actual customer credit amount being allocated
+          double actualCustomerCredit = _toCustomerCreditAmount;
+          
+          // Clamp customer credit to available balance
+          if (actualCustomerCredit > availableBalance) {
+            actualCustomerCredit = availableBalance;
+            debugPrint('  - Clamped customer credit to available balance: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+          }
+          
+          // Cash balance = available balance - customer credit
+          cashBalance = availableBalance - actualCustomerCredit;
+          debugPrint('  - Balance = Available Balance (₹${availableBalance.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
+        } else {
+          cashBalance = 0.0;
+          debugPrint('  - No available balance, balance = 0');
+        }
+      }
+    } else {
+      debugPrint('🔴 RESTAURANT PAGE: Toggle is OFF - Using simple calculation');
+      // Toggle OFF: Simple calculation without previous balance
+      cashBalance = totalPaidAmount - orderTotal;
+      debugPrint('  - Balance = Total Collected (₹${totalPaidAmount.toStringAsFixed(2)}) - Cart Total (₹${orderTotal.toStringAsFixed(2)}) = ₹${cashBalance.toStringAsFixed(2)}');
+    }
+    
+    // Store the raw balance before clamping for comparison
+    double rawBalance = cashBalance;
+    
+    // Clamp cash balance to never show negative values in UI
+    // Negative balance means insufficient payment, but cash drawer can't give negative money
+    if (cashBalance < 0) {
+      debugPrint('🚫 RESTAURANT PAGE: Clamping negative cash balance (₹${cashBalance.toStringAsFixed(2)}) to 0 for UI display');
+      cashBalance = 0.0;
+    }
+    
+    debugPrint('💵 Final cash balance: ₹${cashBalance.toStringAsFixed(2)}');
+    debugPrint('💵 Raw balance (before clamping): ₹${rawBalance.toStringAsFixed(2)}');
+    debugPrint('🧮 === RESTAURANT PAGE BALANCE CALCULATION END ===\n');
+    
+    // Hide discount calculations for now
+    // final discountAmount = _flatDiscount + (orderTotal * _percentageDiscount / 100);
+    // final finalOrderTotal = orderTotal - discountAmount;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.shade200,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Icon(
+                Icons.account_balance_wallet,
+                color: const Color(0xFF2563EB),
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Payment Summary',
+                style: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  FontSize.s15,
+                  0.21,
+                  const Color(0xFF1E293B),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          
+          // Summary rows
+          _buildSummaryRow(
+            'Order Total',
+            '₹${orderTotal.toStringAsFixed(2)}',
+            color: const Color(0xFF64748B),
+          ),
+          
+          // Hide discount section for now
+          // if (_hasDiscount()) ...[
+          //   _buildSummaryRow(
+          //     'Discount',
+          //     '-₹${discountAmount.toStringAsFixed(2)}',
+          //     color: const Color(0xFFD97706),
+          //   ),
+          //   _buildSummaryRow(
+          //     'Final Total',
+          //     '₹${finalOrderTotal.toStringAsFixed(2)}',
+          //     color: const Color(0xFF1E293B),
+          //     isBold: true,
+          //   ),
+          // ],
+          
+          if (_selectedCustomer != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              height: 1,
+              color: Colors.grey.shade200,
+            ),
+            const SizedBox(height: 8),
+            _buildSummaryRow(
+              'Customer Balance',
+              '₹${customerBalance.toStringAsFixed(2)}',
+              color: customerBalance >= 0 
+                  ? const Color(0xFF059669) 
+                  : const Color(0xFFDC2626),
+            ),
+          ],
+          
+          if (_hasPaymentMethod()) ...[
+            const SizedBox(height: 8),
+            Container(
+              height: 1,
+              color: Colors.grey.shade200,
+            ),
+            const SizedBox(height: 8),
+            _buildSummaryRow(
+              'Paid Amount',
+              '₹${totalPaidAmount.toStringAsFixed(2)}',
+              color: const Color(0xFF059669),
+            ),
+            _buildSummaryRow(
+              'Balance',
+              rawBalance >= 0 
+                  ? '₹${rawBalance.toStringAsFixed(2)}' 
+                  : 'Short: ₹${(-rawBalance).toStringAsFixed(2)}',
+              color: rawBalance >= 0 
+                  ? const Color(0xFF059669) 
+                  : const Color(0xFFDC2626),
+              isBold: true,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(
+    String label,
+    String amount,
+    {
+    required Color color,
+    bool isBold = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: buildCustomStyle(
+              isBold ? FontWeightManager.semiBold : FontWeightManager.regular,
+              FontSize.s14,
+              0.21,
+              const Color(0xFF64748B),
+            ),
+          ),
+          Text(
+            amount,
+            style: buildCustomStyle(
+              isBold ? FontWeightManager.bold : FontWeightManager.semiBold,
+              FontSize.s15,
+              0.21,
+              color,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -2124,21 +3156,42 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   Widget _buildOrderDetailsView() {
-    // Get cart items from the saved order
+    // Get cart items from the saved order - handle multiple possible structures
     List<dynamic> cartItems = [];
-    if (_selectedOrder['cart_items'] != null &&
-        _selectedOrder['cart_items']['cart_items'] is List) {
-      cartItems = _selectedOrder['cart_items']['cart_items'];
-    } else if (_selectedOrder['cart_items'] is List) {
-      cartItems = _selectedOrder['cart_items'];
-    } else if (_selectedOrder['cart'] != null &&
-        _selectedOrder['cart']['cart_items'] is List) {
-      cartItems = _selectedOrder['cart']['cart_items'];
+    if (_selectedOrder['cart_items'] != null) {
+      if (_selectedOrder['cart_items']['cart_items'] is List) {
+        cartItems = _selectedOrder['cart_items']['cart_items'];
+      } else if (_selectedOrder['cart_items'] is List) {
+        cartItems = _selectedOrder['cart_items'];
+      }
+    } else if (_selectedOrder['cart'] != null) {
+      if (_selectedOrder['cart']['cart_items'] is List) {
+        cartItems = _selectedOrder['cart']['cart_items'];
+      } else if (_selectedOrder['cart']['items'] is List) {
+        cartItems = _selectedOrder['cart']['items'];
+      }
+    } else if (_selectedOrder['items'] is List) {
+      cartItems = _selectedOrder['items'];
+    } else if (_selectedOrder['order_items'] is List) {
+      cartItems = _selectedOrder['order_items'];
     }
 
-    final total =
-        double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
-            0.0;
+    // Calculate current total from cart items (dynamic calculation)
+    double total = 0.0;
+    for (var item in cartItems) {
+      final quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+      final unitPrice = double.tryParse(item['unit_price']?.toString() ?? 
+                      item['price']?.toString() ?? 
+                      item['product_price']?.toString() ?? '0') ?? 0.0;
+      total += quantity * unitPrice;
+    }
+
+    // If we still have zero total, try getting it from order total as fallback
+    if (total == 0.0 && _selectedOrder['grand_total'] != null) {
+      total = double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ?? 0.0;
+    }
+
+    debugPrint('📊 Cart items count: ${cartItems.length}, Total: ₹${total.toStringAsFixed(2)}');
 
     return Container(
       margin: const EdgeInsets.all(8),
@@ -2363,58 +3416,237 @@ class _OrderPanelState extends State<_OrderPanel> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // First row: Confirm Order button
-            SizedBox(
-              width: double.infinity,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: allItemsReadyOrServed ? () => _confirmOrder() : null,
-                  borderRadius: BorderRadius.circular(12),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: widget.isCompact ? 44 : 48,
-                    decoration: BoxDecoration(
-                      color: !allItemsReadyOrServed
-                          ? const Color(0xFF94A3B8)
-                          : const Color(0xFF2563EB),
+            // Payment Summary Section
+            _buildPaymentSummary(),
+            const SizedBox(height: 16),
+            // Payment Method, Customer Selection, and Discount buttons row
+            Row(
+              children: [
+                // Payment Method Button
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _showPaymentMethodModal(),
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: allItemsReadyOrServed
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xFF2563EB).withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: _hasPaymentMethod() 
+                              ? const Color(0xFF2563EB).withOpacity(0.1)
+                              : Colors.grey.shade100,
+                          border: Border.all(
+                            color: _hasPaymentMethod() 
+                                ? const Color(0xFF2563EB)
+                                : Colors.grey.shade300,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.payment,
+                                color: _hasPaymentMethod() 
+                                    ? const Color(0xFF2563EB)
+                                    : const Color(0xFF64748B),
+                                size: widget.isCompact ? 14 : 16,
                               ),
-                            ]
-                          : [],
-                    ),
-                    child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.check_circle,
-                            color: Colors.white,
-                            size: widget.isCompact ? 16 : 18,
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  _hasPaymentMethod() ? 'Paid' : 'Payment',
+                                  style: buildCustomStyle(
+                                      FontWeightManager.semiBold,
+                                      widget.isCompact ? FontSize.s11 : FontSize.s12,
+                                      0.21,
+                                      _hasPaymentMethod() 
+                                          ? const Color(0xFF2563EB)
+                                          : const Color(0xFF64748B)),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Confirm Order',
-                            style: buildCustomStyle(
-                                FontWeightManager.semiBold,
-                                widget.isCompact ? FontSize.s13 : FontSize.s14,
-                                0.21,
-                                Colors.white),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 6),
+                // Customer Selection Button
+                Expanded(
+                  flex: 2, // Give more space to customer button
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _showCustomerSelectionModal(),
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: _selectedCustomer != null 
+                              ? const Color(0xFF059669).withOpacity(0.1)
+                              : Colors.grey.shade100,
+                          border: Border.all(
+                            color: _selectedCustomer != null 
+                                ? const Color(0xFF059669)
+                                : Colors.grey.shade300,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.person,
+                                color: _selectedCustomer != null 
+                                    ? const Color(0xFF059669)
+                                    : const Color(0xFF64748B),
+                                size: widget.isCompact ? 14 : 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  _selectedCustomer != null 
+                                      ? (_selectedCustomer!.name?.split(' ').first ?? 'Customer')
+                                      : 'Customer',
+                                  style: buildCustomStyle(
+                                      FontWeightManager.semiBold,
+                                      widget.isCompact ? FontSize.s11 : FontSize.s12,
+                                      0.21,
+                                      _selectedCustomer != null 
+                                          ? const Color(0xFF059669)
+                                          : const Color(0xFF64748B)),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Discount Button - HIDDEN FOR NOW
+                // const SizedBox(width: 6),
+                // Expanded(
+                //   child: Material(
+                //     color: Colors.transparent,
+                //     child: InkWell(
+                //       onTap: () => _showDiscountModal(),
+                //       borderRadius: BorderRadius.circular(12),
+                //       child: AnimatedContainer(
+                //         duration: const Duration(milliseconds: 200),
+                //         height: widget.isCompact ? 44 : 48,
+                //         decoration: BoxDecoration(
+                //           color: _hasDiscount() 
+                //               ? const Color(0xFFD97706).withOpacity(0.1)
+                //               : Colors.grey.shade100,
+                //           border: Border.all(
+                //             color: _hasDiscount() 
+                //                 ? const Color(0xFFD97706)
+                //                 : Colors.grey.shade300,
+                //             width: 1.5,
+                //           ),
+                //           borderRadius: BorderRadius.circular(12),
+                //         ),
+                //         child: Center(
+                //           child: Row(
+                //             mainAxisAlignment: MainAxisAlignment.center,
+                //             mainAxisSize: MainAxisSize.min,
+                //             children: [
+                //               Icon(
+                //                 Icons.discount,
+                //                 color: _hasDiscount() 
+                //                     ? const Color(0xFFD97706)
+                //                     : const Color(0xFF64748B),
+                //                 size: widget.isCompact ? 14 : 16,
+                //               ),
+                //               const SizedBox(width: 4),
+                //               Flexible(
+                //                 child: Text(
+                //                   _hasDiscount() ? 'Applied' : 'Discount',
+                //                   style: buildCustomStyle(
+                //                       FontWeightManager.semiBold,
+                //                       widget.isCompact ? FontSize.s11 : FontSize.s12,
+                //                       0.21,
+                //                       _hasDiscount() 
+                //                           ? const Color(0xFFD97706)
+                //                           : const Color(0xFF64748B)),
+                //                   overflow: TextOverflow.ellipsis,
+                //                 ),
+                //               ),
+                //             ],
+                //           ),
+                //         ),
+                //       ),
+                //     ),
+                //   ),
+                // ),
+              ],
             ),
             const SizedBox(height: 12),
+            // First row: Confirm Order button - REMOVED (using bottom Confirm button instead)
+            // SizedBox(
+            //   width: double.infinity,
+            //   child: Material(
+            //     color: Colors.transparent,
+            //     child: InkWell(
+            //       onTap: allItemsReadyOrServed ? () => _confirmOrder() : null,
+            //       borderRadius: BorderRadius.circular(12),
+            //       child: AnimatedContainer(
+            //         duration: const Duration(milliseconds: 200),
+            //         height: widget.isCompact ? 44 : 48,
+            //         decoration: BoxDecoration(
+            //           color: !allItemsReadyOrServed
+            //               ? const Color(0xFF94A3B8)
+            //               : const Color(0xFF2563EB),
+            //           borderRadius: BorderRadius.circular(12),
+            //           boxShadow: allItemsReadyOrServed
+            //               ? [
+            //                   BoxShadow(
+            //                     color: const Color(0xFF2563EB).withOpacity(0.3),
+            //                     blurRadius: 8,
+            //                     offset: const Offset(0, 2),
+            //                   ),
+            //                 ]
+            //               : [],
+            //         ),
+            //         child: Center(
+            //           child: Row(
+            //             mainAxisAlignment: MainAxisAlignment.center,
+            //             children: [
+            //               Icon(
+            //                 Icons.check_circle,
+            //                 color: Colors.white,
+            //                 size: widget.isCompact ? 16 : 18,
+            //               ),
+            //               const SizedBox(width: 8),
+            //               Text(
+            //                 'Confirm Order',
+            //                 style: buildCustomStyle(
+            //                     FontWeightManager.semiBold,
+            //                     widget.isCompact ? FontSize.s13 : FontSize.s14,
+            //                     0.21,
+            //                     Colors.white),
+            //               ),
+            //             ],
+            //           ),
+            //         ),
+            //       ),
+            //     ),
+            //   ),
+            // ),
+            // const SizedBox(height: 12),
             // Second row: Back and Update Order buttons
             Row(
               children: [
@@ -2457,20 +3689,20 @@ class _OrderPanelState extends State<_OrderPanel> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: cartItems.isEmpty ? null : () => _updateOrderStatus(),
+                      onTap: (cartItems.isEmpty || !allItemsReadyOrServed) ? null : () => _confirmOrder(),
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         height: widget.isCompact ? 44 : 48,
                         decoration: BoxDecoration(
-                          color: cartItems.isEmpty
+                          color: (cartItems.isEmpty || !allItemsReadyOrServed)
                               ? const Color(0xFF94A3B8)
-                              : const Color(0xFF059669),
+                              : const Color(0xFF2563EB),
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: cartItems.isNotEmpty
+                          boxShadow: (cartItems.isNotEmpty && allItemsReadyOrServed)
                               ? [
                                   BoxShadow(
-                                    color: const Color(0xFF059669).withOpacity(0.3),
+                                    color: const Color(0xFF2563EB).withOpacity(0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -2482,13 +3714,13 @@ class _OrderPanelState extends State<_OrderPanel> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                Icons.update,
+                                Icons.check_circle,
                                 color: Colors.white,
                                 size: widget.isCompact ? 16 : 18,
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Update Order',
+                                'Confirm',
                                 style: buildCustomStyle(
                                     FontWeightManager.semiBold,
                                     widget.isCompact ? FontSize.s13 : FontSize.s14,
@@ -2863,19 +4095,84 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('🔄 Confirming order: $orderNumber (ID: $orderId)');
 
       // Get order details for API call
-      final customerId = _selectedOrder['customer_id'] ?? authModel.userId ?? 1;
-      final customerPhone = _selectedOrder['customer_phone'] ?? '';
+      final customerId = _selectedCustomer?.id ?? _selectedOrder['customer_id'] ?? authModel.userId ?? 1;
+      final customerPhone = _selectedCustomer?.phone ?? _selectedOrder['customer_phone'] ?? '';
       final totalPrice = _selectedOrder['grand_total']?.toString() ?? '0';
-      final transactionId = _selectedOrder['transaction_number'] ?? '';
+      final transactionId = _transactionNumber.isNotEmpty ? _transactionNumber : (_selectedOrder['transaction_number'] ?? '');
       final comment = _selectedOrder['comment'] ?? 'Order confirmed from restaurant';
+      
+      // Prepare payment method data
+      String? paymentMethod;
+      String? paidAmount;
+      List<String> paymentMethods = [];
+      List<Map<String, dynamic>> paidMethods = [];
+      
+      if (_hasPaymentMethod()) {
+        // Multi-payment handling
+        List<String> selectedMethods = [];
+        if (_isCashSelected) selectedMethods.add('CASH');
+        if (_isCardSelected) selectedMethods.add('CARD');
+        if (_isUpiSelected) selectedMethods.add('UPI');
+        
+        if (selectedMethods.length > 1) {
+          // Multi-payment: store as JSON
+          Map<String, dynamic> multiPaymentData = {
+            "methods": selectedMethods,
+            "amounts": {
+              "CASH": _cashAmount.isNotEmpty ? _cashAmount : "0",
+              "CARD": _cardAmount.isNotEmpty ? _cardAmount : "0",
+              "UPI": _upiAmount.isNotEmpty ? _upiAmount : "0",
+            },
+            "isMultiPayment": true
+          };
+          paymentMethod = json.encode(multiPaymentData);
+          
+          // Calculate total paid amount
+          final cashAmount = double.tryParse(_cashAmount) ?? 0.0;
+          final cardAmount = double.tryParse(_cardAmount) ?? 0.0;
+          final upiAmount = double.tryParse(_upiAmount) ?? 0.0;
+          paidAmount = (cashAmount + cardAmount + upiAmount).toString();
+          
+          // Prepare paidMethods array
+          if (_isCashSelected) {
+            paidMethods.add({"method": "CASH", "amount": double.tryParse(_cashAmount) ?? 0.0});
+          }
+          if (_isCardSelected) {
+            paidMethods.add({"method": "CARD", "amount": double.tryParse(_cardAmount) ?? 0.0});
+          }
+          if (_isUpiSelected) {
+            paidMethods.add({"method": "UPI", "amount": double.tryParse(_upiAmount) ?? 0.0});
+          }
+          
+          paymentMethods = selectedMethods;
+        } else {
+          // Single payment method
+          paymentMethod = selectedMethods.first;
+          if (paymentMethod == "CASH") {
+            paidAmount = _cashAmount;
+          } else if (paymentMethod == "CARD") {
+            paidAmount = _cardAmount;
+          } else if (paymentMethod == "UPI") {
+            paidAmount = _upiAmount;
+          }
+        }
+      }
+      
+      // Calculate balance amount
+      final totalPaid = double.tryParse(paidAmount ?? '0') ?? 0.0;
+      final orderAmount = double.tryParse(totalPrice) ?? 0.0;
+      final balanceAmount = (totalPaid - orderAmount).toString();
 
       debugPrint('📦 Order details for confirmation:');
       debugPrint('   - Customer ID: $customerId');
       debugPrint('   - Customer Phone: $customerPhone');
       debugPrint('   - Total Price: $totalPrice');
       debugPrint('   - Transaction ID: $transactionId');
+      debugPrint('   - Payment Method: $paymentMethod');
+      debugPrint('   - Paid Amount: $paidAmount');
+      debugPrint('   - Balance Amount: $balanceAmount');
 
-      // Call update order API with status "confirmed"
+      // Call update order API with status "confirmed" and payment data
       final response = await cartProvider.updateOrderAPI(
         orderId: orderId.toString(),
         accessToken: authModel.token ?? '',
@@ -2883,6 +4180,11 @@ class _OrderPanelState extends State<_OrderPanel> {
         totalPrice: totalPrice,
         customerId: int.tryParse(customerId.toString()),
         customerPhone: customerPhone,
+        paymentMethod: paymentMethod,
+        paidAmount: paidAmount,
+        balanceAmount: balanceAmount,
+        paymentMethods: paymentMethods.isNotEmpty ? paymentMethods : null,
+        paidMethods: paidMethods.isNotEmpty ? paidMethods : null,
         status: 'confirmed',
         comment: comment,
       );

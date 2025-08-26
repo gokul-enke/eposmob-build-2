@@ -973,7 +973,6 @@ class _OrderQueuePanel extends StatelessWidget {
 
   Widget _buildOrderCard(KitchenOrder order, bool compact, OrderStatus selectedFilter) {
     final timeSinceOrder = DateTime.now().difference(order.timestamp);
-    final isUrgent = timeSinceOrder.inMinutes > 15;
 
     return Material(
       color: Colors.transparent,
@@ -984,15 +983,11 @@ class _OrderQueuePanel extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: EdgeInsets.all(compact ? 12 : 16),
           decoration: BoxDecoration(
-            color: isUrgent
-                ? const Color(0xFFDC2626).withOpacity(0.05)
-                : Colors.grey.shade50,
+            color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isUrgent
-                  ? const Color(0xFFDC2626).withOpacity(0.3)
-                  : Colors.grey.shade200,
-              width: isUrgent ? 2 : 1,
+              color: Colors.grey.shade200,
+              width: 1,
             ),
           ),
           child: Column(
@@ -1024,9 +1019,7 @@ class _OrderQueuePanel extends StatelessWidget {
                         FontWeightManager.medium,
                         compact ? FontSize.s10 : FontSize.s11,
                         0.21,
-                        isUrgent
-                            ? const Color(0xFFDC2626)
-                            : const Color(0xFF64748B)),
+                        const Color(0xFF64748B)),
                   ),
                 ],
               ),
@@ -1363,21 +1356,14 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                               final order = activeOrders[index];
                               final timeSinceOrder =
                                   DateTime.now().difference(order.timestamp);
-                              final isUrgent = timeSinceOrder.inMinutes > 15;
 
                               return Container(
                                 decoration: BoxDecoration(
-                                  color: isUrgent
-                                      ? const Color(0xFFDC2626)
-                                          .withOpacity(0.05)
-                                      : Colors.grey.shade50,
+                                  color: Colors.grey.shade50,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: isUrgent
-                                        ? const Color(0xFFDC2626)
-                                            .withOpacity(0.3)
-                                        : Colors.grey.shade200,
-                                    width: isUrgent ? 2 : 1,
+                                    color: Colors.grey.shade200,
+                                    width: 1,
                                   ),
                                 ),
                                 child: Theme(
@@ -1424,9 +1410,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                                               FontWeightManager.medium,
                                               FontSize.s12,
                                               0.21,
-                                              isUrgent
-                                                  ? const Color(0xFFDC2626)
-                                                  : const Color(0xFF64748B)),
+                                              const Color(0xFF64748B)),
                                         ),
                                       ],
                                     ),
@@ -2107,27 +2091,6 @@ class _KitchenStatsPanel extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Urgent Orders',
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s12, 0.21, const Color(0xFF64748B)),
-                  ),
-                  Text(
-                    stats['urgentOrders'].toString(),
-                    style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s12,
-                        0.21,
-                        stats['urgentOrders'] > 0
-                            ? const Color(0xFFDC2626)
-                            : const Color(0xFF1E293B)),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -2256,12 +2219,6 @@ class _KitchenStatsPanel extends StatelessWidget {
 
     final totalItems = orders.fold<int>(0, (sum, order) => sum + order.items.length);
 
-    final urgentOrders = orders.where((order) {
-      final timeSinceOrder = DateTime.now().difference(order.timestamp);
-      return timeSinceOrder.inMinutes > 15 &&
-          order.status != OrderStatus.served;
-    }).length;
-
     // Calculate average prep time
     int totalPrepTimeMinutes = 0;
     int itemsWithPrepTime = 0;
@@ -2286,7 +2243,6 @@ class _KitchenStatsPanel extends StatelessWidget {
       'ready': ready,
       'served': served,
       'totalItems': totalItems,
-      'urgentOrders': urgentOrders,
       'avgPrepTime': avgPrepTime,
     };
   }
