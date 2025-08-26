@@ -74,10 +74,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     isCardSelected = widget.initialIsCardSelected;
     isUpiSelected = widget.initialIsUpiSelected;
 
-    // Initialize controllers - don't fill with "0", use existing values or empty
+    // Initialize controllers - handle auto-filled values properly
     cashAmountController = TextEditingController(
-        text:
-            widget.initialCashAmount.isEmpty || widget.initialCashAmount == "0"
+        text: widget.initialCashAmount.isEmpty
                 ? ""
                 : widget.initialCashAmount);
     cardAmountController = TextEditingController(
@@ -163,6 +162,24 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       toCustomerCreditController.text = initDebit.toStringAsFixed(2);
       // Keep debit selection as provided by parent but ensure consistency in display
       WidgetsBinding.instance.addPostFrameCallback((_) => _calculateBalance());
+    }
+
+    // Auto-focus cash field if it was auto-filled and cash is selected
+    if (widget.initialIsCashSelected && cashAmountController.text.isNotEmpty) {
+      // Check if this looks like an auto-filled amount (cart total)
+      final cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
+      if (cashAmount > 0 && cashAmount == widget.cartTotal) {
+        // This appears to be auto-filled, focus and select the text
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            cashAmountFocusNode.requestFocus();
+            cashAmountController.selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: cashAmountController.text.length,
+            );
+          }
+        });
+      }
     }
   }
 
