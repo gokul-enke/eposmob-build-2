@@ -348,7 +348,8 @@ class StandardPrinter {
                 // Customer Information Section - if available
                 if (customerName != null ||
                     customerPhone != null ||
-                    customerEmail != null)
+                    customerEmail != null ||
+                    customerAddress != null)
                   _buildCustomerDetailsPDF(
                     selectedPaperSize,
                     customerName,
@@ -382,6 +383,9 @@ class StandardPrinter {
                       ],
                     ),
                   ),
+
+                // Cart Total Row - added after items table
+                _buildCartTotalRow(selectedPaperSize, cartItems, isFromLocalStorage, summaryStyle),
 
                 pw.SizedBox(height: 5), // Reduced from 8
 
@@ -1067,7 +1071,7 @@ class StandardPrinter {
     debugPrint("===== END DISPLAY CONFIGURATION DEBUG =====");
   }
 
-  // Customer Details Section for PDF - compact design
+  // Customer Details Section for PDF - compact design with increased font size
   pw.Widget _buildCustomerDetailsPDF(
     String selectedPaperSize,
     String? customerName,
@@ -1077,19 +1081,100 @@ class StandardPrinter {
     pw.TextStyle headerStyle,
     pw.TextStyle bodyStyle,
   ) {
+    // Create a larger style for customer details
+    final customerDetailStyle = pw.TextStyle(
+      fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0, // Increased from bodyStyle
+      fontWeight: pw.FontWeight.bold,
+      color: PdfColors.black,
+    );
+    
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+      padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8), // Increased vertical padding
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
+          // Add a header for customer details
+          // pw.Text(
+          //   'CUSTOMER DETAILS',
+          //   style: pw.TextStyle(
+          //     fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+          //     fontWeight: pw.FontWeight.bold,
+          //     color: PdfColors.black,
+          //   ),
+          // ),
+          // pw.SizedBox(height: 5),
           if (customerName != null && customerName.isNotEmpty)
-            pw.Text('Name: $customerName', style: bodyStyle),
+            pw.Text('Name: $customerName', style: customerDetailStyle),
           if (customerPhone != null && customerPhone.isNotEmpty)
-            pw.Text('Phone: $customerPhone', style: bodyStyle),
+            pw.Text('Phone: $customerPhone', style: customerDetailStyle),
           if (customerEmail != null && customerEmail.isNotEmpty)
-            pw.Text('Email: $customerEmail', style: bodyStyle),
+            pw.Text('Email: $customerEmail', style: customerDetailStyle),
           if (customerAddress != null && customerAddress.isNotEmpty)
-            pw.Text('Address: $customerAddress', style: bodyStyle),
+            pw.Text('Address: $customerAddress', style: customerDetailStyle),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to calculate cart total from items
+  double _calculateCartTotal(List<dynamic> cartItems, bool isFromLocalStorage) {
+    double total = 0.0;
+    
+    for (var item in cartItems) {
+      double itemTotal = 0.0;
+      
+      if (isFromLocalStorage) {
+        itemTotal = double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0.0;
+      } else {
+        if (item is Map<String, dynamic>) {
+          itemTotal = double.tryParse(item['total_price']?.toString() ?? 
+                                    item['totalPrice']?.toString() ?? '0') ?? 0.0;
+        } else {
+          try {
+            itemTotal = double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0.0;
+          } catch (e) {
+            debugPrint('Error accessing item totalPrice: $e');
+            itemTotal = 0.0;
+          }
+        }
+      }
+      
+      total += itemTotal;
+    }
+    
+    return total;
+  }
+
+  // Helper method to build cart total row after items table
+  pw.Widget _buildCartTotalRow(
+    String selectedPaperSize,
+    List<dynamic> cartItems,
+    bool isFromLocalStorage,
+    pw.TextStyle summaryStyle,
+  ) {
+    final cartTotal = _calculateCartTotal(cartItems, isFromLocalStorage);
+    
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'TOTAL:',
+            style: pw.TextStyle(
+              fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.black,
+            ),
+          ),
+          pw.Text(
+            'Rs. ${cartTotal.toStringAsFixed(2)}',
+            style: pw.TextStyle(
+              fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.black,
+            ),
+          ),
         ],
       ),
     );
@@ -1351,6 +1436,8 @@ class StandardPrinter {
               billDocumentConfig,
             ),
             pw.SizedBox(height: 10),
+            // Cart Total Row
+            _buildCartTotalRow(selectedPaperSize, cartItems, isFromLocalStorage, summaryStyle),
             // Summary Section
             _buildPdfSummary(
               summaryStyle,

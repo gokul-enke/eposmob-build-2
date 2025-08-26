@@ -32,8 +32,8 @@ class GetProductModel {
             ? null
             : Links.fromJson(json["links"]), // Assuming this exists in your API
         meta: json["meta"] == null ? null : Meta.fromJson(json["meta"]),
-        pagination: json["pagination"] == null 
-            ? null 
+        pagination: json["pagination"] == null
+            ? null
             : Pagination.fromJson(json["pagination"]),
       );
 
@@ -62,6 +62,7 @@ class GetProduct {
   final dynamic description;
   final ProductPrice? price;
   final dynamic mrp;
+  final String? purchasePrice;
   final List<Attachment>? attachment;
   bool isSelected = false;
   final dynamic names; // Change to dynamic
@@ -69,6 +70,8 @@ class GetProduct {
   final WeightInfo? weightInfo;
   final List<Stock>? stock;
   final String? sku;
+  final dynamic offerPrice;
+  final dynamic productLocation;
 
   GetProduct({
     this.productId,
@@ -81,6 +84,7 @@ class GetProduct {
     this.rating,
     this.price,
     this.mrp,
+    this.purchasePrice,
     this.unit,
     this.currency,
     this.description,
@@ -90,6 +94,8 @@ class GetProduct {
     this.weightInfo,
     this.stock,
     this.sku,
+    this.offerPrice,
+    this.productLocation,
   });
 
   factory GetProduct.fromJson(Map<String, dynamic> json) => GetProduct(
@@ -105,9 +111,8 @@ class GetProduct {
         category: json["category"] == null
             ? null
             : ProductCategory.fromJson(json["category"]),
-        numberOfProductsAvailable: json["number_of_products_available"] != null
-            ? json["number_of_products_available"].toString()
-            : null,
+        numberOfProductsAvailable:
+            json["number_of_products_available"]?.toString(),
         rating: json["rating"],
         unit: json["unit"],
         currency: json["currency"],
@@ -115,6 +120,7 @@ class GetProduct {
         price:
             json["price"] == null ? null : ProductPrice.fromJson(json["price"]),
         mrp: json["mrp"] ?? "",
+        purchasePrice: json["purchase_price"]?.toString(),
         attachment: json["attachment"] == null
             ? []
             : List<Attachment>.from(
@@ -129,9 +135,10 @@ class GetProduct {
             : WeightInfo.fromJson(json["weight_info"]),
         stock: json["stock"] == null
             ? []
-            : List<Stock>.from(
-                json["stock"]!.map((x) => Stock.fromJson(x))),
+            : List<Stock>.from(json["stock"]!.map((x) => Stock.fromJson(x))),
         sku: json["sku"],
+        offerPrice: json["offer_price"],
+        productLocation: json["product_location"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -145,6 +152,7 @@ class GetProduct {
         "rating": rating,
         "price": price?.toJson(),
         "mrp": mrp,
+        "purchase_price": purchasePrice,
         "unit": unit,
         "currency": currency,
         "description": description,
@@ -160,6 +168,8 @@ class GetProduct {
             ? []
             : List<dynamic>.from(stock!.map((x) => x.toJson())),
         "sku": sku,
+        "offer_price": offerPrice,
+        "product_location": productLocation,
       };
 }
 
@@ -201,6 +211,9 @@ class Attachment {
   final String? status;
   final String? alt;
   final String? description;
+  final String? createdAt;
+  final String? updatedAt;
+  final dynamic file;
 
   Attachment({
     this.id,
@@ -213,6 +226,9 @@ class Attachment {
     this.status,
     this.alt,
     this.description,
+    this.createdAt,
+    this.updatedAt,
+    this.file,
   });
 
   factory Attachment.fromJson(Map<String, dynamic> json) => Attachment(
@@ -226,6 +242,9 @@ class Attachment {
         status: json["status"],
         alt: json["alt"],
         description: json["description"],
+        createdAt: json["created_at"],
+        updatedAt: json["updated_at"],
+        file: json["file"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -239,6 +258,9 @@ class Attachment {
         "status": status,
         "alt": alt,
         "description": description,
+        "created_at": createdAt,
+        "updated_at": updatedAt,
+        "file": file,
       };
 }
 
@@ -285,7 +307,7 @@ class ProductPrice {
 
   Map<String, dynamic> toJson() => {
         "old_price": oldPrice,
-        "price": price,
+        "base_price": price,
         "percentage": percentage,
         "total_price": totalPrice,
       };
@@ -409,36 +431,60 @@ class Meta {
 class Stock {
   final int? id;
   final int? productId;
+  final String? supplier;
   final num? quantity;
   final String? price;
+  final String? sku;
   final String? mrp;
+  final String? unit;
   final String? purchasePrice;
+  final String? date;
+  final String? expiryDate;
+  final String? rack;
 
   Stock({
     this.id,
     this.productId,
+    this.supplier,
     this.quantity,
     this.price,
+    this.sku,
     this.mrp,
+    this.unit,
     this.purchasePrice,
+    this.date,
+    this.expiryDate,
+    this.rack,
   });
 
   factory Stock.fromJson(Map<String, dynamic> json) => Stock(
         id: json["id"],
         productId: json["product_id"],
+        supplier: json["supplier"],
         quantity: json["quantity"],
         price: json["price"],
+        sku: json["sku"],
         mrp: json["mrp"],
+        unit: json["unit"],
         purchasePrice: json["purchase_price"],
+        date: json["date"],
+        expiryDate: json["expiry_date"],
+        rack: json["rack"],
       );
 
   Map<String, dynamic> toJson() => {
         "id": id,
         "product_id": productId,
+        "supplier": supplier,
         "quantity": quantity,
         "price": price,
+        "sku": sku,
         "mrp": mrp,
+        "unit": unit,
         "purchase_price": purchasePrice,
+        "date": date,
+        "expiry_date": expiryDate,
+        "rack": rack,
       };
 }
 

@@ -4401,14 +4401,24 @@ class BillingPageState extends State<BillingPage>
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
+    // Auto-fill cash amount if no payment methods are currently selected
+    String autoFillCashAmount = _cashAmountController.text;
+    bool autoSelectCash = _isCashSelected;
+    
+    if (!_isCashSelected && !_isCardSelected && !_isUpiSelected && !_isDebitSelected) {
+      // No payment method selected, auto-fill cash with cart total
+      autoFillCashAmount = localProductProvider.cartTotal.toStringAsFixed(2);
+      autoSelectCash = true;
+    }
+
     showDialog(
       context: context,
       builder: (context) => PaymentMethodModal(
-        initialIsCashSelected: _isCashSelected,
+        initialIsCashSelected: autoSelectCash,
         initialIsCardSelected: _isCardSelected,
         initialIsUpiSelected: _isUpiSelected,
         initialIsDebitSelected: _isDebitSelected,
-        initialCashAmount: _cashAmountController.text,
+        initialCashAmount: autoFillCashAmount,
         initialCardAmount: _cardAmountController.text,
         initialUpiAmount: _upiAmountController.text,
         initialDebitAmount: _debitAmountController.text,
