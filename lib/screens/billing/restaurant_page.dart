@@ -4760,6 +4760,30 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('   - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
       debugPrint('   - Total Discount Amount: ₹${totalDiscountAmount.toStringAsFixed(2)}');
       debugPrint('   - Coupon Code: $_couponCode');
+      debugPrint('🔧 Payment Methods Details:');
+      debugPrint('   - Payment Methods Array: $paymentMethods');
+      debugPrint('   - Paid Methods Array: $paidMethods');
+      debugPrint('   - Is Cash Selected: $_isCashSelected (Amount: $_cashAmount)');
+      debugPrint('   - Is Card Selected: $_isCardSelected (Amount: $_cardAmount)');
+      debugPrint('   - Is UPI Selected: $_isUpiSelected (Amount: $_upiAmount)');
+      debugPrint('\n🚀 CALLING updateOrderAPI with these parameters:');
+      debugPrint('   orderId: ${orderId.toString()}');
+      debugPrint('   accessToken: ${authModel.token != null ? "[PROVIDED]" : "[NULL]"}');
+      debugPrint('   transactionId: $transactionId');
+      debugPrint('   totalPrice: $totalPrice');
+      debugPrint('   customerId: ${int.tryParse(customerId.toString())}');
+      debugPrint('   customerPhone: $customerPhone');
+      debugPrint('   paymentMethod: $paymentMethod');
+      debugPrint('   paidAmount: $paidAmount');
+      debugPrint('   balanceAmount: $balanceAmount');
+      debugPrint('   paymentMethods: $paymentMethods');
+      debugPrint('   paidMethods: $paidMethods');
+      debugPrint('   status: "confirmed"');
+      debugPrint('   comment: $comment');
+      debugPrint('   flatDiscount: ${_flatDiscount > 0 ? _flatDiscount : null}');
+      debugPrint('   percentageDiscount: ${_percentageDiscount > 0 ? _percentageDiscount : null}');
+      debugPrint('   discountAmount: ${totalDiscountAmount > 0 ? totalDiscountAmount : null}');
+      debugPrint('\n📡 About to call updateOrderAPI...');
 
       // Call update order API with status "confirmed" and payment data
       final response = await cartProvider.updateOrderAPI(
@@ -4782,6 +4806,14 @@ class _OrderPanelState extends State<_OrderPanel> {
         discountAmount: totalDiscountAmount > 0 ? totalDiscountAmount : null,
       );
 
+      debugPrint('\n📥 updateOrderAPI RESPONSE:');
+      debugPrint('   Response: $response');
+      debugPrint('   Response Type: ${response.runtimeType}');
+      if (response is Map) {
+        debugPrint('   Status: ${response['status']}');
+        debugPrint('   Message: ${response['message']}');
+        debugPrint('   Data: ${response['data']}');
+      }
       debugPrint('✅ Confirm order response: $response');
 
       if (response != null &&
