@@ -42,6 +42,7 @@ class _AddProductWithBarcodeModalState
   final TextEditingController _categorySearchController =
       TextEditingController();
   bool isLoading = false;
+  bool isBarcodeGenerating = false;
   String? selectedUnit;
   Category? selectedCategory;
   bool isValidatedOnce = false;
@@ -68,6 +69,59 @@ class _AddProductWithBarcodeModalState
     selectedCategory = null;
     isValidatedOnce = false;
     super.dispose();
+  }
+
+  Future<void> generateBarcode() async {
+    if (isBarcodeGenerating) return;
+    
+    setState(() {
+      isBarcodeGenerating = true;
+    });
+    
+    try {
+      String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+      
+      if (accessToken == null || accessToken.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: 'Authentication token not found. Please log in again.',
+        );
+        return;
+      }
+      
+      GridSelectionProvider gridSelectionProvider =
+          Provider.of<GridSelectionProvider>(context, listen: false);
+      
+      final Map<String, dynamic>? result = await gridSelectionProvider
+          .generateBarcodeAPI(accessToken: accessToken);
+      
+      if (result != null && result['status'] == 'success' && result['data'] != null) {
+        final String generatedBarcode = result['data']['barcode'];
+        
+        setState(() {
+          _productBarcodeController.text = generatedBarcode;
+        });
+        
+        showScaffold(
+          context: context,
+          message: 'Barcode generated successfully',
+        );
+      } else {
+        showScaffoldError(
+          context: context,
+          message: result?['message'] ?? 'Failed to generate barcode',
+        );
+      }
+    } catch (e) {
+      showScaffoldError(
+        context: context,
+        message: 'Error generating barcode: ${e.toString()}',
+      );
+    } finally {
+      setState(() {
+        isBarcodeGenerating = false;
+      });
+    }
   }
 
 
@@ -149,24 +203,63 @@ class _AddProductWithBarcodeModalState
                     width: size.width / 4.5,
                   ),
 
-                  // Product Barcode TextField
-                  buildColumnWidgetForTextFields(
-                    autofocus: true,
-                    isStarRed: true,
-                    controller: _productBarcodeController,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'This field is required';
-                      }
-                      return null;
-                    },
-                    onchanged: (value) {
-                      // Remove validation loop - only validate on submit
-                    },
-                    hintText: 'Barcode',
-                    readOnly: widget.barcode != null,
-                    size: size,
+                  // Product Barcode TextField with Generate Button
+                  SizedBox(
                     width: size.width / 4.5,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: buildColumnWidgetForTextFields(
+                            autofocus: true,
+                            isStarRed: true,
+                            controller: _productBarcodeController,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'This field is required';
+                              }
+                              return null;
+                            },
+                            onchanged: (value) {
+                              // Remove validation loop - only validate on submit
+                            },
+                            hintText: 'Barcode',
+                            readOnly: widget.barcode != null,
+                            size: size,
+                            width: size.width / 4.5 - 60, // Adjust width for button
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: widget.barcode != null || isBarcodeGenerating
+                                ? null
+                                : generateBarcode,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: isBarcodeGenerating
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.refresh,
+                                    size: 18,
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
