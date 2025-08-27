@@ -21,6 +21,9 @@ import '../../resources/style_manager.dart';
 import '../../screens/customers/add_customer_modal.dart';
 import '../../screens/billing/widgets/payment_method_modal.dart';
 import '../../screens/billing/widgets/coupon_modal.dart';
+import 'package:pos_machine/helpers/amount_helper.dart'; // Add AmountHelper import
+import '../../components/build_round_button.dart'; // Add button import
+import '../../providers/keyboard_provider.dart'; // Add keyboard provider import
 
 class RestaurantPage extends StatefulWidget {
   const RestaurantPage({super.key});
@@ -2512,11 +2515,55 @@ class _OrderPanelState extends State<_OrderPanel> {
   void _showDiscountModal() {
     if (_selectedOrder == null) return;
 
+    // Calculate current order total from cart items for discount calculation
+    List<dynamic> cartItems = [];
+    if (_selectedOrder['cart_items'] != null) {
+      if (_selectedOrder['cart_items']['cart_items'] is List) {
+        cartItems = _selectedOrder['cart_items']['cart_items'];
+      } else if (_selectedOrder['cart_items'] is List) {
+        cartItems = _selectedOrder['cart_items'];
+      }
+    } else if (_selectedOrder['cart'] != null) {
+      if (_selectedOrder['cart']['cart_items'] is List) {
+        cartItems = _selectedOrder['cart']['cart_items'];
+      } else if (_selectedOrder['cart']['items'] is List) {
+        cartItems = _selectedOrder['cart']['items'];
+      }
+    } else if (_selectedOrder['items'] is List) {
+      cartItems = _selectedOrder['items'];
+    } else if (_selectedOrder['order_items'] is List) {
+      cartItems = _selectedOrder['order_items'];
+    }
+
+    // Calculate subtotal for discount modal
+    double orderSubTotal = 0.0;
+    for (var item in cartItems) {
+      final quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+      final unitPrice = double.tryParse(item['unit_price']?.toString() ??
+              item['price']?.toString() ??
+              item['product_price']?.toString() ??
+              '0') ??
+          0.0;
+      orderSubTotal += quantity * unitPrice;
+    }
+
+    // If we still have zero total, try getting it from order total as fallback
+    if (orderSubTotal == 0.0 && _selectedOrder['grand_total'] != null) {
+      orderSubTotal =
+          double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
+              0.0;
+    }
+
+    debugPrint('🎫 Discount Modal - Order Subtotal: ₹${orderSubTotal.toStringAsFixed(2)}');
+
     showDialog(
       context: context,
-      builder: (context) => CouponModal(
+      builder: (context) => RestaurantCouponModal(
         initialCouponCode: _couponCode,
         isCouponApplied: _isCouponApplied,
+        orderSubTotal: orderSubTotal,
+        currentFlatDiscount: _flatDiscount,
+        currentPercentageDiscount: _percentageDiscount,
         onCouponAction: (couponCode, isApplied,
             {flatDiscount, percentageDiscount}) {
           setState(() {
@@ -2524,10 +2571,32 @@ class _OrderPanelState extends State<_OrderPanel> {
             _isCouponApplied = isApplied;
             _flatDiscount = flatDiscount ?? 0.0;
             _percentageDiscount = percentageDiscount ?? 0.0;
+            
+            debugPrint('🎫 Discount Applied in Restaurant Page:');
+            debugPrint('  - Coupon Code: $_couponCode');
+            debugPrint('  - Is Applied: $_isCouponApplied');
+            debugPrint('  - Flat Discount: ₹${_flatDiscount.toStringAsFixed(2)}');
+            debugPrint('  - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
+            
+            // If clearing discount
+            if (!isApplied) {
+              debugPrint('🧹 Clearing all discount values');
+              _couponCode = "";
+              _flatDiscount = 0.0;
+              _percentageDiscount = 0.0;
+            }
           });
         },
       ),
     );
+  }
+
+  // Helper method to check if any discount is applied
+  bool _hasDiscount() {
+    return _isCouponApplied || 
+           _flatDiscount > 0.0 || 
+           _percentageDiscount > 0.0 || 
+           _couponCode.isNotEmpty;
   }
 
   // Method to refresh saved orders without clearing the selected order (for when editing)
@@ -2718,13 +2787,105 @@ class _OrderPanelState extends State<_OrderPanel> {
   void _loadOrderSpecificData(dynamic order) {
     debugPrint('📋 Loading order-specific data...');
 
-    // TODO: Load customer data from order if needed
-    // This can be implemented later to restore order's original customer
+    try {
+      // Load customer information if available
+      final customerId = order['customer_id'];
+      final customerPhone = order['customer_phone'] ?? order['phone'];
+      
+      if (customerId != null) {
+        // Find customer in the list
+        final customer = _customers.firstWhere(
+          (c) => c.id == customerId,
+          orElse: () => CustomerListModelData(
+            id: customerId,
+            phone: customerPhone,
+            name: order['customer_name'] ?? 'Unknown Customer',
+          ),
+        );
+        
+        setState(() {
+          _selectedCustomer = customer;
+          _selectedCustomerID = customerId;
+          _selectedCustomerPhone = customerPhone;
+        });
+        
+        debugPrint('✅ Loaded customer: ${customer.name} (${customer.phone})');
+      }
 
-    // TODO: Load payment data from order if needed
-    // This can be implemented later to restore order's payment methods
+      // Load payment method information if available
+      final paymentMethod = order['payment_method'];
+      final paidAmount = order['paid_amount']?.toString() ?? '';
+      final transactionNumber = order['transaction_number'] ?? order['transaction_id'] ?? '';
+      
+      if (paymentMethod != null && paidAmount.isNotEmpty) {
+        setState(() {
+          _transactionNumber = transactionNumber;
+          
+          // Reset all payment methods first
+          _isCashSelected = false;
+          _isCardSelected = false;
+          _isUpiSelected = false;
+          _isDebitSelected = false;
+          _cashAmount = '';
+          _cardAmount = '';
+          _upiAmount = '';
+          _debitAmount = '';
+          
+          // Set the specific payment method
+          switch (paymentMethod.toString().toUpperCase()) {
+            case 'CASH':
+              _isCashSelected = true;
+              _cashAmount = paidAmount;
+              break;
+            case 'CARD':
+              _isCardSelected = true;
+              _cardAmount = paidAmount;
+              break;
+            case 'UPI':
+              _isUpiSelected = true;
+              _upiAmount = paidAmount;
+              break;
+            default:
+              // Default to cash if payment method is unknown
+              _isCashSelected = true;
+              _cashAmount = paidAmount;
+          }
+        });
+        
+        debugPrint('✅ Loaded payment method: $paymentMethod, Amount: ₹$paidAmount');
+      }
 
-    debugPrint('✅ Order-specific data loaded');
+      // Load discount information if available
+      final flatDiscount = order['flat_discount'];
+      final percentageDiscount = order['percentage_discount'];
+      final couponCode = order['coupon_id'] ?? order['coupon_code'] ?? '';
+      
+      setState(() {
+        _flatDiscount = double.tryParse(flatDiscount?.toString() ?? '0') ?? 0.0;
+        _percentageDiscount = double.tryParse(percentageDiscount?.toString() ?? '0') ?? 0.0;
+        _couponCode = couponCode;
+        _isCouponApplied = _flatDiscount > 0 || _percentageDiscount > 0 || _couponCode.isNotEmpty;
+      });
+      
+      if (_isCouponApplied) {
+        debugPrint('✅ Loaded discount data:');
+        debugPrint('   - Flat Discount: ₹${_flatDiscount.toStringAsFixed(2)}');
+        debugPrint('   - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
+        debugPrint('   - Coupon Code: $_couponCode');
+      }
+
+      // Calculate balance amount
+      final orderTotal = double.tryParse(order['grand_total']?.toString() ?? '0') ?? 0.0;
+      final totalPaid = double.tryParse(paidAmount) ?? 0.0;
+      _balanceAmount = totalPaid - orderTotal;
+      
+      debugPrint('💰 Calculated balance: ₹${_balanceAmount.toStringAsFixed(2)}');
+      
+    } catch (e) {
+      debugPrint('❌ Error loading order-specific data: $e');
+    }
+
+    debugPrint('✅ Order-specific data loading completed');
   }
 
   bool _hasPaymentMethod() {
@@ -2732,10 +2893,6 @@ class _OrderPanelState extends State<_OrderPanel> {
         _isCardSelected ||
         _isUpiSelected ||
         _isDebitSelected;
-  }
-
-  bool _hasDiscount() {
-    return _isCouponApplied || _flatDiscount > 0 || _percentageDiscount > 0;
   }
 
   Widget _buildPaymentSummary() {
@@ -2900,9 +3057,11 @@ class _OrderPanelState extends State<_OrderPanel> {
         '💵 Raw balance (before clamping): ₹${rawBalance.toStringAsFixed(2)}');
     debugPrint('🧮 === RESTAURANT PAGE BALANCE CALCULATION END ===\n');
 
-    // Hide discount calculations for now
-    // final discountAmount = _flatDiscount + (orderTotal * _percentageDiscount / 100);
-    // final finalOrderTotal = orderTotal - discountAmount;
+    // Calculate discount amounts
+    final flatDiscountAmount = _flatDiscount;
+    final percentageDiscountAmount = (orderTotal * _percentageDiscount / 100);
+    final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
+    final finalOrderTotal = orderTotal - totalDiscountAmount;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -2952,6 +3111,28 @@ class _OrderPanelState extends State<_OrderPanel> {
             '₹${orderTotal.toStringAsFixed(2)}',
             color: const Color(0xFF64748B),
           ),
+          
+          // Show discount information if any discount is applied (single line format like billing_page.dart)
+          if (_hasDiscount()) ...[
+            _buildSummaryRow(
+              'Discount',
+              '₹${totalDiscountAmount.toStringAsFixed(2)} (${(orderTotal > 0 ? ((totalDiscountAmount / orderTotal) * 100) : 0.0).toStringAsFixed(1)}%)',
+              color: const Color(0xFFDC2626),
+            ),
+            _buildSummaryRow(
+              'Final Total',
+              '₹${finalOrderTotal.toStringAsFixed(2)}',
+              color: const Color(0xFF059669),
+              isBold: true,
+            ),
+          ] else ...[
+            _buildSummaryRow(
+              'Final Total',
+              '₹${orderTotal.toStringAsFixed(2)}',
+              color: const Color(0xFF059669),
+              isBold: true,
+            ),
+          ],
 
           // Hide discount section for now
           // if (_hasDiscount()) ...[
@@ -3763,7 +3944,6 @@ class _OrderPanelState extends State<_OrderPanel> {
                 const SizedBox(width: 6),
                 // Customer Selection Button
                 Expanded(
-                  flex: 2, // Give more space to customer button
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -3824,62 +4004,62 @@ class _OrderPanelState extends State<_OrderPanel> {
                     ),
                   ),
                 ),
-                // Discount Button - HIDDEN FOR NOW
-                // const SizedBox(width: 6),
-                // Expanded(
-                //   child: Material(
-                //     color: Colors.transparent,
-                //     child: InkWell(
-                //       onTap: () => _showDiscountModal(),
-                //       borderRadius: BorderRadius.circular(12),
-                //       child: AnimatedContainer(
-                //         duration: const Duration(milliseconds: 200),
-                //         height: widget.isCompact ? 44 : 48,
-                //         decoration: BoxDecoration(
-                //           color: _hasDiscount()
-                //               ? const Color(0xFFD97706).withOpacity(0.1)
-                //               : Colors.grey.shade100,
-                //           border: Border.all(
-                //             color: _hasDiscount()
-                //                 ? const Color(0xFFD97706)
-                //                 : Colors.grey.shade300,
-                //             width: 1.5,
-                //           ),
-                //           borderRadius: BorderRadius.circular(12),
-                //         ),
-                //         child: Center(
-                //           child: Row(
-                //             mainAxisAlignment: MainAxisAlignment.center,
-                //             mainAxisSize: MainAxisSize.min,
-                //             children: [
-                //               Icon(
-                //                 Icons.discount,
-                //                 color: _hasDiscount()
-                //                     ? const Color(0xFFD97706)
-                //                     : const Color(0xFF64748B),
-                //                 size: widget.isCompact ? 14 : 16,
-                //               ),
-                //               const SizedBox(width: 4),
-                //               Flexible(
-                //                 child: Text(
-                //                   _hasDiscount() ? 'Applied' : 'Discount',
-                //                   style: buildCustomStyle(
-                //                       FontWeightManager.semiBold,
-                //                       widget.isCompact ? FontSize.s11 : FontSize.s12,
-                //                       0.21,
-                //                       _hasDiscount()
-                //                           ? const Color(0xFFD97706)
-                //                           : const Color(0xFF64748B)),
-                //                   overflow: TextOverflow.ellipsis,
-                //                 ),
-                //               ),
-                //             ],
-                //           ),
-                //         ),
-                //       ),
-                //     ),
-                //   ),
-                // ),
+                // Discount Button
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _showDiscountModal(),
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: _hasDiscount()
+                              ? const Color(0xFFD97706).withOpacity(0.1)
+                              : Colors.grey.shade100,
+                          border: Border.all(
+                            color: _hasDiscount()
+                                ? const Color(0xFFD97706)
+                                : Colors.grey.shade300,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.discount,
+                                color: _hasDiscount()
+                                    ? const Color(0xFFD97706)
+                                    : const Color(0xFF64748B),
+                                size: widget.isCompact ? 14 : 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  _hasDiscount() ? 'Applied' : 'Discount',
+                                  style: buildCustomStyle(
+                                      FontWeightManager.semiBold,
+                                      widget.isCompact ? FontSize.s11 : FontSize.s12,
+                                      0.21,
+                                      _hasDiscount()
+                                          ? const Color(0xFFD97706)
+                                          : const Color(0xFF64748B)),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -4561,6 +4741,12 @@ class _OrderPanelState extends State<_OrderPanel> {
       final orderAmount = double.tryParse(totalPrice) ?? 0.0;
       final balanceAmount = (totalPaid - orderAmount).toString();
 
+      // Calculate discount amount for API
+      final orderSubTotal = orderAmount; // Use order amount as subtotal base
+      final flatDiscountAmount = _flatDiscount;
+      final percentageDiscountAmount = (orderSubTotal * _percentageDiscount / 100);
+      final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
+
       debugPrint('📦 Order details for confirmation:');
       debugPrint('   - Customer ID: $customerId');
       debugPrint('   - Customer Phone: $customerPhone');
@@ -4569,6 +4755,11 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('   - Payment Method: $paymentMethod');
       debugPrint('   - Paid Amount: $paidAmount');
       debugPrint('   - Balance Amount: $balanceAmount');
+      debugPrint('🎫 Discount details for confirmation:');
+      debugPrint('   - Flat Discount: ₹${flatDiscountAmount.toStringAsFixed(2)}');
+      debugPrint('   - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
+      debugPrint('   - Total Discount Amount: ₹${totalDiscountAmount.toStringAsFixed(2)}');
+      debugPrint('   - Coupon Code: $_couponCode');
 
       // Call update order API with status "confirmed" and payment data
       final response = await cartProvider.updateOrderAPI(
@@ -4585,6 +4776,10 @@ class _OrderPanelState extends State<_OrderPanel> {
         paidMethods: paidMethods.isNotEmpty ? paidMethods : null,
         status: 'confirmed',
         comment: comment,
+        // Add discount parameters
+        flatDiscount: _flatDiscount > 0 ? _flatDiscount : null,
+        percentageDiscount: _percentageDiscount > 0 ? _percentageDiscount : null,
+        discountAmount: totalDiscountAmount > 0 ? totalDiscountAmount : null,
       );
 
       debugPrint('✅ Confirm order response: $response');
@@ -5235,5 +5430,451 @@ class _OrderPanelState extends State<_OrderPanel> {
       _isLoadingOrderDetails = false;
       _error = null;
     });
+  }
+}
+
+// Custom Coupon Modal for Restaurant Page that doesn't depend on LocalProductProvider
+class RestaurantCouponModal extends StatefulWidget {
+  final String initialCouponCode;
+  final bool isCouponApplied;
+  final double orderSubTotal;
+  final double currentFlatDiscount;
+  final double currentPercentageDiscount;
+  final Function(String, bool,
+      {double? flatDiscount, double? percentageDiscount}) onCouponAction;
+
+  const RestaurantCouponModal({
+    Key? key,
+    required this.initialCouponCode,
+    required this.isCouponApplied,
+    required this.orderSubTotal,
+    required this.currentFlatDiscount,
+    required this.currentPercentageDiscount,
+    required this.onCouponAction,
+  }) : super(key: key);
+
+  @override
+  State<RestaurantCouponModal> createState() => _RestaurantCouponModalState();
+}
+
+class _RestaurantCouponModalState extends State<RestaurantCouponModal> {
+  late TextEditingController couponController;
+  late TextEditingController flatDiscountController;
+  late TextEditingController percentageDiscountController;
+  late bool isCouponApplied;
+
+  @override
+  void initState() {
+    super.initState();
+    couponController = TextEditingController(text: widget.initialCouponCode);
+    flatDiscountController = TextEditingController(
+        text: widget.currentFlatDiscount == 0.0
+            ? ''
+            : widget.currentFlatDiscount.toString());
+    percentageDiscountController = TextEditingController(
+        text: widget.currentPercentageDiscount == 0.0
+            ? ''
+            : widget.currentPercentageDiscount.toString());
+    isCouponApplied = widget.isCouponApplied;
+
+    // Add listeners for real-time calculation
+    flatDiscountController.addListener(() => setState(() {}));
+    percentageDiscountController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    couponController.dispose();
+    flatDiscountController.dispose();
+    percentageDiscountController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentFlatDiscount =
+        double.tryParse(flatDiscountController.text) ?? 0.0;
+    final currentPercentageDiscount =
+        double.tryParse(percentageDiscountController.text) ?? 0.0;
+
+    // Calculate the new total after applying current modal discounts
+    final percentageDiscountValue =
+        widget.orderSubTotal * (currentPercentageDiscount / 100);
+    final totalDiscount = currentFlatDiscount + percentageDiscountValue;
+    final newTotal = widget.orderSubTotal - totalDiscount;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: BuildBoxShadowContainer(
+        circleRadius: 12,
+        color: Colors.white,
+        width: 450,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Discount & Coupon',
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s16,
+                    0.21,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Discount Fields
+            Row(
+              children: [
+                // Flat Discount Field
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Flat Discount',
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s12,
+                          0.21,
+                          ColorManager.textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      BuildBoxShadowContainer(
+                        circleRadius: 7,
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(left: 15),
+                        height: 50,
+                        child: TextField(
+                          controller: flatDiscountController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            hintText: '0.00',
+                            hintStyle: buildCustomStyle(
+                              FontWeight.w500,
+                              12,
+                              0.27,
+                              Colors.grey.withOpacity(.5),
+                            ),
+                            border: InputBorder.none,
+                          ),
+                          style: buildCustomStyle(
+                            FontWeight.w500,
+                            12,
+                            0.27,
+                            Colors.black.withOpacity(.5),
+                          ),
+                          onTap: () {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (flatDiscountController.text.isNotEmpty) {
+                                flatDiscountController.selection =
+                                    TextSelection(
+                                  baseOffset: 0,
+                                  extentOffset:
+                                      flatDiscountController.text.length,
+                                );
+                              }
+                            });
+                            Provider.of<KeyboardProvider>(context,
+                                    listen: false)
+                                .show(
+                              'number',
+                              flatDiscountController,
+                              replaceOnFirstInput: true,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 15),
+                // Percentage Discount Field
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Percentage Discount (%)',
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s12,
+                          0.21,
+                          ColorManager.textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      BuildBoxShadowContainer(
+                        circleRadius: 7,
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(left: 15),
+                        height: 50,
+                        child: TextField(
+                          controller: percentageDiscountController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            hintText: '0',
+                            hintStyle: buildCustomStyle(
+                              FontWeight.w500,
+                              12,
+                              0.27,
+                              Colors.grey.withOpacity(.5),
+                            ),
+                            border: InputBorder.none,
+                          ),
+                          style: buildCustomStyle(
+                            FontWeight.w500,
+                            12,
+                            0.27,
+                            Colors.black.withOpacity(.5),
+                          ),
+                          onTap: () {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (percentageDiscountController
+                                  .text.isNotEmpty) {
+                                percentageDiscountController.selection =
+                                    TextSelection(
+                                  baseOffset: 0,
+                                  extentOffset: percentageDiscountController
+                                      .text.length,
+                                );
+                              }
+                            });
+                            Provider.of<KeyboardProvider>(context,
+                                    listen: false)
+                                .show(
+                              'number',
+                              percentageDiscountController,
+                              replaceOnFirstInput: true,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Coupon Code Field
+            Text(
+              'Coupon Code (Optional)',
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.21,
+                ColorManager.textColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            BuildBoxShadowContainer(
+              circleRadius: 7,
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.only(left: 15),
+              height: 50,
+              child: TextField(
+                controller: couponController,
+                enabled: (!isCouponApplied || couponController.text.isEmpty),
+                decoration: InputDecoration(
+                  hintText: 'Enter Coupon Code',
+                  hintStyle: buildCustomStyle(
+                    FontWeight.w500,
+                    12,
+                    0.27,
+                    Colors.grey.withOpacity(.5),
+                  ),
+                  border: InputBorder.none,
+                ),
+                style: buildCustomStyle(
+                  FontWeight.w500,
+                  12,
+                  0.27,
+                  Colors.black.withOpacity(.5),
+                ),
+                onTap: () {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (couponController.text.isNotEmpty) {
+                      couponController.selection = TextSelection(
+                        baseOffset: 0,
+                        extentOffset: couponController.text.length,
+                      );
+                    }
+                  });
+                  Provider.of<KeyboardProvider>(context, listen: false).show(
+                    'text',
+                    couponController,
+                    replaceOnFirstInput: true,
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Updated Total Display
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: ColorManager.kButtonGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Net Total:',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s14,
+                          0.21,
+                          ColorManager.textColor,
+                        ),
+                      ),
+                      Text(
+                        'INR ${AmountHelper.formatAmount(widget.orderSubTotal)}',
+                        style: buildCustomStyle(
+                          FontWeightManager.bold,
+                          FontSize.s15,
+                          0.21,
+                          ColorManager.kPrimaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Discount Amount:',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s14,
+                          0.21,
+                          ColorManager.textColorRed,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Text(
+                            'INR ${AmountHelper.formatAmount(totalDiscount)}',
+                            style: buildCustomStyle(
+                              FontWeightManager.bold,
+                              FontSize.s15,
+                              0.21,
+                              ColorManager.textColorRed,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '(${(widget.orderSubTotal > 0 ? ((totalDiscount / widget.orderSubTotal) * 100) : 0.0).toStringAsFixed(1)}%)',
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s12,
+                              0.21,
+                              ColorManager.textColorRed,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total after Discount:',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s14,
+                          0.21,
+                          ColorManager.textColor,
+                        ),
+                      ),
+                      Text(
+                        'INR ${AmountHelper.formatAmount(newTotal)}',
+                        style: buildCustomStyle(
+                          FontWeightManager.bold,
+                          FontSize.s15,
+                          0.21,
+                          ColorManager.kButtonGreen,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: CustomRoundButton(
+                    title: "Clear All",
+                    fct: () {
+                      setState(() {
+                        flatDiscountController.clear();
+                        percentageDiscountController.clear();
+                        couponController.clear();
+                      });
+                    },
+                    fontSize: FontSize.s14,
+                    height: 45,
+                    width: double.infinity,
+                    boxColor: Colors.grey.shade600,
+                    borderColor: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 2,
+                  child: CustomRoundButton(
+                    title: "Apply Discount",
+                    fct: () {
+                      double flatDiscount =
+                          double.tryParse(flatDiscountController.text) ??
+                              0.0;
+                      double percentageDiscount = double.tryParse(
+                              percentageDiscountController.text) ??
+                          0.0;
+
+                      widget.onCouponAction(
+                        couponController.text,
+                        flatDiscount > 0 ||
+                            percentageDiscount > 0 ||
+                            couponController.text.isNotEmpty,
+                        flatDiscount: flatDiscount,
+                        percentageDiscount: percentageDiscount,
+                      );
+                      Navigator.of(context).pop();
+                    },
+                    fontSize: FontSize.s14,
+                    height: 45,
+                    width: double.infinity,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
