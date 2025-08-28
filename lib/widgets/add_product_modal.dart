@@ -19,7 +19,8 @@ class AddProductWithBarcodeModal extends StatefulWidget {
   final String? barcode;
   final bool isAddToCart;
 
-  const AddProductWithBarcodeModal({Key? key, this.barcode, this.isAddToCart = false})
+  const AddProductWithBarcodeModal(
+      {Key? key, this.barcode, this.isAddToCart = false})
       : super(key: key);
 
   @override
@@ -73,14 +74,15 @@ class _AddProductWithBarcodeModalState
 
   Future<void> generateBarcode() async {
     if (isBarcodeGenerating) return;
-    
+
     setState(() {
       isBarcodeGenerating = true;
     });
-    
+
     try {
-      String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-      
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+
       if (accessToken == null || accessToken.isEmpty) {
         showScaffoldError(
           context: context,
@@ -88,20 +90,22 @@ class _AddProductWithBarcodeModalState
         );
         return;
       }
-      
+
       GridSelectionProvider gridSelectionProvider =
           Provider.of<GridSelectionProvider>(context, listen: false);
-      
+
       final Map<String, dynamic>? result = await gridSelectionProvider
           .generateBarcodeAPI(accessToken: accessToken);
-      
-      if (result != null && result['status'] == 'success' && result['data'] != null) {
+
+      if (result != null &&
+          result['status'] == 'success' &&
+          result['data'] != null) {
         final String generatedBarcode = result['data']['barcode'];
-        
+
         setState(() {
           _productBarcodeController.text = generatedBarcode;
         });
-        
+
         showScaffold(
           context: context,
           message: 'Barcode generated successfully',
@@ -123,8 +127,6 @@ class _AddProductWithBarcodeModalState
       });
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -204,15 +206,19 @@ class _AddProductWithBarcodeModalState
                   ),
 
                   // Product Barcode TextField with Generate Button
-                  SizedBox(
+                  Container(
                     width: size.width / 4.5,
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         Expanded(
                           child: buildColumnWidgetForTextFields(
                             autofocus: true,
                             isStarRed: true,
                             controller: _productBarcodeController,
+                            margin: const EdgeInsets.all(0),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'This field is required';
@@ -225,20 +231,23 @@ class _AddProductWithBarcodeModalState
                             hintText: 'Barcode',
                             readOnly: widget.barcode != null,
                             size: size,
-                            width: size.width / 4.5 - 60, // Adjust width for button
+                            width: size.width / 4.5 -
+                                56, // Adjust width for button
                           ),
                         ),
                         const SizedBox(width: 8),
                         SizedBox(
                           height: 48,
                           child: ElevatedButton(
-                            onPressed: widget.barcode != null || isBarcodeGenerating
-                                ? null
-                                : generateBarcode,
+                            onPressed:
+                                widget.barcode != null || isBarcodeGenerating
+                                    ? null
+                                    : generateBarcode,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -249,7 +258,8 @@ class _AddProductWithBarcodeModalState
                                     height: 16,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white),
                                     ),
                                   )
                                 : const Icon(
@@ -279,8 +289,10 @@ class _AddProductWithBarcodeModalState
                           hintText: 'Choose Product Unit',
                           value: selectedUnit,
                           margin: const EdgeInsets.only(left: 5),
-                          items:
-                              unitList?.entries.map((entry) => entry.key).toList() ?? [],
+                          items: unitList?.entries
+                                  .map((entry) => entry.key)
+                                  .toList() ??
+                              [],
                           onChanged: (String? newValue) {
                             setState(() {
                               selectedUnit = newValue;
@@ -323,7 +335,8 @@ class _AddProductWithBarcodeModalState
                               selectedCategory = newCategory;
                             });
                           },
-                          displayText: (category) => category.categoryName ?? '',
+                          displayText: (category) =>
+                              category.categoryName ?? '',
                           searchController: _categorySearchController,
                           isRequired: true,
                           height: size.height * .07,
@@ -461,12 +474,12 @@ class _AddProductWithBarcodeModalState
                       setState(() {
                         isValidatedOnce = true;
                       });
-                      
+
                       // Validate form fields and dropdowns
                       bool isFormValid = formKey.currentState!.validate();
                       bool isUnitValid = selectedUnit != null;
                       bool isCategoryValid = selectedCategory != null;
-                      
+
                       if (isFormValid && isUnitValid && isCategoryValid) {
                         formKey.currentState!.save();
 
@@ -480,9 +493,9 @@ class _AddProductWithBarcodeModalState
                           GridSelectionProvider gridSelectionProvider =
                               Provider.of<GridSelectionProvider>(context,
                                   listen: false);
-                          
-                          final result = await gridSelectionProvider
-                              .createProductAPI(
+
+                          final result =
+                              await gridSelectionProvider.createProductAPI(
                             categoryId: selectedCategory!.categoryId.toString(),
                             productName: _productNameController.text,
                             sellingPrice: _productSellingPriceController.text,
@@ -492,9 +505,10 @@ class _AddProductWithBarcodeModalState
                             barcode: _productBarcodeController.text,
                             accessToken: accessToken ?? "",
                           );
-                          
+
                           // Handle success response
-                          if (result is Map<String, dynamic> && result.containsKey('data')) {
+                          if (result is Map<String, dynamic> &&
+                              result.containsKey('data')) {
                             try {
                               GetProduct product =
                                   GetProduct.fromJson(result['data']);
@@ -529,7 +543,7 @@ class _AddProductWithBarcodeModalState
                           } else {
                             // Handle error response
                             String errorMessage = 'Failed to add product';
-                            
+
                             if (result is Map<String, dynamic>) {
                               if (result.containsKey('message')) {
                                 errorMessage = result['message'].toString();
@@ -559,7 +573,7 @@ class _AddProductWithBarcodeModalState
                                 errorMessage = result;
                               }
                             }
-                            
+
                             showScaffoldError(
                               context: context,
                               message: errorMessage,

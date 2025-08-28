@@ -33,6 +33,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
+import 'package:pos_machine/widgets/sync_button.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
 import 'package:pos_machine/widgets/horizontal_product_view_local.dart';
 import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
@@ -1297,6 +1298,11 @@ class BillingPageState extends State<BillingPage>
                   keyboardProvider.featureOn(); // or set type as needed
                 }
               },
+            ),
+            // Sync button next to keyboard icon
+            const SyncButton(
+              showTooltip: true,
+              showText: false,
             ),
             // Show toggle button next to order number when sidebar is hidden
             if (!_isSidebarVisible) ...[

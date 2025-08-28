@@ -32,6 +32,7 @@ import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
+import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:provider/provider.dart';
 import 'controllers/sidebar_controller.dart';
 import 'providers/carousel_provider.dart';
@@ -121,6 +122,7 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => KeyboardProvider()),
         ChangeNotifierProvider(create: (_) => BarcodeProvider()),
+        ChangeNotifierProvider(create: (_) => SyncProvider()),
         ChangeNotifierProvider(create: (_) => SharedPreferenceProvider()),
         ChangeNotifierProvider(create: (_) => TableProvider()),
         ChangeNotifierProvider(create: (_) => MenuProvider()),
