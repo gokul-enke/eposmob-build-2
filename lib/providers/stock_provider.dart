@@ -190,37 +190,9 @@ class StockProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         final result = json.decode(response.body);
 
-        // ✅ FAST UPDATE: Manually update LocalProductProvider instead of full API fetch
-        if (context != null) {
-          try {
-            final localProductProvider =
-                Provider.of<LocalProductProvider>(context, listen: false);
-
-            // Extract stock ID from response (adjust based on your API response structure)
-            int stockId;
-            if (result['data'] != null && result['data']['id'] != null) {
-              stockId = result['data']['id'];
-            } else if (result['stock_id'] != null) {
-              stockId = result['stock_id'];
-            } else if (result['id'] != null) {
-              stockId = result['id'];
-            } else {
-              stockId = DateTime.now().millisecondsSinceEpoch; // Fallback ID
-            }
-
-            // Manually update the product stock in LocalProductProvider
-            localProductProvider.addStockToProduct(
-              productId: int.parse(productId),
-              stockId: stockId,
-              quantity: num.parse(quantity),
-              price: retailPrice,
-              mrp: mrp,
-              purchasePrice: purchaseRate,
-            );
-          } catch (e) {
-            debugPrint("Error updating local product provider: $e");
-          }
-        }
+        // Note: Local stock will be updated via sync functionality
+        // This ensures data consistency with the server
+        debugPrint("✅ Stock added successfully - will be synced via SyncProvider");
 
         return result;
       } else {

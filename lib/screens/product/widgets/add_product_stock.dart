@@ -17,13 +17,13 @@ import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:dropdown_button2/dropdown_button2.dart';
 import 'dart:convert'; // Added for json.decode
 import 'package:pos_machine/widgets/add_product_modal.dart';
 
@@ -106,6 +106,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   final Map<int, TextEditingController> categorySearchControllers = {};
   final Map<int, TextEditingController> productSearchControllers = {};
   final Map<int, TextEditingController> barcodeControllers = {};
+  
+  // Focus nodes for barcode fields
+  final Map<int, FocusNode> barcodeFocusNodes = {};
 
   // Selected header values
   GetStoreModelData? selectedStore;
@@ -117,6 +120,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   List<StockItem> stockItems = [StockItem()]; // Start with one empty row
 
   bool _isLoading = false;
+  bool _isFinishingOrder = false;
 
   @override
   void initState() {
@@ -136,8 +140,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         .forEach((controller) => controller.dispose());
     productSearchControllers.values
         .forEach((controller) => controller.dispose());
-    barcodeControllers.values
-        .forEach((controller) => controller.dispose());
+    barcodeControllers.values.forEach((controller) => controller.dispose());
+    
+    // Dispose all focus nodes
+    barcodeFocusNodes.values.forEach((focusNode) => focusNode.dispose());
+    
     supplierSearchController.dispose();
     super.dispose();
   }
@@ -159,9 +166,17 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   TextEditingController _getBarcodeController(int index) {
     if (!barcodeControllers.containsKey(index)) {
-      barcodeControllers[index] = TextEditingController(text: stockItems[index].barcode);
+      barcodeControllers[index] =
+          TextEditingController(text: stockItems[index].barcode);
     }
     return barcodeControllers[index]!;
+  }
+
+  FocusNode _getBarcodeFocusNode(int index) {
+    if (!barcodeFocusNodes.containsKey(index)) {
+      barcodeFocusNodes[index] = FocusNode();
+    }
+    return barcodeFocusNodes[index]!;
   }
 
   Future<void> _initializeData() async {
@@ -340,6 +355,51 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           try {
             debugPrint('🌐 MAKING API CALL FOR ITEM ${i + 1}...');
 
+            // 📋 DEBUG: Print complete API request body for addProductStockAPI
+            final Map<String, dynamic> apiRequestBody = {
+              'accessToken':
+                  '${accessToken.substring(0, 20)}...', // Only show first 20 chars for security
+              'productId': item.productData!.productId.toString(),
+              'categoryId': item.categoryData!.categoryId.toString(),
+              'quantity': item.quantity,
+              'retailPrice': item.salePrice,
+              'purchaseRate': item.purchaseRate,
+              'mrp': item.mrp,
+              'wholesalePrice': item.wholesale,
+              'unit': item.unit,
+              'supplierId': selectedSupplier?.id?.toString() ??
+                  item.supplierId.toString(),
+              'storeId': selectedStore!.id.toString(),
+              'expiryDate': DateFormat('yyyy-MM-dd').format(item.expDate),
+              'userId': '1',
+              'purchaseVoucherId': null,
+              'purchaseId': null,
+              'taxAmountRetail': null,
+              'taxAmountWholesale': null,
+              'wholesaleMinUnit': item.batchNumber,
+              'rack': item.rack,
+              'barcode': item.barcode,
+              'batchNumber': item.batchNumber,
+              'date': DateFormat('yyyy-MM-dd').format(selectedDate),
+              'purchaseDate':
+                  DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
+              'purchaseNumber': null,
+              'taxInclude': item.taxInclude,
+              'initialRetailPrice': item.salePrice,
+              'initialWholesalePrice': item.wholesale,
+              'retailPriceTax': null,
+              'wholesalePriceTax': null,
+            };
+
+            debugPrint('📋 ADD STOCK API REQUEST BODY FOR ITEM ${i + 1}:');
+            debugPrint(
+                '═══════════════════════════════════════════════════════════');
+            apiRequestBody.forEach((key, value) {
+              debugPrint('   $key: $value');
+            });
+            debugPrint(
+                '═══════════════════════════════════════════════════════════');
+
             var apiResponse =
                 await Provider.of<StockProvider>(context, listen: false)
                     .addProductStockAPI(
@@ -351,8 +411,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               purchaseRate: item.purchaseRate,
               mrp: item.mrp,
               wholesalePrice: item.wholesale,
-              unit:
-                  item.selectedUnit ?? '', // Send unit ID instead of unit name
+              unit: item.unit, // Send unit value instead of unit ID
               supplierId: selectedSupplier?.id?.toString() ??
                   item.supplierId.toString(),
               storeId: selectedStore!.id.toString(),
@@ -551,6 +610,49 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
       debugPrint('🌐 MAKING API CALL FOR SINGLE ITEM ${index + 1}...');
 
+      // 📋 DEBUG: Print complete API request body for single item addProductStockAPI
+      final Map<String, dynamic> singleItemApiRequestBody = {
+        'accessToken':
+            '${accessToken.substring(0, 20)}...', // Only show first 20 chars for security
+        'productId': item.productData!.productId.toString(),
+        'categoryId': item.categoryData!.categoryId.toString(),
+        'quantity': item.quantity,
+        'retailPrice': item.salePrice,
+        'purchaseRate': item.purchaseRate,
+        'mrp': item.mrp,
+        'wholesalePrice': item.wholesale,
+        'unit': item.unit,
+        'supplierId':
+            selectedSupplier?.id?.toString() ?? item.supplierId.toString(),
+        'storeId': selectedStore!.id.toString(),
+        'expiryDate': DateFormat('yyyy-MM-dd').format(item.expDate),
+        'userId': '1',
+        'purchaseVoucherId': null,
+        'purchaseId': null,
+        'taxAmountRetail': null,
+        'taxAmountWholesale': null,
+        'wholesaleMinUnit': item.batchNumber,
+        'rack': item.rack,
+        'barcode': item.barcode,
+        'batchNumber': item.batchNumber,
+        'date': DateFormat('yyyy-MM-dd').format(selectedDate),
+        'purchaseDate': DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
+        'purchaseNumber': null,
+        'taxInclude': item.taxInclude,
+        'initialRetailPrice': item.salePrice,
+        'initialWholesalePrice': item.wholesale,
+        'retailPriceTax': null,
+        'wholesalePriceTax': null,
+      };
+
+      debugPrint(
+          '📋 SINGLE ITEM ADD STOCK API REQUEST BODY FOR ITEM ${index + 1}:');
+      debugPrint('═══════════════════════════════════════════════════════════');
+      singleItemApiRequestBody.forEach((key, value) {
+        debugPrint('   $key: $value');
+      });
+      debugPrint('═══════════════════════════════════════════════════════════');
+
       var apiResponse = await Provider.of<StockProvider>(context, listen: false)
           .addProductStockAPI(
         accessToken: accessToken,
@@ -561,7 +663,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         purchaseRate: item.purchaseRate,
         mrp: item.mrp,
         wholesalePrice: item.wholesale,
-        unit: item.selectedUnit ?? '',
+        unit: item.unit,
         supplierId:
             selectedSupplier?.id?.toString() ?? item.supplierId.toString(),
         storeId: selectedStore!.id.toString(),
@@ -597,13 +699,25 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         showScaffold(
             context: context, message: 'Stock item added successfully');
         debugPrint('✅ SINGLE STOCK ITEM ADDED SUCCESSFULLY');
-        
+
         // Automatically add a new empty row after successful stock addition
         debugPrint('🔄 AUTO-ADDING NEW ROW AFTER SUCCESSFUL STOCK ADDITION');
         setState(() {
           stockItems.add(StockItem());
         });
-        debugPrint('✅ NEW EMPTY ROW ADDED AUTOMATICALLY. Total items: ${stockItems.length}');
+        debugPrint(
+            '✅ NEW EMPTY ROW ADDED AUTOMATICALLY. Total items: ${stockItems.length}');
+
+        // Focus on the barcode field of the next row after a short delay
+        debugPrint('🔍 FOCUSING ON NEXT ROW BARCODE FIELD');
+        Future.delayed(const Duration(milliseconds: 300), () {
+          final nextRowIndex = stockItems.length - 1; // Index of the newly added row
+          final nextBarcodeFocusNode = _getBarcodeFocusNode(nextRowIndex);
+          
+          // Request focus on the barcode field of the next row
+          nextBarcodeFocusNode.requestFocus();
+          debugPrint('✅ FOCUS REQUESTED ON ROW ${nextRowIndex + 1} BARCODE FIELD');
+        });
       } else {
         String errorMessage = 'Failed to add stock';
         if (apiResponse is Map<String, dynamic> &&
@@ -669,132 +783,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     debugPrint('✅ FORM FIELDS RESET COMPLETED');
   }
 
-  void _removeStockRow(int index) {
-    if (stockItems.length > 1) {
-      // Dispose controllers for the removed row
-      categorySearchControllers[index]?.dispose();
-      productSearchControllers[index]?.dispose();
-      barcodeControllers[index]?.dispose();
-      categorySearchControllers.remove(index);
-      productSearchControllers.remove(index);
-      barcodeControllers.remove(index);
-
-      setState(() {
-        stockItems.removeAt(index);
-      });
-    }
-  }
-
-  void _showStockDetailModal(int index) {
-    // Remove this method as we're replacing it with expandable functionality
-  }
-
   void _toggleExpanded(int index) {
     setState(() {
       stockItems[index].isExpanded = !stockItems[index].isExpanded;
-    });
-  }
-
-  Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) {
-      showScaffoldError(
-          context: context, message: 'Please fill all required fields');
-      return;
-    }
-
-    if (selectedStore == null) {
-      showScaffoldError(context: context, message: 'Please select a store');
-      return;
-    }
-
-    // Validate stock items
-    for (int i = 0; i < stockItems.length; i++) {
-      final item = stockItems[i];
-      if (item.product.isEmpty || item.category.isEmpty) {
-        showScaffoldError(
-            context: context, message: 'Please complete stock item ${i + 1}');
-        return;
-      }
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      if (accessToken == null) {
-        throw Exception('Access token not found');
-      }
-
-      // Submit each stock item
-      for (final item in stockItems) {
-        if (item.productData != null && item.categoryData != null) {
-          await Provider.of<StockProvider>(context, listen: false)
-              .addProductStockAPI(
-            accessToken: accessToken,
-            productId: item.productData!.productId.toString(),
-            categoryId: item.categoryData!.categoryId.toString(),
-            quantity: item.quantity,
-            retailPrice: item.salePrice,
-            purchaseRate: item.purchaseRate,
-            mrp: item.mrp,
-            wholesalePrice: item.wholesale,
-            unit: item.selectedUnit ?? '', // Send unit ID instead of unit name
-            supplierId:
-                selectedSupplier?.id?.toString() ?? item.supplierId.toString(),
-            storeId: selectedStore!.id.toString(),
-            expiryDate: DateFormat('yyyy-MM-dd').format(item.expDate),
-            userId: '1',
-            purchaseVoucherId: null,
-            purchaseId: null,
-            taxAmountRetail: null,
-            taxAmountWholesale: null,
-            wholesaleMinUnit:
-                item.batchNumber, // Use batchNumber for wholesaleMinUnit
-            rack: item.rack,
-            barcode: item.barcode,
-            batchNumber: item.batchNumber,
-            date: DateFormat('yyyy-MM-dd').format(selectedDate),
-            purchaseDate: DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
-            purchaseNumber: null,
-            taxInclude: item.taxInclude, // Pass the boolean directly
-            initialRetailPrice: item.salePrice,
-            initialWholesalePrice: item.wholesale,
-            retailPriceTax: null,
-            wholesalePriceTax: null,
-            context: context,
-          );
-        }
-      }
-
-      showScaffold(
-          context: context, message: 'All stock items added successfully');
-      _clearForm();
-      sideBarController.index.value = 15;
-    } catch (e) {
-      showScaffoldError(context: context, message: 'Error: ${e.toString()}');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _clearForm() {
-    supplierSearchController.clear();
-    // Clear all search controllers
-    categorySearchControllers.values
-        .forEach((controller) => controller.clear());
-    productSearchControllers.values.forEach((controller) => controller.clear());
-    barcodeControllers.values.forEach((controller) => controller.clear());
-    setState(() {
-      selectedStore = null;
-      selectedSupplier = null;
-      selectedDate = DateTime.now();
-      selectedPurchaseDate = DateTime.now();
-      stockItems = [StockItem()];
     });
   }
 
@@ -867,7 +858,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   Widget _buildHeaderSection(Size size) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -948,7 +939,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           title: "Supplier",
           hintText: "Select Supplier",
           value: selectedSupplier,
-          items: supplierList ?? [],
+          items: supplierList ?? <GetSuppliersModelData>[],
           onChanged: (value) {
             setState(() {
               selectedSupplier = value;
@@ -964,6 +955,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Widget _buildStockTableHeader() {
+    int completedItems =
+        stockItems.where((item) => item.isSuccessfullyAdded).length;
+    int totalItems = stockItems.length;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -979,10 +974,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           _buildHeaderCell("Category", flex: 2),
           _buildHeaderCell("Product", flex: 3),
           _buildHeaderCell("Qty", flex: 1),
-          SizedBox(
-            width: stockItems.length > 1 ? 100 : 50,
-            child: _buildHeaderCell("Actions", flex: 0),
-          ),
+          _buildHeaderCell("Actions", flex: 0, width: 150),
         ],
       ),
     );
@@ -1034,27 +1026,42 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Row Number
+                // Row Number Indicator
                 SizedBox(
                   width: 40,
-                  child: Center(
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
+                  child: Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: item.isSuccessfullyAdded
+                          ? Colors.green.shade50
+                          : Colors.blue.shade50,
+                      border: Border.all(
                         color: item.isSuccessfullyAdded
                             ? Colors.green
-                            : ColorManager.kPrimaryColor,
-                        borderRadius: BorderRadius.circular(12),
+                            : Colors.blue,
+                        width: 1,
                       ),
-                      child: Center(
-                        child: Text(
-                          '${index + 1}',
-                          style: buildCustomStyle(
-                            FontWeightManager.semiBold,
-                            FontSize.s10,
-                            0.27,
-                            Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: item.isSuccessfullyAdded
+                              ? Colors.green
+                              : Colors.blue,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${index + 1}',
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s12,
+                              0.27,
+                              Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -1071,6 +1078,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: TextFormField(
                       controller: _getBarcodeController(index),
+                      focusNode: _getBarcodeFocusNode(index),
                       decoration: const InputDecoration(
                         hintText: 'Barcode',
                         border: InputBorder.none,
@@ -1143,41 +1151,70 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Actions - Fixed width instead of flex
+                // Actions - Add Stock Button + Expand Button
                 SizedBox(
-                  width: stockItems.length > 1 ? 100 : 50,
+                  width: 150,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
+                      // Add Stock Button (Visible without expanding)
+                      CustomRoundButton(
+                        title: item.isSuccessfullyAdded
+                            ? "Added"
+                            : (_isLoading ? "Adding..." : "Add"),
+                        fct: item.isSuccessfullyAdded || _isLoading
+                            ? () {}
+                            : () => _addStockForSingleItem(index),
                         height: 40,
-                        width: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(5),
-                          border:
-                              Border.all(color: Colors.grey.withOpacity(0.3)),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: ColorManager.boxShadowColor,
-                              blurRadius: 3,
-                              offset: Offset(1, 1),
-                            ),
-                          ],
-                        ),
-                        child: IconButton(
-                          icon: Icon(
-                            item.isExpanded
-                                ? Icons.expand_less
-                                : Icons.expand_more,
-                            size: 18,
-                            color: ColorManager.kPrimaryColor,
+                        width: 70,
+                        fontSize: FontSize.s10,
+                        boxColor: item.isSuccessfullyAdded
+                            ? Colors.green
+                            : (_isLoading
+                                ? Colors.grey
+                                : ColorManager.kPrimaryColor),
+                        textColor: Colors.white,
+                      ),
+                      const SizedBox(width: 8),
+                      // Expand Button with Tooltip
+                      Tooltip(
+                        message: item.isExpanded
+                            ? "Hide details"
+                            : "Show prices, expiry & tax details",
+                        child: Container(
+                          height: 40,
+                          width: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(
+                                color: item.isExpanded
+                                    ? ColorManager.kPrimaryColor
+                                    : Colors.grey.withOpacity(0.3)),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: ColorManager.boxShadowColor,
+                                blurRadius: 3,
+                                offset: Offset(1, 1),
+                              ),
+                            ],
                           ),
-                          onPressed: () => _toggleExpanded(index),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 40,
-                            minHeight: 40,
+                          child: IconButton(
+                            icon: Icon(
+                              item.isExpanded
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
+                              size: 18,
+                              color: item.isExpanded
+                                  ? ColorManager.kPrimaryColor
+                                  : Colors.grey.shade600,
+                            ),
+                            onPressed: () => _toggleExpanded(index),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 40,
+                              minHeight: 40,
+                            ),
                           ),
                         ),
                       ),
@@ -1210,6 +1247,55 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               ],
             ),
           ),
+          // Quick preview for collapsed items with data - Single Row Layout
+          if (!item.isExpanded &&
+              (item.salePrice.isNotEmpty ||
+                  item.purchaseRate.isNotEmpty ||
+                  item.mrp.isNotEmpty ||
+                  item.wholesale.isNotEmpty ||
+                  item.unit.isNotEmpty ||
+                  item.rack.isNotEmpty ||
+                  item.batchNumber.isNotEmpty))
+            Container(
+              padding: const EdgeInsets.only(left: 48, right: 16, bottom: 8),
+              child: Row(
+                children: [
+                  // All details in one row
+                  Expanded(
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
+                      children: [
+                        if (item.salePrice.isNotEmpty)
+                          _buildDetailChip("Retail", "₹${item.salePrice}", Icons.sell, Colors.blue.shade600),
+                        if (item.purchaseRate.isNotEmpty)
+                          _buildDetailChip("Purchase", "₹${item.purchaseRate}", Icons.shopping_cart, Colors.green.shade600),
+                        if (item.mrp.isNotEmpty)
+                          _buildDetailChip("MRP", "₹${item.mrp}", Icons.local_offer, Colors.orange.shade600),
+                        if (item.wholesale.isNotEmpty)
+                          _buildDetailChip("Wholesale", "₹${item.wholesale}", Icons.store, Colors.purple.shade600),
+                        if (item.unit.isNotEmpty)
+                          _buildDetailChip("Unit", item.unit, Icons.straighten, Colors.indigo.shade600),
+                        if (item.rack.isNotEmpty)
+                          _buildDetailChip("Rack", item.rack, Icons.shelves, Colors.teal.shade600),
+                        if (item.batchNumber.isNotEmpty)
+                          _buildDetailChip("Min Wholesale", item.batchNumber, Icons.numbers, Colors.brown.shade600),
+                      ],
+                    ),
+                  ),
+                  // Expand hint
+                  Text(
+                    "Tap ⌄ to expand",
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s9,
+                      0.27,
+                      Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           // Expanded section with additional fields
           if (item.isExpanded)
             Container(
@@ -1639,10 +1725,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             if (product != null) {
               debugPrint('🔄 PRODUCT DROPDOWN AUTO-FILL TRIGGERED');
               debugPrint('   - Row index: $index');
-              debugPrint('   - Product: ${product.productName} (ID: ${product.productId})');
-              
+              debugPrint(
+                  '   - Product: ${product.productName} (ID: ${product.productId})');
+
               setState(() {
-                debugPrint('🔄 AUTO-FILLING ALL FIELDS FROM PRODUCT SELECTION...');
+                debugPrint(
+                    '🔄 AUTO-FILLING ALL FIELDS FROM PRODUCT SELECTION...');
                 // Auto-fill basic fields
                 stockItems[index].productData = product;
                 stockItems[index].product = product.productName ?? '';
@@ -1651,37 +1739,45 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 _getBarcodeController(index).text = product.barcode ?? '';
                 debugPrint('   - Product: ${product.productName}');
                 debugPrint('   - Barcode: ${product.barcode}');
-                
+
                 // Auto-fill category - find the category from CategoryProvider
                 if (product.category != null) {
-                  debugPrint('🔍 SEARCHING FOR CATEGORY: ${product.category!.name}');
-                  final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+                  debugPrint(
+                      '🔍 SEARCHING FOR CATEGORY: ${product.category!.name}');
+                  final categoryProvider =
+                      Provider.of<CategoryProvider>(context, listen: false);
                   final categoryList = categoryProvider.category;
                   if (categoryList != null) {
                     // Find category by name from ProductCategory
                     final matchingCategory = categoryList.firstWhere(
                       (cat) => cat.categoryName == product.category!.name,
-                      orElse: () => categoryList.first, // fallback to first category
+                      orElse: () =>
+                          categoryList.first, // fallback to first category
                     );
                     stockItems[index].categoryData = matchingCategory;
-                    stockItems[index].category = matchingCategory.categoryName ?? '';
-                    debugPrint('   - Category: ${matchingCategory.categoryName}');
+                    stockItems[index].category =
+                        matchingCategory.categoryName ?? '';
+                    debugPrint(
+                        '   - Category: ${matchingCategory.categoryName}');
                   }
                 }
-                
+
                 // Auto-fill expanded fields
-                stockItems[index].salePrice = product.price?.price?.toString() ?? '0';
-                stockItems[index].mrp = product.mrp?.toString() ??
+                stockItems[index].salePrice =
                     product.price?.price?.toString() ?? '0';
+                stockItems[index].mrp = product.mrp?.toString() ??
+                    product.price?.price?.toString() ??
+                    '0';
                 stockItems[index].unit = product.unit ?? '';
                 debugPrint('   - Sale Price: ${stockItems[index].salePrice}');
                 debugPrint('   - MRP: ${stockItems[index].mrp}');
                 debugPrint('   - Unit: ${stockItems[index].unit}');
-                
+
                 // Auto-fill unit dropdown - find the matching unit key
                 if (product.unit != null && product.unit!.isNotEmpty) {
                   debugPrint('🔍 SEARCHING FOR UNIT KEY: ${product.unit}');
-                  final purchaseProvider = Provider.of<PurchaseProvider>(context, listen: false);
+                  final purchaseProvider =
+                      Provider.of<PurchaseProvider>(context, listen: false);
                   final unitList = purchaseProvider.getUnitList;
                   if (unitList != null) {
                     // Find the key that matches the unit value
@@ -1692,34 +1788,42 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         )
                         .key;
                     if (matchingUnitKey.isNotEmpty) {
-                      stockItems[index].selectedUnit = matchingUnitKey; // Store unit ID
-                      stockItems[index].unit = product.unit!; // Store unit name for display
+                      stockItems[index].selectedUnit =
+                          matchingUnitKey; // Store unit ID
+                      stockItems[index].unit =
+                          product.unit!; // Store unit name for display
                       debugPrint('   - Unit Key (ID): $matchingUnitKey');
                       debugPrint('   - Unit Name: ${product.unit}');
                     }
                   }
                 }
-                
+
                 // Auto-fill purchase rate from first available stock
                 if (product.stock != null && product.stock!.isNotEmpty) {
-                  stockItems[index].purchaseRate = product.stock!.first.purchasePrice ?? '0';
-                  debugPrint('   - Purchase Rate: ${stockItems[index].purchaseRate}');
+                  stockItems[index].purchaseRate =
+                      product.stock!.first.purchasePrice ?? '0';
+                  debugPrint(
+                      '   - Purchase Rate: ${stockItems[index].purchaseRate}');
                 }
-                
+
                 // Auto-fill wholesale price (use MRP as default if no wholesale price)
                 stockItems[index].wholesale = product.mrp?.toString() ??
-                    product.price?.price?.toString() ?? '0';
-                debugPrint('   - Wholesale Price: ${stockItems[index].wholesale}');
-                
+                    product.price?.price?.toString() ??
+                    '0';
+                debugPrint(
+                    '   - Wholesale Price: ${stockItems[index].wholesale}');
+
                 // Auto-fill Minimum Units for Wholesale with default value
-                stockItems[index].batchNumber = '1'; // Default minimum units for wholesale
-                debugPrint('   - Batch Number: ${stockItems[index].batchNumber}');
+                stockItems[index].batchNumber =
+                    '1'; // Default minimum units for wholesale
+                debugPrint(
+                    '   - Batch Number: ${stockItems[index].batchNumber}');
               });
-              
+
               // Trigger tax calculation for both retail and wholesale prices after product selection
               _calculateTaxForStockItem(index, isRetail: true);
               _calculateTaxForStockItem(index, isRetail: false);
-              
+
               debugPrint('✅ PRODUCT DROPDOWN AUTO-FILL COMPLETED SUCCESSFULLY');
             }
           },
@@ -1837,135 +1941,174 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   Widget _buildTaxDetailsSection(int index) {
     final item = stockItems[index];
-    double retailPrice = double.tryParse(item.salePrice) ?? 0.0;
-    double wholesalePrice = double.tryParse(item.wholesale) ?? 0.0;
-    double retailTaxAmount = item.calculatedTaxData?['retailTaxAmount'] ?? 0.0;
-    double wholesaleTaxAmount =
-        item.calculatedTaxData?['wholesaleTaxAmount'] ?? 0.0;
-    double retailTaxRate = item.calculatedTaxData?['tax_rate_retail'] ?? 0.0;
-    double wholesaleTaxRate =
-        item.calculatedTaxData?['tax_rate_wholesale'] ?? 0.0;
 
-    return BuildBoxShadowContainer(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.symmetric(horizontal: 0),
-      circleRadius: 7,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              // Including Tax Toggle
-              Expanded(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Tax calculation cards with tax settings on the left
+        Row(
+          children: [
+            // Tax Settings on the left
+            Expanded(
+              flex: 1,
+              child: Container(
+                height: 80,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Switch(
-                      value: item.taxInclude,
-                      onChanged: (bool value) {
-                        setState(() {
-                          item.taxInclude = value;
-                          _calculateTaxForStockItem(index,
-                              isRetail:
-                                  true); // Recalculate both prices based on toggle
-                          _calculateTaxForStockItem(index, isRetail: false);
-                        });
-                      },
-                      activeColor: ColorManager.kPrimaryColor,
-                      inactiveThumbColor: Colors.white,
-                      inactiveTrackColor: Colors.grey
-                          .shade300, // Set inactive track color to a more visible light grey
-                    ),
                     Text(
                       "Including Tax",
                       style: buildCustomStyle(
                         FontWeightManager.regular,
-                        FontSize.s12,
+                        FontSize.s10,
                         0.27,
-                        Colors.black.withOpacity(0.6),
+                        Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Transform.scale(
+                      scale: 0.8,
+                      child: Switch(
+                        value: item.taxInclude,
+                        onChanged: (bool value) {
+                          setState(() {
+                            item.taxInclude = value;
+                            _calculateTaxForStockItem(index, isRetail: true);
+                            _calculateTaxForStockItem(index, isRetail: false);
+                          });
+                        },
+                        activeColor: ColorManager.kPrimaryColor,
+                        inactiveThumbColor: Colors.white,
+                        inactiveTrackColor: Colors.grey.shade300,
                       ),
                     ),
                   ],
                 ),
               ),
-              // Retail Price + Tax
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: _buildTaxCard(
+                "Retail Price",
+                item.taxInclude
+                    ? '₹${(item.calculatedTaxData?['price_including_tax_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}'
+                    : '₹${(item.calculatedTaxData?['price_excluding_tax_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"} + ₹${(item.calculatedTaxData?['retailTaxAmount'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}',
+                'Tax: ${(item.calculatedTaxData?['tax_rate_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
+                Colors.blue,
+                item.taxInclude,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: _buildTaxCard(
+                "Wholesale Price",
+                item.taxInclude
+                    ? '₹${(item.calculatedTaxData?['price_including_tax_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}'
+                    : '₹${(item.calculatedTaxData?['price_excluding_tax_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"} + ₹${(item.calculatedTaxData?['wholesaleTaxAmount'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}',
+                'Tax: ${(item.calculatedTaxData?['tax_rate_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
+                Colors.orange,
+                item.taxInclude,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailChip(String label, String value, IconData icon, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 4),
+        Text(
+          "$label: $value",
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s10,
+            0.27,
+            Colors.grey.shade700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTaxCard(String title, String priceText, String taxText,
+      Color color, bool isIncluding) {
+    return Container(
+      height: 80,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    title == "Retail Price" ? "1" : "2",
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s10,
+                      0.27,
+                      Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Retail Price + Tax",
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s12,
-                        0.27,
-                        ColorManager.textColor,
-                      ),
-                    ),
-                    Text(
-                      item.taxInclude
-                          ? '${(item.calculatedTaxData?['price_including_tax_retail'] as num?)?.toDouble().toStringAsFixed(2)} ' +
-                              '(Tax: ${(item.calculatedTaxData?['tax_rate_retail'] as num?)?.toDouble().toStringAsFixed(2)})'
-                          : '${(item.calculatedTaxData?['price_excluding_tax_retail'] as num?)?.toDouble().toStringAsFixed(2)} + ' +
-                              '${(item.calculatedTaxData?['retailTaxAmount'] as num?)?.toDouble().toStringAsFixed(2)} ' +
-                              '(Tax: ${(item.calculatedTaxData?['tax_rate_retail'] as num?)?.toDouble().toStringAsFixed(2)})',
-                      style: buildCustomStyle(
-                        FontWeightManager.regular,
-                        FontSize.s12,
-                        0.27,
-                        Colors.black,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  title,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.27,
+                    color,
+                  ),
                 ),
-              ),
-              // Wholesale Price + Tax
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Wholesale Price + Tax",
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s12,
-                        0.27,
-                        ColorManager.textColor,
-                      ),
-                    ),
-                    Text(
-                      item.taxInclude
-                          ? '${(item.calculatedTaxData?['price_including_tax_wholesale'] as num?)?.toDouble().toStringAsFixed(2)} ' +
-                              '(Tax: ${(item.calculatedTaxData?['tax_rate_wholesale'] as num?)?.toDouble().toStringAsFixed(2)})'
-                          : '${(item.calculatedTaxData?['price_excluding_tax_wholesale'] as num?)?.toDouble().toStringAsFixed(2)} + ' +
-                              '${(item.calculatedTaxData?['wholesaleTaxAmount'] as num?)?.toDouble().toStringAsFixed(2)} ' +
-                              '(Tax: ${(item.calculatedTaxData?['tax_rate_wholesale'] as num?)?.toDouble().toStringAsFixed(2)})',
-                      style: buildCustomStyle(
-                        FontWeightManager.regular,
-                        FontSize.s12,
-                        0.27,
-                        Colors.black,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Add Stock Button
-              const SizedBox(width: 12),
-              CustomRoundButton(
-                title: item.isSuccessfullyAdded
-                    ? "Added"
-                    : (_isLoading ? "Adding..." : "Add Stock"),
-                fct: item.isSuccessfullyAdded || _isLoading
-                    ? () {}
-                    : () => _addStockForSingleItem(index),
-                height: 40,
-                width: 100,
-                fontSize: FontSize.s12,
-                boxColor: item.isSuccessfullyAdded
-                    ? Colors.green
-                    : (_isLoading ? Colors.grey : ColorManager.kPrimaryColor),
               ),
             ],
+          ),
+          Text(
+            priceText,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s12,
+              0.27,
+              Colors.black87,
+            ),
+          ),
+          Text(
+            taxText,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s10,
+              0.27,
+              Colors.grey.shade600,
+            ),
           ),
         ],
       ),
@@ -2107,93 +2250,182 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         // ),
         // const SizedBox(width: 15),
         CustomRoundButton(
-          title: "Finish",
-          fct: () async {
-            debugPrint('🏁 FINISH BUTTON CLICKED');
+          title: _isFinishingOrder ? "Processing..." : "Finish",
+          isLoading: _isFinishingOrder,
+          fct: _isFinishingOrder
+              ? () {}
+              : () async {
+                  debugPrint('🏁 FINISH BUTTON CLICKED');
 
-            // Check if we have any successfully added stock items
-            List<StockItem> addedItems =
-                stockItems.where((item) => item.isSuccessfullyAdded).toList();
+                  // Check if we have any successfully added stock items
+                  List<StockItem> addedItems = stockItems
+                      .where((item) => item.isSuccessfullyAdded)
+                      .toList();
 
-            if (addedItems.isEmpty) {
-              debugPrint('❌ NO SUCCESSFULLY ADDED STOCK ITEMS FOUND');
-              showScaffoldError(
-                  context: context,
-                  message:
-                      'No stock items have been added successfully. Please add some stock items first.');
-              return;
-            }
+                  if (addedItems.isEmpty) {
+                    debugPrint('❌ NO SUCCESSFULLY ADDED STOCK ITEMS FOUND');
+                    showScaffoldError(
+                        context: context,
+                        message:
+                            'No stock items have been added successfully. Please add some stock items first.');
+                    return;
+                  }
 
-            debugPrint(
-                '📦 FOUND ${addedItems.length} SUCCESSFULLY ADDED STOCK ITEMS');
+                  debugPrint(
+                      '📦 FOUND ${addedItems.length} SUCCESSFULLY ADDED STOCK ITEMS');
 
-            // Look for purchase_id in the API responses
-            String? purchaseId;
-            for (int i = 0; i < addedItems.length; i++) {
-              final item = addedItems[i];
-              debugPrint('🔍 CHECKING ITEM ${i + 1} FOR PURCHASE ID:');
-              debugPrint('   - API Response: ${item.apiResponse}');
+                  // Look for purchase_id in the API responses
+                  String? purchaseId;
+                  for (int i = 0; i < addedItems.length; i++) {
+                    final item = addedItems[i];
+                    debugPrint('🔍 CHECKING ITEM ${i + 1} FOR PURCHASE ID:');
+                    debugPrint('   - API Response: ${item.apiResponse}');
 
-              if (item.apiResponse != null &&
-                  item.apiResponse!['data'] != null &&
-                  item.apiResponse!['data']['purchase_id'] != null) {
-                purchaseId =
-                    item.apiResponse!['data']['purchase_id'].toString();
-                debugPrint('✅ FOUND PURCHASE ID: $purchaseId');
-                break;
-              }
-            }
+                    if (item.apiResponse != null &&
+                        item.apiResponse!['data'] != null &&
+                        item.apiResponse!['data']['purchase_id'] != null) {
+                      purchaseId =
+                          item.apiResponse!['data']['purchase_id'].toString();
+                      debugPrint('✅ FOUND PURCHASE ID: $purchaseId');
+                      break;
+                    }
+                  }
 
-            if (purchaseId == null) {
-              debugPrint('❌ NO PURCHASE ID FOUND IN ANY STOCK API RESPONSE');
-              showScaffoldError(
-                  context: context,
-                  message:
-                      'Could not find purchase ID. Please try adding stock items again.');
-              return;
-            }
+                  if (purchaseId == null) {
+                    debugPrint(
+                        '❌ NO PURCHASE ID FOUND IN ANY STOCK API RESPONSE');
+                    showScaffoldError(
+                        context: context,
+                        message:
+                            'Could not find purchase ID. Please try adding stock items again.');
+                    return;
+                  }
 
-            debugPrint(
-                '🚀 CALLING FINISH PURCHASE ORDER API WITH PURCHASE ID: $purchaseId');
+                  debugPrint(
+                      '🚀 CALLING FINISH PURCHASE ORDER API WITH PURCHASE ID: $purchaseId');
 
-            try {
-              final String? accessToken =
-                  Provider.of<AuthModel>(context, listen: false).token;
-              if (accessToken == null) {
-                throw Exception('Access token not found');
-              }
+                  setState(() {
+                    _isFinishingOrder = true;
+                  });
 
-              final result =
-                  await Provider.of<PurchaseProvider>(context, listen: false)
-                      .finishPurchaseOrder(
-                accessToken: accessToken,
-                purchaseId: purchaseId,
-              );
+                  try {
+                    final String? accessToken =
+                        Provider.of<AuthModel>(context, listen: false).token;
+                    if (accessToken == null) {
+                      throw Exception('Access token not found');
+                    }
 
-              debugPrint('📡 FINISH PURCHASE ORDER API RESPONSE: $result');
+                    final result = await Provider.of<PurchaseProvider>(context,
+                            listen: false)
+                        .finishPurchaseOrder(
+                      accessToken: accessToken,
+                      purchaseId: purchaseId,
+                    );
 
-              if (result is Map<String, dynamic> &&
-                  result['status'] == 'success') {
-                showScaffold(
-                    context: context,
-                    message: 'Purchase order completed successfully!');
-                // Reset form after successful completion
-                _resetFormFields();
-              } else {
-                final message = result is Map<String, dynamic>
-                    ? (result['message'] ?? 'Unknown error')
-                    : 'Unknown error';
-                showScaffoldError(
-                    context: context,
-                    message: 'Failed to complete purchase order: $message');
-              }
-            } catch (e) {
-              debugPrint('💥 ERROR CALLING FINISH PURCHASE ORDER API: $e');
-              showScaffoldError(
-                  context: context,
-                  message: 'Error completing purchase order: ${e.toString()}');
-            }
-          },
+                    debugPrint(
+                        '📡 FINISH PURCHASE ORDER API RESPONSE: $result');
+                    debugPrint(
+                        '📡 FINISH PURCHASE ORDER API RESPONSE TYPE: ${result.runtimeType}');
+
+                    // Enhanced debug printing for the response structure
+                    if (result is Map<String, dynamic>) {
+                      debugPrint(
+                          '📋 FINISH PURCHASE ORDER API RESPONSE DETAILS:');
+                      debugPrint(
+                          '═══════════════════════════════════════════════════════════');
+                      result.forEach((key, value) {
+                        debugPrint('   $key: $value');
+                        if (value is Map || value is List) {
+                          debugPrint('   $key type: ${value.runtimeType}');
+                          if (value is Map) {
+                            debugPrint('   $key contents: ${value.toString()}');
+                          }
+                        }
+                      });
+                      debugPrint(
+                          '═══════════════════════════════════════════════════════════');
+                    } else {
+                      debugPrint(
+                          '📋 FINISH PURCHASE ORDER API RESPONSE (Non-Map): $result');
+                    }
+
+                    if (result is Map<String, dynamic> &&
+                        result['status'] == 'success') {
+                      debugPrint(
+                          '✅ FINISH PURCHASE ORDER SUCCESSFUL - SHOWING SUCCESS NOTIFICATION');
+                      
+                      // Stop loading immediately after success
+                      setState(() {
+                        _isFinishingOrder = false;
+                      });
+                      
+                      showScaffold(
+                          context: context,
+                          message:
+                              'Purchase order completed successfully!');
+
+                      debugPrint(
+                          '🔄 RESETTING FORM FIELDS AFTER SUCCESSFUL COMPLETION');
+                      // Reset form after successful completion
+                      _resetFormFields();
+
+                      debugPrint('🔄 TRIGGERING BACKGROUND SYNC TO UPDATE LOCAL DATA');
+                      // Trigger sync in background without waiting
+                      Future.microtask(() async {
+                        try {
+                          final syncProvider =
+                              Provider.of<SyncProvider>(context, listen: false);
+                          await syncProvider.syncAllData(context);
+                          debugPrint('✅ BACKGROUND SYNC COMPLETED SUCCESSFULLY');
+                        } catch (e) {
+                          debugPrint(
+                              '❌ BACKGROUND SYNC FAILED AFTER PURCHASE ORDER COMPLETION: $e');
+                          // Silently fail background sync - user doesn't need to see this error
+                        }
+                      });
+
+                      debugPrint('✅ STAYING ON CURRENT PAGE WITH CLEARED FIELDS');
+                      // Stay on the same page - do not navigate away
+                    } else {
+                      // Stop loading on error
+                      setState(() {
+                        _isFinishingOrder = false;
+                      });
+                      
+                      final message = result is Map<String, dynamic>
+                          ? (result['message'] ?? 'Unknown error')
+                          : 'Unknown error';
+                      debugPrint(
+                          '❌ FINISH PURCHASE ORDER FAILED - SHOWING ERROR NOTIFICATION: $message');
+                      showScaffoldError(
+                          context: context,
+                          message:
+                              'Failed to complete purchase order: $message');
+                    }
+                  } catch (e) {
+                    // Stop loading on exception
+                    setState(() {
+                      _isFinishingOrder = false;
+                    });
+                    
+                    debugPrint(
+                        '💥 ERROR CALLING FINISH PURCHASE ORDER API: $e');
+                    debugPrint(
+                        '❌ SHOWING ERROR NOTIFICATION FOR API EXCEPTION');
+                    showScaffoldError(
+                        context: context,
+                        message:
+                            'Error completing purchase order: ${e.toString()}');
+                  } finally {
+                    // Loading state is already handled in success/error cases
+                    // Ensure loading is stopped in case of unexpected scenarios
+                    if (_isFinishingOrder) {
+                      setState(() {
+                        _isFinishingOrder = false;
+                      });
+                    }
+                  }
+                },
           height: 50,
           width: size.width * 0.15,
           fontSize: FontSize.s14,

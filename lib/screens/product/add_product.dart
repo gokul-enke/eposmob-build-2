@@ -166,8 +166,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
         backgroundColor: Colors.white,
         child: Container(
           constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width / 2,
-            maxHeight: MediaQuery.of(context).size.height * 0.7,
+            maxWidth: MediaQuery.of(context).size.width * 0.8,
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
           ),
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -198,11 +198,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   shrinkWrap: true,
                   physics: const BouncingScrollPhysics(),
                   children: [
-                    // Product Details in 2 columns
+                    // Product Details in 3 columns
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Left Column - First 4 details
+                        // Left Column - Basic Info
                         Expanded(
                           child: Column(
                             children: [
@@ -214,26 +214,154 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                   'Category', product.category?.name ?? 'N/A'),
                               _buildDetailRow(
                                   'Barcode', product.barcode ?? 'N/A'),
+                              _buildDetailRow('Unit', product.unit ?? 'N/A'),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 24),
-                        // Right Column - Next 4 details
+                        const SizedBox(width: 16),
+                        // Middle Column - Pricing Info
                         Expanded(
                           child: Column(
                             children: [
-                              _buildDetailRow('Unit', product.unit ?? 'N/A'),
                               _buildDetailRow('Price',
                                   product.price?.price?.toString() ?? 'N/A'),
                               _buildDetailRow(
                                   'MRP', product.mrp?.toString() ?? 'N/A'),
                               _buildDetailRow(
+                                  'Purchase Price',
+                                  product.purchasePrice ??
+                                      (product.stock != null &&
+                                              product.stock!.isNotEmpty
+                                          ? product.stock!.first.purchasePrice
+                                          : null) ??
+                                      'N/A'),
+                              _buildDetailRow('Offer Price',
+                                  product.offerPrice?.toString() ?? 'N/A'),
+                              _buildDetailRow(
+                                  'Currency', product.currency ?? 'N/A'),
+                              _buildDetailRow(
                                   'SKU', product.sku ?? 'Not Available'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Right Column - Additional Info
+                        Expanded(
+                          child: Column(
+                            children: [
+                              _buildDetailRow(
+                                  'Rating', product.rating ?? 'N/A'),
+                              _buildDetailRow('Available Qty',
+                                  product.numberOfProductsAvailable ?? 'N/A'),
+                              _buildDetailRow('Location',
+                                  product.productLocation?.toString() ?? 'N/A'),
+                              if (product.weightInfo != null) ...[
+                                _buildDetailRow(
+                                    'Weight',
+                                    product.weightInfo!.weight?.toString() ??
+                                        'N/A'),
+                                _buildDetailRow(
+                                    'Is Weighted',
+                                    product.weightInfo!.isWeighted == true
+                                        ? 'Yes'
+                                        : 'No'),
+                              ] else ...[
+                                _buildDetailRow('Weight', 'N/A'),
+                                _buildDetailRow('Is Weighted', 'N/A'),
+                              ],
                             ],
                           ),
                         ),
                       ],
                     ),
+
+                    // Description Section
+                    if (product.description != null &&
+                        product.description.toString().isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'Description',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s16,
+                          0.20,
+                          ColorManager.kPrimaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border:
+                              Border.all(color: Colors.grey.withOpacity(0.3)),
+                        ),
+                        child: Text(
+                          product.description.toString(),
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            FontSize.s14,
+                            0.20,
+                            ColorManager.textColor,
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    // Product Properties Section
+                    if (product.productProps != null &&
+                        product.productProps!.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'Product Properties',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s16,
+                          0.20,
+                          ColorManager.kPrimaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border:
+                              Border.all(color: Colors.grey.withOpacity(0.3)),
+                        ),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: product.productProps!.map((prop) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color:
+                                    ColorManager.kPrimaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                    color: ColorManager.kPrimaryColor
+                                        .withOpacity(0.3)),
+                              ),
+                              child: Text(
+                                '${prop.label ?? ''}: ${prop.masterValue ?? ''}',
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.18,
+                                  ColorManager.kPrimaryColor,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
 
                     // Stock Information Section
                     const SizedBox(height: 16),
@@ -270,11 +398,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               ),
                               child: Table(
                                 columnWidths: const {
-                                  0: FlexColumnWidth(0.8), // Sl No
-                                  1: FlexColumnWidth(1.5), // Quantity
-                                  2: FlexColumnWidth(1.5), // Price
-                                  3: FlexColumnWidth(1.5), // MRP
-                                  4: FlexColumnWidth(1.5), // Purchase Price
+                                  0: FlexColumnWidth(0.6), // Sl No
+                                  1: FlexColumnWidth(1.2), // Quantity
+                                  2: FlexColumnWidth(1.2), // Price
+                                  3: FlexColumnWidth(1.2), // MRP
+                                  4: FlexColumnWidth(1.2), // Purchase Price
+                                  5: FlexColumnWidth(1.5), // Supplier
+                                  6: FlexColumnWidth(1.0), // SKU
+                                  7: FlexColumnWidth(1.2), // Date
+                                  8: FlexColumnWidth(1.2), // Expiry Date
+                                  9: FlexColumnWidth(1.0), // Rack
                                 },
                                 border: null,
                                 defaultVerticalAlignment:
@@ -287,6 +420,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                       _buildStockTableHeader('Price'),
                                       _buildStockTableHeader('MRP'),
                                       _buildStockTableHeader('Purchase Price'),
+                                      _buildStockTableHeader('Supplier'),
+                                      _buildStockTableHeader('SKU'),
+                                      _buildStockTableHeader('Date'),
+                                      _buildStockTableHeader('Expiry Date'),
+                                      _buildStockTableHeader('Rack'),
                                     ],
                                   ),
                                 ],
@@ -304,11 +442,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 ),
                                 child: Table(
                                   columnWidths: const {
-                                    0: FlexColumnWidth(0.8), // Sl No
-                                    1: FlexColumnWidth(1.5), // Quantity
-                                    2: FlexColumnWidth(1.5), // Price
-                                    3: FlexColumnWidth(1.5), // MRP
-                                    4: FlexColumnWidth(1.5), // Purchase Price
+                                    0: FlexColumnWidth(0.6), // Sl No
+                                    1: FlexColumnWidth(1.2), // Quantity
+                                    2: FlexColumnWidth(1.2), // Price
+                                    3: FlexColumnWidth(1.2), // MRP
+                                    4: FlexColumnWidth(1.2), // Purchase Price
+                                    5: FlexColumnWidth(1.5), // Supplier
+                                    6: FlexColumnWidth(1.0), // SKU
+                                    7: FlexColumnWidth(1.2), // Date
+                                    8: FlexColumnWidth(1.2), // Expiry Date
+                                    9: FlexColumnWidth(1.0), // Rack
                                   },
                                   border: null,
                                   defaultVerticalAlignment:
@@ -326,7 +469,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                         _buildStockTableCell(
                                             stock.mrp ?? 'N/A'),
                                         _buildStockTableCell(
-                                            product.purchasePrice ?? 'N/A'),
+                                            stock.purchasePrice ?? 'N/A'),
+                                        _buildStockTableCell(
+                                            stock.supplier ?? 'N/A'),
+                                        _buildStockTableCell(
+                                            stock.sku ?? 'N/A'),
+                                        _buildStockTableCell(
+                                            stock.date ?? 'N/A'),
+                                        _buildStockTableCell(
+                                            stock.expiryDate ?? 'N/A'),
+                                        _buildStockTableCell(
+                                            stock.rack ?? 'N/A'),
                                       ],
                                     ),
                                   ],
@@ -1042,8 +1195,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         "${product.mrp ?? 'N/A'}"),
                                                     _buildTableCell(product
                                                             .purchasePrice ??
-                                                        (product.stock != null && product.stock!.isNotEmpty
-                                                            ? product.stock!.first
+                                                        (product.stock !=
+                                                                    null &&
+                                                                product.stock!
+                                                                    .isNotEmpty
+                                                            ? product
+                                                                .stock!
+                                                                .first
                                                                 .purchasePrice
                                                             : null) ??
                                                         'N/A'),
