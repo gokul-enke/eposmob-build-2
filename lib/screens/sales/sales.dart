@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
@@ -55,6 +56,7 @@ class _SalesScreenState extends State<SalesScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController storeController = TextEditingController();
+  final TextEditingController storeSearchController = TextEditingController();
   final TextEditingController statusController = TextEditingController();
   String? selectedStatus;
   GetStoreModelData? storeSelected;
@@ -72,13 +74,13 @@ class _SalesScreenState extends State<SalesScreen> {
   Future<Directory> _getEposDirectory() async {
     final documentsDirectory = await getApplicationDocumentsDirectory();
     final eposDirectory = Directory('${documentsDirectory.path}/epos');
-    
+
     // Create epos directory if it doesn't exist
     if (!await eposDirectory.exists()) {
       await eposDirectory.create(recursive: true);
       debugPrint('Created epos directory: ${eposDirectory.path}');
     }
-    
+
     return eposDirectory;
   }
 
@@ -93,6 +95,20 @@ class _SalesScreenState extends State<SalesScreen> {
   void initState() {
     loadInitData();
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    orderNumberController.dispose();
+    customerNameController.dispose();
+    dateController.dispose();
+    amountController.dispose();
+    emailController.dispose();
+    phoneController.dispose();
+    storeController.dispose();
+    storeSearchController.dispose();
+    statusController.dispose();
+    super.dispose();
   }
 
   Future<void> downloadFile(String invoiceHash) async {
@@ -203,10 +219,11 @@ class _SalesScreenState extends State<SalesScreen> {
 
       // Fetch order details
       final String ordersId = order.orderNumber.toString();
-      final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+      final String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
       final OrderDetailsresponse = await SalesProvider()
           .listOrderDetails(context, ordersId, accessToken ?? "");
-      
+
       if (OrderDetailsresponse["status"] != "success") {
         Navigator.of(context, rootNavigator: true).pop();
         if (context.mounted) {
@@ -218,9 +235,10 @@ class _SalesScreenState extends State<SalesScreen> {
         return;
       }
 
-      final OrderDetailsModel details = OrderDetailsModel.fromJson(OrderDetailsresponse);
+      final OrderDetailsModel details =
+          OrderDetailsModel.fromJson(OrderDetailsresponse);
       final orderData = details.data;
-      
+
       if (orderData == null || orderData.cart?.cartItems == null) {
         Navigator.of(context, rootNavigator: true).pop();
         if (context.mounted) {
@@ -233,12 +251,14 @@ class _SalesScreenState extends State<SalesScreen> {
       }
 
       // Get app settings and document configuration
-      final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
-      final docConfigProvider = Provider.of<DocumentConfigProvider>(context, listen: false);
-      
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      final docConfigProvider =
+          Provider.of<DocumentConfigProvider>(context, listen: false);
+
       final appSettings = appSettingsProvider.appSettings;
       final billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
-      
+
       if (appSettings == null || billDocumentConfig == null) {
         Navigator.of(context, rootNavigator: true).pop();
         if (context.mounted) {
@@ -252,17 +272,19 @@ class _SalesScreenState extends State<SalesScreen> {
 
       // Create StandardPrinter instance and generate PDF
       final standardPrinter = StandardPrinter(context);
-      
+
       // Use the cart items directly without conversion since the PDF method expects the original objects
       final File? pdfFile = await standardPrinter.generatePDFForSharing(
         cartItems: orderData.cart!.cartItems!,
-        formattedTotal: orderData.priceSummary?.netPayable?.toString() ?? 
-                        orderData.priceSummary?.netTotal?.toString() ?? 
-                        order.grantTotal ?? '0.00',
+        formattedTotal: orderData.priceSummary?.netPayable?.toString() ??
+            orderData.priceSummary?.netTotal?.toString() ??
+            order.grantTotal ??
+            '0.00',
         savedTotal: orderData.priceSummary?.savedTotal?.toString() ?? '0.00',
         discountAmount: orderData.priceSummary?.discount?.toString() ?? '0.00',
         orderDate: orderData.orderDate ?? DateTime.now().toIso8601String(),
-        orderNumber: orderData.orderNumber?.toString() ?? order.orderNumber.toString(),
+        orderNumber:
+            orderData.orderNumber?.toString() ?? order.orderNumber.toString(),
         isFromLocalStorage: false,
         selectedPaperSize: 'A4', // Default to A4 for sharing
         billDocumentConfig: billDocumentConfig,
@@ -306,16 +328,16 @@ class _SalesScreenState extends State<SalesScreen> {
             mimeType: 'application/pdf',
             length: await pdfFile.length(),
           );
-          
+
           // Use modern ShareParams API - files only for Windows
           final params = ShareParams(
             files: [enhancedXFile],
           );
-          
+
           final result = await SharePlus.instance.share(params);
-          
+
           debugPrint('ShareParams API completed with status: ${result.status}');
-          
+
           if (result.status == ShareResultStatus.success) {
             debugPrint('Windows file sharing succeeded!');
           } else if (result.status == ShareResultStatus.dismissed) {
@@ -333,7 +355,6 @@ class _SalesScreenState extends State<SalesScreen> {
             _handleWindowsAlternativeSharing(pdfFile, order);
             return;
           }
-          
         } catch (e) {
           debugPrint('ShareParams API failed: $e');
           // Alternative approach: Open the PDF file directly
@@ -345,15 +366,16 @@ class _SalesScreenState extends State<SalesScreen> {
         // On other platforms, use enhanced sharing with context
         final enhancedXFile = XFile(
           pdfFile.path,
-          name: 'Invoice_${order.orderNumber}.pdf', 
+          name: 'Invoice_${order.orderNumber}.pdf',
           mimeType: 'application/pdf',
         );
-        
+
         final params = ShareParams(
-          text: 'Please find attached the invoice for order #${order.orderNumber}',
+          text:
+              'Please find attached the invoice for order #${order.orderNumber}',
           files: [enhancedXFile],
         );
-        
+
         final result = await SharePlus.instance.share(params);
         debugPrint('Non-Windows share completed with status: ${result.status}');
       }
@@ -380,9 +402,10 @@ class _SalesScreenState extends State<SalesScreen> {
     }
   }
 
-  Future<void> _handleWindowsAlternativeSharing(File pdfFile, ListOrderModelData order) async {
+  Future<void> _handleWindowsAlternativeSharing(
+      File pdfFile, ListOrderModelData order) async {
     debugPrint('Using alternative Windows sharing approach');
-    
+
     if (context.mounted) {
       // Show dialog with multiple options
       showDialog(
@@ -424,7 +447,8 @@ class _SalesScreenState extends State<SalesScreen> {
                   if (context.mounted) {
                     showScaffold(
                       context: context,
-                      message: 'File location opened. The PDF is saved in Documents/epos folder.',
+                      message:
+                          'File location opened. The PDF is saved in Documents/epos folder.',
                     );
                   }
                 } catch (e) {
@@ -447,7 +471,8 @@ class _SalesScreenState extends State<SalesScreen> {
                   if (context.mounted) {
                     showScaffold(
                       context: context,
-                      message: 'PDF opened. You can now share it from your PDF viewer.',
+                      message:
+                          'PDF opened. You can now share it from your PDF viewer.',
                     );
                   }
                 } catch (e) {
@@ -548,7 +573,7 @@ class _SalesScreenState extends State<SalesScreen> {
         if (storeController.text.isNotEmpty)
           'filterStore': storeController.text.trim(),
         if (selectedStatus != null && selectedStatus != 'all')
-          'filterStatus': selectedStatus!.trim(), // Add status filter  
+          'filterStatus': selectedStatus!.trim(), // Add status filter
         'page': page.toString(),
       };
 
@@ -594,9 +619,9 @@ class _SalesScreenState extends State<SalesScreen> {
       emailController.clear();
       phoneController.clear();
       storeController.clear();
-      statusController.clear(); 
+      statusController.clear();
       storeSelected = null;
-      selectedStatus = null; 
+      selectedStatus = null;
       selectedDate = null;
       calendarPickerKey = UniqueKey();
     });
@@ -656,10 +681,10 @@ class _SalesScreenState extends State<SalesScreen> {
         backgroundColor = Colors.red.withOpacity(0.1);
         textColor = Colors.red;
         break;
-       case 'new':
+      case 'new':
         backgroundColor = Colors.blue.withOpacity(0.1);
         textColor = Colors.blue;
-        break;  
+        break;
       default:
         backgroundColor = Colors.grey.withOpacity(0.1);
         textColor = Colors.grey;
@@ -723,8 +748,9 @@ class _SalesScreenState extends State<SalesScreen> {
                 OrderDetailsModel orderDetails =
                     OrderDetailsModel.fromJson(OrderDetailsresponse);
 
-                String? formattedTotal =
-                    orderDetails.data?.cart?.priceSummary?.netPayable?.toString() ??
+                String? formattedTotal = orderDetails
+                        .data?.cart?.priceSummary?.netPayable
+                        ?.toString() ??
                     orderDetails.data?.cart?.priceSummary?.netTotal.toString();
                 String? savedTotal = orderDetails
                     .data?.cart?.priceSummary?.savedTotal
@@ -732,12 +758,15 @@ class _SalesScreenState extends State<SalesScreen> {
 
                 String storeName = orderDetails.data!.cart!.storeName ?? "";
                 String orderDate = orderDetails.data!.orderDate ?? "";
-                
+
                 // Extract customer details
                 String? customerName = orderDetails.data?.customerDetails?.name;
-                String? customerPhone = orderDetails.data?.customerDetails?.phone;
-                String? customerEmail = orderDetails.data?.customerDetails?.email;
-                String? customerAddress = orderDetails.data?.customerDetails?.address?.join(', ');
+                String? customerPhone =
+                    orderDetails.data?.customerDetails?.phone;
+                String? customerEmail =
+                    orderDetails.data?.customerDetails?.email;
+                String? customerAddress =
+                    orderDetails.data?.customerDetails?.address?.join(', ');
 
                 Navigator.push(
                   context,
@@ -747,7 +776,9 @@ class _SalesScreenState extends State<SalesScreen> {
                       cartItems: orderDetails.data?.cart?.cartItems ?? [],
                       formattedTotal: formattedTotal!,
                       savedTotal: savedTotal!,
-                      discountAmount: orderDetails.data?.priceSummary?.discount?.toString() ?? "0.00",
+                      discountAmount: orderDetails.data?.priceSummary?.discount
+                              ?.toString() ??
+                          "0.00",
                       orderDate: orderDate,
                       orderNumber: orderDetails.data!.orderNumber.toString(),
                       customerName: customerName,
@@ -767,7 +798,8 @@ class _SalesScreenState extends State<SalesScreen> {
           icon: const Icon(Icons.share, size: 18, color: Colors.blue),
           onPressed: () async {
             try {
-              String? invoiceHash = order.invoiceHash; // Use the new invoiceHash field
+              String? invoiceHash =
+                  order.invoiceHash; // Use the new invoiceHash field
               if (invoiceHash == null) {
                 if (context.mounted) {
                   showScaffoldError(
@@ -779,8 +811,10 @@ class _SalesScreenState extends State<SalesScreen> {
               }
 
               // Build message with invoice link
-              final String invoiceUrl = "${APPUrl.baseURL}/invoice-download/$invoiceHash";
-              final String message = "Here is the link for your invoice: $invoiceUrl";
+              final String invoiceUrl =
+                  "${APPUrl.baseURL}/invoice-download/$invoiceHash";
+              final String message =
+                  "Here is the link for your invoice: $invoiceUrl";
               final String encodedMessage = Uri.encodeComponent(message);
 
               // Try to fetch customer phone/email from order details (for direct share targets)
@@ -788,11 +822,13 @@ class _SalesScreenState extends State<SalesScreen> {
               String? customerEmail;
               try {
                 final String ordersId = order.orderNumber.toString();
-                final String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+                final String? accessToken =
+                    Provider.of<AuthModel>(context, listen: false).token;
                 final OrderDetailsresponse = await SalesProvider()
                     .listOrderDetails(context, ordersId, accessToken ?? "");
                 if (OrderDetailsresponse["status"] == "success") {
-                  final OrderDetailsModel details = OrderDetailsModel.fromJson(OrderDetailsresponse);
+                  final OrderDetailsModel details =
+                      OrderDetailsModel.fromJson(OrderDetailsresponse);
                   customerPhone = details.data?.customerDetails?.phone;
                   customerEmail = details.data?.customerDetails?.email;
                 }
@@ -832,22 +868,26 @@ class _SalesScreenState extends State<SalesScreen> {
                           ),
                           const Text(
                             'Share invoice',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 8),
                           const Divider(height: 1),
                           ListTile(
                             leading: CircleAvatar(
                               radius: 18,
-                              backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
-                              child: Icon(Icons.share, color: ColorManager.kPrimaryColor),
+                              backgroundColor:
+                                  ColorManager.kPrimaryColor.withOpacity(0.12),
+                              child: Icon(Icons.share,
+                                  color: ColorManager.kPrimaryColor),
                             ),
                             title: const Text('Share'),
                             onTap: () async {
                               Navigator.pop(ctx);
                               // On Windows, sharing a file tends to open the native Share UI more reliably
                               if (Platform.isWindows) {
-                                final Uint8List data = Uint8List.fromList(utf8.encode(message));
+                                final Uint8List data =
+                                    Uint8List.fromList(utf8.encode(message));
                                 final XFile note = XFile.fromData(
                                   data,
                                   mimeType: 'text/plain',
@@ -869,11 +909,14 @@ class _SalesScreenState extends State<SalesScreen> {
                           ListTile(
                             leading: const CircleAvatar(
                               radius: 18,
-                              backgroundColor: Color(0x1A1E88E5), // ~10% opacity blue
-                              child: Icon(Icons.email, color: Color(0xFF1E88E5)),
+                              backgroundColor:
+                                  Color(0x1A1E88E5), // ~10% opacity blue
+                              child:
+                                  Icon(Icons.email, color: Color(0xFF1E88E5)),
                             ),
                             title: Text(
-                              (customerEmail != null && customerEmail.isNotEmpty)
+                              (customerEmail != null &&
+                                      customerEmail.isNotEmpty)
                                   ? 'Share to Email ($customerEmail)'
                                   : 'Share to Email',
                             ),
@@ -881,19 +924,24 @@ class _SalesScreenState extends State<SalesScreen> {
                               Navigator.pop(ctx);
                               final uri = Uri(
                                 scheme: 'mailto',
-                                path: (customerEmail != null && customerEmail.isNotEmpty) ? customerEmail : '',
+                                path: (customerEmail != null &&
+                                        customerEmail.isNotEmpty)
+                                    ? customerEmail
+                                    : '',
                                 queryParameters: <String, String>{
                                   'subject': 'Invoice #${order.orderNumber}',
                                   'body': message,
                                 },
                               );
                               if (await canLaunchUrl(uri)) {
-                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                await launchUrl(uri,
+                                    mode: LaunchMode.externalApplication);
                               } else {
                                 if (context.mounted) {
                                   showScaffoldError(
                                     context: context,
-                                    message: 'No email app found to share the invoice.',
+                                    message:
+                                        'No email app found to share the invoice.',
                                   );
                                 }
                               }
@@ -902,7 +950,8 @@ class _SalesScreenState extends State<SalesScreen> {
                           ListTile(
                             leading: const CircleAvatar(
                               radius: 18,
-                              backgroundColor: Color(0x1A25D366), // ~10% opacity WhatsApp green
+                              backgroundColor: Color(
+                                  0x1A25D366), // ~10% opacity WhatsApp green
                               child: Icon(Icons.chat, color: Color(0xFF25D366)),
                             ),
                             title: Text(
@@ -917,12 +966,14 @@ class _SalesScreenState extends State<SalesScreen> {
                                   : 'https://wa.me/?text=$encodedMessage';
                               final uri = Uri.parse(waUrl);
                               if (await canLaunchUrl(uri)) {
-                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                await launchUrl(uri,
+                                    mode: LaunchMode.externalApplication);
                               } else {
                                 if (context.mounted) {
                                   showScaffoldError(
                                     context: context,
-                                    message: 'Could not open WhatsApp. Please make sure WhatsApp is installed.',
+                                    message:
+                                        'Could not open WhatsApp. Please make sure WhatsApp is installed.',
                                   );
                                 }
                               }
@@ -931,7 +982,8 @@ class _SalesScreenState extends State<SalesScreen> {
                           ListTile(
                             leading: const CircleAvatar(
                               radius: 18,
-                              backgroundColor: Color(0x1AE53E3E), // ~10% opacity red
+                              backgroundColor:
+                                  Color(0x1AE53E3E), // ~10% opacity red
                               child: Icon(Icons.chat, color: Color(0xFFE53E3E)),
                             ),
                             title: const Text('Share PDF'),
@@ -1035,7 +1087,6 @@ class _SalesScreenState extends State<SalesScreen> {
                     _buildTableHeader('Customer'),
                     _buildTableHeader('Date'),
                     _buildTableHeader('Items'),
-                   
                     _buildTableHeader('Amount'),
                     _buildTableHeader('Status'),
                     _buildTableHeader('Actions'),
@@ -1142,7 +1193,7 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   @override
-Widget build(BuildContext context) {
+  Widget build(BuildContext context) {
     SideBarController sideBarController = Get.put(SideBarController());
     Size size = MediaQuery.of(context).size;
     PurchaseProvider purchaseProvider =
@@ -1229,7 +1280,7 @@ Widget build(BuildContext context) {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        
+
                         // Customer
                         Expanded(
                           flex: 1,
@@ -1263,7 +1314,7 @@ Widget build(BuildContext context) {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        
+
                         // Phone
                         Expanded(
                           flex: 1,
@@ -1297,7 +1348,7 @@ Widget build(BuildContext context) {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        
+
                         // Date
                         Expanded(
                           flex: 1,
@@ -1337,7 +1388,7 @@ Widget build(BuildContext context) {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    
+
                     // Second row of filters with equal width
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1375,7 +1426,7 @@ Widget build(BuildContext context) {
                           ),
                         ),
                         const SizedBox(width: 15),
-                        
+
                         // Store
                         Expanded(
                           flex: 1,
@@ -1394,6 +1445,69 @@ Widget build(BuildContext context) {
                                   ),
                                 ),
                               ),
+                              BuildDropDownWithSearch<GetStoreModelData>(
+                                title:
+                                    null, // Remove title since we're handling it manually
+                                showName:
+                                    false, // Don't show the built-in title
+                                hintText: 'Select Store',
+                                value: storeSelected,
+                                items: [
+                                  GetStoreModelData(
+                                      id: 0,
+                                      name:
+                                          'All Stores'), // Add "All Stores" option
+                                  ...storeList!
+                                ],
+                                onChanged: (GetStoreModelData? storeModelData) {
+                                  setState(() {
+                                    if (storeModelData?.id == 0) {
+                                      // Handle "All Stores" selection
+                                      storeSelected = null;
+                                      storeController.clear();
+                                    } else {
+                                      storeSelected = storeModelData;
+                                      if (storeModelData != null) {
+                                        storeController.text =
+                                            storeModelData.id.toString();
+                                      } else {
+                                        storeController.clear();
+                                      }
+                                    }
+                                  });
+                                  searchOrders(1);
+                                },
+                                displayText: (store) =>
+                                    store.name ?? 'Unknown Store',
+                                searchController: storeSearchController,
+                                height: 45,
+                                margin: const EdgeInsets.symmetric(
+                                    horizontal: 0, vertical: 0),
+                              ),
+                            ],
+                          ),
+                        ),
+// Add this in your filter section (after the Store filter or wherever you prefer)
+                        const SizedBox(width: 15),
+
+// Status Filter
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  "Status",
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s14,
+                                    0.27,
+                                    Colors.black.withOpacity(0.6),
+                                  ),
+                                ),
+                              ),
                               SizedBox(
                                 height: 45,
                                 child: BuildBoxShadowContainer(
@@ -1402,56 +1516,61 @@ Widget build(BuildContext context) {
                                   margin: const EdgeInsets.symmetric(
                                       horizontal: 0, vertical: 0),
                                   padding: const EdgeInsets.only(left: 15),
-                                  child: DropdownButtonFormField<GetStoreModelData>(
+                                  color: Colors.white,
+                                  child: DropdownButtonFormField<String>(
                                     decoration: const InputDecoration(
-                                        border: InputBorder.none),
-                                    value: storeSelected,
+                                      border: InputBorder.none,
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                    ),
+                                    value: selectedStatus,
+                                    dropdownColor: Colors.white,
                                     hint: Text(
-                                      'Select Store',
+                                      'Select Status',
                                       style: buildCustomStyle(
                                         FontWeightManager.medium,
-                                        FontSize.s12,
+                                        FontSize.s10,
                                         0.27,
                                         ColorManager.textColor.withOpacity(.5),
                                       ),
                                     ),
                                     items: [
-                                      DropdownMenuItem<GetStoreModelData>(
+                                      DropdownMenuItem<String>(
                                         value: null,
                                         child: Text(
-                                          'All Stores',
+                                          'All',
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
-                                            FontSize.s12,
+                                            FontSize.s10,
                                             0.27,
-                                            ColorManager.textColor.withOpacity(.5),
+                                            ColorManager.textColor
+                                                .withOpacity(.5),
                                           ),
                                         ),
                                       ),
-                                      ...storeList!
-                                          .map((GetStoreModelData store) {
-                                        return DropdownMenuItem<GetStoreModelData>(
-                                          value: store,
+                                      ...statusOptions.map((String status) {
+                                        return DropdownMenuItem<String>(
+                                          value: status,
                                           child: Text(
-                                            store.name ?? '',
+                                            status.toUpperCase(),
                                             style: buildCustomStyle(
                                               FontWeightManager.medium,
-                                              FontSize.s12,
+                                              FontSize.s10,
                                               0.27,
-                                              ColorManager.textColor.withOpacity(.5),
+                                              ColorManager.textColor
+                                                  .withOpacity(.5),
                                             ),
                                           ),
                                         );
                                       }).toList()
                                     ],
-                                    onChanged: (GetStoreModelData? storeModelData) {
+                                    onChanged: (String? status) {
                                       setState(() {
-                                        storeSelected = storeModelData;
-                                        if (storeModelData != null) {
-                                          storeController.text =
-                                              storeModelData.id.toString();
+                                        selectedStatus = status;
+                                        if (status != null) {
+                                          statusController.text = status;
                                         } else {
-                                          storeController.clear();
+                                          statusController.clear();
                                         }
                                       });
                                       searchOrders(1);
@@ -1462,93 +1581,8 @@ Widget build(BuildContext context) {
                             ],
                           ),
                         ),
-// Add this in your filter section (after the Store filter or wherever you prefer)
-const SizedBox(width: 10),
+                        const SizedBox(width: 15),
 
-// Status Filter
-Expanded(
-  flex: 1,
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Text(
-          "Status",
-          style: buildCustomStyle(
-            FontWeightManager.regular,
-            FontSize.s14,
-            0.27,
-            Colors.black.withOpacity(0.6),
-          ),
-        ),
-      ),
-      SizedBox(
-        height: 45,
-        child: BuildBoxShadowContainer(
-          circleRadius: 7,
-          alignment: Alignment.centerLeft,
-          margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-          padding: const EdgeInsets.only(left: 15),
-          child: DropdownButtonFormField<String>(
-            decoration: const InputDecoration(border: InputBorder.none),
-            value: selectedStatus,
-            hint: Text(
-              'Select Status',
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s12,
-                0.27,
-                ColorManager.textColor.withOpacity(.5),
-              ),
-            ),
-            items: [
-              DropdownMenuItem<String>(
-                value: null,
-                child: Text(
-                  'All',
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s12,
-                    0.27,
-                    ColorManager.textColor.withOpacity(.5),
-                  ),
-                ),
-              ),
-              ...statusOptions.map((String status) {
-                return DropdownMenuItem<String>(
-                  value: status,
-                  child: Text(
-                    status.toUpperCase(),
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s12,
-                      0.27,
-                      ColorManager.textColor.withOpacity(.5),
-                    ),
-                  ),
-                );
-              }).toList()
-            ],
-            onChanged: (String? status) {
-              setState(() {
-                selectedStatus = status;
-                if (status != null) {
-                  statusController.text = status;
-                } else {
-                  statusController.clear();
-                }
-              });
-              searchOrders(1);
-            },
-          ),
-        ),
-      ),
-    ],
-  ),
-),
-                        const SizedBox(width: 10),
-                        
                         // Reset button
                         Expanded(
                           flex: 1,
@@ -1560,7 +1594,8 @@ Expanded(
                               textColor: ColorManager.kPrimaryColor,
                               fct: resetSearch,
                               height: 45,
-                              width: double.infinity, // Take full available width
+                              width:
+                                  double.infinity, // Take full available width
                               fontSize: FontSize.s12,
                             ),
                           ),

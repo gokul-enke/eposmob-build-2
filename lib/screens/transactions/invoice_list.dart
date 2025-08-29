@@ -116,16 +116,33 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }
 
   // Date selection method
-  Future<void> _selectDate(BuildContext context, {required bool isFromDate}) async {
+  Future<void> _selectDate(BuildContext context,
+      {required bool isFromDate}) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: ColorManager.kPrimaryColor, // Header background color
+              onPrimary: Colors.white, // Header text color
+              surface: Colors.white, // Calendar background
+              onSurface: Colors.black, // Calendar text color
+            ),
+            dialogBackgroundColor: Colors.white, // Dialog background
+            cardColor: Colors.white, // Card background
+          ),
+          child: child!,
+        );
+      },
     );
-    
+
     if (picked != null) {
-      final formattedDate = "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
+      final formattedDate =
+          "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
       if (isFromDate) {
         dateFromController.text = formattedDate;
       } else {
@@ -134,6 +151,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       searchInvoices();
     }
   }
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -200,92 +218,84 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 
   Widget _buildSearchBar(Size size) {
     return Column(
+      children: [
+        // First row of search fields
+        SizedBox(
+          height: 90,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 1,
+                child: _buildInvoiceNumberSearch(),
+              ),
+              // Name Search Field
+              Expanded(
+                flex: 1,
+                child: _buildSearchTextField(),
+              ),
 
-        children: [
-          // First row of search fields
-          SizedBox(
-            height: 90,
-            child: Row(
-              children: [
+              // Invoice Number Search Field
 
-                Expanded(
-                  flex: 1,
-                  child: _buildInvoiceNumberSearch(),
-                ),
-                // Name Search Field
-                Expanded(
-                  flex: 1,
-                  child: _buildSearchTextField(),
-                ),
-                
-                // Invoice Number Search Field
-                
-                // // Order Number Search Field
-                // Expanded(
-                //   flex: 1,
-                //   child: _buildOrderNumberSearch(),
-                // ),
-                
+              // // Order Number Search Field
+              // Expanded(
+              //   flex: 1,
+              //   child: _buildOrderNumberSearch(),
+              // ),
 
+              // Phone Search Field
+              Expanded(
+                flex: 1,
+                child: _buildPhoneSearch(),
+              ),
 
-                                // Phone Search Field
-                Expanded(
-                  flex: 1,
-                  child: _buildPhoneSearch(),
-                ),
-                
-                                // Email Search Field
-                Expanded(
-                  flex: 1,
-                  child: _buildEmailSearch(),
-                ),
-              ],
-            ),
+              // Email Search Field
+              Expanded(
+                flex: 1,
+                child: _buildEmailSearch(),
+              ),
+            ],
           ),
-          // Second row of search fields
-          SizedBox(
-            height: 90,
-            child: Row(
-              children: [
+        ),
+        // Second row of search fields
+        SizedBox(
+          height: 90,
+          child: Row(
+            children: [
+              // Status Filter
+              Expanded(
+                flex: 1,
+                child: _buildStatusFilter(),
+              ),
 
-                                // Status Filter
-                Expanded(
-                  flex: 1,
-                  child: _buildStatusFilter(),
-                ),
+              // Date Range Search
+              Expanded(
+                flex: 2,
+                child: _buildDateRangeSearch(),
+              ),
 
-                
+              //SizedBox(width: 10),
 
-                
-                // Date Range Search
-                Expanded(
-                  flex: 2,
-                  child: _buildDateRangeSearch(),
-                ),
-                
-                //SizedBox(width: 10),
-                
-                // Reset Button
-                Expanded(
-                  flex: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 42,left: 10),
-                    child: CustomRoundButton(
-                      title: "Reset",
-                      boxColor: Colors.white,
-                      textColor: ColorManager.kPrimaryColor,
-                      fct: resetSearch,
-                      height: 45,
-                      width: double.infinity,
-                      fontSize: FontSize.s12,
-                    ),
+              // Reset Button
+              Expanded(
+                flex: 1,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 42, left: 10),
+                  child: CustomRoundButton(
+                    title: "Reset",
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    fct: resetSearch,
+                    height: 45,
+                    width: double.infinity,
+                    fontSize: FontSize.s12,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      );
+        ),
+      ],
+    );
   }
 
   Widget _buildInvoiceNumberSearch() {
@@ -302,13 +312,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   0.27, Colors.black.withOpacity(0.6)),
             ),
           ),
-         const SizedBox(height: 8),
-            BuildBoxShadowContainer(
-              
-            
+          const SizedBox(height: 8),
+          BuildBoxShadowContainer(
             height: 45,
             width: double.infinity,
-            circleRadius  : 7,
+            circleRadius: 7,
             child: TextFormField(
               controller: invoiceNumberController,
               onChanged: (value) => searchInvoices(),
@@ -367,9 +375,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         ],
       ),
     );
-  } 
+  }
 
-  
   Widget _buildEmailSearch() {
     return Padding(
       padding: const EdgeInsets.only(left: 10.0),
@@ -408,7 +415,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         ],
       ),
     );
-  } 
+  }
 
   Widget _buildDateRangeSearch() {
     return Padding(
@@ -423,8 +430,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   padding: const EdgeInsets.all(8.0),
                   child: Text(
                     "From Date",
-                    style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                        0.27, Colors.black.withOpacity(0.6)),
+                    style: buildCustomStyle(FontWeightManager.regular,
+                        FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -437,13 +444,22 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     onTap: () => _selectDate(context, isFromDate: true),
                     readOnly: true,
                     cursorColor: ColorManager.kPrimaryColor,
-                    style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                        0.18, ColorManager.textColor),
+                    style: buildCustomStyle(FontWeightManager.medium,
+                        FontSize.s10, 0.18, ColorManager.textColor),
                     decoration: decoration.copyWith(
                       hintText: "DD/MM/YYYY",
                       hintStyle: buildCustomStyle(FontWeightManager.medium,
                           FontSize.s10, 0.18, ColorManager.textColor),
-                      prefixIcon: Icon(Icons.calendar_today, size: 16),
+                      prefixIcon: Container(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          Icons.calendar_today,
+                          size: 16,
+                          color: ColorManager.kPrimaryColor,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
                   ),
                 ),
@@ -459,8 +475,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   padding: const EdgeInsets.all(8.0),
                   child: Text(
                     "To Date",
-                    style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                        0.27, Colors.black.withOpacity(0.6)),
+                    style: buildCustomStyle(FontWeightManager.regular,
+                        FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -473,13 +489,22 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     onTap: () => _selectDate(context, isFromDate: false),
                     readOnly: true,
                     cursorColor: ColorManager.kPrimaryColor,
-                    style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                        0.18, ColorManager.textColor),
+                    style: buildCustomStyle(FontWeightManager.medium,
+                        FontSize.s10, 0.18, ColorManager.textColor),
                     decoration: decoration.copyWith(
                       hintText: "DD/MM/YYYY",
                       hintStyle: buildCustomStyle(FontWeightManager.medium,
                           FontSize.s10, 0.18, ColorManager.textColor),
-                      prefixIcon: Icon(Icons.calendar_today, size: 16),
+                      prefixIcon: Container(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          Icons.calendar_today,
+                          size: 16,
+                          color: ColorManager.kPrimaryColor,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
                   ),
                 ),
@@ -505,7 +530,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   0.27, Colors.black.withOpacity(0.6)),
             ),
           ),
-          SizedBox(height: 8 ),
+          SizedBox(height: 8),
           BuildBoxShadowContainer(
             height: 45,
             width: double.infinity,
@@ -517,7 +542,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 hintText: "All Status",
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
+                filled: true,
+                fillColor: Colors.white,
               ),
+              dropdownColor: Colors.white,
               items: [
                 DropdownMenuItem(
                   value: null,
@@ -557,7 +585,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-    //   Widget _buildOrderNumberSearch() {
+  //   Widget _buildOrderNumberSearch() {
   //   return Padding(
   //     padding: const EdgeInsets.only(left: 10.0),
   //     child: Column(
@@ -595,7 +623,6 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   //     ),
   //   );
   // }
-
 
   void _showInvoiceDetails(Invoice invoice) {
     showDialog(
@@ -649,8 +676,6 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                         _buildDetailRow('Due Date', invoice.dueDate),
                         _buildDetailRow('Amount', invoice.amount.toString()),
                         _buildDetailRow('Status', invoice.status),
-
-
                       ],
                     ),
                   ),
@@ -769,8 +794,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-  Widget 
-  _buildSearchTextField() {
+  Widget _buildSearchTextField() {
     return Padding(
       padding: const EdgeInsets.only(left: 10.0),
       child: Column(
@@ -784,13 +808,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   0.27, Colors.black.withOpacity(0.6)),
             ),
           ),
-          const SizedBox(height: 8,),
-            BuildBoxShadowContainer(
-              
-            
+          const SizedBox(
+            height: 8,
+          ),
+          BuildBoxShadowContainer(
             height: 45,
             width: double.infinity,
-            circleRadius:7,
+            circleRadius: 7,
             child: TextFormField(
               controller: searchTextController,
               onChanged: (value) {
@@ -807,7 +831,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 prefixIconColor: Colors.black,
               ),
             ),
-            ),
+          ),
         ],
       ),
     );
@@ -847,7 +871,6 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                             ),
                             child: Table(
                               columnWidths: const {
-            
                                 0: FlexColumnWidth(1.5), // Invoice Number
                                 1: FlexColumnWidth(1.0), // Amount
                                 2: FlexColumnWidth(2.0), // Name
@@ -863,7 +886,6 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                               children: [
                                 TableRow(
                                   children: [
-                                    
                                     _buildTableHeader("Invoice Number"),
                                     _buildTableHeader("Amount"),
                                     _buildTableHeader("Name"),
@@ -899,10 +921,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                         scrollDirection: Axis.vertical,
                                         child: Table(
                                           columnWidths: const {
-                                            0: FlexColumnWidth(1.5), // Invoice Number
+                                            0: FlexColumnWidth(
+                                                1.5), // Invoice Number
                                             1: FlexColumnWidth(1.0), // Amount
                                             2: FlexColumnWidth(2.0), // Name
-                                            3: FlexColumnWidth(1.5), // Invoice Date
+                                            3: FlexColumnWidth(
+                                                1.5), // Invoice Date
                                             4: FlexColumnWidth(1.0), // Type
                                             5: FlexColumnWidth(1.5), // Due Date
                                             6: FlexColumnWidth(1.0), // Status
@@ -925,19 +949,21 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                         .withOpacity(0.1),
                                               ),
                                               children: [
-
                                                 _buildTableCell(
                                                     invoice.invoiceNumber),
-                                                 _buildTableCell(
-                                                    invoice.amount.toString()),    
-                                                _buildTableCell(invoice.customer.user.name.toString()),
+                                                _buildTableCell(
+                                                    invoice.amount.toString()),
+                                                _buildTableCell(invoice
+                                                    .customer.user.name
+                                                    .toString()),
                                                 _buildTableCell(
                                                     invoice.invoiceDate),
                                                 _buildTableCell(invoice.type),
-                                             
                                                 _buildTableCell(
                                                     invoice.dueDate),
-                                                Center(child: _buildStatusChip(invoice.status)),
+                                                Center(
+                                                    child: _buildStatusChip(
+                                                        invoice.status)),
                                                 Center(
                                                   child: Padding(
                                                     padding:
@@ -993,7 +1019,6 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-
   Widget _buildStatusChip(String status) {
     Color backgroundColor;
     Color textColor;
@@ -1006,7 +1031,6 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         break;
       case 'pending':
       case 'PENDING':
-     
         backgroundColor = Colors.orange.withOpacity(0.1);
         textColor = Colors.orange;
         break;

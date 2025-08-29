@@ -260,9 +260,9 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
             children: [
               // Fifth field
               Expanded(
-              flex: 1,
-              child: _buildEmailSearch(),
-            ),
+                flex: 1,
+                child: _buildEmailSearch(),
+              ),
 
               // sixth field
               Expanded(
@@ -278,7 +278,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
               ),
 
               // Eighth field - Reset Button
-         
+
               Expanded(
                 flex: 1,
                 child: Padding(
@@ -302,86 +302,86 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
   }
 
   Widget _buildPhoneSearch() {
-  return Padding(
-    padding: const EdgeInsets.only(left: 10.0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            "Phone",
-            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                0.27, Colors.black.withOpacity(0.6)),
-          ),
-        ),
-        SizedBox(height: 8),
-        BuildBoxShadowContainer(
-          height: 45,
-          width: double.infinity,
-          circleRadius: 7,
-          child: TextFormField(
-            controller: phoneController,
-            onChanged: (value) {
-              searchReceipts();
-            },
-            cursorColor: ColorManager.kPrimaryColor,
-            cursorHeight: 13,
-            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                0.18, ColorManager.textColor),
-            decoration: decoration.copyWith(
-              hintText: "Phone Number",
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
-              prefixIconColor: Colors.black,
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              "Phone",
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                  0.27, Colors.black.withOpacity(0.6)),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+          SizedBox(height: 8),
+          BuildBoxShadowContainer(
+            height: 45,
+            width: double.infinity,
+            circleRadius: 7,
+            child: TextFormField(
+              controller: phoneController,
+              onChanged: (value) {
+                searchReceipts();
+              },
+              cursorColor: ColorManager.kPrimaryColor,
+              cursorHeight: 13,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                  0.18, ColorManager.textColor),
+              decoration: decoration.copyWith(
+                hintText: "Phone Number",
+                hintStyle: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s10, 0.18, ColorManager.textColor),
+                prefixIconColor: Colors.black,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-Widget _buildEmailSearch() {
-  return Padding(
-    padding: const EdgeInsets.only(left: 10.0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            "Email",
-            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                0.27, Colors.black.withOpacity(0.6)),
-          ),
-        ),
-        SizedBox(height: 8),
-        BuildBoxShadowContainer(
-          height: 45,
-          width: double.infinity,
-          circleRadius: 7,
-          child: TextFormField(
-            controller: emailController,
-            onChanged: (value) {
-              searchReceipts();
-            },
-            cursorColor: ColorManager.kPrimaryColor,
-            cursorHeight: 13,
-            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                0.18, ColorManager.textColor),
-            decoration: decoration.copyWith(
-              hintText: "Email Address",
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
-              prefixIconColor: Colors.black,
+  Widget _buildEmailSearch() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              "Email",
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                  0.27, Colors.black.withOpacity(0.6)),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+          SizedBox(height: 8),
+          BuildBoxShadowContainer(
+            height: 45,
+            width: double.infinity,
+            circleRadius: 7,
+            child: TextFormField(
+              controller: emailController,
+              onChanged: (value) {
+                searchReceipts();
+              },
+              cursorColor: ColorManager.kPrimaryColor,
+              cursorHeight: 13,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                  0.18, ColorManager.textColor),
+              decoration: decoration.copyWith(
+                hintText: "Email Address",
+                hintStyle: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s10, 0.18, ColorManager.textColor),
+                prefixIconColor: Colors.black,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
 // Update all field widgets to use full width
   Widget _buildReceiptNumberSearch() {
@@ -494,7 +494,10 @@ Widget _buildEmailSearch() {
                 hintText: "All Status",
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
+                filled: true,
+                fillColor: Colors.white,
               ),
+              dropdownColor: Colors.white,
               items: [
                 DropdownMenuItem(
                   value: null,
@@ -560,7 +563,10 @@ Widget _buildEmailSearch() {
                 hintText: "All Payment",
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s12, 0.27, ColorManager.textColor),
+                filled: true,
+                fillColor: Colors.white,
               ),
+              dropdownColor: Colors.white,
               items: [
                 DropdownMenuItem(
                   value: null,
