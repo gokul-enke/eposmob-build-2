@@ -25,7 +25,9 @@ import 'package:provider/provider.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert'; // Added for json.decode
+import 'dart:async'; // Added for Timer
 import 'package:pos_machine/widgets/add_product_modal.dart';
+import 'package:pos_machine/components/build_restricted_payment_selector.dart';
 
 class StockItem {
   String barcode;
@@ -122,6 +124,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   bool _isLoading = false;
   bool _isFinishingOrder = false;
 
+  // Payment method state
+  RestrictedPaymentData paymentData = RestrictedPaymentData();
+  double totalStockValue = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -135,6 +141,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   @override
   void dispose() {
+    // Dispose timer
+    _barcodeTimer?.cancel();
+    
     // Dispose all search controllers
     categorySearchControllers.values
         .forEach((controller) => controller.dispose());
@@ -468,6 +477,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 stockItems[originalIndex].isSuccessfullyAdded = true;
                 debugPrint(
                     '✅ MARKED ORIGINAL ROW ${originalIndex + 1} AS SUCCESSFULLY ADDED');
+                
+                // Recalculate total stock value when item is successfully added
+                _calculateTotalStockValue();
               }
             } else {
               String errorMessage = 'Failed to add stock';
@@ -696,6 +708,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         setState(() {
           stockItems[index].isSuccessfullyAdded = true;
         });
+        
+        // Recalculate total stock value when single item is successfully added
+        _calculateTotalStockValue();
+        
         showScaffold(
             context: context, message: 'Stock item added successfully');
         debugPrint('✅ SINGLE STOCK ITEM ADDED SUCCESSFULLY');
@@ -778,6 +794,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       // Reset stock items to one empty row with no success flags
       stockItems = [StockItem(isSuccessfullyAdded: false)];
       debugPrint('✅ STOCK ITEMS RESET TO 1 EMPTY ROW (NO SUCCESS FLAGS)');
+
+      // Reset payment data
+      paymentData = RestrictedPaymentData();
+      totalStockValue = 0.0;
+      debugPrint('✅ PAYMENT DATA RESET');
     });
 
     debugPrint('✅ FORM FIELDS RESET COMPLETED');
@@ -786,6 +807,20 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   void _toggleExpanded(int index) {
     setState(() {
       stockItems[index].isExpanded = !stockItems[index].isExpanded;
+    });
+  }
+
+  void _calculateTotalStockValue() {
+    double total = 0.0;
+    for (StockItem item in stockItems) {
+      if (item.isSuccessfullyAdded && item.purchaseRate.isNotEmpty) {
+        double purchaseRate = double.tryParse(item.purchaseRate) ?? 0.0;
+        double quantity = double.tryParse(item.quantity) ?? 0.0;
+        total += (purchaseRate * quantity);
+      }
+    }
+    setState(() {
+      totalStockValue = total;
     });
   }
 
@@ -841,6 +876,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         _buildStockTableHeader(),
                         const SizedBox(height: 10),
                         _buildStockTable(),
+                        const SizedBox(height: 20),
+                        _buildPaymentSection(),
                         const SizedBox(height: 20),
                         _buildActionButtons(size),
                         const SizedBox(height: 20),
@@ -955,10 +992,6 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Widget _buildStockTableHeader() {
-    int completedItems =
-        stockItems.where((item) => item.isSuccessfullyAdded).length;
-    int totalItems = stockItems.length;
-
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -1008,6 +1041,116 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       children: List.generate(stockItems.length, (index) {
         return _buildStockRow(index);
       }),
+    );
+  }
+
+  Widget _buildPaymentSection() {
+    // Calculate current total for successfully added items
+    _calculateTotalStockValue();
+    
+    // Only show payment section if there are successfully added items
+    bool hasSuccessfulItems = stockItems.any((item) => item.isSuccessfullyAdded);
+    
+    if (!hasSuccessfulItems) {
+      return const SizedBox.shrink(); // Hidden when no items added
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Payment section title removed
+        
+        // Stock value summary - Commented out for now
+        /*
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: ColorManager.kPrimaryColor.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: ColorManager.kPrimaryColor.withOpacity(0.2)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total Purchase Value',
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s14,
+                      0.27,
+                      Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '₹${totalStockValue.toStringAsFixed(2)}',
+                    style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s20,
+                      0.30,
+                      ColorManager.kPrimaryColor,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.green.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.inventory_2,
+                      size: 16,
+                      color: Colors.green.shade600,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${stockItems.where((item) => item.isSuccessfullyAdded).length} items',
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s12,
+                        0.27,
+                        Colors.green.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        */
+        
+        // Payment method selector with restrictions (no validation)
+        BuildRestrictedPaymentSelector(
+          title: "Select Payment Method",
+          availableMethods: const [
+            RestrictedPaymentType.cash,
+            RestrictedPaymentType.card,
+            RestrictedPaymentType.upi,
+          ], // Supports all methods but blocks Card + UPI
+          onPaymentChanged: (data) {
+            setState(() {
+              paymentData = data;
+            });
+            debugPrint('Purchase Payment Data: ${data.totalAmount}');
+          },
+          showTotalAmount: true,
+          // expectedAmount: totalStockValue, // Validation removed - no amount validation
+          // showRestrictionInfo: false, // Default - no info box shown
+        ),
+      ],
     );
   }
 
@@ -1315,6 +1458,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   // Auto-fill method for barcode scanning
+  Timer? _barcodeTimer;
+  
   void _autoFillFromBarcode(int index, String barcode) {
     debugPrint('🔍 BARCODE AUTO-FILL TRIGGERED');
     debugPrint('   - Row index: $index');
@@ -1325,6 +1470,16 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       return;
     }
 
+    // Cancel previous timer to debounce rapid barcode inputs
+    _barcodeTimer?.cancel();
+    
+    // Add delay to prevent multiple rapid API calls during barcode scanning
+    _barcodeTimer = Timer(const Duration(milliseconds: 500), () {
+      _performBarcodeAutoFill(index, barcode);
+    });
+  }
+
+  void _performBarcodeAutoFill(int index, String barcode) {
     // Get the LocalProductProvider
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
@@ -1426,8 +1581,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       });
 
       // Trigger tax calculation for both retail and wholesale prices after auto-fill
-      _calculateTaxForStockItem(index, isRetail: true);
-      _calculateTaxForStockItem(index, isRetail: false);
+      // Add small delay to ensure UI updates smoothly
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _calculateTaxForStockItem(index, isRetail: true);
+        _calculateTaxForStockItem(index, isRetail: false);
+      });
 
       debugPrint('✅ AUTO-FILL COMPLETED SUCCESSFULLY');
     } else {
@@ -1821,8 +1979,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               });
 
               // Trigger tax calculation for both retail and wholesale prices after product selection
-              _calculateTaxForStockItem(index, isRetail: true);
-              _calculateTaxForStockItem(index, isRetail: false);
+              // Add small delay to ensure UI updates smoothly
+              Future.delayed(const Duration(milliseconds: 100), () {
+                _calculateTaxForStockItem(index, isRetail: true);
+                _calculateTaxForStockItem(index, isRetail: false);
+              });
 
               debugPrint('✅ PRODUCT DROPDOWN AUTO-FILL COMPLETED SUCCESSFULLY');
             }
@@ -2270,6 +2431,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             'No stock items have been added successfully. Please add some stock items first.');
                     return;
                   }
+
+                  // Payment validation removed - no validation required for now
 
                   debugPrint(
                       '📦 FOUND ${addedItems.length} SUCCESSFULLY ADDED STOCK ITEMS');
