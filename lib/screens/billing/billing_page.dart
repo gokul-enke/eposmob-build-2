@@ -33,6 +33,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
+import 'package:pos_machine/widgets/sync_button.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
 import 'package:pos_machine/widgets/horizontal_product_view_local.dart';
 import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
@@ -1032,7 +1033,7 @@ class BillingPageState extends State<BillingPage>
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 16),
+                              vertical: 8, horizontal: 8),
                           decoration: BoxDecoration(
                             color: _selectedSidebarTab == 0
                                 ? ColorManager.kPrimaryColor
@@ -1042,14 +1043,6 @@ class BillingPageState extends State<BillingPage>
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.inventory_2_outlined,
-                                size: 18,
-                                color: _selectedSidebarTab == 0
-                                    ? Colors.white
-                                    : Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 3),
                               Text(
                                 'Products',
                                 style: TextStyle(
@@ -1076,7 +1069,7 @@ class BillingPageState extends State<BillingPage>
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 16),
+                              vertical: 8, horizontal: 8),
                           decoration: BoxDecoration(
                             color: _selectedSidebarTab == 1
                                 ? ColorManager.kPrimaryColor
@@ -1086,14 +1079,6 @@ class BillingPageState extends State<BillingPage>
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.receipt_long_outlined,
-                                size: 18,
-                                color: _selectedSidebarTab == 1
-                                    ? Colors.white
-                                    : Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 3),
                               Text(
                                 'Orders',
                                 style: TextStyle(
@@ -1313,6 +1298,11 @@ class BillingPageState extends State<BillingPage>
                   keyboardProvider.featureOn(); // or set type as needed
                 }
               },
+            ),
+            // Sync button next to keyboard icon
+            const SyncButton(
+              showTooltip: true,
+              showText: false,
             ),
             // Show toggle button next to order number when sidebar is hidden
             if (!_isSidebarVisible) ...[
@@ -3674,18 +3664,19 @@ class BillingPageState extends State<BillingPage>
 
             String? formattedTotal =
                 orderDetails.data?.cart?.priceSummary?.netPayable?.toString() ??
-                orderDetails.data?.cart?.priceSummary?.netTotal.toString();
+                    orderDetails.data?.cart?.priceSummary?.netTotal.toString();
             String? savedTotal =
                 orderDetails.data?.cart?.priceSummary?.savedTotal.toString();
 
             String storeName = orderDetails.data!.cart!.storeName ?? "";
             String orderDate = orderDetails.data!.orderDate ?? "";
-            
+
             // Extract customer details
             String? customerName = orderDetails.data?.customerDetails?.name;
             String? customerPhone = orderDetails.data?.customerDetails?.phone;
             String? customerEmail = orderDetails.data?.customerDetails?.email;
-            String? customerAddress = orderDetails.data?.customerDetails?.address?.join(', ');
+            String? customerAddress =
+                orderDetails.data?.customerDetails?.address?.join(', ');
 
             debugPrint(
                 "🖨️ Navigating to print page for order #${orderDetails.data!.orderNumber}");
@@ -3697,7 +3688,9 @@ class BillingPageState extends State<BillingPage>
                   cartItems: orderDetails.data!.cart!.cartItems!,
                   formattedTotal: formattedTotal!,
                   savedTotal: savedTotal!,
-                  discountAmount: orderDetails.data!.priceSummary?.discount?.toString() ?? "0.00",
+                  discountAmount:
+                      orderDetails.data!.priceSummary?.discount?.toString() ??
+                          "0.00",
                   orderDate: orderDate,
                   orderNumber: orderDetails.data!.orderNumber ?? "",
                   customerName: customerName,
@@ -4464,8 +4457,11 @@ class BillingPageState extends State<BillingPage>
     // Auto-fill cash amount if no payment methods are currently selected
     String autoFillCashAmount = _cashAmountController.text;
     bool autoSelectCash = _isCashSelected;
-    
-    if (!_isCashSelected && !_isCardSelected && !_isUpiSelected && !_isDebitSelected) {
+
+    if (!_isCashSelected &&
+        !_isCardSelected &&
+        !_isUpiSelected &&
+        !_isDebitSelected) {
       // No payment method selected, auto-fill cash with cart total
       autoFillCashAmount = localProductProvider.cartTotal.toStringAsFixed(2);
       autoSelectCash = true;
@@ -4740,11 +4736,15 @@ class BillingPageState extends State<BillingPage>
             formattedTotal: netTotal.toString(), // Use calculated net total
             savedTotal:
                 youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
-            discountAmount: savedOrder.flatDiscount != null || savedOrder.percentageDiscount != null
-                ? ((savedOrder.flatDiscount ?? 0.0) + 
-                   ((savedOrder.percentageDiscount ?? 0.0) > 0 ? 
-                    (savedOrder.total * (savedOrder.percentageDiscount ?? 0.0) / 100) : 0.0))
-                      .toString()
+            discountAmount: savedOrder.flatDiscount != null ||
+                    savedOrder.percentageDiscount != null
+                ? ((savedOrder.flatDiscount ?? 0.0) +
+                        ((savedOrder.percentageDiscount ?? 0.0) > 0
+                            ? (savedOrder.total *
+                                (savedOrder.percentageDiscount ?? 0.0) /
+                                100)
+                            : 0.0))
+                    .toString()
                 : "0.00",
             orderDate: savedOrder.createdAt,
             orderNumber: savedOrder.orderNumber,

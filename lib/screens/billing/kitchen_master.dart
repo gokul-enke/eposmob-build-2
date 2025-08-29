@@ -166,6 +166,42 @@ class _KitchenMasterState extends State<KitchenMaster> {
     }
   }
 
+  // Silent refresh method for background updates (no loading spinner)
+  Future<void> _fetchAllSavedOrdersSilently() async {
+    debugPrint('🔄 === FETCHING SAVED ORDERS SILENTLY ===');
+    
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final response = await cartProvider.listSavedOrders(
+        accessToken: authModel.token ?? '',
+        tableId: null, // null => fetch for all tables
+      );
+
+      debugPrint('📥 Saved Orders Response Status (silent): ${response['status']}');
+
+      if ((response['status'] as String?)?.toLowerCase() == 'success') {
+        final List<dynamic> orders =
+            (response['orders'] as List<dynamic>?) ?? [];
+
+        debugPrint('📦 Found ${orders.length} orders (silent)');
+
+        final parsed =
+            orders.map<KitchenOrder>(_mapSavedOrderToKitchenOrder).toList();
+        setState(() {
+          _orders = parsed;
+        });
+
+        debugPrint('✅ Orders mapped and state updated (silent)');
+      } else {
+        debugPrint('⚠️ Failed to refresh orders silently: ${response['message']}');
+      }
+    } catch (e) {
+      debugPrint('❌ Exception in silent refresh: $e');
+    }
+    debugPrint('🏁 === SILENT SAVED ORDERS FETCH COMPLETED ===');
+  }
+
   Future<void> _fetchCartItemStatuses() async {
     debugPrint('🚀 === FETCHING CART ITEM STATUSES ===');
     try {
@@ -479,7 +515,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
             screenSize: screenSize,
             errorMessage: _errorMessage,
             onRetry: () {
-              _fetchAllSavedOrders();
+              _fetchAllSavedOrdersSilently();
               _fetchCartItemStatuses();
             },
           ),
@@ -503,7 +539,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
             orders: _orders,
             screenSize: screenSize,
             onRefresh: () {
-              _fetchAllSavedOrders();
+              _fetchAllSavedOrdersSilently();
               _fetchCartItemStatuses();
             },
           ),
@@ -523,7 +559,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
             isCompact: true,
             screenSize: screenSize,
             onRefresh: () {
-              _fetchAllSavedOrders();
+              _fetchAllSavedOrdersSilently();
               _fetchCartItemStatuses();
             },
           ),
@@ -542,7 +578,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
             onCartItemStatusChanged: _updateCartItemStatusAPI,
             errorMessage: _errorMessage,
             onRetry: () {
-              _fetchAllSavedOrders();
+              _fetchAllSavedOrdersSilently();
               _fetchCartItemStatuses();
             },
           ),
@@ -650,12 +686,12 @@ class _KitchenMasterState extends State<KitchenMaster> {
               '⚠️ WARNING: Status did not change! Item might already be in this status.');
         }
 
-        debugPrint('🔄 Refreshing order details...');
+        debugPrint('🔄 Refreshing order details silently...');
 
-        // Refresh the order details
-        await _fetchAllSavedOrders();
+        // Refresh the order details silently (no loading spinner)
+        await _fetchAllSavedOrdersSilently();
 
-        debugPrint('✅ Order details refreshed');
+        debugPrint('✅ Order details refreshed silently');
 
         // Show success message using custom dialog
         if (mounted) {
@@ -973,7 +1009,6 @@ class _OrderQueuePanel extends StatelessWidget {
 
   Widget _buildOrderCard(KitchenOrder order, bool compact, OrderStatus selectedFilter) {
     final timeSinceOrder = DateTime.now().difference(order.timestamp);
-    final isUrgent = timeSinceOrder.inMinutes > 15;
 
     return Material(
       color: Colors.transparent,
@@ -984,15 +1019,11 @@ class _OrderQueuePanel extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: EdgeInsets.all(compact ? 12 : 16),
           decoration: BoxDecoration(
-            color: isUrgent
-                ? const Color(0xFFDC2626).withOpacity(0.05)
-                : Colors.grey.shade50,
+            color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isUrgent
-                  ? const Color(0xFFDC2626).withOpacity(0.3)
-                  : Colors.grey.shade200,
-              width: isUrgent ? 2 : 1,
+              color: Colors.grey.shade200,
+              width: 1,
             ),
           ),
           child: Column(
@@ -1024,9 +1055,7 @@ class _OrderQueuePanel extends StatelessWidget {
                         FontWeightManager.medium,
                         compact ? FontSize.s10 : FontSize.s11,
                         0.21,
-                        isUrgent
-                            ? const Color(0xFFDC2626)
-                            : const Color(0xFF64748B)),
+                        const Color(0xFF64748B)),
                   ),
                 ],
               ),
@@ -1197,6 +1226,7 @@ class _OrderDetailsPanel extends StatefulWidget {
 
 class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
   String? _expandedOrderId;
+  Set<String> _loadingButtons = {}; // Track which buttons are loading
 
   @override
   Widget build(BuildContext context) {
@@ -1363,21 +1393,14 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                               final order = activeOrders[index];
                               final timeSinceOrder =
                                   DateTime.now().difference(order.timestamp);
-                              final isUrgent = timeSinceOrder.inMinutes > 15;
 
                               return Container(
                                 decoration: BoxDecoration(
-                                  color: isUrgent
-                                      ? const Color(0xFFDC2626)
-                                          .withOpacity(0.05)
-                                      : Colors.grey.shade50,
+                                  color: Colors.grey.shade50,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: isUrgent
-                                        ? const Color(0xFFDC2626)
-                                            .withOpacity(0.3)
-                                        : Colors.grey.shade200,
-                                    width: isUrgent ? 2 : 1,
+                                    color: Colors.grey.shade200,
+                                    width: 1,
                                   ),
                                 ),
                                 child: Theme(
@@ -1424,9 +1447,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                                               FontWeightManager.medium,
                                               FontSize.s12,
                                               0.21,
-                                              isUrgent
-                                                  ? const Color(0xFFDC2626)
-                                                  : const Color(0xFF64748B)),
+                                              const Color(0xFF64748B)),
                                         ),
                                       ],
                                     ),
@@ -1667,6 +1688,8 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                 .map((status) {
               final color = _getStatusButtonColor(status.value);
               String buttonText = status.description;
+              final buttonId = '${item.id}_${status.id}'; // Unique button identifier
+              final isLoading = _loadingButtons.contains(buttonId);
 
               // Use more descriptive button text based on status
               switch (status.value.toUpperCase()) {
@@ -1684,10 +1707,13 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
               return Container(
                 width: double.infinity,
                 child: _buildStatusButton(
-                  buttonText,
+                  isLoading ? 'Processing...' : buttonText,
                   color,
-                  true,
-                  () {
+                  !isLoading, // Disable button when loading
+                  isLoading,  // Show loading indicator
+                  () async {
+                    if (isLoading) return; // Prevent multiple clicks
+                    
                     debugPrint('🎯 === BUTTON CLICKED ===');
                     debugPrint('🏷️ Button Text: $buttonText');
                     debugPrint('📦 Item ID: ${item.id}');
@@ -1704,7 +1730,22 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
 
                     if (cartItemId != null) {
                       debugPrint('✅ Valid cart item ID found, calling API...');
-                      widget.onCartItemStatusChanged(cartItemId, status.id);
+                      
+                      // Set loading state
+                      setState(() {
+                        _loadingButtons.add(buttonId);
+                      });
+                      
+                      try {
+                        await widget.onCartItemStatusChanged(cartItemId, status.id);
+                      } finally {
+                        // Remove loading state
+                        if (mounted) {
+                          setState(() {
+                            _loadingButtons.remove(buttonId);
+                          });
+                        }
+                      }
                     } else {
                       debugPrint(
                           '❌ Could not extract cart item ID from: ${item.id}');
@@ -1723,6 +1764,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                     'Start',
                     const Color(0xFF2563EB),
                     item.status == ItemStatus.pending,
+                    false, // Not loading for fallback buttons
                     () => widget.onItemStatusChanged(
                         orderId, item.id, ItemStatus.preparing),
                   ),
@@ -1733,6 +1775,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                     'Ready',
                     const Color(0xFF059669),
                     item.status == ItemStatus.preparing,
+                    false, // Not loading for fallback buttons
                     () => widget.onItemStatusChanged(
                         orderId, item.id, ItemStatus.ready),
                   ),
@@ -1743,6 +1786,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                     'Served',
                     const Color(0xFF6B7280),
                     item.status == ItemStatus.ready,
+                    false, // Not loading for fallback buttons
                     () => widget.onItemStatusChanged(
                         orderId, item.id, ItemStatus.served),
                   ),
@@ -1756,7 +1800,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
   }
 
   Widget _buildStatusButton(
-      String text, Color color, bool enabled, VoidCallback onTap) {
+      String text, Color color, bool enabled, bool isLoading, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1779,11 +1823,39 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                 : [],
           ),
           child: Center(
-            child: Text(
-              text,
-              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s11,
-                  0.21, enabled ? Colors.white : color.withOpacity(0.5)),
-            ),
+            child: isLoading
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            enabled ? Colors.white : color.withOpacity(0.5),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        text,
+                        style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            FontSize.s11,
+                            0.21,
+                            enabled ? Colors.white : color.withOpacity(0.5)),
+                      ),
+                    ],
+                  )
+                : Text(
+                    text,
+                    style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s11,
+                        0.21,
+                        enabled ? Colors.white : color.withOpacity(0.5)),
+                  ),
           ),
         ),
       ),
@@ -2107,27 +2179,6 @@ class _KitchenStatsPanel extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Urgent Orders',
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s12, 0.21, const Color(0xFF64748B)),
-                  ),
-                  Text(
-                    stats['urgentOrders'].toString(),
-                    style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s12,
-                        0.21,
-                        stats['urgentOrders'] > 0
-                            ? const Color(0xFFDC2626)
-                            : const Color(0xFF1E293B)),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -2256,12 +2307,6 @@ class _KitchenStatsPanel extends StatelessWidget {
 
     final totalItems = orders.fold<int>(0, (sum, order) => sum + order.items.length);
 
-    final urgentOrders = orders.where((order) {
-      final timeSinceOrder = DateTime.now().difference(order.timestamp);
-      return timeSinceOrder.inMinutes > 15 &&
-          order.status != OrderStatus.served;
-    }).length;
-
     // Calculate average prep time
     int totalPrepTimeMinutes = 0;
     int itemsWithPrepTime = 0;
@@ -2286,7 +2331,6 @@ class _KitchenStatsPanel extends StatelessWidget {
       'ready': ready,
       'served': served,
       'totalItems': totalItems,
-      'urgentOrders': urgentOrders,
       'avgPrepTime': avgPrepTime,
     };
   }

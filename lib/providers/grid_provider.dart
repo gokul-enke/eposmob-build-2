@@ -457,6 +457,84 @@ class GridSelectionProvider extends ChangeNotifier {
     }
   }
 
+  //          *********************** GENERATE BARCODE API ***************************************************
+
+  Future<Map<String, dynamic>?> generateBarcodeAPI({required String accessToken}) async {
+    // Debug: Print request details
+    debugPrint('=== GENERATE BARCODE API REQUEST ===');
+    debugPrint('URL: ${APPUrl.generateBarcode}');
+    debugPrint('Method: GET');
+    debugPrint('Access Token: ${accessToken.isNotEmpty ? "Present" : "Missing"}');
+    debugPrint('==========================================');
+
+    final Map<String, dynamic> error = {
+      'status': "failed",
+      'message': "Something went wrong, Please try Again!"
+    };
+
+    final url = Uri.parse(APPUrl.generateBarcode);
+    
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      debugPrint('=== API KEY ERROR ===');
+      debugPrint('API key not found in SharedPreferences');
+      debugPrint('=====================');
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    // Debug: Print headers
+    Map<String, String> headers = {
+      'Authorization': 'Bearer $accessToken',
+      'Content-Type': 'application/json',
+      'X-Tenant': apiKey,
+    };
+    debugPrint('Headers: $headers');
+
+    try {
+      final response = await http.get(url, headers: headers);
+      
+      // Debug: Print response details
+      debugPrint('=== GENERATE BARCODE API RESPONSE ===');
+      debugPrint('Status Code: ${response.statusCode}');
+      debugPrint('Response Headers: ${response.headers}');
+      debugPrint('Response Body: ${response.body}');
+      debugPrint('=======================================');
+      
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        
+        // Debug: Print parsed response data
+        debugPrint('=== PARSED RESPONSE DATA ===');
+        debugPrint('Full Response: $responseData');
+        debugPrint('Status: ${responseData['status']}');
+        debugPrint('Message: ${responseData['message']}');
+        debugPrint('Data: ${responseData['data']}');
+        
+        if (responseData['data'] != null && responseData['data']['barcode'] != null) {
+          debugPrint('Generated Barcode: ${responseData['data']['barcode']}');
+        }
+        debugPrint('============================');
+        
+        return responseData;
+      } else {
+        debugPrint('=== HTTP ERROR ===');
+        debugPrint('Status Code: ${response.statusCode}');
+        debugPrint('Response Body: ${response.body}');
+        debugPrint('==================');
+        return error;
+      }
+    } catch (e) {
+      debugPrint('=== EXCEPTION ERROR ===');
+      debugPrint('Exception Type: ${e.runtimeType}');
+      debugPrint('Exception Message: ${e.toString()}');
+      debugPrint('======================');
+      return error;
+    }
+  }
+
   //          *********************** CREATE PRODUCT  API ***************************************************
 
   Future<dynamic> createProductAPI({

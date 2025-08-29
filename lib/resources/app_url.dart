@@ -160,4 +160,5 @@ class APPUrl {
   static String getCartItemStatuses = '$baseURL/api/v1/cart/cart-item-statuses';
   static String updateCartItemStatus =
       '$baseURL/api/v1/cart/update-cart-item-status';
+  static String generateBarcode = '$baseURL/api/v1/product/generate-barcode';
 }

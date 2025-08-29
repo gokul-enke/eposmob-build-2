@@ -930,7 +930,15 @@ class CartProvider with ChangeNotifier {
       };
     }
 
-    debugPrint("📝 API Request Body: ${json.encode(apiBodyData)}");
+    debugPrint("\n===============================================");
+    debugPrint("📡 UPDATE ORDER API - REQUEST BODY");
+    debugPrint("===============================================");
+    debugPrint("Raw API Body Data:");
+    debugPrint(json.encode(apiBodyData));
+    debugPrint("\nFormatted API Body Data:");
+    final prettyJson = const JsonEncoder.withIndent('  ').convert(apiBodyData);
+    debugPrint(prettyJson);
+    debugPrint("===============================================\n");
 
     final url = Uri.parse(APPUrl.updateOrderUrl);
     debugPrint("🌐 API URL: ${url.toString()}");

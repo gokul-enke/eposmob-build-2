@@ -105,6 +105,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   // Search controllers for each row
   final Map<int, TextEditingController> categorySearchControllers = {};
   final Map<int, TextEditingController> productSearchControllers = {};
+  final Map<int, TextEditingController> barcodeControllers = {};
 
   // Selected header values
   GetStoreModelData? selectedStore;
@@ -135,6 +136,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         .forEach((controller) => controller.dispose());
     productSearchControllers.values
         .forEach((controller) => controller.dispose());
+    barcodeControllers.values
+        .forEach((controller) => controller.dispose());
     supplierSearchController.dispose();
     super.dispose();
   }
@@ -152,6 +155,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       productSearchControllers[index] = TextEditingController();
     }
     return productSearchControllers[index]!;
+  }
+
+  TextEditingController _getBarcodeController(int index) {
+    if (!barcodeControllers.containsKey(index)) {
+      barcodeControllers[index] = TextEditingController(text: stockItems[index].barcode);
+    }
+    return barcodeControllers[index]!;
   }
 
   Future<void> _initializeData() async {
@@ -587,6 +597,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         showScaffold(
             context: context, message: 'Stock item added successfully');
         debugPrint('✅ SINGLE STOCK ITEM ADDED SUCCESSFULLY');
+        
+        // Automatically add a new empty row after successful stock addition
+        debugPrint('🔄 AUTO-ADDING NEW ROW AFTER SUCCESSFUL STOCK ADDITION');
+        setState(() {
+          stockItems.add(StockItem());
+        });
+        debugPrint('✅ NEW EMPTY ROW ADDED AUTOMATICALLY. Total items: ${stockItems.length}');
       } else {
         String errorMessage = 'Failed to add stock';
         if (apiResponse is Map<String, dynamic> &&
@@ -632,6 +649,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     categorySearchControllers.values
         .forEach((controller) => controller.clear());
     productSearchControllers.values.forEach((controller) => controller.clear());
+    barcodeControllers.values.forEach((controller) => controller.clear());
     debugPrint('✅ SEARCH CONTROLLERS CLEARED');
 
     setState(() {
@@ -656,8 +674,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       // Dispose controllers for the removed row
       categorySearchControllers[index]?.dispose();
       productSearchControllers[index]?.dispose();
+      barcodeControllers[index]?.dispose();
       categorySearchControllers.remove(index);
       productSearchControllers.remove(index);
+      barcodeControllers.remove(index);
 
       setState(() {
         stockItems.removeAt(index);
@@ -768,6 +788,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     categorySearchControllers.values
         .forEach((controller) => controller.clear());
     productSearchControllers.values.forEach((controller) => controller.clear());
+    barcodeControllers.values.forEach((controller) => controller.clear());
     setState(() {
       selectedStore = null;
       selectedSupplier = null;
@@ -1049,7 +1070,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     height: 40,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: TextFormField(
-                      initialValue: item.barcode,
+                      controller: _getBarcodeController(index),
                       decoration: const InputDecoration(
                         hintText: 'Barcode',
                         border: InputBorder.none,
@@ -1240,6 +1261,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             localProduct; // Now safe to set directly
         stockItems[index].barcode = localProduct.barcode ?? '';
         stockItems[index].product = localProduct.productName ?? '';
+        // Update barcode controller to reflect the change
+        _getBarcodeController(index).text = localProduct.barcode ?? '';
         debugPrint('   - Product: ${localProduct.productName}');
         debugPrint('   - Barcode: ${localProduct.barcode}');
 
@@ -1614,22 +1637,90 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           items: uniqueProducts,
           onChanged: (product) {
             if (product != null) {
+              debugPrint('🔄 PRODUCT DROPDOWN AUTO-FILL TRIGGERED');
+              debugPrint('   - Row index: $index');
+              debugPrint('   - Product: ${product.productName} (ID: ${product.productId})');
+              
               setState(() {
+                debugPrint('🔄 AUTO-FILLING ALL FIELDS FROM PRODUCT SELECTION...');
+                // Auto-fill basic fields
                 stockItems[index].productData = product;
                 stockItems[index].product = product.productName ?? '';
                 stockItems[index].barcode = product.barcode ?? '';
-                stockItems[index].salePrice =
-                    product.price?.price?.toString() ?? '0';
+                // Update barcode controller to reflect the change
+                _getBarcodeController(index).text = product.barcode ?? '';
+                debugPrint('   - Product: ${product.productName}');
+                debugPrint('   - Barcode: ${product.barcode}');
+                
+                // Auto-fill category - find the category from CategoryProvider
+                if (product.category != null) {
+                  debugPrint('🔍 SEARCHING FOR CATEGORY: ${product.category!.name}');
+                  final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+                  final categoryList = categoryProvider.category;
+                  if (categoryList != null) {
+                    // Find category by name from ProductCategory
+                    final matchingCategory = categoryList.firstWhere(
+                      (cat) => cat.categoryName == product.category!.name,
+                      orElse: () => categoryList.first, // fallback to first category
+                    );
+                    stockItems[index].categoryData = matchingCategory;
+                    stockItems[index].category = matchingCategory.categoryName ?? '';
+                    debugPrint('   - Category: ${matchingCategory.categoryName}');
+                  }
+                }
+                
+                // Auto-fill expanded fields
+                stockItems[index].salePrice = product.price?.price?.toString() ?? '0';
                 stockItems[index].mrp = product.mrp?.toString() ??
-                    product.price?.price?.toString() ??
-                    '0';
-                stockItems[index].purchaseRate =
-                    product.stock?.firstOrNull?.purchasePrice ?? '0';
+                    product.price?.price?.toString() ?? '0';
                 stockItems[index].unit = product.unit ?? '';
+                debugPrint('   - Sale Price: ${stockItems[index].salePrice}');
+                debugPrint('   - MRP: ${stockItems[index].mrp}');
+                debugPrint('   - Unit: ${stockItems[index].unit}');
+                
+                // Auto-fill unit dropdown - find the matching unit key
+                if (product.unit != null && product.unit!.isNotEmpty) {
+                  debugPrint('🔍 SEARCHING FOR UNIT KEY: ${product.unit}');
+                  final purchaseProvider = Provider.of<PurchaseProvider>(context, listen: false);
+                  final unitList = purchaseProvider.getUnitList;
+                  if (unitList != null) {
+                    // Find the key that matches the unit value
+                    String? matchingUnitKey = unitList.entries
+                        .firstWhere(
+                          (entry) => entry.value == product.unit,
+                          orElse: () => MapEntry('', ''),
+                        )
+                        .key;
+                    if (matchingUnitKey.isNotEmpty) {
+                      stockItems[index].selectedUnit = matchingUnitKey; // Store unit ID
+                      stockItems[index].unit = product.unit!; // Store unit name for display
+                      debugPrint('   - Unit Key (ID): $matchingUnitKey');
+                      debugPrint('   - Unit Name: ${product.unit}');
+                    }
+                  }
+                }
+                
+                // Auto-fill purchase rate from first available stock
+                if (product.stock != null && product.stock!.isNotEmpty) {
+                  stockItems[index].purchaseRate = product.stock!.first.purchasePrice ?? '0';
+                  debugPrint('   - Purchase Rate: ${stockItems[index].purchaseRate}');
+                }
+                
+                // Auto-fill wholesale price (use MRP as default if no wholesale price)
+                stockItems[index].wholesale = product.mrp?.toString() ??
+                    product.price?.price?.toString() ?? '0';
+                debugPrint('   - Wholesale Price: ${stockItems[index].wholesale}');
+                
+                // Auto-fill Minimum Units for Wholesale with default value
+                stockItems[index].batchNumber = '1'; // Default minimum units for wholesale
+                debugPrint('   - Batch Number: ${stockItems[index].batchNumber}');
               });
+              
               // Trigger tax calculation for both retail and wholesale prices after product selection
               _calculateTaxForStockItem(index, isRetail: true);
               _calculateTaxForStockItem(index, isRetail: false);
+              
+              debugPrint('✅ PRODUCT DROPDOWN AUTO-FILL COMPLETED SUCCESSFULLY');
             }
           },
           displayText: (product) => product.productName ?? '',

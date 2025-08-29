@@ -1042,8 +1042,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         "${product.mrp ?? 'N/A'}"),
                                                     _buildTableCell(product
                                                             .purchasePrice ??
-                                                        product.stock!.first
-                                                            .purchasePrice ??
+                                                        (product.stock != null && product.stock!.isNotEmpty
+                                                            ? product.stock!.first
+                                                                .purchasePrice
+                                                            : null) ??
                                                         'N/A'),
                                                     _buildTableCell(
                                                         product.unit ?? 'N/A'),
