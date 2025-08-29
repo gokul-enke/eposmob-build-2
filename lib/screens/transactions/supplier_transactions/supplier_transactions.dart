@@ -16,7 +16,6 @@ import '../../../resources/style_manager.dart';
 class TransactionScreen extends StatefulWidget {
   const TransactionScreen({super.key});
 
-
   @override
   State<TransactionScreen> createState() => _TransactionScreenState();
 }
@@ -27,7 +26,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
   final TextEditingController statusController = TextEditingController();
   final TextEditingController paymentModeController = TextEditingController();
   final TextEditingController supplierController = TextEditingController();
-  final TextEditingController supplierSearchController = TextEditingController();
+  final TextEditingController supplierSearchController =
+      TextEditingController();
 
   TransactionModel? selectedTransaction;
   bool initLoading = false;
@@ -36,11 +36,12 @@ class _TransactionScreenState extends State<TransactionScreen> {
   @override
   void initState() {
     super.initState();
-    final accessToken = Provider.of<AuthModel>(context, listen: false).token ?? '';
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
     Provider.of<TransactionProvider>(context, listen: false)
         .setAccessToken(accessToken);
     loadInitData();
-    
+
     // Initialize controllers with default values
     typeController.text = "All Types";
     statusController.text = "All Status";
@@ -66,42 +67,44 @@ class _TransactionScreenState extends State<TransactionScreen> {
     }
   }
 
-void searchTransactions() {
-  final supplierFilter = supplierSearchController.text.isEmpty 
-      ? null 
-      : supplierSearchController.text;
-  
-  Provider.of<TransactionProvider>(context, listen: false)
-      .applyTransactionFiltersLocally(
-    filterName: searchController.text,
-    filterType: typeController.text == "All Types" ? null : typeController.text,
-    filterStatus: statusController.text == "All Status" ? null : statusController.text,
-    filterPaymentMode: paymentModeController.text == "All Payment Modes" 
-        ? null 
-        : paymentModeController.text,
-    filterSupplier: supplierFilter,
-    page: 1,
-  );
-}
+  void searchTransactions() {
+    final supplierFilter = supplierSearchController.text.isEmpty
+        ? null
+        : supplierSearchController.text;
+
+    Provider.of<TransactionProvider>(context, listen: false)
+        .applyTransactionFiltersLocally(
+      filterName: searchController.text,
+      filterType:
+          typeController.text == "All Types" ? null : typeController.text,
+      filterStatus:
+          statusController.text == "All Status" ? null : statusController.text,
+      filterPaymentMode: paymentModeController.text == "All Payment Modes"
+          ? null
+          : paymentModeController.text,
+      filterSupplier: supplierFilter,
+      page: 1,
+    );
+  }
 
   void resetSearch() {
-  setState(() {
-    searchController.clear();
-    typeController.text = "All Types";
-    statusController.text = "All Status";
-    paymentModeController.text = "All Payment Modes";
-    supplierSearchController.clear();  // Clear the supplier search
-  });
-  Provider.of<TransactionProvider>(context, listen: false)
-      .resetTransactionFilters();
-}
+    setState(() {
+      searchController.clear();
+      typeController.text = "All Types";
+      statusController.text = "All Status";
+      paymentModeController.text = "All Payment Modes";
+      supplierSearchController.clear(); // Clear the supplier search
+    });
+    Provider.of<TransactionProvider>(context, listen: false)
+        .resetTransactionFilters();
+  }
 
   Future<void> _onRefresh() async {
     await Provider.of<TransactionProvider>(context, listen: false)
         .refreshAllTransactions();
   }
 
- Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -228,6 +231,7 @@ void searchTransactions() {
       ),
     );
   }
+
   void _showTransactionDetails(TransactionModel transaction) {
     setState(() {
       selectedTransaction = transaction;
@@ -317,7 +321,6 @@ void searchTransactions() {
     );
   }
 
-
   Widget _buildFilterDropdown({
     required String title,
     required TextEditingController controller,
@@ -353,7 +356,10 @@ void searchTransactions() {
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
+                filled: true,
+                fillColor: Colors.white,
               ),
+              dropdownColor: Colors.white,
               value: controller.text,
               hint: Text(
                 'Select $title',
@@ -392,213 +398,216 @@ void searchTransactions() {
   }
 
   @override
-Widget build(BuildContext context) {
-  final transactionProvider = Provider.of<TransactionProvider>(context);
-  Size size = MediaQuery.of(context).size;
-  final bool isSmallScreen = size.width < 600;
+  Widget build(BuildContext context) {
+    final transactionProvider = Provider.of<TransactionProvider>(context);
+    Size size = MediaQuery.of(context).size;
+    final bool isSmallScreen = size.width < 600;
 
-  return SafeArea(
-    child: RefreshIndicator(
-      onRefresh: _onRefresh,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: const [
-            BoxShadow(
-              color: ColorManager.boxShadowColor,
-              blurRadius: 6,
-              offset: Offset(1, 1),
-            )
-          ],
-          color: Colors.white,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              /// Title
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Supplier Transactions",
-                    style: buildCustomStyle(
-                      FontWeightManager.semiBold,
-                      FontSize.s20,
-                      0.30,
-                      ColorManager.textColor,
+    return SafeArea(
+      child: RefreshIndicator(
+        onRefresh: _onRefresh,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: const [
+              BoxShadow(
+                color: ColorManager.boxShadowColor,
+                blurRadius: 6,
+                offset: Offset(1, 1),
+              )
+            ],
+            color: Colors.white,
+          ),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                /// Title
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Supplier Transactions",
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s20,
+                        0.30,
+                        ColorManager.textColor,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
 
-              const SizedBox(height: 15),
+                const SizedBox(height: 15),
 
-              /// First Row (Filters)
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildSearchField(
-                      title: "Search",
-                      child: TextField(
-                        controller: searchController,
-                        onChanged: (value) => searchTransactions(),
-                        decoration: InputDecoration(
-                          hintText: 'Search by name, reference',
-                          hintStyle: buildCustomStyle(
+                /// First Row (Filters)
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSearchField(
+                        title: "Search",
+                        child: TextField(
+                          controller: searchController,
+                          onChanged: (value) => searchTransactions(),
+                          decoration: InputDecoration(
+                            hintText: 'Search by name, reference',
+                            hintStyle: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s12,
+                              0.27,
+                              ColorManager.textColor.withOpacity(.5),
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          style: buildCustomStyle(
                             FontWeightManager.medium,
                             FontSize.s12,
                             0.27,
                             ColorManager.textColor.withOpacity(.5),
                           ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s12,
-                          0.27,
-                          ColorManager.textColor.withOpacity(.5),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildSearchField(
-                      title: "Supplier",
-                      child: SupplierAutocomplete(
-                        size: size,
-                        onSelected: (_) => searchTransactions(),
-                        supplierList: transactionProvider.getSupplierOptions(),
-                        controller: supplierSearchController,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildFilterDropdown(
-                      title: "Type",
-                      controller: typeController,
-                      options: transactionProvider.getTypeOptions(),
-                      width: size.width,
-                      isSmallScreen: isSmallScreen,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildFilterDropdown(
-                      title: "Status",
-                      controller: statusController,
-                      options: transactionProvider.getStatusOptions(),
-                      width: size.width,
-                      isSmallScreen: isSmallScreen,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 15),
-
-              /// Second Row (Reset button aligned right)
-
-                    Row(
-                      children: [
-                        // Empty space to push reset button to the end
-                        Expanded(
-                          flex: 3,
-                          child: Container(),
-                        ),
-
-                        // Reset Button
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 10.0),
-                            child: CustomRoundButton(
-                              title: "Reset",
-                              boxColor: Colors.white,
-                              textColor: ColorManager.kPrimaryColor,
-                              fct: resetSearch,
-                              height: 45,
-                              width: double.infinity,
-                              fontSize: FontSize.s12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-
-
-              const SizedBox(height: 20),
-
-              /// Table + Pagination
-              Expanded(
-                child: Column(
-                  children: [
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: initLoading || transactionProvider.transactionIsLoading
-                          ? const Center(child: CircularProgressIndicator.adaptive())
-                          : transactionProvider.listTransactionModelDataList == null ||
-                                  transactionProvider.listTransactionModelDataList!.isEmpty
-                              ? _buildEmptyState(transactionProvider)
-                              : _buildTransactionTable(transactionProvider),
+                      child: _buildSearchField(
+                        title: "Supplier",
+                        child: SupplierAutocomplete(
+                          size: size,
+                          onSelected: (_) => searchTransactions(),
+                          supplierList:
+                              transactionProvider.getSupplierOptions(),
+                          controller: supplierSearchController,
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 10),
-                    PaginationControl(
-                      currentPage: transactionProvider.transactionCurrentPage,
-                      totalPages: transactionProvider.transactionTotalPages,
-                      onPageChanged: (int page) {
-                        transactionProvider.goToTransactionPage(page);
-                      },
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildFilterDropdown(
+                        title: "Type",
+                        controller: typeController,
+                        options: transactionProvider.getTypeOptions(),
+                        width: size.width,
+                        isSmallScreen: isSmallScreen,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildFilterDropdown(
+                        title: "Status",
+                        controller: statusController,
+                        options: transactionProvider.getStatusOptions(),
+                        width: size.width,
+                        isSmallScreen: isSmallScreen,
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 15),
+
+                /// Second Row (Reset button aligned right)
+
+                Row(
+                  children: [
+                    // Empty space to push reset button to the end
+                    Expanded(
+                      flex: 3,
+                      child: Container(),
+                    ),
+
+                    // Reset Button
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 10.0),
+                        child: CustomRoundButton(
+                          title: "Reset",
+                          boxColor: Colors.white,
+                          textColor: ColorManager.kPrimaryColor,
+                          fct: resetSearch,
+                          height: 45,
+                          width: double.infinity,
+                          fontSize: FontSize.s12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                /// Table + Pagination
+                Expanded(
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: initLoading ||
+                                transactionProvider.transactionIsLoading
+                            ? const Center(
+                                child: CircularProgressIndicator.adaptive())
+                            : transactionProvider
+                                            .listTransactionModelDataList ==
+                                        null ||
+                                    transactionProvider
+                                        .listTransactionModelDataList!.isEmpty
+                                ? _buildEmptyState(transactionProvider)
+                                : _buildTransactionTable(transactionProvider),
+                      ),
+                      const SizedBox(height: 10),
+                      PaginationControl(
+                        currentPage: transactionProvider.transactionCurrentPage,
+                        totalPages: transactionProvider.transactionTotalPages,
+                        onPageChanged: (int page) {
+                          transactionProvider.goToTransactionPage(page);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-/// Helper for consistent fields
-Widget _buildSearchField({required String title, required Widget child}) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Text(
-          title,
-          style: buildCustomStyle(
-            FontWeightManager.regular,
-            FontSize.s14,
-            0.27,
-            Colors.black.withOpacity(0.6),
+  /// Helper for consistent fields
+  Widget _buildSearchField({required String title, required Widget child}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            title,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.27,
+              Colors.black.withOpacity(0.6),
+            ),
           ),
         ),
-      ),
-      const SizedBox(height: 8),
-      BuildBoxShadowContainer(
-        circleRadius: 7,
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 15),
-        height: 45,
-        child: child,
-      ),
-    ],
-  );
-}
-
+        const SizedBox(height: 8),
+        BuildBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.only(left: 15),
+          height: 45,
+          child: child,
+        ),
+      ],
+    );
+  }
 
   Widget _buildEmptyState(TransactionProvider provider) {
-    final hasFilters = 
-        searchController.text.isNotEmpty ||
+    final hasFilters = searchController.text.isNotEmpty ||
         typeController.text != "All Types" ||
         statusController.text != "All Status" ||
         paymentModeController.text != "All Payment Modes" ||
@@ -713,7 +722,8 @@ Widget _buildSearchField({required String title, required Widget child}) {
                       ...provider.listTransactionModelDataList!
                           .asMap()
                           .entries
-                          .map((entry) => _buildTransactionRow(entry.key, entry.value))
+                          .map((entry) =>
+                              _buildTransactionRow(entry.key, entry.value))
                           .toList(),
                     ],
                   ),
@@ -769,4 +779,3 @@ Widget _buildSearchField({required String title, required Widget child}) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////------------------------///////////////////////////////////////
- 

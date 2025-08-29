@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/category_list.dart';
@@ -31,6 +32,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final TextEditingController storeController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
   final TextEditingController barcodeController = TextEditingController();
+  final TextEditingController categorySearchController =
+      TextEditingController();
+  final TextEditingController propertySearchController =
+      TextEditingController();
+  final TextEditingController storeSearchController = TextEditingController();
+  final TextEditingController supplierSearchController =
+      TextEditingController();
   GetStoreModelData? storeSelected;
   GetSuppliersModelData? supplier;
   final TextEditingController supplierIdController = TextEditingController();
@@ -455,18 +463,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   @override
   Widget build(BuildContext context) {
-    CategoryProvider categoryProvider =
-        Provider.of<CategoryProvider>(context, listen: false);
-
     Size size = MediaQuery.of(context).size;
-
-    PurchaseProvider purchaseProvider =
-        Provider.of<PurchaseProvider>(context, listen: false);
-    List<GetStoreModelData>? storeList = purchaseProvider.getStoreList;
-    List<GetSuppliersModelData>? supplierList =
-        purchaseProvider.getSupplierList;
-
-    List<Category>? categoryList = categoryProvider.category;
 
     return SafeArea(
       child: RefreshIndicator(
@@ -573,76 +570,55 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                alignment: Alignment.centerLeft,
-                                padding: const EdgeInsets.only(left: 15),
-                                height: 45,
-                                child: DropdownButtonFormField<Category>(
-                                  isExpanded: true,
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  value: categoryProvider
-                                              .selectedCategoryIndex >=
-                                          0
-                                      ? (categoryList != null &&
-                                              categoryList.isNotEmpty &&
-                                              categoryProvider
-                                                      .selectedCategoryIndex <
-                                                  categoryList.length)
-                                          ? categoryList[categoryProvider
-                                              .selectedCategoryIndex]
-                                          : null
-                                      : null,
-                                  hint: Text(
-                                    'Please Select',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s12,
-                                      0.27,
-                                      ColorManager.textColor.withOpacity(.5),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  items: categoryList != null &&
-                                          categoryList.isNotEmpty
-                                      ? categoryList
-                                          .map((Category category) {
-                                            return DropdownMenuItem<Category>(
-                                              value: category,
-                                              child: Text(
-                                                category.categoryName == "ALL"
-                                                    ? 'Please Select'
-                                                    : category.categoryName ??
-                                                        '',
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s12,
-                                                  0.27,
-                                                  ColorManager.textColor
-                                                      .withOpacity(.5),
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            );
-                                          })
-                                          .toSet()
-                                          .toList()
-                                      : [],
-                                  onChanged:
-                                      (Category? selectedCategory) async {
-                                    if (selectedCategory != null) {
-                                      setState(() {
-                                        selectedCategoryId = selectedCategory
-                                            .categoryId
-                                            .toString();
-                                      });
-                                      searchProducts(1);
+                              Consumer<CategoryProvider>(
+                                builder: (context, categoryProvider, child) {
+                                  List<Category>? categoryList =
+                                      categoryProvider.category;
+                                  Category? selectedCategory;
+                                  if (selectedCategoryId != null &&
+                                      categoryList != null) {
+                                    try {
+                                      selectedCategory =
+                                          categoryList.firstWhere(
+                                        (cat) =>
+                                            cat.categoryId.toString() ==
+                                            selectedCategoryId,
+                                        orElse: () => categoryList.first,
+                                      );
+                                    } catch (e) {
+                                      selectedCategory = null;
                                     }
-                                  },
-                                ),
+                                  }
+
+                                  return BuildDropDownWithSearch<Category>(
+                                    title: null,
+                                    showName: false,
+                                    hintText: 'Please Select',
+                                    value: selectedCategory,
+                                    items: categoryList != null &&
+                                            categoryList.isNotEmpty
+                                        ? categoryList
+                                            .where((category) =>
+                                                category.categoryName != "ALL")
+                                            .toList()
+                                        : [],
+                                    onChanged: (Category? selected) async {
+                                      if (selected != null) {
+                                        setState(() {
+                                          selectedCategoryId =
+                                              selected.categoryId.toString();
+                                        });
+                                        searchProducts(1);
+                                      }
+                                    },
+                                    displayText: (category) =>
+                                        category.categoryName ?? 'Unknown',
+                                    searchController: categorySearchController,
+                                    height: 45,
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 0, vertical: 0),
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -733,48 +709,23 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                margin: const EdgeInsets.only(left: 5),
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 15),
+                              BuildDropDownWithSearch<String>(
+                                title: null,
+                                showName: false,
+                                hintText: 'Select Property',
+                                value: selectedProperty,
+                                items: propertyList,
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    selectedProperty = newValue;
+                                  });
+                                  searchProducts(1);
+                                },
+                                displayText: (property) => property,
+                                searchController: propertySearchController,
                                 height: 45,
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    value: selectedProperty,
-                                    isExpanded: true,
-                                    hint: Text(
-                                      'Select Property',
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.27,
-                                        ColorManager.textColor.withOpacity(.5),
-                                      ),
-                                    ),
-                                    items: propertyList.map((String property) {
-                                      return DropdownMenuItem<String>(
-                                        value: property,
-                                        child: Text(
-                                          property,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 12,
-                                            color:
-                                                Colors.black.withOpacity(0.5),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (String? newValue) {
-                                      setState(() {
-                                        selectedProperty = newValue;
-                                      });
-                                      searchProducts(1);
-                                    },
-                                    icon: const Icon(Icons.arrow_drop_down),
-                                  ),
-                                ),
+                                margin: const EdgeInsets.symmetric(
+                                    horizontal: 0, vertical: 0),
                               ),
                             ],
                           ),
@@ -797,59 +748,36 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                alignment: Alignment.centerLeft,
-                                padding: const EdgeInsets.only(left: 15),
-                                height: 45,
-                                child:
-                                    DropdownButtonFormField<GetStoreModelData>(
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                  ),
-                                  isExpanded: true,
-                                  value: storeSelected,
-                                  hint: Text(
-                                    'Select Store',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s12,
-                                      0.27,
-                                      ColorManager.textColor.withOpacity(.5),
-                                    ),
-                                  ),
-                                  items:
-                                      storeList != null && storeList.isNotEmpty
-                                          ? storeList
-                                              .map((GetStoreModelData store) {
-                                              return DropdownMenuItem<
-                                                  GetStoreModelData>(
-                                                value: store,
-                                                child: Text(
-                                                  store.name ?? '',
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.27,
-                                                    ColorManager.textColor
-                                                        .withOpacity(.5),
-                                                  ),
-                                                ),
-                                              );
-                                            }).toList()
-                                          : [],
-                                  onChanged:
-                                      (GetStoreModelData? storeModelData) {
-                                    if (storeModelData != null) {
-                                      setState(() {
-                                        storeSelected = storeModelData;
-                                        storeController.text =
-                                            "${storeModelData.id ?? 1}";
-                                      });
-                                      searchProducts(1);
-                                    }
-                                  },
-                                ),
+                              Consumer<PurchaseProvider>(
+                                builder: (context, purchaseProvider, child) {
+                                  List<GetStoreModelData> stores =
+                                      purchaseProvider.getStoreList ?? [];
+                                  return BuildDropDownWithSearch<
+                                      GetStoreModelData>(
+                                    title: null,
+                                    showName: false,
+                                    hintText: 'Select Store',
+                                    value: storeSelected,
+                                    items: stores,
+                                    onChanged:
+                                        (GetStoreModelData? storeModelData) {
+                                      if (storeModelData != null) {
+                                        setState(() {
+                                          storeSelected = storeModelData;
+                                          storeController.text =
+                                              "${storeModelData.id ?? 1}";
+                                        });
+                                        searchProducts(1);
+                                      }
+                                    },
+                                    displayText: (store) =>
+                                        store.name ?? 'Unknown Store',
+                                    searchController: storeSearchController,
+                                    height: 45,
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 0, vertical: 0),
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -872,59 +800,36 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                alignment: Alignment.centerLeft,
-                                padding: const EdgeInsets.only(left: 15),
-                                height: 45,
-                                child: DropdownButtonFormField<
-                                    GetSuppliersModelData>(
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                  ),
-                                  isExpanded: true,
-                                  value: supplier,
-                                  hint: Text(
-                                    'Select Supplier',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s12,
-                                      0.27,
-                                      ColorManager.textColor.withOpacity(.5),
-                                    ),
-                                  ),
-                                  items: supplierList != null &&
-                                          supplierList.isNotEmpty
-                                      ? supplierList.map(
-                                          (GetSuppliersModelData supplier) {
-                                          return DropdownMenuItem<
-                                              GetSuppliersModelData>(
-                                            value: supplier,
-                                            child: Text(
-                                              supplier.user?.name ?? 'No Name',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.27,
-                                                ColorManager.textColor
-                                                    .withOpacity(.5),
-                                              ),
-                                            ),
-                                          );
-                                        }).toList()
-                                      : [],
-                                  onChanged: (GetSuppliersModelData?
-                                      suppliersModelData) {
-                                    if (suppliersModelData != null) {
-                                      setState(() {
-                                        supplier = suppliersModelData;
-                                        supplierIdController.text =
-                                            "${suppliersModelData.id ?? 1}";
-                                      });
-                                      searchProducts(1);
-                                    }
-                                  },
-                                ),
+                              Consumer<PurchaseProvider>(
+                                builder: (context, purchaseProvider, child) {
+                                  List<GetSuppliersModelData> suppliers =
+                                      purchaseProvider.getSupplierList ?? [];
+                                  return BuildDropDownWithSearch<
+                                      GetSuppliersModelData>(
+                                    title: null,
+                                    showName: false,
+                                    hintText: 'Select Supplier',
+                                    value: supplier,
+                                    items: suppliers,
+                                    onChanged: (GetSuppliersModelData?
+                                        suppliersModelData) {
+                                      if (suppliersModelData != null) {
+                                        setState(() {
+                                          supplier = suppliersModelData;
+                                          supplierIdController.text =
+                                              "${suppliersModelData.id ?? 1}";
+                                        });
+                                        searchProducts(1);
+                                      }
+                                    },
+                                    displayText: (supplier) =>
+                                        supplier.user?.name ?? 'No Name',
+                                    searchController: supplierSearchController,
+                                    height: 45,
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 0, vertical: 0),
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -938,7 +843,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const SizedBox(
-                                  height: 27), // Space to align with labels
+                                  height: 30), // Space to align with labels
                               SizedBox(
                                 height: 45,
                                 child: CustomRoundButton(
