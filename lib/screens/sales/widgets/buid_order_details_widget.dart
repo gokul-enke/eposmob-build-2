@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:provider/provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
 import '../../../components/build_container_box.dart';
 import '../../../components/build_payment_row.dart';
 import '../../../components/build_profile_picture.dart';
 import '../../../models/order_details.dart';
+import '../../../providers/app_settings_provider.dart';
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
 import '../../../resources/style_manager.dart';
@@ -48,7 +50,11 @@ class OrderDetailWidget extends StatelessWidget {
       );
     }
 
-    return MouseRegion(
+    return Consumer<AppSettingsProvider>(
+      builder: (context, appSettingsProvider, child) {
+        final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+        
+        return MouseRegion(
       cursor: SystemMouseCursors.grab,
       child: ScrollConfiguration(
         behavior: ScrollConfiguration.of(context).copyWith(
@@ -181,7 +187,7 @@ class OrderDetailWidget extends StatelessWidget {
                           children: [
                             // Displaying Price Summary
                             BuildPaymentRow(
-                              amount: "INR ${_calculateTotalMRP().toStringAsFixed(2)}",
+                              amount: "$currency ${_calculateTotalMRP().toStringAsFixed(2)}",
                               title: "Total MRP",
                               color: ColorManager.textColor,
                             ),
@@ -192,7 +198,7 @@ class OrderDetailWidget extends StatelessWidget {
                             ),
                             if ((priceSummary?.savedTotal ?? 0) > 0)
                               BuildPaymentRow(
-                                amount: "INR ${priceSummary?.savedTotal?.toStringAsFixed(2) ?? '0.00'}",
+                                amount: "$currency ${priceSummary?.savedTotal?.toStringAsFixed(2) ?? '0.00'}",
                                 title: "You saved",
                                 color: ColorManager.textColor,
                                 // firstRowTextStyle: buildCustomStyle(
@@ -237,7 +243,7 @@ class OrderDetailWidget extends StatelessWidget {
                               color: ColorManager.kButtonGreen,
                             ),
                             BuildPaymentRow(
-                              amount: "Rs 0.00", // Adjust if necessary
+                              amount: "$currency 0.00", // Adjust if necessary
                               title: "Balance amount",
                               secondRowTextStyle: buildCustomStyle(
                                 FontWeightManager.medium,
@@ -383,7 +389,7 @@ class OrderDetailWidget extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  '₹ ${entry.value}',
+                                  '$currency ${entry.value}',
                                   style: buildCustomStyle(
                                     FontWeightManager.semiBold,
                                     FontSize.s11,
@@ -412,7 +418,7 @@ class OrderDetailWidget extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                '₹ ${_calculateTotalPayments(orderDetailsModelData?.payments ?? {})}',
+                                '$currency ${_calculateTotalPayments(orderDetailsModelData?.payments ?? {})}',
                                 style: buildCustomStyle(
                                   FontWeightManager.bold,
                                   FontSize.s12,
@@ -487,6 +493,8 @@ class OrderDetailWidget extends StatelessWidget {
           ),
         ),
       ),
+        );
+      },
     );
   }
 
@@ -553,14 +561,19 @@ class OrderDetailWidget extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(
-              _formatOrderPropertyValue(label, value),
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s13,
-                0.20,
-                Colors.black,
-              ),
+            child: Consumer<AppSettingsProvider>(
+              builder: (context, appSettingsProvider, child) {
+                final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+                return Text(
+                  _formatOrderPropertyValue(label, value, currency),
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s13,
+                    0.20,
+                    Colors.black,
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -568,7 +581,7 @@ class OrderDetailWidget extends StatelessWidget {
     );
   }
 
-  String _formatOrderPropertyValue(String label, String value) {
+  String _formatOrderPropertyValue(String label, String value, String currency) {
     // Format specific order properties
     switch (label.toUpperCase()) {
       case 'ORDER_STATUS':
@@ -590,7 +603,7 @@ class OrderDetailWidget extends StatelessWidget {
       case 'BALANCE':
         // Format balance with proper currency
         final balance = double.tryParse(value) ?? 0.0;
-        return 'Rs ${balance.toStringAsFixed(2)}';
+        return '$currency ${balance.toStringAsFixed(2)}';
       case 'CUSTOMER_PHONE':
       case 'CUSTOMER_EMAIL':
         // Keep as is for contact info
