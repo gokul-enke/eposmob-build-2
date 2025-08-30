@@ -66,4 +66,10 @@ class ImageAssets {
   static const String camera = '$iconPath/camera_group.svg';
   static const String userProfile = '$iconPath/user-profile.svg';
   static const String lock = '$iconPath/Icon feather-lock.svg';
+
+
+
+
+//---------------------------sales page Icons-------------------------------------------
+  static const String whatsappIcon = '$iconPath/icons-whatsapp.svg';
 }
