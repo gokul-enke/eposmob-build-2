@@ -9,6 +9,7 @@ class AppSettings {
   final bool askDeliveryDate;
   final bool priceRoundOff;
   final bool discountAndCoupon;
+  final String currency;
 
   AppSettings({
     required this.barcodeSales,
@@ -19,6 +20,7 @@ class AppSettings {
     required this.askDeliveryDate,
     required this.priceRoundOff,
     required this.discountAndCoupon,
+    required this.currency,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -31,16 +33,19 @@ class AppSettings {
 
     for (var setting in data) {
       // Handle both "true" and "1" as valid true values for status
-      bool isStatusTrue = setting['status'] == "true" || setting['status'] == "1";
-      
+      bool isStatusTrue =
+          setting['status'] == "true" || setting['status'] == "1";
+
       // Debug logging for DISCOUNT_AND_COUPON specifically
       if (setting['code'] == 'DISCOUNT_AND_COUPON') {
         debugPrint('  - Found DISCOUNT_AND_COUPON:');
-        debugPrint('    - Raw status: "${setting['status']}" (type: ${setting['status'].runtimeType})');
-        debugPrint('    - Raw value: "${setting['value']}" (type: ${setting['value'].runtimeType})');
+        debugPrint(
+            '    - Raw status: "${setting['status']}" (type: ${setting['status'].runtimeType})');
+        debugPrint(
+            '    - Raw value: "${setting['value']}" (type: ${setting['value'].runtimeType})');
         debugPrint('    - Parsed status: $isStatusTrue');
       }
-      
+
       settingsMap[setting['code']] = {
         'status': isStatusTrue,
         'value': setting['value'] ?? ""
@@ -49,9 +54,13 @@ class AppSettings {
 
     // Debug logging for final parsed settings
     debugPrint('  - Final parsed settings:');
-    debugPrint('    - BARCODE_SALES: ${settingsMap['BARCODE_SALES']?['status']}');
-    debugPrint('    - DISCOUNT_AND_COUPON: ${settingsMap['DISCOUNT_AND_COUPON']?['status']}');
-    debugPrint('    - PRICE_ROUND_OFF: ${settingsMap['PRICE_ROUND_OFF']?['status']}');
+    debugPrint(
+        '    - BARCODE_SALES: ${settingsMap['BARCODE_SALES']?['status']}');
+    debugPrint(
+        '    - DISCOUNT_AND_COUPON: ${settingsMap['DISCOUNT_AND_COUPON']?['status']}');
+    debugPrint(
+        '    - PRICE_ROUND_OFF: ${settingsMap['PRICE_ROUND_OFF']?['status']}');
+    debugPrint('    - CURRENCY: ${settingsMap['CURRENCY']?['value']}');
 
     return AppSettings(
       barcodeSales: settingsMap['BARCODE_SALES']?['status'] ?? false,
@@ -66,6 +75,7 @@ class AppSettings {
       askDeliveryDate: settingsMap['ASK_DELIVERY_DATE']?['status'] ?? false,
       priceRoundOff: settingsMap['PRICE_ROUND_OFF']?['status'] ?? false,
       discountAndCoupon: settingsMap['DISCOUNT_AND_COUPON']?['status'] ?? false,
+      currency: settingsMap['CURRENCY']?['value'] ?? "",
     );
   }
 
@@ -119,6 +129,12 @@ class AppSettings {
           "code": "DISCOUNT_AND_COUPON",
           "value": "",
           "status": discountAndCoupon.toString(),
+        },
+        {
+          "name": "Currency",
+          "code": "CURRENCY",
+          "value": currency,
+          "status": currency.toString(),
         },
       ],
     };
