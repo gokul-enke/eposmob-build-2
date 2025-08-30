@@ -86,6 +86,8 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
   RestrictedPaymentType? secondaryMethod;
   final TextEditingController primaryAmountController = TextEditingController();
   final TextEditingController secondaryAmountController = TextEditingController();
+  final FocusNode _primaryAmountFocusNode = FocusNode();
+  final FocusNode _secondaryAmountFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -103,6 +105,8 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
   void dispose() {
     primaryAmountController.dispose();
     secondaryAmountController.dispose();
+    _primaryAmountFocusNode.dispose();
+    _secondaryAmountFocusNode.dispose();
     super.dispose();
   }
 
@@ -179,6 +183,10 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
         // Selecting new method
         if (primaryMethod == null) {
           primaryMethod = method;
+          // Auto-focus on the primary amount field
+          Future.delayed(const Duration(milliseconds: 100), () {
+            _primaryAmountFocusNode.requestFocus();
+          });
         } else if (secondaryMethod == null) {
           // Check restriction before adding secondary method
           if (_wouldViolateRestriction(primaryMethod!, method)) {
@@ -186,6 +194,10 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
             return;
           }
           secondaryMethod = method;
+          // Auto-focus on the secondary amount field
+          Future.delayed(const Duration(milliseconds: 100), () {
+            _secondaryAmountFocusNode.requestFocus();
+          });
         } else {
           // Replace secondary with new selection (if allowed)
           if (_wouldViolateRestriction(primaryMethod!, method)) {
@@ -194,6 +206,10 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
           }
           secondaryMethod = method;
           secondaryAmountController.clear();
+          // Auto-focus on the secondary amount field
+          Future.delayed(const Duration(milliseconds: 100), () {
+            _secondaryAmountFocusNode.requestFocus();
+          });
         }
       }
     });
@@ -382,6 +398,7 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
                       method: primaryMethod!,
                       controller: primaryAmountController,
                       placeholder: 'Enter ${_getMethodName(primaryMethod!)} Amount',
+                      focusNode: _primaryAmountFocusNode,
                     ),
                   ),
                 if (primaryMethod != null && secondaryMethod != null)
@@ -392,6 +409,7 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
                       method: secondaryMethod!,
                       controller: secondaryAmountController,
                       placeholder: 'Enter ${_getMethodName(secondaryMethod!)} Amount',
+                      focusNode: _secondaryAmountFocusNode,
                     ),
                   ),
               ],
@@ -412,6 +430,7 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
     required RestrictedPaymentType method,
     required TextEditingController controller,
     required String placeholder,
+    required FocusNode focusNode,
   }) {
     return BuildBoxShadowContainer(
       circleRadius: 8,
@@ -419,6 +438,7 @@ class _BuildRestrictedPaymentSelectorState extends State<BuildRestrictedPaymentS
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: TextFormField(
         controller: controller,
+        focusNode: focusNode,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         inputFormatters: [
           FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),

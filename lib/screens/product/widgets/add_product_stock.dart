@@ -234,342 +234,6 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     }
   }
 
-  void _addNewStockRow() async {
-    debugPrint('🔄 ADD NEW STOCK ROW BUTTON CLICKED');
-    debugPrint('📊 CURRENT STATE:');
-    debugPrint('   - Total stock items: ${stockItems.length}');
-    debugPrint('   - Selected store: ${selectedStore?.name ?? 'None'}');
-    debugPrint(
-        '   - Selected supplier: ${selectedSupplier?.user?.name ?? 'None'}');
-    debugPrint(
-        '   - Selected date: ${DateFormat('yyyy-MM-dd').format(selectedDate)}');
-
-    // DON'T clear success flags - preserve already added rows
-    debugPrint('✅ PRESERVING SUCCESS FLAGS FOR ALREADY ADDED ROWS');
-
-    // First, add stock for all completed rows (excluding already added ones)
-    debugPrint('🔄 CALLING _addStockForCompletedRows()...');
-    bool stockAddedSuccessfully = await _addStockForCompletedRows();
-
-    // If stock addition failed due to validation, don't add new row
-    if (!stockAddedSuccessfully) {
-      debugPrint('❌ STOCK ADDITION FAILED - NOT ADDING NEW ROW');
-      return;
-    }
-
-    // Then add a new empty row (DON'T reset fields)
-    debugPrint('🔄 ADDING NEW EMPTY ROW...');
-    setState(() {
-      stockItems.add(StockItem());
-    });
-    debugPrint('✅ NEW EMPTY ROW ADDED. Total items: ${stockItems.length}');
-  }
-
-  Future<bool> _addStockForCompletedRows() async {
-    debugPrint('🔄 STOCK ADDITION PROCESS STARTED');
-
-    if (selectedStore == null) {
-      debugPrint('❌ STORE VALIDATION FAILED: No store selected');
-      showScaffoldError(context: context, message: 'Please select a store');
-      return false; // Indicate failure
-    }
-    debugPrint('✅ STORE VALIDATION PASSED: Store ID ${selectedStore!.id}');
-
-    if (selectedSupplier == null || selectedSupplier!.id == 0) {
-      debugPrint('❌ SUPPLIER VALIDATION FAILED: No supplier selected');
-      showScaffoldError(context: context, message: 'Please select a supplier');
-      return false; // Indicate failure
-    }
-    debugPrint(
-        '✅ SUPPLIER VALIDATION PASSED: Supplier ID ${selectedSupplier!.id}');
-
-    // Find completed rows (rows with product and category selected)
-    List<StockItem> completedRows = stockItems
-        .where((item) =>
-            item.productData != null &&
-            item.categoryData != null &&
-            item.product.isNotEmpty &&
-            item.category.isNotEmpty &&
-            !item
-                .isSuccessfullyAdded) // ❌ EXCLUDE ALREADY SUCCESSFULLY ADDED ROWS
-        .toList();
-
-    debugPrint('📊 COMPLETED ROWS ANALYSIS:');
-    debugPrint('   - Total rows: ${stockItems.length}');
-    debugPrint(
-        '   - Completed rows (excluding already added): ${completedRows.length}');
-
-    for (int i = 0; i < stockItems.length; i++) {
-      final item = stockItems[i];
-      debugPrint(
-          '   - Row ${i + 1}: Product=${item.product}, Category=${item.category}, ProductData=${item.productData != null}, CategoryData=${item.categoryData != null}, AlreadyAdded=${item.isSuccessfullyAdded}');
-    }
-
-    if (completedRows.isEmpty) {
-      debugPrint('❌ COMPLETED ROWS VALIDATION FAILED: No completed rows found');
-      showScaffoldError(
-          context: context,
-          message:
-              'Please complete at least one stock item before adding a new row');
-      return false; // Indicate failure
-    }
-    debugPrint(
-        '✅ COMPLETED ROWS VALIDATION PASSED: ${completedRows.length} rows ready for API');
-
-    setState(() {
-      _isLoading = true;
-    });
-    debugPrint('🔄 LOADING STATE SET: true');
-
-    try {
-      final String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      if (accessToken == null) {
-        debugPrint('❌ AUTH VALIDATION FAILED: No access token found');
-        throw Exception('Access token not found');
-      }
-      debugPrint(
-          '✅ AUTH VALIDATION PASSED: Token exists (${accessToken.substring(0, 10)}...)');
-
-      int successCount = 0;
-      int totalCount = completedRows.length;
-      List<String> errorMessages = []; // To collect individual error messages
-      debugPrint('🚀 STARTING API CALLS FOR ${totalCount} STOCK ITEMS');
-
-      // Submit each completed stock item
-      for (int i = 0; i < completedRows.length; i++) {
-        final item = completedRows[i];
-        debugPrint('📦 PROCESSING STOCK ITEM ${i + 1}/${totalCount}:');
-        debugPrint(
-            '   - Product: ${item.product} (ID: ${item.productData?.productId})');
-        debugPrint(
-            '   - Category: ${item.category} (ID: ${item.categoryData?.categoryId})');
-        debugPrint('   - Quantity: ${item.quantity}');
-        debugPrint('   - Retail Price: ${item.salePrice}');
-        debugPrint('   - Purchase Rate: ${item.purchaseRate}');
-        debugPrint('   - MRP: ${item.mrp}');
-        debugPrint('   - Wholesale: ${item.wholesale}');
-        debugPrint('   - Unit ID: ${item.selectedUnit}');
-        debugPrint('   - Unit Name: ${item.unit}');
-        debugPrint('   - Rack: ${item.rack}');
-        debugPrint('   - Barcode: ${item.barcode}');
-        debugPrint('   - Batch Number: ${item.batchNumber}');
-        debugPrint(
-            '   - Expiry Date: ${DateFormat('yyyy-MM-dd').format(item.expDate)}');
-        debugPrint('   - Store ID: ${selectedStore!.id}');
-        debugPrint(
-            '   - Supplier ID: ${selectedSupplier?.id ?? item.supplierId}');
-
-        if (item.productData != null && item.categoryData != null) {
-          try {
-            debugPrint('🌐 MAKING API CALL FOR ITEM ${i + 1}...');
-
-            // 📋 DEBUG: Print complete API request body for addProductStockAPI
-            final Map<String, dynamic> apiRequestBody = {
-              'accessToken':
-                  '${accessToken.substring(0, 20)}...', // Only show first 20 chars for security
-              'productId': item.productData!.productId.toString(),
-              'categoryId': item.categoryData!.categoryId.toString(),
-              'quantity': item.quantity,
-              'retailPrice': item.salePrice,
-              'purchaseRate': item.purchaseRate,
-              'mrp': item.mrp,
-              'wholesalePrice': item.wholesale,
-              'unit': item.unit,
-              'supplierId': selectedSupplier?.id?.toString() ??
-                  item.supplierId.toString(),
-              'storeId': selectedStore!.id.toString(),
-              'expiryDate': DateFormat('yyyy-MM-dd').format(item.expDate),
-              'userId': '1',
-              'purchaseVoucherId': null,
-              'purchaseId': null,
-              'taxAmountRetail': null,
-              'taxAmountWholesale': null,
-              'wholesaleMinUnit': item.batchNumber,
-              'rack': item.rack,
-              'barcode': item.barcode,
-              'batchNumber': item.batchNumber,
-              'date': DateFormat('yyyy-MM-dd').format(selectedDate),
-              'purchaseDate':
-                  DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
-              'purchaseNumber': null,
-              'taxInclude': item.taxInclude,
-              'initialRetailPrice': item.salePrice,
-              'initialWholesalePrice': item.wholesale,
-              'retailPriceTax': null,
-              'wholesalePriceTax': null,
-            };
-
-            debugPrint('📋 ADD STOCK API REQUEST BODY FOR ITEM ${i + 1}:');
-            debugPrint(
-                '═══════════════════════════════════════════════════════════');
-            apiRequestBody.forEach((key, value) {
-              debugPrint('   $key: $value');
-            });
-            debugPrint(
-                '═══════════════════════════════════════════════════════════');
-
-            var apiResponse =
-                await Provider.of<StockProvider>(context, listen: false)
-                    .addProductStockAPI(
-              accessToken: accessToken,
-              productId: item.productData!.productId.toString(),
-              categoryId: item.categoryData!.categoryId.toString(),
-              quantity: item.quantity,
-              retailPrice: item.salePrice,
-              purchaseRate: item.purchaseRate,
-              mrp: item.mrp,
-              wholesalePrice: item.wholesale,
-              unit: item.unit, // Send unit value instead of unit ID
-              supplierId: selectedSupplier?.id?.toString() ??
-                  item.supplierId.toString(),
-              storeId: selectedStore!.id.toString(),
-              expiryDate: DateFormat('yyyy-MM-dd').format(item.expDate),
-              userId: '1',
-              purchaseVoucherId: null,
-              purchaseId: null,
-              taxAmountRetail: null,
-              taxAmountWholesale: null,
-              wholesaleMinUnit: item.batchNumber,
-              rack: item.rack,
-              barcode: item.barcode,
-              batchNumber: item.batchNumber,
-              date: DateFormat('yyyy-MM-dd').format(selectedDate),
-              purchaseDate:
-                  DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
-              purchaseNumber: null,
-              taxInclude: item.taxInclude, // Pass the boolean directly
-              initialRetailPrice: item.salePrice,
-              initialWholesalePrice: item.wholesale,
-              retailPriceTax: null,
-              wholesalePriceTax: null,
-              context: context,
-            );
-
-            // 🔍 DEBUG: Print the complete API response
-            debugPrint('📡 ADD STOCK API RESPONSE FOR ITEM ${i + 1}:');
-            debugPrint('   - Response: $apiResponse');
-            debugPrint('   - Response type: ${apiResponse.runtimeType}');
-
-            // Store the response in the stock item for later use
-            int originalIndex = stockItems.indexOf(item);
-            if (originalIndex != -1) {
-              stockItems[originalIndex].apiResponse = apiResponse;
-            }
-
-            // Check if purchase_id is in the response and API call was successful
-            if (apiResponse is Map<String, dynamic> &&
-                apiResponse['status'] == 'success') {
-              debugPrint('   - Status: ${apiResponse['status']}');
-              debugPrint('   - Message: ${apiResponse['message']}');
-              debugPrint('   - Data: ${apiResponse['data']}');
-
-              if (apiResponse['data'] != null &&
-                  apiResponse['data'] is Map<String, dynamic>) {
-                debugPrint(
-                    '   - Purchase ID: ${(apiResponse['data']['purchase_id'] as num?)?.toString()}');
-                debugPrint(
-                    '   - Stock ID: ${(apiResponse['data']['id'] as num?)?.toString()}');
-              }
-              successCount++;
-              debugPrint('✅ API CALL SUCCESSFUL FOR ITEM ${i + 1}');
-              if (originalIndex != -1) {
-                stockItems[originalIndex].isSuccessfullyAdded = true;
-                debugPrint(
-                    '✅ MARKED ORIGINAL ROW ${originalIndex + 1} AS SUCCESSFULLY ADDED');
-                
-                // Recalculate total stock value when item is successfully added
-                _calculateTotalStockValue();
-              }
-            } else {
-              String errorMessage = 'Failed to add stock';
-              if (apiResponse is Map<String, dynamic> &&
-                  apiResponse['message'] != null) {
-                // The message from StockProvider is now the raw response.body (a JSON string)
-                try {
-                  final decodedRootMessage =
-                      json.decode(apiResponse['message']);
-
-                  if (decodedRootMessage is Map<String, dynamic> &&
-                      decodedRootMessage['message'] != null) {
-                    final actualMessage = decodedRootMessage['message'];
-
-                    if (actualMessage is String) {
-                      errorMessage = actualMessage; // Simple string message
-                    } else if (actualMessage is Map<String, dynamic>) {
-                      // Complex validation error map
-                      errorMessage = actualMessage.values
-                          .expand((e) => e as List)
-                          .join(', ');
-                    }
-                  } else if (decodedRootMessage is String) {
-                    // Fallback for cases where message might be a simple string at root
-                    errorMessage = decodedRootMessage;
-                  }
-                } catch (e) {
-                  // If it's not valid JSON, treat the original message as a simple string
-                  errorMessage = apiResponse['message'].toString();
-                }
-              }
-              debugPrint(
-                  '❌ API CALL FAILED FOR ITEM ${i + 1} (Status: ${apiResponse['status'] ?? 'Unknown'}), Error: $errorMessage');
-              errorMessages.add(errorMessage); // Add error to the list
-              showScaffoldError(context: context, message: errorMessage);
-              // Do not increment successCount, isSuccessfullyAdded remains false
-            }
-          } catch (e) {
-            debugPrint('❌ API CALL FAILED FOR ITEM ${i + 1}: $e');
-            errorMessages.add(e.toString()); // Add exception error to the list
-            showScaffoldError(
-                context: context, message: 'Error: ${e.toString()}');
-          }
-        } else {
-          debugPrint(
-              '❌ SKIPPING ITEM ${i + 1}: Missing product or category data');
-        }
-      }
-
-      debugPrint('📊 API CALLS SUMMARY:');
-      debugPrint('   - Total items: $totalCount');
-      debugPrint('   - Successful: $successCount');
-      debugPrint('   - Failed: ${totalCount - successCount}');
-
-      if (successCount > 0) {
-        debugPrint(
-            '🎉 STOCK ADDITION COMPLETED: $successCount items added successfully');
-
-        showScaffold(
-            context: context,
-            message:
-                '$successCount out of $totalCount stock items added successfully');
-
-        // DON'T reset form fields - keep the data for reference
-        debugPrint('✅ FORM FIELDS PRESERVED - NO RESET');
-        return true; // Indicate success
-      } else {
-        // Display aggregated error messages if no items were successful
-        String finalErrorMessage = errorMessages.isNotEmpty
-            ? 'Failed to add stock items:\n${errorMessages.join('\n')}'
-            : 'Failed to add stock items. Please try again.';
-
-        debugPrint(
-            '❌ STOCK ADDITION FAILED: No items were added successfully. Details: $finalErrorMessage');
-        showScaffoldError(context: context, message: finalErrorMessage);
-        return false; // Indicate failure
-      }
-    } catch (e) {
-      debugPrint('💥 CRITICAL ERROR IN STOCK ADDITION PROCESS: $e');
-      showScaffoldError(context: context, message: 'Error: ${e.toString()}');
-      return false; // Indicate failure
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-      debugPrint('🔄 LOADING STATE SET: false');
-      debugPrint('🏁 STOCK ADDITION PROCESS ENDED');
-    }
-  }
-
   Future<void> _addStockForSingleItem(int index) async {
     debugPrint(
         '🔄 SINGLE STOCK ADDITION PROCESS STARTED FOR ITEM ${index + 1}');
@@ -700,11 +364,58 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         context: context,
       );
 
+      // 🔍 DEBUG: Print the complete API response
+      debugPrint('📡 ADD STOCK API RESPONSE FOR ITEM ${index + 1}:');
+      debugPrint('═══════════════════════════════════════════════════════════');
+      debugPrint('   - Response Type: ${apiResponse.runtimeType}');
+      debugPrint('   - Raw Response: $apiResponse');
+      
+      if (apiResponse is Map<String, dynamic>) {
+        debugPrint('📊 ADD STOCK API RESPONSE DETAILS:');
+        apiResponse.forEach((key, value) {
+          debugPrint('   $key: $value');
+          if (key == 'data' && value is Map<String, dynamic>) {
+            debugPrint('   📦 DATA CONTENTS:');
+            value.forEach((dataKey, dataValue) {
+              debugPrint('      $dataKey: $dataValue');
+            });
+          }
+        });
+      } else {
+        debugPrint('⚠️ Response is not a Map<String, dynamic>');
+      }
+      debugPrint('═══════════════════════════════════════════════════════════');
+
       // Store the response in the stock item
       stockItems[index].apiResponse = apiResponse;
 
       if (apiResponse is Map<String, dynamic> &&
           apiResponse['status'] == 'success') {
+        debugPrint('✅ ADD STOCK API SUCCESS FOR ITEM ${index + 1}');
+        debugPrint('   - Status: ${apiResponse['status']}');
+        debugPrint('   - Message: ${apiResponse['message']}');
+        
+        if (apiResponse['data'] != null && apiResponse['data'] is Map<String, dynamic>) {
+          final data = apiResponse['data'] as Map<String, dynamic>;
+          debugPrint('   📦 SUCCESS DATA DETAILS:');
+          debugPrint('      - Stock ID: ${data['id']}');
+          debugPrint('      - Purchase ID: ${data['purchase_id']}');
+          debugPrint('      - Product ID: ${data['product_id']}');
+          debugPrint('      - Store ID: ${data['store_id']}');
+          debugPrint('      - Quantity: ${data['quantity']}');
+          debugPrint('      - Purchase Rate: ${data['purchase_rate']}');
+          debugPrint('      - Retail Price: ${data['retail_price']}');
+          debugPrint('      - Wholesale Price: ${data['wholesale_price']}');
+          debugPrint('      - MRP: ${data['mrp']}');
+          debugPrint('      - Unit: ${data['unit']}');
+          debugPrint('      - Rack: ${data['rack']}');
+          debugPrint('      - Barcode: ${data['barcode']}');
+          debugPrint('      - Batch Number: ${data['batch_number']}');
+          debugPrint('      - Expiry Date: ${data['expiry_date']}');
+          debugPrint('      - Created At: ${data['created_at']}');
+          debugPrint('      - Updated At: ${data['updated_at']}');
+        }
+        
         setState(() {
           stockItems[index].isSuccessfullyAdded = true;
         });
@@ -714,7 +425,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         
         showScaffold(
             context: context, message: 'Stock item added successfully');
-        debugPrint('✅ SINGLE STOCK ITEM ADDED SUCCESSFULLY');
+        debugPrint('✅ SINGLE STOCK ITEM MARKED AS SUCCESSFULLY ADDED');
 
         // Automatically add a new empty row after successful stock addition
         debugPrint('🔄 AUTO-ADDING NEW ROW AFTER SUCCESSFUL STOCK ADDITION');
@@ -735,33 +446,53 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           debugPrint('✅ FOCUS REQUESTED ON ROW ${nextRowIndex + 1} BARCODE FIELD');
         });
       } else {
+        debugPrint('❌ ADD STOCK API FAILED FOR ITEM ${index + 1}');
+        debugPrint('   - API Response Status: ${apiResponse['status'] ?? 'Unknown'}');
+        
         String errorMessage = 'Failed to add stock';
         if (apiResponse is Map<String, dynamic> &&
             apiResponse['message'] != null) {
+          debugPrint('   - Processing error message from API response...');
           try {
             final decodedRootMessage = json.decode(apiResponse['message']);
+            debugPrint('   - Decoded message: $decodedRootMessage');
+            
             if (decodedRootMessage is Map<String, dynamic> &&
                 decodedRootMessage['message'] != null) {
               final actualMessage = decodedRootMessage['message'];
+              debugPrint('   - Actual message type: ${actualMessage.runtimeType}');
+              
               if (actualMessage is String) {
                 errorMessage = actualMessage;
+                debugPrint('   - String error message: $errorMessage');
               } else if (actualMessage is Map<String, dynamic>) {
                 errorMessage =
                     actualMessage.values.expand((e) => e as List).join(', ');
+                debugPrint('   - Map error message converted: $errorMessage');
               }
             } else if (decodedRootMessage is String) {
               errorMessage = decodedRootMessage;
+              debugPrint('   - Direct string message: $errorMessage');
             }
           } catch (e) {
             errorMessage = apiResponse['message'].toString();
+            debugPrint('   - JSON decode failed, using raw message: $errorMessage');
+            debugPrint('   - Decode error: $e');
           }
+        } else {
+          debugPrint('   - No message field in API response');
         }
+        
+        debugPrint('❌ FINAL ERROR MESSAGE: $errorMessage');
         showScaffoldError(context: context, message: errorMessage);
-        debugPrint('❌ SINGLE STOCK ITEM ADDITION FAILED: $errorMessage');
       }
     } catch (e) {
+      debugPrint('💥 EXCEPTION IN SINGLE STOCK ADDITION FOR ITEM ${index + 1}:');
+      debugPrint('   - Exception Type: ${e.runtimeType}');
+      debugPrint('   - Exception Message: $e');
+      debugPrint('   - Stack Trace: ${StackTrace.current}');
+      
       showScaffoldError(context: context, message: 'Error: ${e.toString()}');
-      debugPrint('💥 ERROR IN SINGLE STOCK ADDITION: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -822,6 +553,56 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     setState(() {
       totalStockValue = total;
     });
+  }
+
+  /// Convert RestrictedPaymentData to API format
+  Map<String, dynamic> _convertPaymentDataToApiFormat(RestrictedPaymentData paymentData) {
+    List<String> paymentMethods = [];
+    List<Map<String, dynamic>> paidMethods = [];
+
+    String _getMethodString(RestrictedPaymentType method) {
+      switch (method) {
+        case RestrictedPaymentType.cash:
+          return 'CASH';
+        case RestrictedPaymentType.card:
+          return 'CARD';
+        case RestrictedPaymentType.upi:
+          return 'UPI';
+      }
+    }
+
+    // Add primary method if present
+    if (paymentData.primaryMethod != null && paymentData.primaryAmount.isNotEmpty) {
+      String methodString = _getMethodString(paymentData.primaryMethod!);
+      double amount = double.tryParse(paymentData.primaryAmount) ?? 0.0;
+      
+      if (amount > 0) {
+        paymentMethods.add(methodString);
+        paidMethods.add({
+          'method': methodString,
+          'amount': amount,
+        });
+      }
+    }
+
+    // Add secondary method if present
+    if (paymentData.secondaryMethod != null && paymentData.secondaryAmount.isNotEmpty) {
+      String methodString = _getMethodString(paymentData.secondaryMethod!);
+      double amount = double.tryParse(paymentData.secondaryAmount) ?? 0.0;
+      
+      if (amount > 0) {
+        paymentMethods.add(methodString);
+        paidMethods.add({
+          'method': methodString,
+          'amount': amount,
+        });
+      }
+    }
+
+    return {
+      'payment_methods': paymentMethods,
+      'paid_methods': paidMethods,
+    };
   }
 
   @override
@@ -969,14 +750,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   Widget _buildSupplierField() {
     return Consumer<PurchaseProvider>(
       builder: (context, purchaseProvider, child) {
-        List<GetSuppliersModelData>? supplierList =
+        List<GetSuppliersModelData> supplierList =
             purchaseProvider.supplierList;
 
         return BuildDropDownWithSearch<GetSuppliersModelData>(
           title: "Supplier",
           hintText: "Select Supplier",
           value: selectedSupplier,
-          items: supplierList ?? <GetSuppliersModelData>[],
+          items: supplierList,
           onChanged: (value) {
             setState(() {
               selectedSupplier = value;
@@ -1058,79 +839,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Payment section title removed
-        
-        // Stock value summary - Commented out for now
-        /*
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: ColorManager.kPrimaryColor.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: ColorManager.kPrimaryColor.withOpacity(0.2)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Total Purchase Value',
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s14,
-                      0.27,
-                      Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '₹${totalStockValue.toStringAsFixed(2)}',
-                    style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      FontSize.s20,
-                      0.30,
-                      ColorManager.kPrimaryColor,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.green.withOpacity(0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.inventory_2,
-                      size: 16,
-                      color: Colors.green.shade600,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${stockItems.where((item) => item.isSuccessfullyAdded).length} items',
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s12,
-                        0.27,
-                        Colors.green.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+        // Purchase Amount Details Section
+        _buildPurchaseAmountDetails(),
         
         const SizedBox(height: 16),
-        */
         
         // Payment method selector with restrictions (no validation)
         BuildRestrictedPaymentSelector(
@@ -1152,6 +864,258 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildPurchaseAmountDetails() {
+    // Calculate totals for successfully added items
+    double totalPurchaseAmount = 0.0;
+    int totalItems = 0;
+    int totalQuantity = 0;
+
+    for (StockItem item in stockItems) {
+      if (item.isSuccessfullyAdded) {
+        double quantity = double.tryParse(item.quantity) ?? 0.0;
+        double purchaseRate = double.tryParse(item.purchaseRate) ?? 0.0;
+
+        totalPurchaseAmount += (purchaseRate * quantity);
+        totalItems++;
+        totalQuantity += quantity.toInt();
+      }
+    }
+
+    // Get supplier information
+    String supplierName = selectedSupplier?.user?.name ?? 'No Supplier';
+    double supplierBalance = _getSupplierBalance(); // Helper method to get balance
+    double totalPayable = totalPurchaseAmount + supplierBalance;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with supplier info
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Purchase Summary',
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s16,
+                        0.30,
+                        ColorManager.kPrimaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Supplier: $supplierName',
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s12,
+                        0.27,
+                        Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Supplier balance badge
+              _buildSupplierBalanceBadge(supplierBalance),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Purchase details in a single row
+          Row(
+            children: [
+              Expanded(
+                child: _buildSummaryCard(
+                  'Total Items',
+                  totalItems.toString(),
+                  Icons.inventory_2_outlined,
+                  Colors.blue.shade600,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildSummaryCard(
+                  'Total Purchase Amount',
+                  '₹${totalPurchaseAmount.toStringAsFixed(2)}',
+                  Icons.shopping_cart_outlined,
+                  Colors.green.shade600,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildSummaryCard(
+                  'Total Quantity',
+                  totalQuantity.toString(),
+                  Icons.format_list_numbered_outlined,
+                  Colors.orange.shade600,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildSummaryCard(
+                  'Total Payable',
+                  '₹${totalPayable.toStringAsFixed(2)}',
+                  Icons.payment_outlined,
+                  totalPayable >= 0 ? Colors.green.shade600 : Colors.red.shade600,
+                  isHighlighted: true,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSupplierBalanceBadge(double balance) {
+    bool isPositive = balance >= 0;
+    Color badgeColor = isPositive ? Colors.green : Colors.red;
+    IconData icon = isPositive ? Icons.arrow_upward : Icons.arrow_downward;
+    String balanceText = '${isPositive ? '+' : ''}${balance.toStringAsFixed(2)}';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: badgeColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: badgeColor.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: badgeColor,
+          ),
+          const SizedBox(width: 4),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Supplier Balance',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s10,
+                  0.27,
+                  Colors.grey.shade600,
+                ),
+              ),
+              Text(
+                '₹$balanceText',
+                style: buildCustomStyle(
+                  FontWeightManager.bold,
+                  FontSize.s12,
+                  0.27,
+                  badgeColor,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color, {
+    bool isHighlighted = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white, // Background is always white
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isHighlighted ? color : Colors.grey.shade200, // Border color changes if highlighted
+          width: isHighlighted ? 2 : 1, // Border is thicker if highlighted
+        ),
+        boxShadow: [ // Consistent shadow for all cards
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: color,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.27,
+                    Colors.grey.shade600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: buildCustomStyle(
+              FontWeightManager.bold,
+              isHighlighted ? FontSize.s14 : FontSize.s13,
+              0.27,
+              isHighlighted ? color : Colors.black87, // Text color changes if highlighted
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to get supplier balance
+  double _getSupplierBalance() {
+    // TODO: Implement actual supplier balance fetching
+    // For now, returning a mock value for demonstration
+    // You can replace this with actual balance from supplier data
+    if (selectedSupplier != null) {
+      // Mock balance for demonstration - replace with actual balance
+      // You might need to add balance field to GetSuppliersModelData
+      // or fetch it from a separate API call
+      return 1000.0; // Mock positive balance
+    }
+    return 0.0;
   }
 
   Widget _buildStockRow(int index) {
@@ -2432,7 +2396,43 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     return;
                   }
 
-                  // Payment validation removed - no validation required for now
+                  // Validate payment data if payment methods are provided
+                  Map<String, dynamic> apiPaymentData = _convertPaymentDataToApiFormat(paymentData);
+                  List<String>? paymentMethods = apiPaymentData['payment_methods'];
+                  List<Map<String, dynamic>>? paidMethods = apiPaymentData['paid_methods'];
+
+                  // Optional validation: if payment data is provided, ensure it's complete
+                  if (paymentMethods != null && paymentMethods.isNotEmpty) {
+                    debugPrint('✅ PAYMENT DATA PROVIDED - VALIDATING...');
+                    debugPrint('   - Payment Methods: $paymentMethods');
+                    debugPrint('   - Paid Methods: $paidMethods');
+                    
+                    if (paidMethods == null || paidMethods.isEmpty) {
+                      debugPrint('❌ PAYMENT VALIDATION FAILED: Payment methods provided but no amounts specified');
+                      showScaffoldError(
+                          context: context,
+                          message: 'Please specify payment amounts for selected payment methods.');
+                      return;
+                    }
+                    
+                    // Check if any payment amount is zero or negative
+                    bool hasInvalidAmount = paidMethods.any((method) {
+                      double amount = (method['amount'] as num?)?.toDouble() ?? 0.0;
+                      return amount <= 0;
+                    });
+                    
+                    if (hasInvalidAmount) {
+                      debugPrint('❌ PAYMENT VALIDATION FAILED: One or more payment amounts are zero or negative');
+                      showScaffoldError(
+                          context: context,
+                          message: 'Payment amounts must be greater than zero.');
+                      return;
+                    }
+                    
+                    debugPrint('✅ PAYMENT DATA VALIDATION PASSED');
+                  } else {
+                    debugPrint('ℹ️ NO PAYMENT DATA PROVIDED - PROCEEDING WITHOUT PAYMENT INFO');
+                  }
 
                   debugPrint(
                       '📦 FOUND ${addedItems.length} SUCCESSFULLY ADDED STOCK ITEMS');
@@ -2467,6 +2467,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   debugPrint(
                       '🚀 CALLING FINISH PURCHASE ORDER API WITH PURCHASE ID: $purchaseId');
 
+                  debugPrint('💰 PAYMENT DATA FOR API:');
+                  debugPrint('   - Payment Methods: $paymentMethods');
+                  debugPrint('   - Paid Methods: $paidMethods');
+
                   setState(() {
                     _isFinishingOrder = true;
                   });
@@ -2483,6 +2487,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         .finishPurchaseOrder(
                       accessToken: accessToken,
                       purchaseId: purchaseId,
+                      paymentMethods: paymentMethods,
+                      paidMethods: paidMethods,
                     );
 
                     debugPrint(
