@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/string_helper.dart';
 import '../../../components/build_container_box.dart';
 import '../../../components/build_payment_row.dart';
 import '../../../components/build_profile_picture.dart';
@@ -193,19 +194,19 @@ class OrderDetailWidget extends StatelessWidget {
                               BuildPaymentRow(
                                 amount: "INR ${priceSummary?.savedTotal?.toStringAsFixed(2) ?? '0.00'}",
                                 title: "You saved",
-                                color: ColorManager.kButtonGreen,
-                                firstRowTextStyle: buildCustomStyle(
-                                  FontWeightManager.semiBold,
-                                  FontSize.s14,
-                                  0.21,
-                                  ColorManager.kButtonGreen,
-                                ),
-                                secondRowTextStyle: buildCustomStyle(
-                                  FontWeightManager.semiBold,
-                                  FontSize.s14,
-                                  0.21,
-                                  ColorManager.kButtonGreen,
-                                ),
+                                color: ColorManager.textColor,
+                                // firstRowTextStyle: buildCustomStyle(
+                                //   FontWeightManager.semiBold,
+                                //   FontSize.s14,
+                                //   0.21,
+                                //   ColorManager.kButtonGreen,
+                                // ),
+                                // secondRowTextStyle: buildCustomStyle(
+                                //   FontWeightManager.semiBold,
+                                //   FontSize.s14,
+                                //   0.21,
+                                //   ColorManager.kButtonGreen,
+                                // ),
                               ),
                             BuildPaymentRow(
                               amount: "${priceSummary?.discount?.toStringAsFixed(2) ?? '0.00'}",
@@ -225,15 +226,15 @@ class OrderDetailWidget extends StatelessWidget {
                                 FontWeightManager.bold,
                                 FontSize.s15,
                                 0.23,
-                                ColorManager.textColor,
+                                ColorManager.kButtonGreen,
                               ),
                               firstRowTextStyle: buildCustomStyle(
                                 FontWeightManager.bold,
                                 FontSize.s15,
                                 0.23,
-                                ColorManager.textColor,
+                                ColorManager.kButtonGreen,
                               ),
-                              color: ColorManager.textColor,
+                              color: ColorManager.kButtonGreen,
                             ),
                             BuildPaymentRow(
                               amount: "Rs 0.00", // Adjust if necessary
@@ -382,7 +383,7 @@ class OrderDetailWidget extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  'Rs ${entry.value}',
+                                  '₹ ${entry.value}',
                                   style: buildCustomStyle(
                                     FontWeightManager.semiBold,
                                     FontSize.s11,
@@ -411,7 +412,7 @@ class OrderDetailWidget extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                'Rs ${_calculateTotalPayments(orderDetailsModelData?.payments ?? {})}',
+                                '₹ ${_calculateTotalPayments(orderDetailsModelData?.payments ?? {})}',
                                 style: buildCustomStyle(
                                   FontWeightManager.bold,
                                   FontSize.s12,
@@ -451,6 +452,7 @@ class OrderDetailWidget extends StatelessWidget {
                         _buildInfoRow('Email', customerDetails?.email ?? ''),
                       if (customerDetails?.address != null && (customerDetails?.address?.isNotEmpty ?? false))
                         _buildInfoRow('Address', customerDetails?.address?.join(', ') ?? ''),
+
                     ],
                   ),
                 ),
@@ -476,7 +478,7 @@ class OrderDetailWidget extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       ...(orderDetailsModelData?.orderProps?.map((prop) => 
-                        _buildInfoRow(prop.propsCode ?? '', prop.propsValue ?? '')
+                        _buildInfoRow(StringHelper.formatPropCode(prop.propsCode ?? ''), prop.propsValue ?? '')
                       )?.toList() ?? []),
                     ],
                   ),

@@ -795,7 +795,7 @@ class _SalesScreenState extends State<SalesScreen> {
           },
         ),
         IconButton(
-          icon: const Icon(Icons.share, size: 18, color: Colors.blue),
+          icon: const Icon(Icons.more_vert, size: 18, color: Colors.blue),
           onPressed: () async {
             try {
               String? invoiceHash =
@@ -952,7 +952,7 @@ class _SalesScreenState extends State<SalesScreen> {
                               radius: 18,
                               backgroundColor: Color(
                                   0x1A25D366), // ~10% opacity WhatsApp green
-                              child: Icon(Icons.chat, color: Color(0xFF25D366)),
+                              child: Icon(Icons.phone, color: Color(0xFF25D366)),
                             ),
                             title: Text(
                               intlPhone != null
@@ -984,7 +984,7 @@ class _SalesScreenState extends State<SalesScreen> {
                               radius: 18,
                               backgroundColor:
                                   Color(0x1AE53E3E), // ~10% opacity red
-                              child: Icon(Icons.chat, color: Color(0xFFE53E3E)),
+                              child: Icon(Icons.picture_as_pdf_outlined, color: Color(0xFFE53E3E)),
                             ),
                             title: const Text('Share PDF'),
                             onTap: () async {
@@ -1145,11 +1145,16 @@ class _SalesScreenState extends State<SalesScreen> {
                               height: 55,
                               child: _buildTableCell("#${order.orderNumber}"),
                             ),
-                            SizedBox(
-                              height: 55,
-                              child: _buildTableCell(
-                                  "${order.customerName ?? "NA"}"),
-                            ),
+SizedBox(
+  height: 55,
+  child: _buildTableCell(
+    (order.customerName?.isNotEmpty == true)
+        ? order.customerName!
+        : (order.customerDetails?.phone?.isNotEmpty == true
+            ? order.customerDetails!.phone!
+            : "NA"),
+  ),
+),
                             SizedBox(
                               height: 55,
                               child: _buildTableCell(
