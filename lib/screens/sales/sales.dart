@@ -22,6 +22,7 @@ import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/print/print_standard.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -30,6 +31,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:cross_file/cross_file.dart';
+import 'package:websafe_svg/websafe_svg.dart';
 
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
@@ -878,7 +880,7 @@ class _SalesScreenState extends State<SalesScreen> {
                               radius: 18,
                               backgroundColor:
                                   ColorManager.kPrimaryColor.withOpacity(0.12),
-                              child: Icon(Icons.share,
+                              child: const Icon(Icons.share,
                                   color: ColorManager.kPrimaryColor),
                             ),
                             title: const Text('Share'),
@@ -948,11 +950,15 @@ class _SalesScreenState extends State<SalesScreen> {
                             },
                           ),
                           ListTile(
-                            leading: const CircleAvatar(
+                            leading: CircleAvatar(
                               radius: 18,
-                              backgroundColor: Color(
+                              backgroundColor: const Color(
                                   0x1A25D366), // ~10% opacity WhatsApp green
-                              child: Icon(Icons.phone, color: Color(0xFF25D366)),
+                              child: WebsafeSvg.asset(
+                                ImageAssets.whatsappIcon,
+                                color: Colors.green,
+                                fit: BoxFit.none,
+                              ),
                             ),
                             title: Text(
                               intlPhone != null
@@ -984,9 +990,10 @@ class _SalesScreenState extends State<SalesScreen> {
                               radius: 18,
                               backgroundColor:
                                   Color(0x1AE53E3E), // ~10% opacity red
-                              child: Icon(Icons.picture_as_pdf_outlined, color: Color(0xFFE53E3E)),
+                              child: Icon(Icons.picture_as_pdf_outlined,
+                                  color: Color(0xFFE53E3E)),
                             ),
-                            title: const Text('Share PDF'),
+                            title: const Text('Share as PDF'),
                             onTap: () async {
                               Navigator.pop(ctx);
                               await _sharePDFInvoice(order);
@@ -1145,16 +1152,18 @@ class _SalesScreenState extends State<SalesScreen> {
                               height: 55,
                               child: _buildTableCell("#${order.orderNumber}"),
                             ),
-SizedBox(
-  height: 55,
-  child: _buildTableCell(
-    (order.customerName?.isNotEmpty == true)
-        ? order.customerName!
-        : (order.customerDetails?.phone?.isNotEmpty == true
-            ? order.customerDetails!.phone!
-            : "NA"),
-  ),
-),
+                            SizedBox(
+                              height: 55,
+                              child: _buildTableCell(
+                                (order.customerName?.isNotEmpty == true)
+                                    ? order.customerName!
+                                    : (order.customerDetails?.phone
+                                                ?.isNotEmpty ==
+                                            true
+                                        ? order.customerDetails!.phone!
+                                        : "NA"),
+                              ),
+                            ),
                             SizedBox(
                               height: 55,
                               child: _buildTableCell(
