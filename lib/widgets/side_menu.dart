@@ -212,7 +212,7 @@ class _SideMenuState extends State<SideMenu> {
                 selected: sideBarController.index.value == 46,
               ),
             ),
-          if (_hasAnyRole(['attender', 'sales_executive']))
+          if (_hasAnyRole(['attender']))
             // if (_hasRole('attender'))
             Obx(
               () => DrawerListTile(
