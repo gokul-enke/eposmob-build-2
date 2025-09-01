@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:provider/provider.dart';
 
 class CustomerOrdersWidget extends StatefulWidget {
   final Size size;
@@ -140,18 +142,24 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s12, 0,
                 ColorManager.kGreyColor),
           ),
-          trailing: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '₹${order.grandTotal ?? '0.00'}',
-                style: buildCustomStyle(FontWeightManager.bold, FontSize.s14, 0,
-                    ColorManager.kSuccessColor),
-              ),
-              const SizedBox(height: 2),
-              _buildStatusBadge(order.status),
-            ],
+          trailing: Consumer<AppSettingsProvider>(
+            builder: (context, appSettingsProvider, child) {
+              final currency =
+                  appSettingsProvider.appSettings?.currency ?? 'INR';
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '$currency${order.grandTotal ?? '0.00'}',
+                    style: buildCustomStyle(FontWeightManager.bold,
+                        FontSize.s14, 0, ColorManager.kSuccessColor),
+                  ),
+                  const SizedBox(height: 2),
+                  _buildStatusBadge(order.status),
+                ],
+              );
+            },
           ),
           children: [_buildOrderDetails(order)],
         ),
@@ -235,6 +243,12 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
     if (items == null || items.isEmpty) {
       return [const Text('No items in this order.')];
     }
+
+    final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.currency ??
+        'INR';
+
     return items
         .map((item) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -248,7 +262,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
                     ),
                   ),
                   Text(
-                    '₹${item.totalPrice ?? '0.00'}',
+                    '$currency${item.totalPrice ?? '0.00'}',
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s12, 0, ColorManager.kTitleTextColor),
                   ),
@@ -277,29 +291,35 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
 
   Widget _buildTotalRow(String label, String? value,
       {bool isGrandTotal = false, Color? color}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: isGrandTotal
-                ? buildCustomStyle(FontWeightManager.bold, FontSize.s14, 0,
-                    ColorManager.kTitleTextColor)
-                : buildCustomStyle(FontWeightManager.medium, FontSize.s12, 0,
-                    ColorManager.kGreyColor),
+    return Consumer<AppSettingsProvider>(
+      builder: (context, appSettingsProvider, child) {
+        final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: isGrandTotal
+                    ? buildCustomStyle(FontWeightManager.bold, FontSize.s14, 0,
+                        ColorManager.kTitleTextColor)
+                    : buildCustomStyle(FontWeightManager.medium, FontSize.s12,
+                        0, ColorManager.kGreyColor),
+              ),
+              Text(
+                '$currency${value ?? '0.00'}',
+                style: isGrandTotal
+                    ? buildCustomStyle(FontWeightManager.bold, FontSize.s14, 0,
+                        color ?? ColorManager.kSuccessColor)
+                    : buildCustomStyle(FontWeightManager.semiBold, FontSize.s12,
+                        0, color ?? ColorManager.kTitleTextColor),
+              ),
+            ],
           ),
-          Text(
-            '₹${value ?? '0.00'}',
-            style: isGrandTotal
-                ? buildCustomStyle(FontWeightManager.bold, FontSize.s14, 0,
-                    color ?? ColorManager.kSuccessColor)
-                : buildCustomStyle(FontWeightManager.semiBold, FontSize.s12, 0,
-                    color ?? ColorManager.kTitleTextColor),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

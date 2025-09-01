@@ -11,6 +11,7 @@ import 'package:pos_machine/models/add_to_order.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
@@ -760,403 +761,428 @@ class _OrderListNewState extends State<OrderListNew> {
   }
 
   Widget _buildPaymentSummary() {
-    return Column(
-      children: [
-        BuildPaymentRow(
-          amount:
-              "INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.subTotal ?? 0.00)}",
-          title: "Net amount",
-          color: ColorManager.textColor,
-        ),
-        const BuildPaymentRow(
-          amount: "INR 0.00",
-          title: "Shipping",
-          color: ColorManager.textColor,
-        ),
-        BuildPaymentRow(
-          amount:
-              "INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.discount ?? 0.00)}",
-          title: "Discount",
-          color: ColorManager.textColor,
-        ),
-        GestureDetector(
-          child: BuildPaymentRow(
-            amount: "INR ${AmountHelper.formatAmount(
-              Provider.of<CartProvider>(context, listen: true)
-                      .priceSummary!
-                      .totalTax ??
-                  0.00,
-            )}",
-            title: "GST",
-            color: ColorManager.kPrimaryColor,
-          ),
-          onTap: () {
-            // debugPrint("Tax Details ${taxNames.toString()}");
-            showDialog(
-              context: context,
-              builder: (context) {
-                return Center(
-                  child: TaxDetailsDialog(
-                    taxAmounts: taxNames,
-                  ),
+    return Consumer<AppSettingsProvider>(
+      builder: (context, appSettingsProvider, child) {
+        final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
+        return Column(
+          children: [
+            BuildPaymentRow(
+              amount:
+                  "$currency ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.subTotal ?? 0.00)}",
+              title: "Net amount",
+              color: ColorManager.textColor,
+            ),
+            BuildPaymentRow(
+              amount: "$currency 0.00",
+              title: "Shipping",
+              color: ColorManager.textColor,
+            ),
+            BuildPaymentRow(
+              amount:
+                  "$currency ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.discount ?? 0.00)}",
+              title: "Discount",
+              color: ColorManager.textColor,
+            ),
+            GestureDetector(
+              child: BuildPaymentRow(
+                amount: "$currency ${AmountHelper.formatAmount(
+                  Provider.of<CartProvider>(context, listen: true)
+                          .priceSummary!
+                          .totalTax ??
+                      0.00,
+                )}",
+                title: "GST",
+                color: ColorManager.kPrimaryColor,
+              ),
+              onTap: () {
+                // debugPrint("Tax Details ${taxNames.toString()}");
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return Center(
+                      child: TaxDetailsDialog(
+                        taxAmounts: taxNames,
+                      ),
+                    );
+                  },
                 );
               },
-            );
-          },
-        ),
-        const Divider(thickness: 2),
-        BuildPaymentRow(
-          amount:
-              "INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal ?? 0.00)}",
-          title: "Total Payable",
-          secondRowTextStyle: buildCustomStyle(
-            FontWeightManager.bold,
-            FontSize.s15,
-            0.23,
-            ColorManager.textColor,
-          ),
-          firstRowTextStyle: buildCustomStyle(
-            FontWeightManager.bold,
-            FontSize.s15,
-            0.23,
-            ColorManager.textColor,
-          ),
-          color: ColorManager.textColor,
-        ),
-      ],
+            ),
+            const Divider(thickness: 2),
+            BuildPaymentRow(
+              amount:
+                  "$currency ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal ?? 0.00)}",
+              title: "Total Payable",
+              secondRowTextStyle: buildCustomStyle(
+                FontWeightManager.bold,
+                FontSize.s15,
+                0.23,
+                ColorManager.textColor,
+              ),
+              firstRowTextStyle: buildCustomStyle(
+                FontWeightManager.bold,
+                FontSize.s15,
+                0.23,
+                ColorManager.textColor,
+              ),
+              color: ColorManager.textColor,
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildPaymentMethodSelection() {
-    return Column(
-      children: [
-        BuildPaymentRow(
-          amount: "",
-          title: "Payment Method",
-          firstRowTextStyle: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s14,
-            0.21,
-            ColorManager.kPrimaryColor,
-          ),
-          color: ColorManager.kPrimaryColor,
-        ),
-        Row(
+    return Consumer<AppSettingsProvider>(
+      builder: (context, appSettingsProvider, child) {
+        final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
+        return Column(
           children: [
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  iconColor = 1;
-                });
-              },
-              child: BuildBoxShadowContainer(
-                border: iconColor == 1
-                    ? Border.all(color: ColorManager.kPrimaryColor)
-                    : null,
-                margin: const EdgeInsets.only(top: 10),
-                padding: const EdgeInsets.all(8),
-                blurRadius: 4,
-                circleRadius: 5,
-                child: Column(
-                  children: [
-                    WebsafeSvg.asset(
-                      ImageAssets.cashIcon,
-                      color: Colors.black,
-                      fit: BoxFit.none,
-                    ),
-                    Text(
-                      'Cash',
-                      style: buildCustomStyle(FontWeightManager.medium,
-                          FontSize.s8, 0.12, Colors.black),
-                    ),
-                  ],
-                ),
+            BuildPaymentRow(
+              amount: "",
+              title: "Payment Method",
+              firstRowTextStyle: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s14,
+                0.21,
+                ColorManager.kPrimaryColor,
               ),
+              color: ColorManager.kPrimaryColor,
             ),
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  iconColor = 2;
-                });
-              },
-              child: BuildBoxShadowContainer(
-                border: iconColor == 2
-                    ? Border.all(color: ColorManager.kPrimaryColor)
-                    : null,
-                margin: const EdgeInsets.only(left: 10, top: 10),
-                padding: const EdgeInsets.only(
-                    left: 12, top: 8, bottom: 8, right: 12),
-                blurRadius: 4,
-                circleRadius: 5,
-                child: Column(
-                  children: [
-                    WebsafeSvg.asset(
-                      ImageAssets.creditCardIcon,
-                      color: Colors.black,
-                      fit: BoxFit.none,
-                    ),
-                    Text(
-                      'Card',
-                      style: buildCustomStyle(FontWeightManager.medium,
-                          FontSize.s8, 0.12, Colors.black),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  iconColor = 3;
-                });
-              },
-              child: BuildBoxShadowContainer(
-                border: iconColor == 3
-                    ? Border.all(color: ColorManager.kPrimaryColor)
-                    : null,
-                margin: const EdgeInsets.only(left: 10, top: 10),
-                padding: const EdgeInsets.only(
-                    left: 12, top: 8, bottom: 8, right: 12),
-                blurRadius: 4,
-                circleRadius: 5,
-                child: Column(
-                  children: [
-                    WebsafeSvg.asset(
-                      ImageAssets.creditCardIcon,
-                      color: Colors.black,
-                      fit: BoxFit.none,
-                    ),
-                    Text(
-                      'Upi',
-                      style: buildCustomStyle(FontWeightManager.medium,
-                          FontSize.s8, 0.12, Colors.black),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (iconColor == 2 || iconColor == 3 || iconColor == 1)
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: iconColor != 1
-                      ? TextFormField(
-                          controller: _transactionNumberController,
-                          decoration: const InputDecoration(
-                            hintText: 'Transaction Reference No:',
-                          ),
-                        )
-                      : TextFormField(
-                          controller: _paidAmountController,
-                          onChanged: (value) {
-                            _getBalanceAmount();
-                          },
-                          decoration: const InputDecoration(
-                            hintText: 'Enter Paid Amount Here:',
-                          ),
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      iconColor = 1;
+                    });
+                  },
+                  child: BuildBoxShadowContainer(
+                    border: iconColor == 1
+                        ? Border.all(color: ColorManager.kPrimaryColor)
+                        : null,
+                    margin: const EdgeInsets.only(top: 10),
+                    padding: const EdgeInsets.all(8),
+                    blurRadius: 4,
+                    circleRadius: 5,
+                    child: Column(
+                      children: [
+                        WebsafeSvg.asset(
+                          ImageAssets.cashIcon,
+                          color: Colors.black,
+                          fit: BoxFit.none,
                         ),
+                        Text(
+                          'Cash',
+                          style: buildCustomStyle(FontWeightManager.medium,
+                              FontSize.s8, 0.12, Colors.black),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      iconColor = 2;
+                    });
+                  },
+                  child: BuildBoxShadowContainer(
+                    border: iconColor == 2
+                        ? Border.all(color: ColorManager.kPrimaryColor)
+                        : null,
+                    margin: const EdgeInsets.only(left: 10, top: 10),
+                    padding: const EdgeInsets.only(
+                        left: 12, top: 8, bottom: 8, right: 12),
+                    blurRadius: 4,
+                    circleRadius: 5,
+                    child: Column(
+                      children: [
+                        WebsafeSvg.asset(
+                          ImageAssets.creditCardIcon,
+                          color: Colors.black,
+                          fit: BoxFit.none,
+                        ),
+                        Text(
+                          'Card',
+                          style: buildCustomStyle(FontWeightManager.medium,
+                              FontSize.s8, 0.12, Colors.black),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      iconColor = 3;
+                    });
+                  },
+                  child: BuildBoxShadowContainer(
+                    border: iconColor == 3
+                        ? Border.all(color: ColorManager.kPrimaryColor)
+                        : null,
+                    margin: const EdgeInsets.only(left: 10, top: 10),
+                    padding: const EdgeInsets.only(
+                        left: 12, top: 8, bottom: 8, right: 12),
+                    blurRadius: 4,
+                    circleRadius: 5,
+                    child: Column(
+                      children: [
+                        WebsafeSvg.asset(
+                          ImageAssets.creditCardIcon,
+                          color: Colors.black,
+                          fit: BoxFit.none,
+                        ),
+                        Text(
+                          'Upi',
+                          style: buildCustomStyle(FontWeightManager.medium,
+                              FontSize.s8, 0.12, Colors.black),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (iconColor == 2 || iconColor == 3 || iconColor == 1)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 10),
+                      child: iconColor != 1
+                          ? TextFormField(
+                              controller: _transactionNumberController,
+                              decoration: const InputDecoration(
+                                hintText: 'Transaction Reference No:',
+                              ),
+                            )
+                          : TextFormField(
+                              controller: _paidAmountController,
+                              onChanged: (value) {
+                                _getBalanceAmount();
+                              },
+                              decoration: const InputDecoration(
+                                hintText: 'Enter Paid Amount Here:',
+                              ),
+                            ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (iconColor == 1)
+              BuildPaymentRow(
+                amount: "$currency ${_balanceAmount.toStringAsFixed(2)}",
+                title: "Balance amount",
+                secondRowTextStyle: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s15,
+                  0.18,
+                  ColorManager.textColorRed,
+                ),
+                firstRowTextStyle: buildCustomStyle(
+                  FontWeightManager.bold,
+                  FontSize.s15,
+                  0.23,
+                  ColorManager.textColorRed,
+                ),
+                color: ColorManager.textColorRed,
               ),
+            if (iconColor == 1) const SizedBox(height: 10),
           ],
-        ),
-        const SizedBox(height: 10),
-        if (iconColor == 1)
-          BuildPaymentRow(
-            amount: "INR ${_balanceAmount.toStringAsFixed(2)}",
-            title: "Balance amount",
-            secondRowTextStyle: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s15,
-              0.18,
-              ColorManager.textColorRed,
-            ),
-            firstRowTextStyle: buildCustomStyle(
-              FontWeightManager.bold,
-              FontSize.s15,
-              0.23,
-              ColorManager.textColorRed,
-            ),
-            color: ColorManager.textColorRed,
-          ),
-        if (iconColor == 1) const SizedBox(height: 10),
-      ],
+        );
+      },
     );
   }
 
   Widget _buildActionButtons() {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        decoration: const BoxDecoration(
-          borderRadius: BorderRadius.only(
-            topRight: Radius.circular(13.0),
-            bottomRight: Radius.circular(13.0),
-            topLeft: Radius.circular(13.0),
-            bottomLeft: Radius.circular(13.0),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: ColorManager.boxShadowColor,
-              blurRadius: 6,
-              offset: Offset(1, 1),
+    return Consumer<AppSettingsProvider>(
+      builder: (context, appSettingsProvider, child) {
+        final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            decoration: const BoxDecoration(
+              borderRadius: BorderRadius.only(
+                topRight: Radius.circular(13.0),
+                bottomRight: Radius.circular(13.0),
+                topLeft: Radius.circular(13.0),
+                bottomLeft: Radius.circular(13.0),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: ColorManager.boxShadowColor,
+                  blurRadius: 6,
+                  offset: Offset(1, 1),
+                ),
+              ],
+              color: ColorManager.greyWithOpacity60,
             ),
-          ],
-          color: ColorManager.greyWithOpacity60,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            Expanded(
-              flex: 3,
-              child: GestureDetector(
-                onTap: () async {
-                  if (selectedCustomerID == null && mobileNumberText == "") {
-                    showScaffoldError(
-                      context: context,
-                      message: "Please select a customer",
-                    );
-                  } else if (iconColor != 1 &&
-                      iconColor != 2 &&
-                      iconColor != 3) {
-                    showScaffoldError(
-                      context: context,
-                      message: "Please chose a Payment Method",
-                    );
-                  } else {
-                    String? accessToken =
-                        Provider.of<AuthModel>(context, listen: false).token;
-                    // debugPrint("accessToken From AuthModel $accessToken");
-                    final provider =
-                        Provider.of<CartProvider>(context, listen: false);
-                    int? cartId = provider.getCartIDForOrder;
-                    // debugPrint("$cartId");
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: GestureDetector(
+                    onTap: () async {
+                      if (selectedCustomerID == null &&
+                          mobileNumberText == "") {
+                        showScaffoldError(
+                          context: context,
+                          message: "Please select a customer",
+                        );
+                      } else if (iconColor != 1 &&
+                          iconColor != 2 &&
+                          iconColor != 3) {
+                        showScaffoldError(
+                          context: context,
+                          message: "Please chose a Payment Method",
+                        );
+                      } else {
+                        String? accessToken =
+                            Provider.of<AuthModel>(context, listen: false)
+                                .token;
+                        // debugPrint("accessToken From AuthModel $accessToken");
+                        final provider =
+                            Provider.of<CartProvider>(context, listen: false);
+                        int? cartId = provider.getCartIDForOrder;
+                        // debugPrint("$cartId");
 
-                    String paymentMethod = "";
+                        String paymentMethod = "";
 
-                    if (iconColor == 1) {
-                      paymentMethod = "CASH";
-                    } else if (iconColor == 2) {
-                      paymentMethod = "CARD";
-                    } else if (iconColor == 3) {
-                      paymentMethod = "UPI";
-                    }
+                        if (iconColor == 1) {
+                          paymentMethod = "CASH";
+                        } else if (iconColor == 2) {
+                          paymentMethod = "CARD";
+                        } else if (iconColor == 3) {
+                          paymentMethod = "UPI";
+                        }
 
-                    try {
-                      await Provider.of<CartProvider>(context, listen: false)
-                          .addToOrderAPI(
-                        cartIds: cartId!,
-                        accessToken: accessToken ?? "",
-                        transactionId: _transactionNumberController.text,
-                        totalPrice:
-                            Provider.of<CartProvider>(context, listen: false)
+                        try {
+                          await Provider.of<CartProvider>(context,
+                                  listen: false)
+                              .addToOrderAPI(
+                            cartIds: cartId!,
+                            accessToken: accessToken ?? "",
+                            transactionId: _transactionNumberController.text,
+                            totalPrice: Provider.of<CartProvider>(context,
+                                    listen: false)
                                 .priceSummary!
                                 .netTotal
                                 .toString(),
-                        customerId: selectedCustomerID,
-                        customerPhone: selectedCustomerPhone,
-                        phone: mobileNumberText,
-                        paymentMethod: paymentMethod,
-                      )
-                          .then((response) {
-                        AddToOrderModel addToOrderModel =
-                            AddToOrderModel.fromJson(response);
-                        // debugPrint("$response");
-                        if (response["status"] == "success") {
-                          showScaffold(
-                            context: context,
-                            message: "${addToOrderModel.message}",
-                          );
+                            customerId: selectedCustomerID,
+                            customerPhone: selectedCustomerPhone,
+                            phone: mobileNumberText,
+                            paymentMethod: paymentMethod,
+                          )
+                              .then((response) {
+                            AddToOrderModel addToOrderModel =
+                                AddToOrderModel.fromJson(response);
+                            // debugPrint("$response");
+                            if (response["status"] == "success") {
+                              showScaffold(
+                                context: context,
+                                message: "${addToOrderModel.message}",
+                              );
 
-                          // Clear the mobile number after successful save
-                          setState(() {
-                            mobileNumberText = ""; // Clear the variable
-                            selectedCustomerID = null;
-                            selectedCustomerPhone = null;
-                            iconColor = 0;
-                            mobileNumberTextController
-                                .clear(); // Clear the text field
+                              // Clear the mobile number after successful save
+                              setState(() {
+                                mobileNumberText = ""; // Clear the variable
+                                selectedCustomerID = null;
+                                selectedCustomerPhone = null;
+                                iconColor = 0;
+                                mobileNumberTextController
+                                    .clear(); // Clear the text field
+                              });
+                            } else {
+                              showScaffoldError(
+                                context: context,
+                                message: "${addToOrderModel.message}",
+                              );
+                            }
                           });
-                        } else {
-                          showScaffoldError(
-                            context: context,
-                            message: "${addToOrderModel.message}",
-                          );
+                        } catch (error) {
+                          // debugPrint(error.toString());
                         }
-                      });
-                    } catch (error) {
-                      // debugPrint(error.toString());
-                    }
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(13),
-                  decoration: const BoxDecoration(
-                    borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(0.0),
-                      bottomLeft: Radius.circular(13.0),
-                      topLeft: Radius.circular(13.0),
-                      bottomRight: Radius.circular(0.0),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: ColorManager.boxShadowColor,
-                        blurRadius: 6,
-                        offset: Offset(1, 1),
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(13),
+                      decoration: const BoxDecoration(
+                        borderRadius: BorderRadius.only(
+                          topRight: Radius.circular(0.0),
+                          bottomLeft: Radius.circular(13.0),
+                          topLeft: Radius.circular(13.0),
+                          bottomRight: Radius.circular(0.0),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: ColorManager.boxShadowColor,
+                            blurRadius: 6,
+                            offset: Offset(1, 1),
+                          ),
+                        ],
+                        color: ColorManager.kPrimaryColor,
                       ),
-                    ],
-                    color: ColorManager.kPrimaryColor,
-                  ),
-                  child: Text(
-                    'Save Sales ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal)}',
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s16, 0.27, Colors.white),
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  String formattedTotal = AmountHelper.formatAmount(
-                      Provider.of<CartProvider>(context, listen: false)
-                          .priceSummary!
-                          .netTotal);
-                  // debugPrint(cartProductItems!.length.toString());
-                  // debugPrint(formattedTotal.toString());
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PrintPage(
-                        cartItems: cartProductItems!,
-                        formattedTotal: formattedTotal,
-                        discountAmount: Provider.of<CartProvider>(context, listen: false)
-                            .priceSummary?.discount?.toString() ?? "0.00",
-                        orderDate: DateHelper.formatDate(DateTime.now()),
-                        orderNumber: "#000000",
+                      child: Text(
+                        'Save Sales ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal)}',
+                        style: buildCustomStyle(FontWeightManager.medium,
+                            FontSize.s16, 0.27, Colors.white),
                       ),
                     ),
-                  );
-                },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    WebsafeSvg.asset(
-                      ImageAssets.printIcon,
-                      color: Colors.white,
-                      fit: BoxFit.none,
-                    ),
-                    Text(
-                      'Print',
-                      style: buildCustomStyle(FontWeightManager.medium,
-                          FontSize.s10, 0.16, Colors.white),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      String formattedTotal = AmountHelper.formatAmount(
+                          Provider.of<CartProvider>(context, listen: false)
+                              .priceSummary!
+                              .netTotal);
+                      // debugPrint(cartProductItems!.length.toString());
+                      // debugPrint(formattedTotal.toString());
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PrintPage(
+                            cartItems: cartProductItems!,
+                            formattedTotal: formattedTotal,
+                            discountAmount: Provider.of<CartProvider>(context,
+                                        listen: false)
+                                    .priceSummary
+                                    ?.discount
+                                    ?.toString() ??
+                                "0.00",
+                            orderDate: DateHelper.formatDate(DateTime.now()),
+                            orderNumber: "#000000",
+                          ),
+                        ),
+                      );
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        WebsafeSvg.asset(
+                          ImageAssets.printIcon,
+                          color: Colors.white,
+                          fit: BoxFit.none,
+                        ),
+                        Text(
+                          'Print',
+                          style: buildCustomStyle(FontWeightManager.medium,
+                              FontSize.s10, 0.16, Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

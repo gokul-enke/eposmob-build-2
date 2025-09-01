@@ -2036,6 +2036,9 @@ class BillingPageState extends State<BillingPage>
   Widget _buildPaymentSummary({bool compact = false}) {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: true);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: true);
+    final currency = appSettingsProvider.appSettings?.currency ?? '';
 
     localProductProvider.cartTotal; // Call this to ensure priceSummary is set
 
@@ -2059,7 +2062,7 @@ class BillingPageState extends State<BillingPage>
           const SizedBox(height: 5),
           BuildPaymentRow(
             amount:
-                "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
+                "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
             title: "Net amount",
             color: ColorManager.textColor,
             firstRowTextStyle: buildCustomStyle(
@@ -2081,7 +2084,7 @@ class BillingPageState extends State<BillingPage>
                   true)
               ? BuildPaymentRow(
                   amount:
-                      "INR ${AmountHelper.roundOffAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
+                      "$currency ${AmountHelper.roundOffAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
                   title: "Discount",
                   color: ColorManager.kButtonGreen,
                   firstRowTextStyle: buildCustomStyle(
@@ -2099,7 +2102,7 @@ class BillingPageState extends State<BillingPage>
                 )
               : BuildPaymentRow(
                   amount:
-                      "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
+                      "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
                   title: "Discount",
                   color: ColorManager.kButtonGreen,
                   firstRowTextStyle: buildCustomStyle(
@@ -2118,7 +2121,7 @@ class BillingPageState extends State<BillingPage>
           const Divider(thickness: 2),
           BuildPaymentRow(
             amount:
-                "INR ${AmountHelper.roundOffAmount(localProductProvider.cartTotal)}",
+                "$currency ${AmountHelper.roundOffAmount(localProductProvider.cartTotal)}",
             title: "Total Payable",
             secondRowTextStyle: buildCustomStyle(
               FontWeightManager.bold,
@@ -2159,7 +2162,7 @@ class BillingPageState extends State<BillingPage>
         ),
         BuildPaymentRow(
           amount:
-              "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
+              "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
           title: "Net amount",
           color: ColorManager.textColor,
           firstRowTextStyle: buildCustomStyle(
@@ -2175,14 +2178,14 @@ class BillingPageState extends State<BillingPage>
             ColorManager.textColor,
           ),
         ),
-        const BuildPaymentRow(
-          amount: "INR 0.00",
+        BuildPaymentRow(
+          amount: "$currency 0.00",
           title: "Shipping",
           color: ColorManager.textColor,
         ),
         BuildPaymentRow(
           amount:
-              "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
+              "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
           title: "Discount",
           color: ColorManager.textColor,
           firstRowTextStyle: buildCustomStyle(
@@ -2201,7 +2204,7 @@ class BillingPageState extends State<BillingPage>
         GestureDetector(
           child: BuildPaymentRow(
             amount:
-                "INR ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}",
+                "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}",
             title: "GST",
             color: ColorManager.kPrimaryColor,
           ),
@@ -2220,7 +2223,7 @@ class BillingPageState extends State<BillingPage>
         ),
         const Divider(thickness: 2),
         BuildPaymentRow(
-          amount: "INR ${_getFormattedTotal()}", // Use helper method
+          amount: "$currency ${_getFormattedTotal()}", // Use helper method
           title: "Total Payable",
           secondRowTextStyle: buildCustomStyle(
             FontWeightManager.bold,
@@ -2933,6 +2936,9 @@ class BillingPageState extends State<BillingPage>
   }
 
   Widget _buildCustomerBalance(double balance) {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? '';
     Color balanceColor;
     String balanceText;
 
@@ -2959,7 +2965,7 @@ class BillingPageState extends State<BillingPage>
           ),
         ),
         Text(
-          'INR $balanceText',
+          '$currency $balanceText',
           style: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s12,
@@ -4031,6 +4037,9 @@ class BillingPageState extends State<BillingPage>
   double _calculateBalanceAmount() {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
     double cartTotal = localProductProvider.cartTotal;
 
     // For balance calculation, only include actual cash payments (not debit/store credit)
@@ -4052,7 +4061,7 @@ class BillingPageState extends State<BillingPage>
         debugPrint('💳 Customer has debt - using transaction excess logic');
         final transactionExcess = totalCollected - cartTotal;
         debugPrint(
-            '💰 Transaction excess: ₹${transactionExcess.toStringAsFixed(2)}');
+            '💰 Transaction excess: $currency${transactionExcess.toStringAsFixed(2)}');
 
         if (transactionExcess > 0) {
           // Get the actual customer credit amount being allocated
@@ -4063,13 +4072,13 @@ class BillingPageState extends State<BillingPage>
           if (actualCustomerCredit > transactionExcess) {
             actualCustomerCredit = transactionExcess;
             debugPrint(
-                '  - Clamped customer credit to transaction excess: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+                '  - Clamped customer credit to transaction excess: $currency${actualCustomerCredit.toStringAsFixed(2)}');
           }
 
           // Cash balance = transaction excess - customer credit
           balance = transactionExcess - actualCustomerCredit;
           debugPrint(
-              '  - Balance = Transaction Excess (₹${transactionExcess.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
+              '  - Balance = Transaction Excess ($currency${transactionExcess.toStringAsFixed(2)}) - Customer Credit ($currency${actualCustomerCredit.toStringAsFixed(2)}) = $currency${balance.toStringAsFixed(2)}');
         } else {
           balance = 0.0;
           debugPrint('  - No transaction excess, balance = 0');
@@ -4080,17 +4089,18 @@ class BillingPageState extends State<BillingPage>
         // Net Due = Purchase Total - Customer Previous Balance
         double netDue = cartTotal - customerPrevBalance;
         debugPrint('💰 Net Due calculation:');
-        debugPrint('  - Purchase Total: ₹${cartTotal.toStringAsFixed(2)}');
         debugPrint(
-            '  - Customer Prev Balance: ₹${customerPrevBalance.toStringAsFixed(2)}');
-        debugPrint('  - Net Due: ₹${netDue.toStringAsFixed(2)}');
+            '  - Purchase Total: $currency${cartTotal.toStringAsFixed(2)}');
+        debugPrint(
+            '  - Customer Prev Balance: $currency${customerPrevBalance.toStringAsFixed(2)}');
+        debugPrint('  - Net Due: $currency${netDue.toStringAsFixed(2)}');
 
         // Available balance = Total Collected - Net Due
         double availableBalance = totalCollected - netDue;
         debugPrint(
-            '  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
+            '  - Total Collected: $currency${totalCollected.toStringAsFixed(2)}');
         debugPrint(
-            '  - Available Balance: ₹${availableBalance.toStringAsFixed(2)}');
+            '  - Available Balance: $currency${availableBalance.toStringAsFixed(2)}');
 
         if (availableBalance > 0) {
           // Get the actual customer credit amount being allocated
@@ -4101,13 +4111,13 @@ class BillingPageState extends State<BillingPage>
           if (actualCustomerCredit > availableBalance) {
             actualCustomerCredit = availableBalance;
             debugPrint(
-                '  - Clamped customer credit to available balance: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+                '  - Clamped customer credit to available balance: $currency${actualCustomerCredit.toStringAsFixed(2)}');
           }
 
           // Cash balance = available balance - customer credit
           balance = availableBalance - actualCustomerCredit;
           debugPrint(
-              '  - Balance = Available Balance (₹${availableBalance.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
+              '  - Balance = Available Balance ($currency${availableBalance.toStringAsFixed(2)}) - Customer Credit ($currency${actualCustomerCredit.toStringAsFixed(2)}) = $currency${balance.toStringAsFixed(2)}');
         } else {
           balance = 0.0;
           debugPrint('  - No available balance, balance = 0');
@@ -4118,14 +4128,14 @@ class BillingPageState extends State<BillingPage>
       // Toggle OFF: Simple calculation without previous balance
       balance = totalCollected - cartTotal;
       debugPrint(
-          '  - Balance = Total Collected (₹${totalCollected.toStringAsFixed(2)}) - Cart Total (₹${cartTotal.toStringAsFixed(2)}) = ₹${balance.toStringAsFixed(2)}');
+          '  - Balance = Total Collected ($currency${totalCollected.toStringAsFixed(2)}) - Cart Total ($currency${cartTotal.toStringAsFixed(2)}) = $currency${balance.toStringAsFixed(2)}');
     }
 
     // Clamp balance to never show negative values in UI
     // Negative balance means insufficient payment, but cash drawer can't give negative money
     if (balance < 0) {
       debugPrint(
-          '🚫 BILLING PAGE: Clamping negative balance (₹${balance.toStringAsFixed(2)}) to 0 for UI display');
+          '🚫 BILLING PAGE: Clamping negative balance ($currency${balance.toStringAsFixed(2)}) to 0 for UI display');
       balance = 0.0;
     }
 
@@ -4208,6 +4218,9 @@ class BillingPageState extends State<BillingPage>
   Widget _buildQuickAccessIcons() {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
+        final appSettingsProvider =
+            Provider.of<AppSettingsProvider>(context, listen: false);
+        final currency = appSettingsProvider.appSettings?.currency ?? '';
         double totalPaid = _getTotalPaidAmount();
         double cartTotal = localProductProvider.cartTotal;
         // For balance calculation, only include actual cash payments (not debit/store credit)
@@ -4322,7 +4335,7 @@ class BillingPageState extends State<BillingPage>
                         ),
                       ),
                       Text(
-                        'INR ${totalPaid.toStringAsFixed(2)}',
+                        '$currency ${totalPaid.toStringAsFixed(2)}',
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s15,
@@ -4345,7 +4358,7 @@ class BillingPageState extends State<BillingPage>
                         ),
                       ),
                       Text(
-                        'INR ${balance.toStringAsFixed(2)}',
+                        '$currency ${balance.toStringAsFixed(2)}',
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s15,

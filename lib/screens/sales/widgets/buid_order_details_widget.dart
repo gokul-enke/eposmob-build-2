@@ -52,7 +52,7 @@ class OrderDetailWidget extends StatelessWidget {
 
     return Consumer<AppSettingsProvider>(
       builder: (context, appSettingsProvider, child) {
-        final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+        final currency = appSettingsProvider.appSettings?.currency ?? '';
         
         return MouseRegion(
       cursor: SystemMouseCursors.grab,
@@ -192,7 +192,7 @@ class OrderDetailWidget extends StatelessWidget {
                               color: ColorManager.textColor,
                             ),
                             BuildPaymentRow(
-                              amount: "${priceSummary?.netTotal?.toStringAsFixed(2) ?? '0.00'}",
+                              amount: "$currency ${priceSummary?.netTotal?.toStringAsFixed(2) ?? '0.00'}",
                               title: "Net amount",
                               color: ColorManager.textColor,
                             ),
@@ -215,18 +215,18 @@ class OrderDetailWidget extends StatelessWidget {
                                 // ),
                               ),
                             BuildPaymentRow(
-                              amount: "${priceSummary?.discount?.toStringAsFixed(2) ?? '0.00'}",
+                              amount: "$currency ${priceSummary?.discount?.toStringAsFixed(2) ?? '0.00'}",
                               title: "Discount",
                               color: ColorManager.textColor,
                             ),
                             BuildPaymentRow(
-                              amount: "${priceSummary?.totalTax?.toStringAsFixed(2) ?? '0.00'}",
+                              amount: "$currency ${priceSummary?.totalTax?.toStringAsFixed(2) ?? '0.00'}",
                               title: "Tax Amount",
                               color: ColorManager.textColor,
                             ),
                             const Divider(thickness: 2),
                             BuildPaymentRow(
-                              amount: "${priceSummary?.netPayable?.toStringAsFixed(2) ?? '0.00'}",
+                              amount: "$currency ${priceSummary?.netPayable?.toStringAsFixed(2) ?? '0.00'}",
                               title: "Payable",
                               secondRowTextStyle: buildCustomStyle(
                                 FontWeightManager.bold,

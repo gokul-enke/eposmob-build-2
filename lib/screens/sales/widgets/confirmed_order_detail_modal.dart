@@ -3,6 +3,7 @@ import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -42,337 +43,370 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
-      elevation: 8,
-      backgroundColor: Colors.white,
-      child: Container(
-        constraints: BoxConstraints(
-            maxWidth: 700, maxHeight: MediaQuery.of(context).size.height * 0.8),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header with close button (Fixed at top)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Consumer<AppSettingsProvider>(
+      builder: (context, appSettingsProvider, child) {
+        final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          elevation: 8,
+          backgroundColor: Colors.white,
+          child: Container(
+            constraints: BoxConstraints(
+                maxWidth: 700,
+                maxHeight: MediaQuery.of(context).size.height * 0.8),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  "Order Details",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.black),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Scrollable content
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                // Header with close button (Fixed at top)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Order Information Card
-                    Card(
-                      elevation: 2,
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: Colors.grey[300]!),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Order Information",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildInfoRow(
-                                "Order Number", "#${order.orderNumber}"),
-                            const SizedBox(height: 8),
-                            _buildInfoRow(
-                                "Customer Phone", order.customerPhone ?? "N/A"),
-                            const SizedBox(height: 8),
-                            if (order.customerName != null && order.customerName!.isNotEmpty) ...[
-                              _buildInfoRow("Customer Name", order.customerName!),
-                              const SizedBox(height: 8),
-                            ],
-                            _buildInfoRow(
-                                "Date", _formatDateTime(order.createdAt)),
-                            const SizedBox(height: 8),
-                            _buildInfoRow("Time", _formatTime(order.createdAt)),
-                            const SizedBox(height: 8),
-                            _buildInfoRow("Total Amount",
-                                "₹${order.total.toStringAsFixed(2)}"),
-                            const SizedBox(height: 8),
-                            _buildInfoRow("Total MRP",
-                                "₹${_calculateTotalMRP().toStringAsFixed(2)}"),
-                            const SizedBox(height: 8),
-                            _buildInfoRow("You Saved",
-                                "₹${_calculateYouSaved().toStringAsFixed(2)}",
-                                valueStyle: const TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.w600,
-                                )),
-                            // Display additional order details
-                            if (order.deliveryMethod != null && order.deliveryMethod!.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              _buildInfoRow("Delivery Method", order.deliveryMethod!),
-                            ],
-                            if (order.transactionId != null && order.transactionId!.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              _buildInfoRow("Transaction ID", order.transactionId!),
-                            ],
-                            if (order.balanceAmount != null && order.balanceAmount != "0.0" && order.balanceAmount!.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              _buildInfoRow("Balance Amount", "₹${order.balanceAmount}",
-                                  valueStyle: const TextStyle(
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.w600,
-                                  )),
-                            ],
-                            if (order.carNumber != null && order.carNumber!.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              _buildInfoRow("Car Number", order.carNumber!,
-                                  valueStyle: const TextStyle(
-                                    color: Colors.purple,
-                                    fontWeight: FontWeight.w600,
-                                  )),
-                            ],
-                            if (order.status != null && order.status!.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              _buildInfoRow("Order Status", order.status!.toUpperCase(),
-                                  valueStyle: TextStyle(
-                                    color: order.status!.toLowerCase() == 'confirmed' 
-                                        ? Colors.green 
-                                        : order.status!.toLowerCase() == 'saved'
-                                            ? Colors.orange
-                                            : Colors.grey,
-                                    fontWeight: FontWeight.bold,
-                                  )),
-                            ],
-                            // Display Discount Information
-                            if ((order.flatDiscount != null && order.flatDiscount! > 0) ||
-                                (order.percentageDiscount != null && order.percentageDiscount! > 0)) ...[
-                              const SizedBox(height: 8),
-                              const Divider(),
-                              const SizedBox(height: 8),
-                              const Text(
-                                "Applied Discounts",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              if (order.flatDiscount != null && order.flatDiscount! > 0)
-                                _buildInfoRow("Flat Discount",
-                                    "₹${order.flatDiscount!.toStringAsFixed(2)}",
-                                    valueStyle: const TextStyle(
-                                      color: Colors.orange,
-                                      fontWeight: FontWeight.w600,
-                                    )),
-                              if (order.percentageDiscount != null && order.percentageDiscount! > 0) ...[
-                                const SizedBox(height: 4),
-                                _buildInfoRow("Percentage Discount",
-                                    "${order.percentageDiscount!.toStringAsFixed(1)}%",
-                                    valueStyle: const TextStyle(
-                                      color: Colors.orange,
-                                      fontWeight: FontWeight.w600,
-                                    )),
-                              ],
-                              if (order.couponId != null && order.couponId!.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                _buildInfoRow("Coupon Code", order.couponId!,
-                                    valueStyle: const TextStyle(
-                                      color: Colors.blue,
-                                      fontWeight: FontWeight.w600,
-                                    )),
-                              ],
-                            ],
-                            // Display Payment Method(s)
-                            if (order.paymentMethod != null) ...[
-                              const SizedBox(height: 8),
-                              const Divider(),
-                              const SizedBox(height: 8),
-                              ConfirmedOrderDetailModal._buildPaymentMethodInfo(order.paymentMethod!),
-                            ],
-                            if (order.deliveryDate != null &&
-                                order.deliveryDate!.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              _buildInfoRow(
-                                  "Delivery Date",
-                                  DateHelper.formatISODate(
-                                      order.deliveryDate!)),
-                            ],
-                            if (order.deliveryTime != null &&
-                                order.deliveryTime!.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              _buildInfoRow(
-                                  "Delivery Time", order.deliveryTime!),
-                            ],
-                            if (order.comment != null &&
-                                order.comment!.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              _buildInfoRow("Comment", order.comment!),
-                            ],
-                            if (order.toCustomerCredit == true) ...[
-                              const SizedBox(height: 8),
-                              _buildInfoRow(
-                                "Credit Applied",
-                                "Yes",
-                                valueStyle: const TextStyle(
-                                  color: Colors.blue,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Order Items Section
                     const Text(
-                      "Order Items",
+                      "Order Details",
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.black),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
 
-                    // Table with order items (now scrolls with everything else)
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.grey[300]!),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: DataTable(
-                          headingTextStyle: const TextStyle(
+                // Scrollable content
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Order Information Card
+                        Card(
+                          elevation: 2,
+                          color: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Order Information",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                _buildInfoRow(
+                                    "Order Number", "#${order.orderNumber}"),
+                                const SizedBox(height: 8),
+                                _buildInfoRow("Customer Phone",
+                                    order.customerPhone ?? "N/A"),
+                                const SizedBox(height: 8),
+                                if (order.customerName != null &&
+                                    order.customerName!.isNotEmpty) ...[
+                                  _buildInfoRow(
+                                      "Customer Name", order.customerName!),
+                                  const SizedBox(height: 8),
+                                ],
+                                _buildInfoRow(
+                                    "Date", _formatDateTime(order.createdAt)),
+                                const SizedBox(height: 8),
+                                _buildInfoRow(
+                                    "Time", _formatTime(order.createdAt)),
+                                const SizedBox(height: 8),
+                                _buildInfoRow("Total Amount",
+                                    "$currency${order.total.toStringAsFixed(2)}"),
+                                const SizedBox(height: 8),
+                                _buildInfoRow("Total MRP",
+                                    "$currency${_calculateTotalMRP().toStringAsFixed(2)}"),
+                                const SizedBox(height: 8),
+                                _buildInfoRow("You Saved",
+                                    "$currency${_calculateYouSaved().toStringAsFixed(2)}",
+                                    valueStyle: const TextStyle(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.w600,
+                                    )),
+                                // Display additional order details
+                                if (order.deliveryMethod != null &&
+                                    order.deliveryMethod!.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  _buildInfoRow(
+                                      "Delivery Method", order.deliveryMethod!),
+                                ],
+                                if (order.transactionId != null &&
+                                    order.transactionId!.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  _buildInfoRow(
+                                      "Transaction ID", order.transactionId!),
+                                ],
+                                if (order.balanceAmount != null &&
+                                    order.balanceAmount != "0.0" &&
+                                    order.balanceAmount!.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  _buildInfoRow("Balance Amount",
+                                      "$currency${order.balanceAmount}",
+                                      valueStyle: const TextStyle(
+                                        color: Colors.blue,
+                                        fontWeight: FontWeight.w600,
+                                      )),
+                                ],
+                                if (order.carNumber != null &&
+                                    order.carNumber!.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  _buildInfoRow("Car Number", order.carNumber!,
+                                      valueStyle: const TextStyle(
+                                        color: Colors.purple,
+                                        fontWeight: FontWeight.w600,
+                                      )),
+                                ],
+                                if (order.status != null &&
+                                    order.status!.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  _buildInfoRow("Order Status",
+                                      order.status!.toUpperCase(),
+                                      valueStyle: TextStyle(
+                                        color: order.status!.toLowerCase() ==
+                                                'confirmed'
+                                            ? Colors.green
+                                            : order.status!.toLowerCase() ==
+                                                    'saved'
+                                                ? Colors.orange
+                                                : Colors.grey,
+                                        fontWeight: FontWeight.bold,
+                                      )),
+                                ],
+                                // Display Discount Information
+                                if ((order.flatDiscount != null &&
+                                        order.flatDiscount! > 0) ||
+                                    (order.percentageDiscount != null &&
+                                        order.percentageDiscount! > 0)) ...[
+                                  const SizedBox(height: 8),
+                                  const Divider(),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    "Applied Discounts",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  if (order.flatDiscount != null &&
+                                      order.flatDiscount! > 0)
+                                    _buildInfoRow("Flat Discount",
+                                        "$currency${order.flatDiscount!.toStringAsFixed(2)}",
+                                        valueStyle: const TextStyle(
+                                          color: Colors.orange,
+                                          fontWeight: FontWeight.w600,
+                                        )),
+                                  if (order.percentageDiscount != null &&
+                                      order.percentageDiscount! > 0) ...[
+                                    const SizedBox(height: 4),
+                                    _buildInfoRow("Percentage Discount",
+                                        "${order.percentageDiscount!.toStringAsFixed(1)}%",
+                                        valueStyle: const TextStyle(
+                                          color: Colors.orange,
+                                          fontWeight: FontWeight.w600,
+                                        )),
+                                  ],
+                                  if (order.couponId != null &&
+                                      order.couponId!.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    _buildInfoRow(
+                                        "Coupon Code", order.couponId!,
+                                        valueStyle: const TextStyle(
+                                          color: Colors.blue,
+                                          fontWeight: FontWeight.w600,
+                                        )),
+                                  ],
+                                ],
+                                // Display Payment Method(s)
+                                if (order.paymentMethod != null) ...[
+                                  const SizedBox(height: 8),
+                                  const Divider(),
+                                  const SizedBox(height: 8),
+                                  ConfirmedOrderDetailModal
+                                      ._buildPaymentMethodInfo(
+                                          order.paymentMethod!, currency),
+                                ],
+                                if (order.deliveryDate != null &&
+                                    order.deliveryDate!.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  _buildInfoRow(
+                                      "Delivery Date",
+                                      DateHelper.formatISODate(
+                                          order.deliveryDate!)),
+                                ],
+                                if (order.deliveryTime != null &&
+                                    order.deliveryTime!.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  _buildInfoRow(
+                                      "Delivery Time", order.deliveryTime!),
+                                ],
+                                if (order.comment != null &&
+                                    order.comment!.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  _buildInfoRow("Comment", order.comment!),
+                                ],
+                                if (order.toCustomerCredit == true) ...[
+                                  const SizedBox(height: 8),
+                                  _buildInfoRow(
+                                    "Credit Applied",
+                                    "Yes",
+                                    valueStyle: const TextStyle(
+                                      color: Colors.blue,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Order Items Section
+                        const Text(
+                          "Order Items",
+                          style: TextStyle(
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
                           ),
-                          dataTextStyle: const TextStyle(
-                            color: Colors.black,
-                          ),
-                          horizontalMargin: 16,
-                          columnSpacing: 24,
-                          columns: const [
-                            DataColumn(label: Text('Product')),
-                            DataColumn(label: Text('Qty'), numeric: true),
-                            DataColumn(
-                                label: Text('Unit Price'), numeric: true),
-                            DataColumn(label: Text('Total'), numeric: true),
-                          ],
-                          rows: order.items.map((item) {
-                            double unitPrice =
-                                item.price ?? item.product.price?.price ?? 0.0;
-                            double totalPrice = unitPrice * item.quantity;
-
-                            return DataRow(cells: [
-                              DataCell(Text(
-                                item.product.productName ?? 'Unknown Product',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black,
-                                ),
-                              )),
-                              DataCell(Text(
-                                item.quantity.toString(),
-                                style: const TextStyle(color: Colors.black),
-                              )),
-                              DataCell(Text(
-                                "₹${unitPrice.toStringAsFixed(2)}",
-                                style: const TextStyle(color: Colors.black),
-                              )),
-                              DataCell(Text(
-                                "₹${totalPrice.toStringAsFixed(2)}",
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              )),
-                            ]);
-                          }).toList(),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ),
+                        const SizedBox(height: 16),
 
-            // Action Buttons (Fixed at bottom)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                CustomRoundButton(
-                  fct: () => _printOrder(context),
-                  title: "Print Order",
-                  fontSize: FontSize.s12,
-                  height: MediaQuery.of(context).size.height * .05,
-                  width: 120,
-                  boxColor: ColorManager.kPrimaryColor,
-                  textColor: Colors.white,
+                        // Table with order items (now scrolls with everything else)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: DataTable(
+                              headingTextStyle: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                              dataTextStyle: const TextStyle(
+                                color: Colors.black,
+                              ),
+                              horizontalMargin: 16,
+                              columnSpacing: 24,
+                              columns: const [
+                                DataColumn(label: Text('Product')),
+                                DataColumn(label: Text('Qty'), numeric: true),
+                                DataColumn(
+                                    label: Text('Unit Price'), numeric: true),
+                                DataColumn(label: Text('Total'), numeric: true),
+                              ],
+                              rows: order.items.map((item) {
+                                double unitPrice = item.price ??
+                                    item.product.price?.price ??
+                                    0.0;
+                                double totalPrice = unitPrice * item.quantity;
+
+                                return DataRow(cells: [
+                                  DataCell(Text(
+                                    item.product.productName ??
+                                        'Unknown Product',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.black,
+                                    ),
+                                  )),
+                                  DataCell(Text(
+                                    item.quantity.toString(),
+                                    style: const TextStyle(color: Colors.black),
+                                  )),
+                                  DataCell(Text(
+                                    "$currency${unitPrice.toStringAsFixed(2)}",
+                                    style: const TextStyle(color: Colors.black),
+                                  )),
+                                  DataCell(Text(
+                                    "$currency${totalPrice.toStringAsFixed(2)}",
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  )),
+                                ]);
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
                 ),
+
+                // Action Buttons (Fixed at bottom)
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     CustomRoundButton(
-                      fct: () => _showDeleteConfirmationDialog(context),
-                      title: "Delete",
+                      fct: () => _printOrder(context),
+                      title: "Print Order",
                       fontSize: FontSize.s12,
                       height: MediaQuery.of(context).size.height * .05,
-                      width: 80,
-                      boxColor: ColorManager.kButtonRed,
-                      borderColor: ColorManager.kButtonRed,
+                      width: 120,
+                      boxColor: ColorManager.kPrimaryColor,
                       textColor: Colors.white,
                     ),
-                    const SizedBox(width: 12),
-                    CustomRoundButton(
-                      fct: () => Navigator.of(context).pop(),
-                      title: "Close",
-                      fontSize: FontSize.s12,
-                      height: MediaQuery.of(context).size.height * .05,
-                      width: 80,
-                      boxColor: Colors.grey[300],
-                      textColor: Colors.black,
+                    Row(
+                      children: [
+                        CustomRoundButton(
+                          fct: () => _showDeleteConfirmationDialog(context),
+                          title: "Delete",
+                          fontSize: FontSize.s12,
+                          height: MediaQuery.of(context).size.height * .05,
+                          width: 80,
+                          boxColor: ColorManager.kButtonRed,
+                          borderColor: ColorManager.kButtonRed,
+                          textColor: Colors.white,
+                        ),
+                        const SizedBox(width: 12),
+                        CustomRoundButton(
+                          fct: () => Navigator.of(context).pop(),
+                          title: "Close",
+                          fontSize: FontSize.s12,
+                          height: MediaQuery.of(context).size.height * .05,
+                          width: 80,
+                          boxColor: Colors.grey[300],
+                          textColor: Colors.black,
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  static Widget _buildInfoRow(String label, String value, {TextStyle? valueStyle}) {
+  static Widget _buildInfoRow(String label, String value,
+      {TextStyle? valueStyle}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -457,9 +491,11 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
             savedTotal:
                 youSaved.toString(), // 🔧 FIX: Use calculated "You Saved"
             discountAmount: ((order.flatDiscount ?? 0.0) +
-                ((order.percentageDiscount ?? 0.0) > 0
-                    ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
-                    : 0.0))
+                    ((order.percentageDiscount ?? 0.0) > 0
+                        ? (order.total *
+                            (order.percentageDiscount ?? 0.0) /
+                            100)
+                        : 0.0))
                 .toString(),
             orderDate: order.createdAt,
             orderNumber: order.orderNumber,
@@ -506,7 +542,8 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
     );
   }
 
-  static Widget _buildPaymentMethodInfo(String paymentMethodJsonOrString) {
+  static Widget _buildPaymentMethodInfo(
+      String paymentMethodJsonOrString, String currency) {
     try {
       if (paymentMethodJsonOrString.startsWith('{') &&
           paymentMethodJsonOrString.endsWith('}')) {
@@ -515,10 +552,10 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
         if (multiPaymentData['isMultiPayment'] == true) {
           final Map<String, dynamic> amounts =
               Map<String, dynamic>.from(multiPaymentData['amounts'] ?? {});
-          
+
           List<Widget> methodWidgets = [];
           double totalPaid = 0.0;
-          
+
           amounts.forEach((method, amount) {
             double amountValue = double.tryParse(amount.toString()) ?? 0.0;
             if (amountValue > 0) {
@@ -528,7 +565,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 16.0, top: 4.0),
                   child: _buildInfoRow(
                     "$method Payment",
-                    "₹${amountValue.toStringAsFixed(2)}",
+                    "$currency${amountValue.toStringAsFixed(2)}",
                     valueStyle: const TextStyle(
                       color: Colors.green,
                       fontWeight: FontWeight.w600,
@@ -538,7 +575,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
               );
             }
           });
-          
+
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -553,7 +590,8 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
               const SizedBox(height: 8),
               ...methodWidgets,
               const SizedBox(height: 8),
-              _buildInfoRow("Total Paid", "₹${totalPaid.toStringAsFixed(2)}",
+              _buildInfoRow(
+                  "Total Paid", "$currency${totalPaid.toStringAsFixed(2)}",
                   valueStyle: const TextStyle(
                     color: Colors.green,
                     fontWeight: FontWeight.bold,

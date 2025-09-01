@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:provider/provider.dart';
 
 class CustomerLoyaltyWidget extends StatefulWidget {
   final Size size;
@@ -76,8 +78,8 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
             const SizedBox(height: 8),
             Text(errorMessage!,
                 textAlign: TextAlign.center,
-                style: buildCustomStyle(FontWeightManager.regular,
-                    FontSize.s14, 0, ColorManager.kGreyColor)),
+                style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                    0, ColorManager.kGreyColor)),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _loadLoyaltyInfo,
@@ -236,7 +238,8 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
           _buildInfoRow(
             icon: Icons.price_change_outlined,
             title: 'Price Per Point',
-            value: '₹${widget.customer.pricePerPoint?.toStringAsFixed(2) ?? '0.00'}',
+            value:
+                '', // Empty value as we'll use the Consumer widget to display this
           ),
           _buildInfoRow(
             icon: Icons.calendar_today_outlined,
@@ -276,19 +279,31 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
                       FontSize.s14, 0, ColorManager.kGreyColor),
                 ),
               ),
-              Text(
-                value,
-                style: buildCustomStyle(
-                    FontWeightManager.bold,
-                    FontSize.s14,
-                    0,
-                    valueColor ?? ColorManager.kTitleTextColor),
-              ),
+              if (title == 'Price Per Point')
+                Consumer<AppSettingsProvider>(
+                  builder: (context, appSettingsProvider, child) {
+                    final currency =
+                        appSettingsProvider.appSettings?.currency ?? 'INR';
+                    return Text(
+                      '$currency${widget.customer.pricePerPoint?.toStringAsFixed(2) ?? '0.00'}',
+                      style: buildCustomStyle(
+                          FontWeightManager.bold,
+                          FontSize.s14,
+                          0,
+                          valueColor ?? ColorManager.kTitleTextColor),
+                    );
+                  },
+                )
+              else
+                Text(
+                  value,
+                  style: buildCustomStyle(FontWeightManager.bold, FontSize.s14,
+                      0, valueColor ?? ColorManager.kTitleTextColor),
+                ),
             ],
           ),
         ),
-        if (showDivider)
-          const Divider(height: 1, indent: 16, endIndent: 16),
+        if (showDivider) const Divider(height: 1, indent: 16, endIndent: 16),
       ],
     );
   }
