@@ -183,9 +183,36 @@ class _BuildDropDownWithSearchState<T> extends State<BuildDropDownWithSearch<T>>
                       ),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      suffixIcon: const Icon(
-                        Icons.arrow_drop_down,
-                        size: 20,
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Close icon - only show when there's a selection
+                          if (widget.value != null && controller.text.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                controller.clear();
+                                widget.onChanged(null);
+                                setState(() {
+                                  _userHasTyped = true; // Keep this true to show suggestions
+                                });
+                                // Focus the field to show dropdown with all items
+                                focusNode.requestFocus();
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                child: Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: ColorManager.textColor.withOpacity(.6),
+                                ),
+                              ),
+                            ),
+                          // Dropdown arrow
+                          const Icon(
+                            Icons.arrow_drop_down,
+                            size: 20,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -425,7 +452,7 @@ class _KeyboardNavigationItemState<T> extends State<_KeyboardNavigationItem<T>> 
           },
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
               color: isHighlighted ? Colors.blue.shade50 : Colors.white,
               borderRadius: BorderRadius.circular(4),
