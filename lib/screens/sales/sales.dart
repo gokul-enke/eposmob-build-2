@@ -1177,8 +1177,15 @@ class _SalesScreenState extends State<SalesScreen> {
                             ),
                             SizedBox(
                               height: 55,
-                              child: _buildTableCell(
-                                  "Rs ${AmountHelper.formatAmount(priceSummary.grandTotal ?? 0.0)}"),
+                              child: Consumer<AppSettingsProvider>(
+                                builder: (context, appSettingsProvider, child) {
+                                  final currency = appSettingsProvider
+                                          .appSettings?.currency ??
+                                      'INR';
+                                  return _buildTableCell(
+                                      "$currency ${AmountHelper.formatAmount(priceSummary.grandTotal ?? 0.0)}");
+                                },
+                              ),
                             ),
                             SizedBox(
                               height: 55,

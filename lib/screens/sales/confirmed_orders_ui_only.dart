@@ -3,6 +3,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 // Dummy Data Models
 class DummyProduct {
@@ -89,7 +91,8 @@ class FontSize {
 }
 
 // Style Builder
-TextStyle buildCustomStyle(FontWeight weight, double size, double letterSpacing, Color color) {
+TextStyle buildCustomStyle(
+    FontWeight weight, double size, double letterSpacing, Color color) {
   return TextStyle(
     fontWeight: weight,
     fontSize: size,
@@ -223,7 +226,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
     _animationController.forward();
-    
+
     _initializeDummyData();
   }
 
@@ -232,12 +235,14 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
       DummyOrder(
         id: "1",
         orderNumber: "ORD-2024-001",
-        createdAt: DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
+        createdAt:
+            DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
         total: 1250.75,
         paymentMethod: "UPI",
         status: "confirmed",
         customerPhone: "+91 98765 43210",
-        deliveryDate: DateTime.now().add(const Duration(days: 1)).toIso8601String(),
+        deliveryDate:
+            DateTime.now().add(const Duration(days: 1)).toIso8601String(),
         deliveryTime: "2:00 PM - 4:00 PM",
         items: [
           DummyOrderItem(
@@ -267,7 +272,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
       DummyOrder(
         id: "2",
         orderNumber: "ORD-2024-002",
-        createdAt: DateTime.now().subtract(const Duration(hours: 4)).toIso8601String(),
+        createdAt:
+            DateTime.now().subtract(const Duration(hours: 4)).toIso8601String(),
         total: 899.50,
         paymentMethod: "CARD",
         status: "confirmed",
@@ -300,12 +306,14 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
       DummyOrder(
         id: "3",
         orderNumber: "ORD-2024-003",
-        createdAt: DateTime.now().subtract(const Duration(hours: 6)).toIso8601String(),
+        createdAt:
+            DateTime.now().subtract(const Duration(hours: 6)).toIso8601String(),
         total: 2150.00,
         paymentMethod: "CASH",
         status: "confirmed",
         customerPhone: "+91 76543 21098",
-        deliveryDate: DateTime.now().add(const Duration(days: 2)).toIso8601String(),
+        deliveryDate:
+            DateTime.now().add(const Duration(days: 2)).toIso8601String(),
         deliveryTime: "10:00 AM - 12:00 PM",
         items: [
           DummyOrderItem(
@@ -324,7 +332,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
       DummyOrder(
         id: "4",
         orderNumber: "ORD-2024-004",
-        createdAt: DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
+        createdAt:
+            DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
         total: 750.25,
         paymentMethod: "UPI",
         status: "confirmed",
@@ -357,7 +366,9 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
       DummyOrder(
         id: "5",
         orderNumber: "ORD-2024-005",
-        createdAt: DateTime.now().subtract(const Duration(days: 1, hours: 5)).toIso8601String(),
+        createdAt: DateTime.now()
+            .subtract(const Duration(days: 1, hours: 5))
+            .toIso8601String(),
         total: 1599.99,
         paymentMethod: "CARD",
         status: "confirmed",
@@ -379,12 +390,14 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
       DummyOrder(
         id: "6",
         orderNumber: "ORD-2024-006",
-        createdAt: DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
+        createdAt:
+            DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
         total: 3250.00,
         paymentMethod: "UPI",
         status: "confirmed",
         customerPhone: "+91 43210 98765",
-        deliveryDate: DateTime.now().add(const Duration(days: 3)).toIso8601String(),
+        deliveryDate:
+            DateTime.now().add(const Duration(days: 3)).toIso8601String(),
         deliveryTime: "6:00 PM - 8:00 PM",
         items: [
           DummyOrderItem(
@@ -442,22 +455,42 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
   }
 
   Widget _buildStatsCards() {
-    final totalRevenue = confirmedOrders.fold<double>(0, (sum, order) => sum + order.total);
+    final totalRevenue =
+        confirmedOrders.fold<double>(0, (sum, order) => sum + order.total);
     final totalOrders = confirmedOrders.length;
     final avgOrderValue = totalRevenue / totalOrders;
 
-    return Row(
-      children: [
-        Expanded(child: _buildStatCard("Total Orders", totalOrders.toString(), Icons.receipt_long, ColorManager.kPrimaryColor)),
-        const SizedBox(width: 16),
-        Expanded(child: _buildStatCard("Revenue", "₹${totalRevenue.toStringAsFixed(0)}", Icons.trending_up, ColorManager.successGreen)),
-        const SizedBox(width: 16),
-        Expanded(child: _buildStatCard("Avg. Order", "₹${avgOrderValue.toStringAsFixed(0)}", Icons.analytics, ColorManager.warningOrange)),
-      ],
+    return Consumer<AppSettingsProvider>(
+      builder: (context, appSettingsProvider, child) {
+        final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
+        return Row(
+          children: [
+            Expanded(
+                child: _buildStatCard("Total Orders", totalOrders.toString(),
+                    Icons.receipt_long, ColorManager.kPrimaryColor)),
+            const SizedBox(width: 16),
+            Expanded(
+                child: _buildStatCard(
+                    "Revenue",
+                    "$currency${totalRevenue.toStringAsFixed(0)}",
+                    Icons.trending_up,
+                    ColorManager.successGreen)),
+            const SizedBox(width: 16),
+            Expanded(
+                child: _buildStatCard(
+                    "Avg. Order",
+                    "$currency${avgOrderValue.toStringAsFixed(0)}",
+                    Icons.analytics,
+                    ColorManager.warningOrange)),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
     return BuildBoxShadowContainer(
       circleRadius: 12,
       child: Container(
@@ -490,12 +523,14 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
             const SizedBox(height: 12),
             Text(
               value,
-              style: buildCustomStyle(FontWeightManager.bold, FontSize.s24, 0.0, ColorManager.textColor),
+              style: buildCustomStyle(FontWeightManager.bold, FontSize.s24, 0.0,
+                  ColorManager.textColor),
             ),
             const SizedBox(height: 4),
             Text(
               title,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s14, 0.0, Colors.grey.shade600),
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
+                  0.0, Colors.grey.shade600),
             ),
           ],
         ),
@@ -509,11 +544,13 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey.shade400),
+            Icon(Icons.receipt_long_outlined,
+                size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
               'No confirmed orders found',
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s18, 0.0, Colors.grey.shade600),
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s18,
+                  0.0, Colors.grey.shade600),
             ),
           ],
         ),
@@ -552,161 +589,184 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
     String formattedDate = _formatDateTime(order.createdAt);
     String formattedTime = _formatTime(order.createdAt);
 
-    return TweenAnimationBuilder(
-      duration: Duration(milliseconds: 600 + (index * 100)),
-      tween: Tween<double>(begin: 0.0, end: 1.0),
-      builder: (context, double value, child) {
-        return Transform.scale(
-          scale: value,
-          child: GestureDetector(
-            onTap: () => _showOrderDetailsModal(context, order),
-            child: BuildBoxShadowContainer(
-              circleRadius: 12,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  gradient: LinearGradient(
-                    colors: [Colors.white, Colors.grey.shade50],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Top Section: Order Number & Actions
-                      Row(
+    return Consumer<AppSettingsProvider>(
+      builder: (context, appSettingsProvider, child) {
+        final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
+        return TweenAnimationBuilder(
+          duration: Duration(milliseconds: 600 + (index * 100)),
+          tween: Tween<double>(begin: 0.0, end: 1.0),
+          builder: (context, double value, child) {
+            return Transform.scale(
+              scale: value,
+              child: GestureDetector(
+                onTap: () => _showOrderDetailsModal(context, order),
+                child: BuildBoxShadowContainer(
+                  circleRadius: 12,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        colors: [Colors.white, Colors.grey.shade50],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              order.orderNumber,
-                              style: buildCustomStyle(
-                                FontWeightManager.bold,
-                                FontSize.s12,
-                                0.0,
-                                ColorManager.kPrimaryColor,
-                              ),
-                            ),
-                          ),
+                          // Top Section: Order Number & Actions
                           Row(
-                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _buildActionButton(Icons.print, ColorManager.kPrimaryColor, () => _printOrder(order)),
-                              const SizedBox(width: 6),
-                              _buildActionButton(Icons.delete_outline, ColorManager.kButtonRed, () => _showDeleteConfirmationDialog(context, order)),
-                            ],
-                          ),
-                        ],
-                      ),
-                      
-                      // Middle Section: Time & Delivery Info
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.access_time, size: 12, color: Colors.grey.shade600),
-                              const SizedBox(width: 4),
-                              Text(
-                                '$formattedDate • $formattedTime',
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s12,
-                                  0.0,
-                                  Colors.grey.shade600,
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: ColorManager.kPrimaryColor
+                                      .withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                              ),
-                            ],
-                          ),
-                          if (order.deliveryDate != null) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(Icons.local_shipping, size: 12, color: ColorManager.successGreen),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Delivery: ${_formatDateTime(order.deliveryDate!)}',
+                                child: Text(
+                                  order.orderNumber,
                                   style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s10,
+                                    FontWeightManager.bold,
+                                    FontSize.s12,
                                     0.0,
-                                    ColorManager.successGreen,
+                                    ColorManager.kPrimaryColor,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                      
-                      // Bottom Section: Items, Payment & Total
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildActionButton(
+                                      Icons.print,
+                                      ColorManager.kPrimaryColor,
+                                      () => _printOrder(order)),
+                                  const SizedBox(width: 6),
+                                  _buildActionButton(
+                                      Icons.delete_outline,
+                                      ColorManager.kButtonRed,
+                                      () => _showDeleteConfirmationDialog(
+                                          context, order)),
+                                ],
+                              ),
+                            ],
+                          ),
+
+                          // Middle Section: Time & Delivery Info
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                '${order.items.length} items',
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s12,
-                                  0.0,
-                                  Colors.grey.shade600,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _getPaymentMethodColor(order.paymentMethod).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  order.paymentMethod,
-                                  style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s10,
-                                    0.0,
-                                    _getPaymentMethodColor(order.paymentMethod),
+                              Row(
+                                children: [
+                                  Icon(Icons.access_time,
+                                      size: 12, color: Colors.grey.shade600),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$formattedDate • $formattedTime',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s12,
+                                      0.0,
+                                      Colors.grey.shade600,
+                                    ),
                                   ),
+                                ],
+                              ),
+                              if (order.deliveryDate != null) ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(Icons.local_shipping,
+                                        size: 12,
+                                        color: ColorManager.successGreen),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Delivery: ${_formatDateTime(order.deliveryDate!)}',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s10,
+                                        0.0,
+                                        ColorManager.successGreen,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+
+                          // Bottom Section: Items, Payment & Total
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${order.items.length} items',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s12,
+                                      0.0,
+                                      Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: _getPaymentMethodColor(
+                                              order.paymentMethod)
+                                          .withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      order.paymentMethod,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.semiBold,
+                                        FontSize.s10,
+                                        0.0,
+                                        _getPaymentMethodColor(
+                                            order.paymentMethod),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                '$currency${order.total.toStringAsFixed(2)}',
+                                style: buildCustomStyle(
+                                  FontWeightManager.bold,
+                                  FontSize.s16,
+                                  0.0,
+                                  ColorManager.successGreen,
                                 ),
                               ),
                             ],
                           ),
-                          Text(
-                            '₹${order.total.toStringAsFixed(2)}',
-                            style: buildCustomStyle(
-                              FontWeightManager.bold,
-                              FontSize.s16,
-                              0.0,
-                              ColorManager.successGreen,
-                            ),
-                          ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildActionButton(IconData icon, Color color, VoidCallback onPressed) {
+  Widget _buildActionButton(
+      IconData icon, Color color, VoidCallback onPressed) {
     return Container(
       width: 28,
       height: 28,
@@ -765,108 +825,119 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.5,
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return Consumer<AppSettingsProvider>(
+          builder: (context, appSettingsProvider, child) {
+            final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.5,
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      order.orderNumber,
-                      style: buildCustomStyle(
-                        FontWeightManager.bold,
-                        FontSize.s24,
-                        0.0,
-                        ColorManager.textColor,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          order.orderNumber,
+                          style: buildCustomStyle(
+                            FontWeightManager.bold,
+                            FontSize.s24,
+                            0.0,
+                            ColorManager.textColor,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
+                    const Divider(height: 32),
+                    ...order.items
+                        .map((item) => Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: ColorManager.cardBackground,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.product.productName,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.semiBold,
+                                            FontSize.s14,
+                                            0.0,
+                                            ColorManager.textColor,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Qty: ${item.quantity}',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.0,
+                                            Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    '$currency${(item.price * item.quantity).toStringAsFixed(2)}',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      FontSize.s14,
+                                      0.0,
+                                      ColorManager.successGreen,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ))
+                        .toList(),
+                    const Divider(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total Amount',
+                          style: buildCustomStyle(
+                            FontWeightManager.bold,
+                            FontSize.s18,
+                            0.0,
+                            ColorManager.textColor,
+                          ),
+                        ),
+                        Text(
+                          '$currency${order.total.toStringAsFixed(2)}',
+                          style: buildCustomStyle(
+                            FontWeightManager.bold,
+                            FontSize.s20,
+                            0.0,
+                            ColorManager.successGreen,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                const Divider(height: 32),
-                ...order.items.map((item) => Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: ColorManager.cardBackground,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.product.productName,
-                              style: buildCustomStyle(
-                                FontWeightManager.semiBold,
-                                FontSize.s14,
-                                0.0,
-                                ColorManager.textColor,
-                              ),
-                            ),
-                            Text(
-                              'Qty: ${item.quantity}',
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.0,
-                                Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        '₹${(item.price * item.quantity).toStringAsFixed(2)}',
-                        style: buildCustomStyle(
-                          FontWeightManager.bold,
-                          FontSize.s14,
-                          0.0,
-                          ColorManager.successGreen,
-                        ),
-                      ),
-                    ],
-                  ),
-                )).toList(),
-                const Divider(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total Amount',
-                      style: buildCustomStyle(
-                        FontWeightManager.bold,
-                        FontSize.s18,
-                        0.0,
-                        ColorManager.textColor,
-                      ),
-                    ),
-                    Text(
-                      '₹${order.total.toStringAsFixed(2)}',
-                      style: buildCustomStyle(
-                        FontWeightManager.bold,
-                        FontSize.s20,
-                        0.0,
-                        ColorManager.successGreen,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -877,7 +948,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Container(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -924,21 +996,25 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                         onPressed: () {
                           Navigator.pop(context);
                           setState(() {
-                            confirmedOrders.removeWhere((o) => o.id == order.id);
+                            confirmedOrders
+                                .removeWhere((o) => o.id == order.id);
                           });
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Order ${order.orderNumber} deleted'),
+                              content:
+                                  Text('Order ${order.orderNumber} deleted'),
                               backgroundColor: ColorManager.kButtonRed,
                               behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
                             ),
                           );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: ColorManager.kButtonRed,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
                         ),
                         child: Text('Delete'),
                       ),
@@ -998,7 +1074,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
           content: const Text("No confirmed orders to sync"),
           backgroundColor: ColorManager.kButtonRed,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
       return;
@@ -1010,7 +1087,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Container(
             width: MediaQuery.of(context).size.width / 3,
             padding: const EdgeInsets.all(32),
@@ -1052,7 +1130,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                 ),
                 const SizedBox(height: 32),
                 const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(ColorManager.successGreen),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(ColorManager.successGreen),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -1076,10 +1155,12 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Successfully synced ${confirmedOrders.length} orders!"),
+          content:
+              Text("Successfully synced ${confirmedOrders.length} orders!"),
           backgroundColor: ColorManager.successGreen,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     });

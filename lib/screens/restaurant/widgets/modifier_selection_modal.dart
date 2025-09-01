@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../../models/restaurant/menu_item_model.dart';
+import '../../../providers/app_settings_provider.dart';
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
 import '../../../resources/style_manager.dart';
 import '../../../components/build_round_button.dart';
+import 'package:provider/provider.dart';
 
 class ModifierSelectionModal extends StatefulWidget {
   final MenuItemModel menuItem;
-  final Function(Map<String, List<ModifierOption>>, String?) onModifiersSelected;
+  final Function(Map<String, List<ModifierOption>>, String?)
+      onModifiersSelected;
 
   const ModifierSelectionModal({
     super.key,
@@ -30,7 +33,8 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
     // Initialize with default modifiers if any
     for (var group in widget.menuItem.modifierGroups) {
       if (group.isRequired) {
-        final defaultOption = group.options.firstWhereOrNull((opt) => opt.isDefault);
+        final defaultOption =
+            group.options.firstWhereOrNull((opt) => opt.isDefault);
         if (defaultOption != null) {
           _selectedModifiers[group.id] = [defaultOption];
         }
@@ -53,7 +57,8 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
             _selectedModifiers.remove(groupId);
           }
         } else {
-          final group = widget.menuItem.modifierGroups.firstWhere((g) => g.id == groupId);
+          final group =
+              widget.menuItem.modifierGroups.firstWhere((g) => g.id == groupId);
           if (group.maxSelections == 1) {
             _selectedModifiers[groupId] = [option];
           } else {
@@ -84,7 +89,8 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
       if (group.isRequired && _selectedModifiers[group.id]!.isEmpty) {
         return false;
       }
-      if (_selectedModifiers.containsKey(group.id) && _selectedModifiers[group.id]!.length > group.maxSelections) {
+      if (_selectedModifiers.containsKey(group.id) &&
+          _selectedModifiers[group.id]!.length > group.maxSelections) {
         return false;
       }
     }
@@ -98,7 +104,8 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       title: Text(
         widget.menuItem.name,
-        style: buildCustomStyle(FontWeightManager.bold, FontSize.s20, 0.3, ColorManager.textColor),
+        style: buildCustomStyle(
+            FontWeightManager.bold, FontSize.s20, 0.3, ColorManager.textColor),
       ),
       content: SingleChildScrollView(
         child: Column(
@@ -107,18 +114,27 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
           children: [
             Text(
               widget.menuItem.description,
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0.21, ColorManager.textColor.withOpacity(0.7)),
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+                  0.21, ColorManager.textColor.withOpacity(0.7)),
             ),
             const SizedBox(height: 15),
-            Text(
-              'Base Price: ₹${widget.menuItem.price.toStringAsFixed(0)}',
-              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s16, 0.23, ColorManager.kPrimaryColor),
+            Consumer<AppSettingsProvider>(
+              builder: (context, appSettingsProvider, child) {
+                final currency =
+                    appSettingsProvider.appSettings?.currency ?? 'INR';
+                return Text(
+                  'Base Price: $currency${widget.menuItem.price.toStringAsFixed(0)}',
+                  style: buildCustomStyle(FontWeightManager.semiBold,
+                      FontSize.s16, 0.23, ColorManager.kPrimaryColor),
+                );
+              },
             ),
             const Divider(height: 25, color: ColorManager.grey),
             if (widget.menuItem.modifierGroups.isNotEmpty)
               Text(
                 'Customizations',
-                style: buildCustomStyle(FontWeightManager.bold, FontSize.s16, 0.3, ColorManager.textColor),
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
+                    0.3, ColorManager.textColor),
               ),
             const SizedBox(height: 10),
             ...widget.menuItem.modifierGroups.map((group) {
@@ -129,27 +145,39 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
                   children: [
                     Text(
                       '${group.name} ${group.isRequired ? '(Required)' : '(Optional)'}',
-                      style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s14, 0.21, ColorManager.textColor),
+                      style: buildCustomStyle(FontWeightManager.semiBold,
+                          FontSize.s14, 0.21, ColorManager.textColor),
                     ),
                     Text(
                       '(Select ${group.maxSelections == 1 ? '1 option' : 'up to ${group.maxSelections} options'})',
-                      style: buildCustomStyle(FontWeightManager.regular, FontSize.s12, 0.21, ColorManager.kGreyColor),
+                      style: buildCustomStyle(FontWeightManager.regular,
+                          FontSize.s12, 0.21, ColorManager.kGreyColor),
                     ),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8.0,
                       runSpacing: 8.0,
                       children: group.options.map((option) {
-                        final isSelected = _selectedModifiers.containsKey(group.id) &&
-                            _selectedModifiers[group.id]!.contains(option);
+                        final isSelected =
+                            _selectedModifiers.containsKey(group.id) &&
+                                _selectedModifiers[group.id]!.contains(option);
                         return ChoiceChip(
-                          label: Text(
-                            '${option.name} ${option.additionalPrice > 0 ? '(+₹${option.additionalPrice.toStringAsFixed(0)})' : ''}',
+                          label: Consumer<AppSettingsProvider>(
+                            builder: (context, appSettingsProvider, child) {
+                              final currency =
+                                  appSettingsProvider.appSettings?.currency ??
+                                      'INR';
+                              return Text(
+                                '${option.name} ${option.additionalPrice > 0 ? '(+$currency${option.additionalPrice.toStringAsFixed(0)})' : ''}',
+                              );
+                            },
                           ),
                           selected: isSelected,
                           selectedColor: ColorManager.kPrimaryColor,
                           labelStyle: TextStyle(
-                            color: isSelected ? Colors.white : ColorManager.textColor,
+                            color: isSelected
+                                ? Colors.white
+                                : ColorManager.textColor,
                           ),
                           onSelected: (selected) {
                             _toggleModifierOption(group.id, option);
@@ -164,15 +192,18 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
             const Divider(height: 25, color: ColorManager.grey),
             Text(
               'Special Notes',
-              style: buildCustomStyle(FontWeightManager.bold, FontSize.s16, 0.3, ColorManager.textColor),
+              style: buildCustomStyle(FontWeightManager.bold, FontSize.s16, 0.3,
+                  ColorManager.textColor),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _notesController,
               decoration: InputDecoration(
                 hintText: 'e.g., No onions, extra crispy',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
               maxLines: 2,
             ),
@@ -182,12 +213,14 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
               children: [
                 Text(
                   'Quantity',
-                  style: buildCustomStyle(FontWeightManager.bold, FontSize.s16, 0.3, ColorManager.textColor),
+                  style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
+                      0.3, ColorManager.textColor),
                 ),
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.remove_circle_outline, color: ColorManager.kButtonRed),
+                      icon: const Icon(Icons.remove_circle_outline,
+                          color: ColorManager.kButtonRed),
                       onPressed: () {
                         setState(() {
                           if (_quantity > 1) _quantity--;
@@ -196,10 +229,12 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
                     ),
                     Text(
                       _quantity.toString(),
-                      style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s16, 0.23, ColorManager.textColor),
+                      style: buildCustomStyle(FontWeightManager.semiBold,
+                          FontSize.s16, 0.23, ColorManager.textColor),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.add_circle_outline, color: ColorManager.kButtonGreen),
+                      icon: const Icon(Icons.add_circle_outline,
+                          color: ColorManager.kButtonGreen),
                       onPressed: () {
                         setState(() {
                           _quantity++;
@@ -212,9 +247,16 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
             ),
             const SizedBox(height: 15),
             Center(
-              child: Text(
-                'Total Price: ₹${(_currentPrice * _quantity).toStringAsFixed(0)}',
-                style: buildCustomStyle(FontWeightManager.bold, FontSize.s22, 0.3, ColorManager.kPrimaryColor),
+              child: Consumer<AppSettingsProvider>(
+                builder: (context, appSettingsProvider, child) {
+                  final currency =
+                      appSettingsProvider.appSettings?.currency ?? 'INR';
+                  return Text(
+                    'Total Price: $currency${(_currentPrice * _quantity).toStringAsFixed(0)}',
+                    style: buildCustomStyle(FontWeightManager.bold,
+                        FontSize.s22, 0.3, ColorManager.kPrimaryColor),
+                  );
+                },
               ),
             ),
           ],
@@ -235,15 +277,23 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
           title: 'Add to Order',
           fct: _isValidSelection()
               ? () {
-                  widget.onModifiersSelected(_selectedModifiers, _notesController.text.isNotEmpty ? _notesController.text : null);
+                  widget.onModifiersSelected(
+                      _selectedModifiers,
+                      _notesController.text.isNotEmpty
+                          ? _notesController.text
+                          : null);
                   Navigator.of(context).pop();
                 }
               : () {},
           height: 40,
           width: 150,
           fontSize: FontSize.s14,
-          boxColor: _isValidSelection() ? ColorManager.kButtonGreen : ColorManager.kGreyColor.withOpacity(0.5),
-          borderColor: _isValidSelection() ? ColorManager.kButtonGreen : ColorManager.kGreyColor.withOpacity(0.5),
+          boxColor: _isValidSelection()
+              ? ColorManager.kButtonGreen
+              : ColorManager.kGreyColor.withOpacity(0.5),
+          borderColor: _isValidSelection()
+              ? ColorManager.kButtonGreen
+              : ColorManager.kGreyColor.withOpacity(0.5),
           textColor: Colors.white,
         ),
       ],
@@ -258,4 +308,4 @@ extension ListExtension<T> on List<T> {
     }
     return null;
   }
-} 
+}

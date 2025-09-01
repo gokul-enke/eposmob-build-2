@@ -8,6 +8,7 @@ import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -232,13 +233,24 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                               Colors.grey,
                                             ),
                                           ),
-                                          Text(
-                                            '₹${order.total.toStringAsFixed(2)}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                              color: ColorManager.kPrimaryColor,
-                                            ),
+                                          Consumer<AppSettingsProvider>(
+                                            builder: (context,
+                                                appSettingsProvider, child) {
+                                              final currency =
+                                                  appSettingsProvider
+                                                          .appSettings
+                                                          ?.currency ??
+                                                      'INR';
+                                              return Text(
+                                                '$currency${order.total.toStringAsFixed(2)}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                  color: ColorManager
+                                                      .kPrimaryColor,
+                                                ),
+                                              );
+                                            },
                                           ),
                                         ],
                                       ),
@@ -320,9 +332,11 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             formattedTotal: finalTotal.toString(), // Use order's total
             savedTotal: youSaved.toString(),
             discountAmount: ((order.flatDiscount ?? 0.0) +
-                ((order.percentageDiscount ?? 0.0) > 0
-                    ? (order.total * (order.percentageDiscount ?? 0.0) / 100)
-                    : 0.0))
+                    ((order.percentageDiscount ?? 0.0) > 0
+                        ? (order.total *
+                            (order.percentageDiscount ?? 0.0) /
+                            100)
+                        : 0.0))
                 .toString(),
             orderDate: order.createdAt,
             orderNumber: order.orderNumber,

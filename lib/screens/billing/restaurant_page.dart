@@ -2538,7 +2538,8 @@ class _OrderPanelState extends State<_OrderPanel> {
     // Calculate subtotal for discount modal
     double orderSubTotal = 0.0;
     for (var item in cartItems) {
-      final quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+      final quantity =
+          double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
       final unitPrice = double.tryParse(item['unit_price']?.toString() ??
               item['price']?.toString() ??
               item['product_price']?.toString() ??
@@ -2554,7 +2555,8 @@ class _OrderPanelState extends State<_OrderPanel> {
               0.0;
     }
 
-    debugPrint('🎫 Discount Modal - Order Subtotal: ₹${orderSubTotal.toStringAsFixed(2)}');
+    debugPrint(
+        '🎫 Discount Modal - Order Subtotal: ₹${orderSubTotal.toStringAsFixed(2)}');
 
     showDialog(
       context: context,
@@ -2571,13 +2573,15 @@ class _OrderPanelState extends State<_OrderPanel> {
             _isCouponApplied = isApplied;
             _flatDiscount = flatDiscount ?? 0.0;
             _percentageDiscount = percentageDiscount ?? 0.0;
-            
+
             debugPrint('🎫 Discount Applied in Restaurant Page:');
             debugPrint('  - Coupon Code: $_couponCode');
             debugPrint('  - Is Applied: $_isCouponApplied');
-            debugPrint('  - Flat Discount: ₹${_flatDiscount.toStringAsFixed(2)}');
-            debugPrint('  - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
-            
+            debugPrint(
+                '  - Flat Discount: ₹${_flatDiscount.toStringAsFixed(2)}');
+            debugPrint(
+                '  - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
+
             // If clearing discount
             if (!isApplied) {
               debugPrint('🧹 Clearing all discount values');
@@ -2593,10 +2597,10 @@ class _OrderPanelState extends State<_OrderPanel> {
 
   // Helper method to check if any discount is applied
   bool _hasDiscount() {
-    return _isCouponApplied || 
-           _flatDiscount > 0.0 || 
-           _percentageDiscount > 0.0 || 
-           _couponCode.isNotEmpty;
+    return _isCouponApplied ||
+        _flatDiscount > 0.0 ||
+        _percentageDiscount > 0.0 ||
+        _couponCode.isNotEmpty;
   }
 
   // Method to refresh saved orders without clearing the selected order (for when editing)
@@ -2791,7 +2795,7 @@ class _OrderPanelState extends State<_OrderPanel> {
       // Load customer information if available
       final customerId = order['customer_id'];
       final customerPhone = order['customer_phone'] ?? order['phone'];
-      
+
       if (customerId != null) {
         // Find customer in the list
         final customer = _customers.firstWhere(
@@ -2802,25 +2806,26 @@ class _OrderPanelState extends State<_OrderPanel> {
             name: order['customer_name'] ?? 'Unknown Customer',
           ),
         );
-        
+
         setState(() {
           _selectedCustomer = customer;
           _selectedCustomerID = customerId;
           _selectedCustomerPhone = customerPhone;
         });
-        
+
         debugPrint('✅ Loaded customer: ${customer.name} (${customer.phone})');
       }
 
       // Load payment method information if available
       final paymentMethod = order['payment_method'];
       final paidAmount = order['paid_amount']?.toString() ?? '';
-      final transactionNumber = order['transaction_number'] ?? order['transaction_id'] ?? '';
-      
+      final transactionNumber =
+          order['transaction_number'] ?? order['transaction_id'] ?? '';
+
       if (paymentMethod != null && paidAmount.isNotEmpty) {
         setState(() {
           _transactionNumber = transactionNumber;
-          
+
           // Reset all payment methods first
           _isCashSelected = false;
           _isCardSelected = false;
@@ -2830,7 +2835,7 @@ class _OrderPanelState extends State<_OrderPanel> {
           _cardAmount = '';
           _upiAmount = '';
           _debitAmount = '';
-          
+
           // Set the specific payment method
           switch (paymentMethod.toString().toUpperCase()) {
             case 'CASH':
@@ -2851,36 +2856,42 @@ class _OrderPanelState extends State<_OrderPanel> {
               _cashAmount = paidAmount;
           }
         });
-        
-        debugPrint('✅ Loaded payment method: $paymentMethod, Amount: ₹$paidAmount');
+
+        debugPrint(
+            '✅ Loaded payment method: $paymentMethod, Amount: ₹$paidAmount');
       }
 
       // Load discount information if available
       final flatDiscount = order['flat_discount'];
       final percentageDiscount = order['percentage_discount'];
       final couponCode = order['coupon_id'] ?? order['coupon_code'] ?? '';
-      
+
       setState(() {
         _flatDiscount = double.tryParse(flatDiscount?.toString() ?? '0') ?? 0.0;
-        _percentageDiscount = double.tryParse(percentageDiscount?.toString() ?? '0') ?? 0.0;
+        _percentageDiscount =
+            double.tryParse(percentageDiscount?.toString() ?? '0') ?? 0.0;
         _couponCode = couponCode;
-        _isCouponApplied = _flatDiscount > 0 || _percentageDiscount > 0 || _couponCode.isNotEmpty;
+        _isCouponApplied = _flatDiscount > 0 ||
+            _percentageDiscount > 0 ||
+            _couponCode.isNotEmpty;
       });
-      
+
       if (_isCouponApplied) {
         debugPrint('✅ Loaded discount data:');
         debugPrint('   - Flat Discount: ₹${_flatDiscount.toStringAsFixed(2)}');
-        debugPrint('   - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
+        debugPrint(
+            '   - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
         debugPrint('   - Coupon Code: $_couponCode');
       }
 
       // Calculate balance amount
-      final orderTotal = double.tryParse(order['grand_total']?.toString() ?? '0') ?? 0.0;
+      final orderTotal =
+          double.tryParse(order['grand_total']?.toString() ?? '0') ?? 0.0;
       final totalPaid = double.tryParse(paidAmount) ?? 0.0;
       _balanceAmount = totalPaid - orderTotal;
-      
-      debugPrint('💰 Calculated balance: ₹${_balanceAmount.toStringAsFixed(2)}');
-      
+
+      debugPrint(
+          '💰 Calculated balance: ₹${_balanceAmount.toStringAsFixed(2)}');
     } catch (e) {
       debugPrint('❌ Error loading order-specific data: $e');
     }
@@ -3111,7 +3122,7 @@ class _OrderPanelState extends State<_OrderPanel> {
             '₹${orderTotal.toStringAsFixed(2)}',
             color: const Color(0xFF64748B),
           ),
-          
+
           // Show discount information if any discount is applied (single line format like billing_page.dart)
           if (_hasDiscount()) ...[
             _buildSummaryRow(
@@ -4045,7 +4056,9 @@ class _OrderPanelState extends State<_OrderPanel> {
                                   _hasDiscount() ? 'Applied' : 'Discount',
                                   style: buildCustomStyle(
                                       FontWeightManager.semiBold,
-                                      widget.isCompact ? FontSize.s11 : FontSize.s12,
+                                      widget.isCompact
+                                          ? FontSize.s11
+                                          : FontSize.s12,
                                       0.21,
                                       _hasDiscount()
                                           ? const Color(0xFFD97706)
@@ -4744,7 +4757,8 @@ class _OrderPanelState extends State<_OrderPanel> {
       // Calculate discount amount for API
       final orderSubTotal = orderAmount; // Use order amount as subtotal base
       final flatDiscountAmount = _flatDiscount;
-      final percentageDiscountAmount = (orderSubTotal * _percentageDiscount / 100);
+      final percentageDiscountAmount =
+          (orderSubTotal * _percentageDiscount / 100);
       final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
 
       debugPrint('📦 Order details for confirmation:');
@@ -4756,19 +4770,25 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('   - Paid Amount: $paidAmount');
       debugPrint('   - Balance Amount: $balanceAmount');
       debugPrint('🎫 Discount details for confirmation:');
-      debugPrint('   - Flat Discount: ₹${flatDiscountAmount.toStringAsFixed(2)}');
-      debugPrint('   - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
-      debugPrint('   - Total Discount Amount: ₹${totalDiscountAmount.toStringAsFixed(2)}');
+      debugPrint(
+          '   - Flat Discount: ₹${flatDiscountAmount.toStringAsFixed(2)}');
+      debugPrint(
+          '   - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
+      debugPrint(
+          '   - Total Discount Amount: ₹${totalDiscountAmount.toStringAsFixed(2)}');
       debugPrint('   - Coupon Code: $_couponCode');
       debugPrint('🔧 Payment Methods Details:');
       debugPrint('   - Payment Methods Array: $paymentMethods');
       debugPrint('   - Paid Methods Array: $paidMethods');
-      debugPrint('   - Is Cash Selected: $_isCashSelected (Amount: $_cashAmount)');
-      debugPrint('   - Is Card Selected: $_isCardSelected (Amount: $_cardAmount)');
+      debugPrint(
+          '   - Is Cash Selected: $_isCashSelected (Amount: $_cashAmount)');
+      debugPrint(
+          '   - Is Card Selected: $_isCardSelected (Amount: $_cardAmount)');
       debugPrint('   - Is UPI Selected: $_isUpiSelected (Amount: $_upiAmount)');
       debugPrint('\n🚀 CALLING updateOrderAPI with these parameters:');
       debugPrint('   orderId: ${orderId.toString()}');
-      debugPrint('   accessToken: ${authModel.token != null ? "[PROVIDED]" : "[NULL]"}');
+      debugPrint(
+          '   accessToken: ${authModel.token != null ? "[PROVIDED]" : "[NULL]"}');
       debugPrint('   transactionId: $transactionId');
       debugPrint('   totalPrice: $totalPrice');
       debugPrint('   customerId: ${int.tryParse(customerId.toString())}');
@@ -4780,9 +4800,12 @@ class _OrderPanelState extends State<_OrderPanel> {
       debugPrint('   paidMethods: $paidMethods');
       debugPrint('   status: "confirmed"');
       debugPrint('   comment: $comment');
-      debugPrint('   flatDiscount: ${_flatDiscount > 0 ? _flatDiscount : null}');
-      debugPrint('   percentageDiscount: ${_percentageDiscount > 0 ? _percentageDiscount : null}');
-      debugPrint('   discountAmount: ${totalDiscountAmount > 0 ? totalDiscountAmount : null}');
+      debugPrint(
+          '   flatDiscount: ${_flatDiscount > 0 ? _flatDiscount : null}');
+      debugPrint(
+          '   percentageDiscount: ${_percentageDiscount > 0 ? _percentageDiscount : null}');
+      debugPrint(
+          '   discountAmount: ${totalDiscountAmount > 0 ? totalDiscountAmount : null}');
       debugPrint('\n📡 About to call updateOrderAPI...');
 
       // Call update order API with status "confirmed" and payment data
@@ -4802,7 +4825,8 @@ class _OrderPanelState extends State<_OrderPanel> {
         comment: comment,
         // Add discount parameters
         flatDiscount: _flatDiscount > 0 ? _flatDiscount : null,
-        percentageDiscount: _percentageDiscount > 0 ? _percentageDiscount : null,
+        percentageDiscount:
+            _percentageDiscount > 0 ? _percentageDiscount : null,
         discountAmount: totalDiscountAmount > 0 ? totalDiscountAmount : null,
       );
 
@@ -5679,8 +5703,8 @@ class _RestaurantCouponModalState extends State<RestaurantCouponModal> {
                                 percentageDiscountController.selection =
                                     TextSelection(
                                   baseOffset: 0,
-                                  extentOffset: percentageDiscountController
-                                      .text.length,
+                                  extentOffset:
+                                      percentageDiscountController.text.length,
                                 );
                               }
                             });
@@ -5881,11 +5905,10 @@ class _RestaurantCouponModalState extends State<RestaurantCouponModal> {
                     title: "Apply Discount",
                     fct: () {
                       double flatDiscount =
-                          double.tryParse(flatDiscountController.text) ??
+                          double.tryParse(flatDiscountController.text) ?? 0.0;
+                      double percentageDiscount =
+                          double.tryParse(percentageDiscountController.text) ??
                               0.0;
-                      double percentageDiscount = double.tryParse(
-                              percentageDiscountController.text) ??
-                          0.0;
 
                       widget.onCouponAction(
                         couponController.text,

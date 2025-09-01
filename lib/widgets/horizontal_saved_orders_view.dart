@@ -6,6 +6,7 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart'; // Added import
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/screens/billing/billing_page.dart';
 import 'package:provider/provider.dart';
@@ -57,7 +58,8 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                         child: GridView.builder(
                           controller: _scrollController,
                           physics: const BouncingScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                          gridDelegate:
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
                             maxCrossAxisExtent: 250, // Maximum card width
                             crossAxisSpacing: 10,
                             mainAxisSpacing: 10,
@@ -215,6 +217,11 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
     String time = _formatTimeWith12Hour(order.createdAt);
     bool isSelected = provider.currentOrder?.id == order.id;
 
+    // Get currency from AppSettingsProvider
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? '';
+
     return ConstrainedBox(
       constraints: const BoxConstraints(
         minWidth: 200, // Minimum card width
@@ -267,7 +274,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "₹${order.total.toStringAsFixed(2)}",
+                      "$currency ${order.total.toStringAsFixed(2)}",
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
@@ -290,7 +297,8 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                   children: [
                     IconButton(
                       onPressed: () {
-                        if (context.findAncestorStateOfType<BillingPageState>() !=
+                        if (context
+                                .findAncestorStateOfType<BillingPageState>() !=
                             null) {
                           context
                               .findAncestorStateOfType<BillingPageState>()!
