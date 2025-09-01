@@ -783,12 +783,18 @@ class PurchaseProvider extends ChangeNotifier {
   Future<dynamic> finishPurchaseOrder({
     required String accessToken,
     required String purchaseId,
+    List<String>? paymentMethods,
+    List<Map<String, dynamic>>? paidMethods,
   }) async {
     debugPrint("FINISH PURCHASE ORDER API CALLED");
     debugPrint("Purchase ID: $purchaseId");
+    debugPrint("Payment Methods: $paymentMethods");
+    debugPrint("Paid Methods: $paidMethods");
 
     final Map<String, dynamic> apiBodyData = {
       'purchase_id': purchaseId,
+      'payment_method': (paymentMethods != null && paymentMethods.isNotEmpty) ? paymentMethods : [],
+      'paid_methods': (paidMethods != null && paidMethods.isNotEmpty) ? paidMethods : [],
     };
     
     debugPrint("API Body Data: $apiBodyData");
