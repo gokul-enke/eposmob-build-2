@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart'; // Add this import for PointerDeviceKind
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_back_button.dart';
@@ -70,7 +71,58 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
   @override
   void initState() {
-    loadInitData();
+    // Check if there's an order number passed from sales screen
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final salesProvider = Provider.of<SalesProvider>(context, listen: false);
+      final passedOrderNumber = salesProvider.getOrderNumber;
+      final passedOrderId = salesProvider.getOrderId;
+
+      debugPrint('Checking for passed order number: $passedOrderNumber');
+
+      if (passedOrderNumber.isNotEmpty) {
+        debugPrint('Found order number from sales page: $passedOrderNumber');
+
+        setState(() {
+          orderNumberController.text = passedOrderNumber;
+          selectedOrderId = passedOrderId;
+          selectedOrderNumber = passedOrderNumber;
+          isOrderSelected = true;
+          initLoading = true;
+        });
+
+        try {
+          // Get access token
+          String? accessToken =
+              Provider.of<AuthModel>(context, listen: false).token;
+
+          // Directly fetch the specific order by order number
+          await Provider.of<SalesProvider>(context, listen: false).fetchOrders(
+            accessToken: accessToken ?? '',
+            orderNumber: passedOrderNumber,
+            page: 1,
+          );
+
+          // Load the order details
+          await getOrderDetails(passedOrderNumber);
+
+          // Clear the provider values to prevent reloading on future navigation
+          salesProvider.setOrderNumber("");
+          salesProvider.setOrderId("");
+        } catch (e) {
+          debugPrint('Error loading specific order: $e');
+        } finally {
+          if (mounted) {
+            setState(() {
+              initLoading = false;
+            });
+          }
+        }
+      } else {
+        // If no order number passed, load initial data
+        loadInitData();
+      }
+    });
+
     super.initState();
   }
 
@@ -105,39 +157,56 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       setState(() {
         initLoading = true;
       });
+
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       SalesProvider orderProvider =
           Provider.of<SalesProvider>(context, listen: false);
 
-      // debugPrint("orderNumberController.text ${orderNumberController.text}");
+      // Store current selection state
+      bool wasOrderSelected = isOrderSelected;
+      String? prevSelectedOrderId = selectedOrderId;
+      String? prevSelectedOrderNumber = selectedOrderNumber;
 
       await orderProvider.fetchOrders(
         accessToken: accessToken ?? '',
-        // storeId: 1,
         orderNumber: orderNumberController.text,
         customerId: selectedCustomerID,
-        // productId: int.parse(selectedProductIdController.text),
-        // filterName: customerNameController.text,
-        // filterPrice: amountController.text,
-        // filterEmail: emailController.text,
-        // filterPhone: phoneController.text,
         date: selectedDate != null
             ? DateFormat('yyyy-MM-dd').format(selectedDate!)
             : '',
-        // filterStore: storeController.text,
         page: page,
       );
+
+      // Restore selection state if we came from the sales page
+      if (wasOrderSelected && prevSelectedOrderId != null) {
+        debugPrint('Restoring selected order: $prevSelectedOrderNumber');
+
+        setState(() {
+          isOrderSelected = true;
+          selectedOrderId = prevSelectedOrderId;
+          selectedOrderNumber = prevSelectedOrderNumber;
+        });
+
+        // Load the order details for the selected order
+        if (prevSelectedOrderNumber != null &&
+            prevSelectedOrderNumber.isNotEmpty) {
+          getOrderDetails(prevSelectedOrderNumber);
+        }
+      } else {
+        setState(() {
+          initLoading = false;
+          isOrderSelected = false;
+          selectedOrderId = null;
+          selectedOrderNumber = null;
+          orderDetailsModelData = null;
+        });
+      }
     } catch (error, stackTrace) {
       debugPrint('Error in searchOrders: $error');
       debugPrint('Stack Trace for searchOrders: $stackTrace');
-    } finally {
       setState(() {
         initLoading = false;
-        isOrderSelected = false;
-        selectedOrderId = null;
-        selectedOrderNumber = null;
-        orderDetailsModelData = null;
       });
     }
   }
@@ -165,20 +234,51 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   }
 
   Future<void> getOrderDetails(String ordersId) async {
+    debugPrint("Starting getOrderDetails for order ID: $ordersId");
     try {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
+
+      // Make sure we have a valid order ID
+      if (ordersId.isEmpty) {
+        debugPrint("Empty order ID provided to getOrderDetails");
+        return;
+      }
+
       debugPrint("Fetching sales return items for order ID: $ordersId");
+
+      // Show loading indicator
+      setState(() {
+        initLoading = true;
+      });
+
       await Provider.of<SalesProvider>(context, listen: false)
           .fetchSalesReturnItems(
               orderId: ordersId, accessToken: accessToken ?? "");
-      debugPrint("Fetched sales return items: ${_salesReturnItems}");
+
+      // Update the local list with the fetched items
       _salesReturnItems =
           Provider.of<SalesProvider>(context, listen: false).salesReturnItems;
-      debugPrint('salesReturnItems: ${_salesReturnItems}');
+
+      debugPrint('Fetched ${_salesReturnItems.length} sales return items');
+
+      // If we have items, ensure the order is marked as selected
+      if (_salesReturnItems.isNotEmpty) {
+        setState(() {
+          isOrderSelected = true;
+          selectedOrderNumber = ordersId;
+        });
+      }
     } catch (error, stackTrace) {
       debugPrint('Error in getOrderDetails for order ID $ordersId: $error');
       debugPrint('Stack Trace for getOrderDetails: $stackTrace');
+    } finally {
+      // Hide loading indicator
+      if (mounted) {
+        setState(() {
+          initLoading = false;
+        });
+      }
     }
   }
 
@@ -400,15 +500,71 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                           itemBuilder: (context, index) {
                             if (isOrderSelected) {
                               // Display only the selected order's title
-                              final order = orders.firstWhere((order) =>
-                                  order.id.toString() == selectedOrderId);
-                              return _buildOrderCard(
-                                context,
-                                orderId: order.id.toString(),
-                                orderNumber: order.orderNumber.toString(),
-                                date: order.orderDate.toString(),
-                                customer: order.customerName.toString(),
-                              );
+                              try {
+                                // Try to find the order by order number instead of ID
+                                final order = orders.firstWhere(
+                                  (order) =>
+                                      order.orderNumber.toString() ==
+                                      selectedOrderNumber,
+                                  orElse: () {
+                                    // If order not found by order number, try by ID
+                                    try {
+                                      return orders.firstWhere(
+                                        (order) =>
+                                            order.id.toString() ==
+                                            selectedOrderId,
+                                        orElse: () {
+                                          // If still not found, create a placeholder
+                                          debugPrint(
+                                              'Order not found in loaded orders, creating placeholder');
+                                          return ListOrderModelData(
+                                            id: int.tryParse(
+                                                selectedOrderId ?? "0"),
+                                            orderNumber: selectedOrderNumber,
+                                            orderDate: DateTime.now(),
+                                            customerName:
+                                                "Order #$selectedOrderNumber",
+                                          );
+                                        },
+                                      );
+                                    } catch (e) {
+                                      debugPrint(
+                                          'Error finding order by ID: $e');
+                                      return ListOrderModelData(
+                                        id: int.tryParse(
+                                            selectedOrderId ?? "0"),
+                                        orderNumber: selectedOrderNumber,
+                                        orderDate: DateTime.now(),
+                                        customerName:
+                                            "Order #$selectedOrderNumber",
+                                      );
+                                    }
+                                  },
+                                );
+
+                                debugPrint(
+                                    'Displaying order card: ${order.orderNumber}');
+
+                                return _buildOrderCard(
+                                  context,
+                                  orderId: order.id.toString(),
+                                  orderNumber: order.orderNumber.toString(),
+                                  date: order.orderDate.toString(),
+                                  customer:
+                                      order.customerName?.toString() ?? "N/A",
+                                );
+                              } catch (e) {
+                                debugPrint(
+                                    'Error displaying selected order: $e');
+                                // Fallback to show a placeholder card
+                                return _buildOrderCard(
+                                  context,
+                                  orderId: selectedOrderId ?? "0",
+                                  orderNumber: selectedOrderNumber ?? "0",
+                                  date: DateTime.now().toIso8601String(),
+                                  customer: "Order #$selectedOrderNumber",
+                                );
+                              }
                             } else {
                               final order = orders[index];
                               return _buildOrderCard(
@@ -416,7 +572,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                 orderId: order.id.toString(),
                                 orderNumber: order.orderNumber.toString(),
                                 date: order.orderDate.toString(),
-                                customer: order.customerName.toString(),
+                                customer:
+                                    order.customerName?.toString() ?? "N/A",
                               );
                             }
                           },
@@ -451,7 +608,11 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   const SizedBox(
                     height: 20,
                   ),
-                  _buildOrderDetails(),
+                  // Wrap the order details in a SizedBox with fixed height
+                  SizedBox(
+                    height: 300, // Set a fixed height for the table
+                    child: _buildOrderDetails(),
+                  ),
                   const SizedBox(
                     height: 20,
                   ),
@@ -495,14 +656,6 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Text(
-              //   'Order ID: $orderId',
-              //   style: const TextStyle(
-              //     fontSize: 16,
-              //     fontWeight: FontWeight.bold,
-              //   ),
-              // ),
-              // const SizedBox(height: 8),
               Text(
                 'Order Number: $orderNumber',
                 style: const TextStyle(fontSize: 14),
@@ -1082,83 +1235,206 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           ],
         );
       }
-      return SizedBox(
-        width: double.infinity,
-        child: DataTable(
-          columns: const [
-            DataColumn(label: Text('Product Name')),
-            DataColumn(label: Text('Quantity')),
-            DataColumn(label: Text('Unit Price')),
-            DataColumn(label: Text('Total Price')),
-            DataColumn(label: Text('Returned Quantity')),
-            DataColumn(label: Text('Returned Total')),
-            DataColumn(label: Text('Returned')),
-            DataColumn(label: Text('Action')),
-          ],
-          rows: salesReturnItems.map((item) {
-            return DataRow(
-              cells: [
-                DataCell(InkWell(
-                  onTap: () {
-                    debugPrint('item.quantity ${item.quantity}');
-                    debugPrint('item.unitPrice ${item.unitPrice}');
-                    debugPrint('item.totalPrice ${item.totalPrice}');
-                    debugPrint('item.productName ${item.productName}');
 
-                    _showReturnDialog(
-                      context,
-                      productName: item.productName.toString(),
-                      unitPrice: item.unitPrice.toString(),
-                      orderId: selectedOrderId.toString(),
-                      cartItemId: item.cartItemId,
-                      currency: '',
-                      totalPrice: item.totalPrice.toString(),
-                      quantity: item.quantity.toString(),
-                    );
-                  },
-                  child: Text(
-                    item.productName,
-                    style: const TextStyle(fontSize: 12),
+      return BuildBoxShadowContainer(
+        margin: const EdgeInsets.only(top: 5),
+        circleRadius: 7,
+        offsetValue: const Offset(2, 2),
+        blurRadius: 8.0,
+        color: Colors.white,
+        child: Column(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                color: ColorManager.tableBGColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    offset: Offset(0, 2),
+                    blurRadius: 2.0,
                   ),
-                )),
-                DataCell(Text(item.quantity)),
-                DataCell(Text(item.unitPrice)),
-                DataCell(Text(item.totalPrice)),
-                DataCell(Text(item.returnedQuantity.toString())),
-                DataCell(Text(item.returnedTotal.toString())),
-                DataCell(
-                  Icon(
-                    item.isReturned ? Icons.pending : Icons.cancel,
-                    color: item.isReturned ? Colors.amber : Colors.red,
-                    size: 20,
+                ],
+              ),
+              child: Table(
+                columnWidths: const {
+                  0: FlexColumnWidth(3), // Product Name
+                  1: FlexColumnWidth(1), // Quantity
+                  2: FlexColumnWidth(1.5), // Unit Price
+                  3: FlexColumnWidth(1.5), // Total Price
+                  4: FlexColumnWidth(1.5), // Returned Quantity
+                  5: FlexColumnWidth(1.5), // Returned Total
+                  6: FlexColumnWidth(1), // Returned
+                  7: FlexColumnWidth(1.5), // Action
+                },
+                border: null,
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                children: [
+                  TableRow(
+                    children: [
+                      _buildTableHeader('Product Name'),
+                      _buildTableHeader('Quantity'),
+                      _buildTableHeader('Unit Price'),
+                      _buildTableHeader('Total Price'),
+                      _buildTableHeader('Returned Qty'),
+                      _buildTableHeader('Returned Total'),
+                      _buildTableHeader('Status'),
+                      _buildTableHeader('Action'),
+                    ],
                   ),
-                ),
-                DataCell(
-                  TextButton(
-                    onPressed: () {
-                      _showReturnDialog(
-                        context,
-                        productName: item.productName.toString(),
-                        unitPrice: item.unitPrice.toString(),
-                        orderId: selectedOrderId.toString(),
-                        cartItemId: item.cartItemId,
-                        currency: '',
-                        totalPrice: item.totalPrice.toString(),
-                        quantity: item.quantity.toString(),
-                      );
+                ],
+              ),
+            ),
+            // Replace Expanded with Container having a fixed height
+            Container(
+              height: 200, // Fixed height for the table body
+              child: MouseRegion(
+                cursor: SystemMouseCursors.grab,
+                child: ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(context).copyWith(
+                    dragDevices: {
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.stylus,
+                      PointerDeviceKind.trackpad,
                     },
-                    child: const Text("Return"),
+                  ),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    scrollDirection: Axis.vertical,
+                    child: Table(
+                      columnWidths: const {
+                        0: FlexColumnWidth(3), // Product Name
+                        1: FlexColumnWidth(1), // Quantity
+                        2: FlexColumnWidth(1.5), // Unit Price
+                        3: FlexColumnWidth(1.5), // Total Price
+                        4: FlexColumnWidth(1.5), // Returned Quantity
+                        5: FlexColumnWidth(1.5), // Returned Total
+                        6: FlexColumnWidth(1), // Returned
+                        7: FlexColumnWidth(1.5), // Action
+                      },
+                      border: null,
+                      defaultVerticalAlignment:
+                          TableCellVerticalAlignment.middle,
+                      children: [
+                        ...salesReturnItems.asMap().entries.map((entry) {
+                          int index = entry.key;
+                          SalesReturnCart item = entry.value;
+                          return TableRow(
+                            decoration: BoxDecoration(
+                              color: index % 2 == 0
+                                  ? Colors.white
+                                  : Colors.grey.withOpacity(0.1),
+                            ),
+                            children: [
+                              SizedBox(
+                                height: 55,
+                                child: _buildTableCell(item.productName),
+                              ),
+                              SizedBox(
+                                height: 55,
+                                child: _buildTableCell(item.quantity),
+                              ),
+                              SizedBox(
+                                height: 55,
+                                child: _buildTableCell(item.unitPrice),
+                              ),
+                              SizedBox(
+                                height: 55,
+                                child: _buildTableCell(item.totalPrice),
+                              ),
+                              SizedBox(
+                                height: 55,
+                                child: _buildTableCell(
+                                    item.returnedQuantity.toString()),
+                              ),
+                              SizedBox(
+                                height: 55,
+                                child: _buildTableCell(
+                                    item.returnedTotal.toString()),
+                              ),
+                              SizedBox(
+                                height: 55,
+                                child: Center(
+                                  child: Icon(
+                                    item.isReturned
+                                        ? Icons.pending
+                                        : Icons.cancel,
+                                    color: item.isReturned
+                                        ? Colors.amber
+                                        : Colors.red,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(
+                                height: 55,
+                                child: Center(
+                                  child: TextButton(
+                                    onPressed: () {
+                                      _showReturnDialog(
+                                        context,
+                                        productName:
+                                            item.productName.toString(),
+                                        unitPrice: item.unitPrice.toString(),
+                                        orderId: selectedOrderId.toString(),
+                                        cartItemId: item.cartItemId,
+                                        currency: '',
+                                        totalPrice: item.totalPrice.toString(),
+                                        quantity: item.quantity.toString(),
+                                      );
+                                    },
+                                    child: const Text("Return"),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            );
-          }).toList(),
+              ),
+            ),
+          ],
         ),
       );
     });
   }
 
-  _buildCompleteReturnButton(Size size) {
+  Widget _buildTableHeader(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s12,
+          0.18,
+          ColorManager.kPrimaryColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTableCell(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s9,
+          0.18,
+          Colors.black,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompleteReturnButton(Size size) {
     final SideBarController sideBarController = Get.put(SideBarController());
 
     return CustomRoundButton(
