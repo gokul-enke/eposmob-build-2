@@ -1121,9 +1121,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             onDateSelected: onDateSelected,
             hintText: "Select $title",
             isRequired: title.toLowerCase().contains('date'),
-            firstDate: title.toLowerCase().contains('purchase') 
-              ? DateTime(2020) // Allow past dates for purchase
-              : DateTime.now(), // Future dates for other dates
+            firstDate: DateTime(2020), // Allow past dates for all general date fields
             lastDate: DateTime(2030),
             showQuickActions: false, // No quick actions for header dates
             isForExpiry: false, // These are not expiry dates

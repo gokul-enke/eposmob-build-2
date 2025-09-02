@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -31,11 +33,44 @@ class CalendarPickerTableCell extends StatefulWidget {
       _CalendarPickerTableCellState();
 }
 
+// Date input formatter that automatically adds hyphens
+class DateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // Remove all non-digit characters
+    String digitsOnly = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
+    
+    // Limit to 8 digits (YYYYMMDD)
+    if (digitsOnly.length > 8) {
+      digitsOnly = digitsOnly.substring(0, 8);
+    }
+    
+    String formatted = '';
+    
+    // Format as YYYY-MM-DD
+    for (int i = 0; i < digitsOnly.length; i++) {
+      if (i == 4 || i == 6) {
+        formatted += '-';
+      }
+      formatted += digitsOnly[i];
+    }
+    
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
 class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
   DateTime? selectedDate;
   bool isTextInputMode = false;
   late TextEditingController textController;
   final FocusNode textFocusNode = FocusNode();
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -45,10 +80,34 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
     if (selectedDate != null) {
       textController.text = DateFormat('yyyy-MM-dd').format(selectedDate!);
     }
+    
+    // Add listener for real-time validation on focus loss
+    textFocusNode.addListener(() {
+      if (!textFocusNode.hasFocus && textController.text.isNotEmpty) {
+        // Validate when user loses focus
+        _handleTextInput(textController.text);
+      }
+    });
+    
+    // Add listener for text changes with debouncing
+    textController.addListener(() {
+      if (isTextInputMode && textController.text.isNotEmpty) {
+        // Cancel previous timer
+        _debounceTimer?.cancel();
+        
+        // Set new timer for delayed validation
+        _debounceTimer = Timer(const Duration(milliseconds: 1500), () {
+          if (textController.text.isNotEmpty && textController.text.length >= 8) {
+            _handleTextInput(textController.text);
+          }
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     textController.dispose();
     textFocusNode.dispose();
     super.dispose();
@@ -146,27 +205,37 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
     if (value.isEmpty) return;
     
     try {
-      // Try parsing different date formats
       DateTime? parsedDate;
+      String cleanValue = value.replaceAll(RegExp(r'[^\d]'), ''); // Remove all non-digits
       
-      // Format: yyyy-MM-dd
-      if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) {
+      // Handle different input lengths
+      if (cleanValue.length == 8) {
+        // Format: YYYYMMDD -> YYYY-MM-DD
+        String year = cleanValue.substring(0, 4);
+        String month = cleanValue.substring(4, 6);
+        String day = cleanValue.substring(6, 8);
+        parsedDate = DateTime(int.parse(year), int.parse(month), int.parse(day));
+      }
+      else if (cleanValue.length == 6) {
+        // Format: DDMMYY -> DD-MM-20YY (assuming 20xx for 2-digit years)
+        String day = cleanValue.substring(0, 2);
+        String month = cleanValue.substring(2, 4);
+        String year = '20${cleanValue.substring(4, 6)}';
+        parsedDate = DateTime(int.parse(year), int.parse(month), int.parse(day));
+      }
+      else if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) {
+        // Format: yyyy-MM-dd (already formatted)
         parsedDate = DateTime.parse(value);
       }
-      // Format: dd-MM-yyyy or dd/MM/yyyy
       else if (RegExp(r'^\d{2}[-/]\d{2}[-/]\d{4}$').hasMatch(value)) {
+        // Format: dd-MM-yyyy or dd/MM/yyyy
         final parts = value.split(RegExp(r'[-/]'));
         parsedDate = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
       }
-      // Format: MM-dd-yyyy or MM/dd/yyyy
-      else if (RegExp(r'^\d{2}[-/]\d{2}[-/]\d{4}$').hasMatch(value)) {
+      else if (RegExp(r'^\d{1,2}[-/]\d{1,2}[-/]\d{4}$').hasMatch(value)) {
+        // Format: d-M-yyyy or d/M/yyyy (single digits allowed)
         final parts = value.split(RegExp(r'[-/]'));
-        // Try MM/dd/yyyy format if dd-MM-yyyy fails
-        try {
-          parsedDate = DateTime(int.parse(parts[2]), int.parse(parts[0]), int.parse(parts[1]));
-        } catch (e) {
-          parsedDate = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
-        }
+        parsedDate = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
       }
       
       if (parsedDate != null) {
@@ -185,11 +254,26 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
         });
         widget.onDateSelected(parsedDate);
       } else {
-        _showDateValidationError('Invalid date format. Use yyyy-MM-dd, dd-MM-yyyy, or dd/MM/yyyy');
+        _showDateValidationError('Invalid date. Try: 20250205 or 2025-02-05 or 05-02-2025');
       }
     } catch (e) {
-      _showDateValidationError('Invalid date format. Use yyyy-MM-dd, dd-MM-yyyy, or dd/MM/yyyy');
+      _showDateValidationError('Invalid date. Try: 20250205 or 2025-02-05 or 05-02-2025');
     }
+  }
+
+  void _onTextChanged(String value) {
+    // Cancel any existing timer
+    _debounceTimer?.cancel();
+    
+    // Don't validate empty or very short inputs
+    if (value.isEmpty || value.length < 4) return;
+    
+    // Set a timer for validation after user stops typing
+    _debounceTimer = Timer(const Duration(milliseconds: 800), () {
+      if (value.isNotEmpty && value.length >= 8) {
+        _handleTextInput(value);
+      }
+    });
   }
 
   void _showDateValidationError(String message) {
@@ -378,8 +462,9 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
               ? TextFormField(
                   controller: textController,
                   focusNode: textFocusNode,
+                  inputFormatters: [DateInputFormatter()],
                   decoration: InputDecoration(
-                    hintText: 'MMM dd, yyyy',
+                    hintText: 'Type: 20250205',
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
@@ -399,7 +484,8 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
                     ColorManager.textColor.withOpacity(.5),
                   ),
                   onFieldSubmitted: _handleTextInput,
-                  keyboardType: TextInputType.datetime,
+                  onChanged: _onTextChanged,
+                  keyboardType: TextInputType.number,
                 )
               : GestureDetector(
                   onTap: _toggleInputMode,
