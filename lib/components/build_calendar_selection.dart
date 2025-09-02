@@ -15,6 +15,7 @@ class CalendarPickerTableCell extends StatefulWidget {
   final bool showQuickActions;
   final bool isRequired;
   final bool isForExpiry;
+  final bool isAllowEdit;
 
   const CalendarPickerTableCell({
     Key? key, 
@@ -26,6 +27,7 @@ class CalendarPickerTableCell extends StatefulWidget {
     this.showQuickActions = false,
     this.isRequired = false,
     this.isForExpiry = false,
+    this.isAllowEdit = true,
   }) : super(key: key);
 
   @override
@@ -248,7 +250,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
           return;
         }
         
-        setState(() {
+      setState(() {
           selectedDate = parsedDate;
           isTextInputMode = false;
         });
@@ -341,7 +343,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
                     onPressed: () => Navigator.of(context).pop(),
                     icon: Icon(
                       Icons.calendar_today,
-                      color: ColorManager.textColor.withOpacity(.5),
+                      color: Colors.black87,
                       size: 18,
                     ),
                     label: Text(
@@ -350,13 +352,28 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
                         FontWeightManager.medium,
                         FontSize.s12,
                         0.27,
-                        ColorManager.textColor.withOpacity(.5),
+                        Colors.black87,
                       ),
                     ),
                     style: TextButton.styleFrom(
-                      foregroundColor: ColorManager.textColor.withOpacity(.5),
+                      foregroundColor: Colors.black87,
                       backgroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    ).copyWith(
+                      overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                        (Set<WidgetState> states) {
+                          if (states.contains(WidgetState.hovered)) {
+                            return Colors.blue.shade50;
+                          }
+                          if (states.contains(WidgetState.focused)) {
+                            return Colors.blue.shade100;
+                          }
+                          if (states.contains(WidgetState.pressed)) {
+                            return Colors.blue.shade200;
+                          }
+                          return null;
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -379,18 +396,34 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(
-          color: Colors.grey.withOpacity(0.3), // Consistent subtle border
+          color: Colors.grey.withOpacity(0.3),
+          width: 1,
         ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: TextButton(
         onPressed: isEnabled ? () => Navigator.of(context).pop(date) : null,
         style: TextButton.styleFrom(
-          foregroundColor: isEnabled ? ColorManager.textColor.withOpacity(.5) : Colors.grey,
+          foregroundColor: isEnabled ? Colors.black87 : Colors.grey,
           backgroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
+          ),
+        ).copyWith(
+          overlayColor: WidgetStateProperty.resolveWith<Color?>(
+            (Set<WidgetState> states) {
+              if (states.contains(WidgetState.hovered)) {
+                return Colors.blue.shade50;
+              }
+              if (states.contains(WidgetState.focused)) {
+                return Colors.blue.shade100;
+              }
+              if (states.contains(WidgetState.pressed)) {
+                return Colors.blue.shade200;
+              }
+              return null;
+            },
           ),
         ),
         child: Row(
@@ -402,7 +435,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
                 FontWeightManager.medium,
                 FontSize.s12,
                 0.27,
-                isEnabled ? ColorManager.textColor.withOpacity(.5) : Colors.grey.shade400,
+                isEnabled ? Colors.black87 : Colors.grey.shade400,
               ),
             ),
             Text(
@@ -411,7 +444,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
                 FontWeightManager.medium,
                 FontSize.s12,
                 0.27,
-                isEnabled ? ColorManager.textColor.withOpacity(.5) : Colors.grey.shade400,
+                isEnabled ? Colors.black87 : Colors.grey.shade400,
               ),
             ),
           ],
@@ -474,7 +507,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
                       FontWeightManager.medium,
                       FontSize.s12,
                       0.27,
-                      ColorManager.textColor.withOpacity(.5),
+                      Colors.black87,
                     ),
                   ),
                   style: buildCustomStyle(
@@ -488,7 +521,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
                   keyboardType: TextInputType.number,
                 )
               : GestureDetector(
-                  onTap: _toggleInputMode,
+                  onTap: widget.isAllowEdit ? _toggleInputMode : null,
                   child: Container(
                     width: double.infinity,
                     alignment: Alignment.centerLeft,
@@ -498,7 +531,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
                         FontWeightManager.medium,
                         FontSize.s12,
                         0.27,
-                        ColorManager.textColor.withOpacity(.5),
+                        Colors.black87,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -506,7 +539,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
                 ),
           ),
           // Mode toggle icon (edit icon for text input)
-          if (!isTextInputMode)
+          if (!isTextInputMode && widget.isAllowEdit)
             InkWell(
               onTap: _toggleInputMode,
               borderRadius: BorderRadius.circular(4),

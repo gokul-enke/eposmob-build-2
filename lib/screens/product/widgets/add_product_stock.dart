@@ -1125,6 +1125,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             lastDate: DateTime(2030),
             showQuickActions: false, // No quick actions for header dates
             isForExpiry: false, // These are not expiry dates
+            isAllowEdit: true, // Allow text editing for header dates
           ),
         ),
       ],
@@ -2435,6 +2436,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             lastDate: DateTime.now().add(const Duration(days: 3650)), // 10 years from now
             showQuickActions: true, // Enable quick date selection for expiry dates
             isForExpiry: label.toLowerCase().contains('expiry'), // Show quick actions only for expiry dates
+            isAllowEdit: true, // Allow text editing for expiry dates
           ),
         ),
       ],
