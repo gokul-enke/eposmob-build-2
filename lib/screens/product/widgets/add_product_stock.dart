@@ -1119,6 +1119,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           child: CalendarPickerTableCell(
             initialDate: selectedDate,
             onDateSelected: onDateSelected,
+            hintText: "Select $title",
+            isRequired: title.toLowerCase().contains('date'),
+            firstDate: title.toLowerCase().contains('purchase') 
+              ? DateTime(2020) // Allow past dates for purchase
+              : DateTime.now(), // Future dates for other dates
+            lastDate: DateTime(2030),
+            showQuickActions: false, // No quick actions for header dates
+            isForExpiry: false, // These are not expiry dates
           ),
         ),
       ],
@@ -2423,6 +2431,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           child: CalendarPickerTableCell(
             initialDate: selectedDate,
             onDateSelected: onDateSelected,
+            hintText: "Select $label",
+            isRequired: label.toLowerCase().contains('expiry'),
+            firstDate: DateTime.now(), // Expiry dates should be in the future
+            lastDate: DateTime.now().add(const Duration(days: 3650)), // 10 years from now
+            showQuickActions: true, // Enable quick date selection for expiry dates
+            isForExpiry: label.toLowerCase().contains('expiry'), // Show quick actions only for expiry dates
           ),
         ),
       ],
