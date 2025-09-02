@@ -5,6 +5,7 @@ import '../providers/category_providers.dart';
 import '../providers/document_config_provider.dart';
 import '../providers/invoice_provider.dart';
 import '../providers/purchase_provider.dart';
+import '../providers/stock_provider.dart';
 import '../providers/auth_model.dart';
 
 /// Comprehensive sync provider that handles synchronization of all data
@@ -46,27 +47,31 @@ class SyncProvider extends ChangeNotifier {
       debugPrint("🔄 Starting comprehensive data sync...");
       debugPrint("Access Token: ${accessToken.substring(0, 20)}...");
 
-      // Step 1: Sync Products (25%)
+      // Step 1: Sync Products (20%)
       _updateProgress(0.1, "Syncing products...");
       await _syncProducts(context, accessToken);
 
-      // Step 2: Sync Categories (35%)
-      _updateProgress(0.25, "Syncing categories...");
+      // Step 2: Sync Stock Data (30%)
+      _updateProgress(0.2, "Syncing stock quantities...");
+      await _syncStockData(context, accessToken);
+
+      // Step 3: Sync Categories (40%)
+      _updateProgress(0.3, "Syncing categories...");
       await _syncCategories(context);
 
-      // Step 3: Sync Document Configurations (50%)
-      _updateProgress(0.35, "Syncing document configurations...");
+      // Step 4: Sync Document Configurations (55%)
+      _updateProgress(0.4, "Syncing document configurations...");
       await _syncDocumentConfigurations(context, accessToken);
 
-      // Step 4: Sync Invoice Data (70%)
-      _updateProgress(0.5, "Syncing invoice data...");
+      // Step 5: Sync Invoice Data (75%)
+      _updateProgress(0.55, "Syncing invoice data...");
       await _syncInvoiceData(context, accessToken);
 
-      // Step 5: Sync Purchase Data (90%)
-      _updateProgress(0.7, "Syncing purchase data...");
+      // Step 6: Sync Purchase Data (90%)
+      _updateProgress(0.75, "Syncing purchase data...");
       await _syncPurchaseData(context, accessToken);
 
-      // Step 6: Complete (100%)
+      // Step 7: Complete (100%)
       _updateProgress(1.0, "Sync completed successfully!");
       _lastSyncTime = DateTime.now();
       
@@ -93,6 +98,34 @@ class SyncProvider extends ChangeNotifier {
       throw Exception('Failed to sync products: $e');
     }
   }
+
+  /// Sync dedicated stock data from API for inventory management
+  /// Note: Product quantities are already synced via _syncProducts() -> fetchProductsFromAPI()
+  /// This sync provides additional stock data for inventory reports and stock management screens
+  Future<void> _syncStockData(BuildContext context, String accessToken) async {
+    try {
+      debugPrint("📦 Syncing stock data for inventory management...");
+      final stockProvider = Provider.of<StockProvider>(context, listen: false);
+      
+      // Get stock data from StockProvider (for stock management/reporting screens)
+      final result = await stockProvider.syncStockData(accessToken);
+      
+      if (result['status'] == 'success') {
+        debugPrint("✅ Stock inventory data synced successfully");
+        debugPrint("   - Synced ${result['synced_count']} stock entries");
+        debugPrint("   - Stock data available for inventory management screens");
+      } else {
+        debugPrint("⚠️ Stock sync completed with warnings: ${result['message']}");
+        // Don't throw error for stock sync failures - continue with other syncs
+      }
+    } catch (e) {
+      debugPrint("❌ Failed to sync stock data: $e");
+      // Don't throw error for stock sync failures - continue with other syncs
+      debugPrint("⚠️ Continuing sync process despite stock sync failure");
+    }
+  }
+  
+
 
   /// Sync categories from API
   Future<void> _syncCategories(BuildContext context) async {

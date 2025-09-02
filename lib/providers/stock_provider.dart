@@ -956,6 +956,47 @@ class StockProvider extends ChangeNotifier {
     }
   }
 
+  //          *********************** SYNC STOCK DATA ***************************************************
+  
+  /// Sync stock data from server - fetches latest stock quantities and details
+  Future<Map<String, dynamic>> syncStockData(String accessToken) async {
+    debugPrint('🔄 STARTING DEDICATED STOCK DATA SYNC');
+    
+    try {
+      // Use existing stock listing API but with all data
+      await listStockAPI(
+        accessToken: accessToken,
+        page: 1,
+        loadAll: true, // Get large batch for sync
+        filterName: null,
+      );
+      
+      debugPrint('✅ Stock sync API successful');
+      
+      return {
+        'status': 'success',
+        'message': 'Stock data synced successfully',
+        'synced_count': _allStocks?.length ?? 0,
+      };
+    } catch (e) {
+      debugPrint('❌ Stock sync failed with error: $e');
+      return {
+        'status': 'failed',
+        'message': 'Stock sync failed: $e',
+      };
+    }
+  }
+  
+  /// Get stock sync summary for reporting
+  Map<String, dynamic> getStockSyncSummary() {
+    return {
+      'total_stocks': _allStocks?.length ?? 0,
+      'last_sync_time': DateTime.now().toIso8601String(),
+    };
+  }
+
+  //          *********************** CLEAR STOCK DATA ***************************************************
+  
   /// Clear all stock data
   void clearStockData() {
     _listStockModelDataList = [];
