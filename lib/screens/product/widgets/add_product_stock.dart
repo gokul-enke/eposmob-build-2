@@ -3254,24 +3254,32 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                     });
                                   }
 
-                                  // Trigger lightweight stock-only sync
+                                  // Trigger stock-only sync followed by full sync
                                   Future.microtask(() async {
                                     try {
                                       final syncProvider =
                                           Provider.of<SyncProvider>(context,
                                               listen: false);
-                                      bool success = await syncProvider
+                                      
+                                      // Step 1: Quick stock-only sync for immediate updates
+                                      debugPrint('🔄 Starting stock-only sync...');
+                                      bool stockSyncSuccess = await syncProvider
                                           .syncStockDataOnly(context);
-                                      if (success) {
+                                      if (stockSyncSuccess) {
                                         debugPrint(
                                             '✅ STOCK-ONLY SYNC COMPLETED SUCCESSFULLY');
                                       } else {
                                         debugPrint(
                                             '⚠️ STOCK-ONLY SYNC SKIPPED (ALREADY RUNNING)');
                                       }
+                                      
+                                      // Step 2: Full comprehensive sync for complete data consistency
+                                      debugPrint('🔄 Starting comprehensive sync...');
+                                      await syncProvider.syncAllData(context);
+                                      debugPrint('✅ COMPREHENSIVE SYNC COMPLETED SUCCESSFULLY');
+                                      
                                     } catch (e) {
-                                      debugPrint(
-                                          '❌ STOCK-ONLY SYNC FAILED: $e');
+                                      debugPrint('❌ SYNC PROCESS FAILED: $e');
                                     }
                                   });
                                 } else {
