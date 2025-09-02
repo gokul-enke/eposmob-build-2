@@ -249,6 +249,53 @@ class SyncProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sync only stock-related data after successful stock operations
+  /// This is a lightweight sync focused on stock data only
+  Future<bool> syncStockDataOnly(BuildContext context) async {
+    if (_isSyncing) {
+      debugPrint("Sync already in progress, skipping stock-only sync...");
+      return false;
+    }
+
+    _startSync();
+    
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final accessToken = authModel.token;
+
+      if (accessToken == null || accessToken.isEmpty) {
+        throw Exception('No access token available. Please login again.');
+      }
+
+      debugPrint("🔄 Starting stock-only sync after successful stock operations...");
+      debugPrint("Access Token: ${accessToken.substring(0, 20)}...");
+
+      // Step 1: Sync Products (50%) - Updates stock quantities in LocalProductProvider
+      _updateProgress(0.2, "Updating product stock quantities...");
+      await _syncProducts(context, accessToken);
+
+      // Step 2: Sync Stock Data (100%) - Updates StockProvider for inventory screens
+      _updateProgress(0.5, "Syncing stock inventory data...");
+      await _syncStockData(context, accessToken);
+
+      // Complete
+      _updateProgress(1.0, "Stock sync completed successfully!");
+      _lastSyncTime = DateTime.now();
+      
+      debugPrint("✅ Stock-only sync completed successfully at ${_lastSyncTime}");
+      
+      await Future.delayed(const Duration(milliseconds: 500));
+      _completSync();
+
+      return true;
+
+    } catch (e) {
+      debugPrint("❌ Stock-only sync failed with error: $e");
+      _syncError(e.toString());
+      return false;
+    }
+  }
+
   /// Get formatted last sync time
   String getFormattedLastSyncTime() {
     if (_lastSyncTime == null) return 'Never';

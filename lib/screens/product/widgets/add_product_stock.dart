@@ -250,8 +250,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Future<void> _addStockForSingleItem(int index) async {
-    debugPrint(
-        '🔄 LOCAL STOCK ADDITION PROCESS STARTED FOR ITEM ${index + 1}');
+    debugPrint('🔄 LOCAL STOCK ADDITION PROCESS STARTED FOR ITEM ${index + 1}');
 
     if (selectedStore == null) {
       debugPrint('❌ STORE VALIDATION FAILED: No store selected');
@@ -289,7 +288,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'retailPrice': item.salePrice,
         'purchaseRate': item.purchaseRate,
         'mrp': item.mrp.isNotEmpty ? item.mrp : item.salePrice,
-        'wholesalePrice': item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
+        'wholesalePrice':
+            item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
         'unit': item.unit,
         'supplierId': selectedSupplier!.id,
         'storeId': selectedStore!.id,
@@ -299,7 +299,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'purchaseId': null,
         'taxAmountRetail': item.calculatedTaxData?['retailTaxAmount'],
         'taxAmountWholesale': item.calculatedTaxData?['wholesaleTaxAmount'],
-        'wholesaleMinUnit': item.batchNumber.isNotEmpty ? item.batchNumber : '1',
+        'wholesaleMinUnit':
+            item.batchNumber.isNotEmpty ? item.batchNumber : '1',
         'rack': item.rack,
         'barcode': item.barcode,
         'batchNumber': item.batchNumber,
@@ -308,9 +309,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'purchaseNumber': null,
         'taxInclude': item.taxInclude,
         'initialRetailPrice': item.salePrice,
-        'initialWholesalePrice': item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
+        'initialWholesalePrice':
+            item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
         'retailPriceTax': item.calculatedTaxData?['price_including_tax_retail'],
-        'wholesalePriceTax': item.calculatedTaxData?['price_including_tax_wholesale'],
+        'wholesalePriceTax':
+            item.calculatedTaxData?['price_including_tax_wholesale'],
         // Additional data for UI reference
         'productName': item.product,
         'categoryName': item.category,
@@ -331,7 +334,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
       if (success) {
         debugPrint('✅ STOCK ITEM ADDED TO LOCAL STORAGE SUCCESSFULLY');
-        
+
         setState(() {
           stockItems[index].isSuccessfullyAdded = true;
           // Store the local ID for tracking
@@ -371,11 +374,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         });
       } else {
         debugPrint('❌ LOCAL VALIDATION FAILED FOR ITEM ${index + 1}');
-        
+
         // Get validation errors from stock provider
         final validationErrors = stockProvider.validateStockItem(stockItemData);
         String errorMessage = 'Please complete all required fields:';
-        
+
         validationErrors.forEach((field, error) {
           if (error != null) {
             errorMessage += '\n• $error';
@@ -386,8 +389,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         showScaffoldError(context: context, message: errorMessage);
       }
     } catch (e) {
-      debugPrint(
-          '💥 EXCEPTION IN LOCAL STOCK ADDITION FOR ITEM ${index + 1}:');
+      debugPrint('💥 EXCEPTION IN LOCAL STOCK ADDITION FOR ITEM ${index + 1}:');
       debugPrint('   - Exception Type: ${e.runtimeType}');
       debugPrint('   - Exception Message: $e');
       debugPrint('   - Stack Trace: ${StackTrace.current}');
@@ -450,7 +452,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   void _clearStockItem(int index) {
     setState(() {
       stockItems[index] = StockItem(); // Reset to empty item
-      
+
       // Clear controllers for this index
       _getCategorySearchController(index).clear();
       _getProductSearchController(index).clear();
@@ -463,16 +465,16 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   /// Update pending stock item when form fields change
   void _updatePendingStockItem(int index) {
     final item = stockItems[index];
-    
+
     // Only update if item is successfully added (has localId)
-    if (!item.isSuccessfullyAdded || 
-        item.apiResponse == null || 
+    if (!item.isSuccessfullyAdded ||
+        item.apiResponse == null ||
         item.apiResponse!['localId'] == null) {
       return;
     }
-    
+
     final localId = item.apiResponse!['localId'];
-    
+
     // Prepare updated stock item data
     final Map<String, dynamic> updatedStockItemData = {
       'productId': item.productData?.productId,
@@ -481,7 +483,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       'retailPrice': item.salePrice,
       'purchaseRate': item.purchaseRate,
       'mrp': item.mrp.isNotEmpty ? item.mrp : item.salePrice,
-      'wholesalePrice': item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
+      'wholesalePrice':
+          item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
       'unit': item.unit,
       'supplierId': selectedSupplier?.id ?? item.supplierId,
       'storeId': selectedStore?.id ?? 1,
@@ -500,9 +503,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       'purchaseNumber': null,
       'taxInclude': item.taxInclude,
       'initialRetailPrice': item.salePrice,
-      'initialWholesalePrice': item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
+      'initialWholesalePrice':
+          item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
       'retailPriceTax': item.calculatedTaxData?['price_including_tax_retail'],
-      'wholesalePriceTax': item.calculatedTaxData?['price_including_tax_wholesale'],
+      'wholesalePriceTax':
+          item.calculatedTaxData?['price_including_tax_wholesale'],
       // Additional data for UI reference
       'productName': item.product,
       'categoryName': item.category,
@@ -512,8 +517,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
     // Update in provider
     final stockProvider = Provider.of<StockProvider>(context, listen: false);
-    bool success = stockProvider.updateStockItemLocally(localId, updatedStockItemData);
-    
+    bool success =
+        stockProvider.updateStockItemLocally(localId, updatedStockItemData);
+
     if (success) {
       debugPrint('✅ UPDATED PENDING STOCK ITEM: $localId');
     } else {
@@ -575,19 +581,20 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                
+
                 // Remove from local storage if it was added
                 final item = stockItems[index];
-                if (item.apiResponse != null && item.apiResponse!['localId'] != null) {
+                if (item.apiResponse != null &&
+                    item.apiResponse!['localId'] != null) {
                   Provider.of<StockProvider>(context, listen: false)
                       .removeStockItemLocally(item.apiResponse!['localId']);
                 }
-                
+
                 // Remove from UI
                 setState(() {
                   if (stockItems.length > 1) {
                     stockItems.removeAt(index);
-                    
+
                     // Clean up controllers for this index
                     categorySearchControllers[index]?.dispose();
                     productSearchControllers[index]?.dispose();
@@ -595,7 +602,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     quantityControllers[index]?.dispose();
                     barcodeFocusNodes[index]?.dispose();
                     quantityFocusNodes[index]?.dispose();
-                    
+
                     // Remove from maps
                     categorySearchControllers.remove(index);
                     productSearchControllers.remove(index);
@@ -608,9 +615,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     _clearStockItem(index);
                   }
                 });
-                
+
                 showScaffold(
-                    context: context, 
+                    context: context,
                     message: 'Stock item deleted successfully');
                 debugPrint('🗑️ DELETED STOCK ITEM AT INDEX $index');
               },
@@ -859,15 +866,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     itemBuilder: (context, index) {
                       final result = results[index] as Map<String, dynamic>;
                       final bool isSuccess = result['status'] == 'success';
-                      
+
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: isSuccess ? Colors.green.shade50 : Colors.red.shade50,
+                          color: isSuccess
+                              ? Colors.green.shade50
+                              : Colors.red.shade50,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: isSuccess ? Colors.green.shade200 : Colors.red.shade200,
+                            color: isSuccess
+                                ? Colors.green.shade200
+                                : Colors.red.shade200,
                           ),
                         ),
                         child: Row(
@@ -902,7 +913,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                       FontWeightManager.semiBold,
                                       FontSize.s12,
                                       0.27,
-                                      isSuccess ? Colors.green.shade700 : Colors.red.shade700,
+                                      isSuccess
+                                          ? Colors.green.shade700
+                                          : Colors.red.shade700,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
@@ -938,20 +951,21 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               Consumer<StockProvider>(
                 builder: (context, stockProvider, child) {
                   return TextButton.icon(
-                    onPressed: stockProvider.batchProcessingLoading 
-                        ? null 
+                    onPressed: stockProvider.batchProcessingLoading
+                        ? null
                         : () {
                             Navigator.of(context).pop();
                             stockProvider.resetFailedItemsForRetry();
                             showScaffold(
-                                context: context, 
-                                message: 'Failed items reset for retry. Click Finish to try again.');
+                                context: context,
+                                message:
+                                    'Failed items reset for retry. Click Finish to try again.');
                           },
                     icon: Icon(
                       Icons.refresh,
                       size: 16,
-                      color: stockProvider.batchProcessingLoading 
-                          ? Colors.grey 
+                      color: stockProvider.batchProcessingLoading
+                          ? Colors.grey
                           : Colors.orange.shade600,
                     ),
                     label: Text(
@@ -960,8 +974,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         FontWeightManager.medium,
                         FontSize.s14,
                         0.30,
-                        stockProvider.batchProcessingLoading 
-                            ? Colors.grey 
+                        stockProvider.batchProcessingLoading
+                            ? Colors.grey
                             : Colors.orange.shade600,
                       ),
                     ),
@@ -992,7 +1006,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    
+
     // Calculate total stock value outside of any Consumer build method
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _calculateTotalStockValue();
@@ -1227,14 +1241,15 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     return Consumer<StockProvider>(
       builder: (context, stockProvider, child) {
         // Only show payment section if there are successfully added items or pending items
-        bool hasSuccessfulItems = stockItems.any((item) => item.isSuccessfullyAdded);
+        bool hasSuccessfulItems =
+            stockItems.any((item) => item.isSuccessfullyAdded);
         bool hasPendingItems = stockProvider.pendingStockItemsCount > 0;
 
         if (!hasSuccessfulItems && !hasPendingItems) {
           return const SizedBox.shrink(); // Hidden when no items added
         }
 
-            return Column(
+        return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Pending Items Info Section
@@ -1698,16 +1713,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             ),
                           ),
                           // Updated indicator
-                          if (item.isSuccessfullyAdded && 
+                          if (item.isSuccessfullyAdded &&
                               item.apiResponse != null &&
                               item.apiResponse!['localId'] != null) ...[
                             Consumer<StockProvider>(
                               builder: (context, stockProvider, child) {
-                                final pendingItem = stockProvider.getPendingStockItem(item.apiResponse!['localId']);
-                                final bool isUpdated = pendingItem != null && pendingItem['updatedAt'] != null;
-                                
+                                final pendingItem =
+                                    stockProvider.getPendingStockItem(
+                                        item.apiResponse!['localId']);
+                                final bool isUpdated = pendingItem != null &&
+                                    pendingItem['updatedAt'] != null;
+
                                 if (!isUpdated) return const SizedBox.shrink();
-                                
+
                                 return Positioned(
                                   top: -2,
                                   right: -2,
@@ -1823,10 +1841,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Clear/Delete Button (Conditional)
-                      if (item.productData != null || item.isSuccessfullyAdded) ...[
+                      if (item.productData != null ||
+                          item.isSuccessfullyAdded) ...[
                         Tooltip(
-                          message: item.isSuccessfullyAdded 
-                              ? "Delete stock item" 
+                          message: item.isSuccessfullyAdded
+                              ? "Delete stock item"
                               : "Clear product selection",
                           child: Container(
                             height: 40,
@@ -1834,7 +1853,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(5),
-                              border: Border.all(color: Colors.red.withOpacity(0.3)),
+                              border: Border.all(
+                                  color: Colors.red.withOpacity(0.3)),
                               boxShadow: const [
                                 BoxShadow(
                                   color: ColorManager.boxShadowColor,
@@ -1845,8 +1865,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             ),
                             child: IconButton(
                               icon: Icon(
-                                item.isSuccessfullyAdded 
-                                    ? Icons.delete 
+                                item.isSuccessfullyAdded
+                                    ? Icons.delete
                                     : Icons.clear,
                                 size: 18,
                                 color: Colors.red,
@@ -2914,13 +2934,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
     final item = stockItems[index];
 
-    if (item.productData == null || 
+    if (item.productData == null ||
         item.categoryData == null ||
         item.productData!.productId == null ||
         item.categoryData!.categoryId == null) {
       debugPrint(
           '⚠️ Cannot calculate tax: Product or Category data missing for item $index');
-      
+
       // Only set state if we have valid calculated tax data structure
       if (mounted) {
         setState(() {
@@ -3135,18 +3155,21 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
                       try {
                         final String? accessToken =
-                            Provider.of<AuthModel>(context, listen: false).token;
+                            Provider.of<AuthModel>(context, listen: false)
+                                .token;
                         if (accessToken == null) {
                           throw Exception('Access token not found');
                         }
 
                         // Process all pending stock items
-                        final batchResult = await stockProvider.processPendingStockItems(accessToken);
+                        final batchResult = await stockProvider
+                            .processPendingStockItems(accessToken);
 
                         debugPrint('📡 BATCH PROCESSING RESULT: $batchResult');
 
                         if (batchResult['success'] == true) {
-                          final summary = batchResult['summary'] as Map<String, dynamic>;
+                          final summary =
+                              batchResult['summary'] as Map<String, dynamic>;
                           final int successful = summary['successful'] ?? 0;
                           final int failed = summary['failed'] ?? 0;
                           final int total = summary['total'] ?? 0;
@@ -3160,102 +3183,135 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           if (failed > 0) {
                             _showBatchProcessingResults(batchResult);
                             showScaffold(
-                                context: context, 
-                                message: '$failed items failed and remain in pending list. You can retry by clicking Finish again.');
+                                context: context,
+                                message:
+                                    '$failed items failed and remain in pending list. You can retry by clicking Finish again.');
                           } else {
                             // All successful - just show success message
                             showScaffold(
-                                context: context, 
-                                message: 'All $successful stock items processed successfully!');
+                                context: context,
+                                message:
+                                    'All $successful stock items processed successfully!');
                           }
 
                           // If we have successful items, try to complete the purchase order
                           if (successful > 0) {
-                            final successfulItems = summary['successfulItems'] as List<Map<String, dynamic>>;
-                            
+                            final successfulItems = summary['successfulItems']
+                                as List<Map<String, dynamic>>;
+
                             // Look for purchase_id in the successful API responses
                             String? purchaseId;
                             for (var item in successfulItems) {
                               if (item['apiResponse'] != null &&
                                   item['apiResponse']['data'] != null &&
-                                  item['apiResponse']['data']['purchase_id'] != null) {
-                                purchaseId = item['apiResponse']['data']['purchase_id'].toString();
+                                  item['apiResponse']['data']['purchase_id'] !=
+                                      null) {
+                                purchaseId = item['apiResponse']['data']
+                                        ['purchase_id']
+                                    .toString();
                                 debugPrint('✅ FOUND PURCHASE ID: $purchaseId');
                                 break;
                               }
                             }
 
                             if (purchaseId != null) {
-                              debugPrint('🚀 CALLING FINISH PURCHASE ORDER API WITH PURCHASE ID: $purchaseId');
+                              debugPrint(
+                                  '🚀 CALLING FINISH PURCHASE ORDER API WITH PURCHASE ID: $purchaseId');
 
                               try {
-                                final result = await Provider.of<PurchaseProvider>(context, listen: false)
-                                    .finishPurchaseOrder(
+                                final result =
+                                    await Provider.of<PurchaseProvider>(context,
+                                            listen: false)
+                                        .finishPurchaseOrder(
                                   accessToken: accessToken,
                                   purchaseId: purchaseId,
                                   paymentMethods: paymentMethods,
                                   paidMethods: paidMethods,
                                 );
 
-                                if (result is Map<String, dynamic> && result['status'] == 'success') {
-                                  debugPrint('✅ PURCHASE ORDER COMPLETED SUCCESSFULLY');
-                                  
+                                if (result is Map<String, dynamic> &&
+                                    result['status'] == 'success') {
+                                  debugPrint(
+                                      '✅ PURCHASE ORDER COMPLETED SUCCESSFULLY');
+
                                   // Only reset form if no failed items remain
-                                  final remainingPending = summary['remainingPending'] ?? 0;
+                                  final remainingPending =
+                                      summary['remainingPending'] ?? 0;
                                   if (remainingPending == 0) {
-                                    debugPrint('🔄 NO FAILED ITEMS - RESETTING FORM');
+                                    debugPrint(
+                                        '🔄 NO FAILED ITEMS - RESETTING FORM');
                                     _resetFormFields();
                                   } else {
-                                    debugPrint('⚠️ FAILED ITEMS REMAIN - NOT RESETTING FORM');
+                                    debugPrint(
+                                        '⚠️ FAILED ITEMS REMAIN - NOT RESETTING FORM');
                                     // Just clear the successfully added items from UI
                                     setState(() {
-                                      stockItems.removeWhere((item) => item.isSuccessfullyAdded);
+                                      stockItems.removeWhere(
+                                          (item) => item.isSuccessfullyAdded);
                                       if (stockItems.isEmpty) {
                                         stockItems.add(StockItem());
                                       }
                                     });
                                   }
 
-                                  // Trigger background sync
+                                  // Trigger lightweight stock-only sync
                                   Future.microtask(() async {
                                     try {
-                                      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
-                                      await syncProvider.syncAllData(context);
-                                      debugPrint('✅ BACKGROUND SYNC COMPLETED SUCCESSFULLY');
+                                      final syncProvider =
+                                          Provider.of<SyncProvider>(context,
+                                              listen: false);
+                                      bool success = await syncProvider
+                                          .syncStockDataOnly(context);
+                                      if (success) {
+                                        debugPrint(
+                                            '✅ STOCK-ONLY SYNC COMPLETED SUCCESSFULLY');
+                                      } else {
+                                        debugPrint(
+                                            '⚠️ STOCK-ONLY SYNC SKIPPED (ALREADY RUNNING)');
+                                      }
                                     } catch (e) {
-                                      debugPrint('❌ BACKGROUND SYNC FAILED: $e');
+                                      debugPrint(
+                                          '❌ STOCK-ONLY SYNC FAILED: $e');
                                     }
                                   });
                                 } else {
-                                  debugPrint('❌ PURCHASE ORDER COMPLETION FAILED');
+                                  debugPrint(
+                                      '❌ PURCHASE ORDER COMPLETION FAILED');
                                   showScaffoldError(
                                       context: context,
-                                      message: 'Purchase order completion failed. Stock items were added but order was not finalized.');
+                                      message:
+                                          'Purchase order completion failed. Stock items were added but order was not finalized.');
                                 }
                               } catch (e) {
-                                debugPrint('💥 ERROR COMPLETING PURCHASE ORDER: $e');
+                                debugPrint(
+                                    '💥 ERROR COMPLETING PURCHASE ORDER: $e');
                                 showScaffoldError(
                                     context: context,
-                                    message: 'Error completing purchase order: ${e.toString()}');
+                                    message:
+                                        'Error completing purchase order: ${e.toString()}');
                               }
                             } else {
-                              debugPrint('❌ NO PURCHASE ID FOUND IN SUCCESSFUL ITEMS');
+                              debugPrint(
+                                  '❌ NO PURCHASE ID FOUND IN SUCCESSFUL ITEMS');
                               showScaffoldError(
                                   context: context,
-                                  message: 'Stock items were processed but purchase order could not be completed.');
+                                  message:
+                                      'Stock items were processed but purchase order could not be completed.');
                             }
                           }
                         } else {
                           debugPrint('❌ BATCH PROCESSING FAILED');
                           showScaffoldError(
                               context: context,
-                              message: batchResult['message'] ?? 'Batch processing failed');
+                              message: batchResult['message'] ??
+                                  'Batch processing failed');
                         }
                       } catch (e) {
                         debugPrint('💥 ERROR IN BATCH PROCESSING: $e');
                         showScaffoldError(
                             context: context,
-                            message: 'Error processing stock items: ${e.toString()}');
+                            message:
+                                'Error processing stock items: ${e.toString()}');
                       }
                     },
               height: 50,
