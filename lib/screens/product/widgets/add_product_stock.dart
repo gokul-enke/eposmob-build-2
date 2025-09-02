@@ -10,7 +10,7 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/get_store.dart';
-import 'package:pos_machine/models/get_suppliers.dart';
+import 'package:pos_machine/models/supplier.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
@@ -18,6 +18,7 @@ import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
+import 'package:pos_machine/providers/supplier_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -48,7 +49,7 @@ class StockItem {
   int supplierId;
   GetProduct? productData;
   Category? categoryData;
-  GetSuppliersModelData? supplierData;
+  Supplier? supplierData;
   bool isExpanded; // Add this field for expandable functionality
   String? selectedUnit; // Add selected unit for dropdown
   String? selectedRack; // Add selected rack for dropdown
@@ -108,15 +109,17 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   final Map<int, TextEditingController> categorySearchControllers = {};
   final Map<int, TextEditingController> productSearchControllers = {};
   final Map<int, TextEditingController> barcodeControllers = {};
-  
-  // Focus nodes for barcode fields
+  final Map<int, TextEditingController> quantityControllers = {};
+
+  // Focus nodes for barcode and quantity fields
   final Map<int, FocusNode> barcodeFocusNodes = {};
+  final Map<int, FocusNode> quantityFocusNodes = {};
 
   // Selected header values
   GetStoreModelData? selectedStore;
   DateTime selectedDate = DateTime.now();
   DateTime selectedPurchaseDate = DateTime.now();
-  GetSuppliersModelData? selectedSupplier;
+  Supplier? selectedSupplier;
 
   // Stock items list
   List<StockItem> stockItems = [StockItem()]; // Start with one empty row
@@ -143,17 +146,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   void dispose() {
     // Dispose timer
     _barcodeTimer?.cancel();
-    
+
     // Dispose all search controllers
     categorySearchControllers.values
         .forEach((controller) => controller.dispose());
     productSearchControllers.values
         .forEach((controller) => controller.dispose());
     barcodeControllers.values.forEach((controller) => controller.dispose());
-    
+    quantityControllers.values.forEach((controller) => controller.dispose());
+
     // Dispose all focus nodes
     barcodeFocusNodes.values.forEach((focusNode) => focusNode.dispose());
-    
+    quantityFocusNodes.values.forEach((focusNode) => focusNode.dispose());
+
     supplierSearchController.dispose();
     super.dispose();
   }
@@ -188,6 +193,21 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     return barcodeFocusNodes[index]!;
   }
 
+  TextEditingController _getQuantityController(int index) {
+    if (!quantityControllers.containsKey(index)) {
+      quantityControllers[index] =
+          TextEditingController(text: stockItems[index].quantity);
+    }
+    return quantityControllers[index]!;
+  }
+
+  FocusNode _getQuantityFocusNode(int index) {
+    if (!quantityFocusNodes.containsKey(index)) {
+      quantityFocusNodes[index] = FocusNode();
+    }
+    return quantityFocusNodes[index]!;
+  }
+
   Future<void> _initializeData() async {
     // Initialize any required data
     await _loadSuppliers();
@@ -200,8 +220,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       final String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       if (accessToken != null) {
-        await Provider.of<PurchaseProvider>(context, listen: false)
-            .listAllSuppliers(accessToken, null);
+        await Provider.of<SupplierProvider>(context, listen: false)
+            .fetchSuppliers(accessToken: accessToken);
       }
     } catch (e) {
       debugPrint('Error loading suppliers: $e');
@@ -299,7 +319,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'wholesalePrice': item.wholesale,
         'unit': item.unit,
         'supplierId':
-            selectedSupplier?.id?.toString() ?? item.supplierId.toString(),
+            selectedSupplier?.id.toString() ?? item.supplierId.toString(),
         'storeId': selectedStore!.id.toString(),
         'expiryDate': DateFormat('yyyy-MM-dd').format(item.expDate),
         'userId': '1',
@@ -341,7 +361,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         wholesalePrice: item.wholesale,
         unit: item.unit,
         supplierId:
-            selectedSupplier?.id?.toString() ?? item.supplierId.toString(),
+            selectedSupplier?.id.toString() ?? item.supplierId.toString(),
         storeId: selectedStore!.id.toString(),
         expiryDate: DateFormat('yyyy-MM-dd').format(item.expDate),
         userId: '1',
@@ -369,7 +389,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       debugPrint('═══════════════════════════════════════════════════════════');
       debugPrint('   - Response Type: ${apiResponse.runtimeType}');
       debugPrint('   - Raw Response: $apiResponse');
-      
+
       if (apiResponse is Map<String, dynamic>) {
         debugPrint('📊 ADD STOCK API RESPONSE DETAILS:');
         apiResponse.forEach((key, value) {
@@ -394,8 +414,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         debugPrint('✅ ADD STOCK API SUCCESS FOR ITEM ${index + 1}');
         debugPrint('   - Status: ${apiResponse['status']}');
         debugPrint('   - Message: ${apiResponse['message']}');
-        
-        if (apiResponse['data'] != null && apiResponse['data'] is Map<String, dynamic>) {
+
+        if (apiResponse['data'] != null &&
+            apiResponse['data'] is Map<String, dynamic>) {
           final data = apiResponse['data'] as Map<String, dynamic>;
           debugPrint('   📦 SUCCESS DATA DETAILS:');
           debugPrint('      - Stock ID: ${data['id']}');
@@ -415,14 +436,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           debugPrint('      - Created At: ${data['created_at']}');
           debugPrint('      - Updated At: ${data['updated_at']}');
         }
-        
+
         setState(() {
           stockItems[index].isSuccessfullyAdded = true;
         });
-        
+
         // Recalculate total stock value when single item is successfully added
         _calculateTotalStockValue();
-        
+
         showScaffold(
             context: context, message: 'Stock item added successfully');
         debugPrint('✅ SINGLE STOCK ITEM MARKED AS SUCCESSFULLY ADDED');
@@ -438,17 +459,20 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         // Focus on the barcode field of the next row after a short delay
         debugPrint('🔍 FOCUSING ON NEXT ROW BARCODE FIELD');
         Future.delayed(const Duration(milliseconds: 300), () {
-          final nextRowIndex = stockItems.length - 1; // Index of the newly added row
+          final nextRowIndex =
+              stockItems.length - 1; // Index of the newly added row
           final nextBarcodeFocusNode = _getBarcodeFocusNode(nextRowIndex);
-          
+
           // Request focus on the barcode field of the next row
           nextBarcodeFocusNode.requestFocus();
-          debugPrint('✅ FOCUS REQUESTED ON ROW ${nextRowIndex + 1} BARCODE FIELD');
+          debugPrint(
+              '✅ FOCUS REQUESTED ON ROW ${nextRowIndex + 1} BARCODE FIELD');
         });
       } else {
         debugPrint('❌ ADD STOCK API FAILED FOR ITEM ${index + 1}');
-        debugPrint('   - API Response Status: ${apiResponse['status'] ?? 'Unknown'}');
-        
+        debugPrint(
+            '   - API Response Status: ${apiResponse['status'] ?? 'Unknown'}');
+
         String errorMessage = 'Failed to add stock';
         if (apiResponse is Map<String, dynamic> &&
             apiResponse['message'] != null) {
@@ -456,12 +480,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           try {
             final decodedRootMessage = json.decode(apiResponse['message']);
             debugPrint('   - Decoded message: $decodedRootMessage');
-            
+
             if (decodedRootMessage is Map<String, dynamic> &&
                 decodedRootMessage['message'] != null) {
               final actualMessage = decodedRootMessage['message'];
-              debugPrint('   - Actual message type: ${actualMessage.runtimeType}');
-              
+              debugPrint(
+                  '   - Actual message type: ${actualMessage.runtimeType}');
+
               if (actualMessage is String) {
                 errorMessage = actualMessage;
                 debugPrint('   - String error message: $errorMessage');
@@ -476,22 +501,24 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             }
           } catch (e) {
             errorMessage = apiResponse['message'].toString();
-            debugPrint('   - JSON decode failed, using raw message: $errorMessage');
+            debugPrint(
+                '   - JSON decode failed, using raw message: $errorMessage');
             debugPrint('   - Decode error: $e');
           }
         } else {
           debugPrint('   - No message field in API response');
         }
-        
+
         debugPrint('❌ FINAL ERROR MESSAGE: $errorMessage');
         showScaffoldError(context: context, message: errorMessage);
       }
     } catch (e) {
-      debugPrint('💥 EXCEPTION IN SINGLE STOCK ADDITION FOR ITEM ${index + 1}:');
+      debugPrint(
+          '💥 EXCEPTION IN SINGLE STOCK ADDITION FOR ITEM ${index + 1}:');
       debugPrint('   - Exception Type: ${e.runtimeType}');
       debugPrint('   - Exception Message: $e');
       debugPrint('   - Stack Trace: ${StackTrace.current}');
-      
+
       showScaffoldError(context: context, message: 'Error: ${e.toString()}');
     } finally {
       setState(() {
@@ -511,6 +538,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         .forEach((controller) => controller.clear());
     productSearchControllers.values.forEach((controller) => controller.clear());
     barcodeControllers.values.forEach((controller) => controller.clear());
+    quantityControllers.values.forEach((controller) => controller.clear());
     debugPrint('✅ SEARCH CONTROLLERS CLEARED');
 
     setState(() {
@@ -556,7 +584,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   /// Convert RestrictedPaymentData to API format
-  Map<String, dynamic> _convertPaymentDataToApiFormat(RestrictedPaymentData paymentData) {
+  Map<String, dynamic> _convertPaymentDataToApiFormat(
+      RestrictedPaymentData paymentData) {
     List<String> paymentMethods = [];
     List<Map<String, dynamic>> paidMethods = [];
 
@@ -572,10 +601,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     }
 
     // Add primary method if present
-    if (paymentData.primaryMethod != null && paymentData.primaryAmount.isNotEmpty) {
+    if (paymentData.primaryMethod != null &&
+        paymentData.primaryAmount.isNotEmpty) {
       String methodString = _getMethodString(paymentData.primaryMethod!);
       double amount = double.tryParse(paymentData.primaryAmount) ?? 0.0;
-      
+
       if (amount > 0) {
         paymentMethods.add(methodString);
         paidMethods.add({
@@ -586,10 +616,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     }
 
     // Add secondary method if present
-    if (paymentData.secondaryMethod != null && paymentData.secondaryAmount.isNotEmpty) {
+    if (paymentData.secondaryMethod != null &&
+        paymentData.secondaryAmount.isNotEmpty) {
       String methodString = _getMethodString(paymentData.secondaryMethod!);
       double amount = double.tryParse(paymentData.secondaryAmount) ?? 0.0;
-      
+
       if (amount > 0) {
         paymentMethods.add(methodString);
         paidMethods.add({
@@ -748,25 +779,34 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Widget _buildSupplierField() {
-    return Consumer<PurchaseProvider>(
-      builder: (context, purchaseProvider, child) {
-        List<GetSuppliersModelData> supplierList =
-            purchaseProvider.supplierList;
+    return Consumer<SupplierProvider>(
+      builder: (context, supplierProvider, child) {
+        List<Supplier> supplierList = supplierProvider.supplierList ?? [];
 
-        return BuildDropDownWithSearch<GetSuppliersModelData>(
-          title: "Supplier",
-          hintText: "Select Supplier",
-          value: selectedSupplier,
-          items: supplierList,
-          onChanged: (value) {
-            setState(() {
-              selectedSupplier = value;
-            });
-          },
-          displayText: (supplier) => supplier.user?.name ?? 'Unknown Supplier',
-          searchController: supplierSearchController,
-          isRequired: true,
-          searchHintText: "Search for supplier...",
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            BuildDropDownWithSearch<Supplier>(
+              title: "Supplier",
+              hintText: "Select Supplier",
+              value: selectedSupplier,
+              items: supplierList,
+              onChanged: (value) {
+                setState(() {
+                  selectedSupplier = value;
+                });
+              },
+              displayText: (supplier) => supplier.name,
+              searchController: supplierSearchController,
+              isRequired: true,
+              searchHintText: "Search for supplier...",
+            ),
+            // Current Balance Display
+            if (selectedSupplier != null) ...[
+              const SizedBox(height: 8),
+              _buildSupplierBalanceDisplay(),
+            ],
+          ],
         );
       },
     );
@@ -828,10 +868,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   Widget _buildPaymentSection() {
     // Calculate current total for successfully added items
     _calculateTotalStockValue();
-    
+
     // Only show payment section if there are successfully added items
-    bool hasSuccessfulItems = stockItems.any((item) => item.isSuccessfullyAdded);
-    
+    bool hasSuccessfulItems =
+        stockItems.any((item) => item.isSuccessfullyAdded);
+
     if (!hasSuccessfulItems) {
       return const SizedBox.shrink(); // Hidden when no items added
     }
@@ -841,9 +882,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       children: [
         // Purchase Amount Details Section
         _buildPurchaseAmountDetails(),
-        
+
         const SizedBox(height: 16),
-        
+
         // Payment method selector with restrictions (no validation)
         BuildRestrictedPaymentSelector(
           title: "Select Payment Method",
@@ -884,8 +925,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     }
 
     // Get supplier information
-    String supplierName = selectedSupplier?.user?.name ?? 'No Supplier';
-    double supplierBalance = _getSupplierBalance(); // Helper method to get balance
+    String supplierName = selectedSupplier?.name ?? 'No Supplier';
+    double supplierBalance =
+        _getSupplierBalance(); // Helper method to get balance
     double totalPayable = totalPurchaseAmount + supplierBalance;
 
     return Container(
@@ -940,9 +982,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               _buildSupplierBalanceBadge(supplierBalance),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Purchase details in a single row
           Row(
             children: [
@@ -978,7 +1020,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   'Total Payable',
                   '₹${totalPayable.toStringAsFixed(2)}',
                   Icons.payment_outlined,
-                  totalPayable >= 0 ? Colors.green.shade600 : Colors.red.shade600,
+                  totalPayable >= 0
+                      ? Colors.green.shade600
+                      : Colors.red.shade600,
                   isHighlighted: true,
                 ),
               ),
@@ -990,10 +1034,24 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Widget _buildSupplierBalanceBadge(double balance) {
-    bool isPositive = balance >= 0;
-    Color badgeColor = isPositive ? Colors.green : Colors.red;
-    IconData icon = isPositive ? Icons.arrow_upward : Icons.arrow_downward;
-    String balanceText = '${isPositive ? '+' : ''}${balance.toStringAsFixed(2)}';
+    String paymentType = _getSupplierPaymentType();
+
+    // Color coding same as supplier list:
+    // Red for 'to_pay' (we owe TO the supplier)
+    // Green for 'to_receive' (supplier owes TO us)
+    Color badgeColor = paymentType == 'to_pay'
+        ? Colors.red
+        : paymentType == 'to_receive'
+            ? Colors.green
+            : Colors.grey;
+
+    IconData icon = paymentType == 'to_pay'
+        ? Icons.arrow_upward
+        : paymentType == 'to_receive'
+            ? Icons.arrow_downward
+            : Icons.balance;
+
+    String balanceText = balance.toStringAsFixed(2);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1052,10 +1110,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         color: Colors.white, // Background is always white
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isHighlighted ? color : Colors.grey.shade200, // Border color changes if highlighted
+          color: isHighlighted
+              ? color
+              : Colors.grey.shade200, // Border color changes if highlighted
           width: isHighlighted ? 2 : 1, // Border is thicker if highlighted
         ),
-        boxShadow: [ // Consistent shadow for all cards
+        boxShadow: [
+          // Consistent shadow for all cards
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 2,
@@ -1096,7 +1157,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               FontWeightManager.bold,
               isHighlighted ? FontSize.s14 : FontSize.s13,
               0.27,
-              isHighlighted ? color : Colors.black87, // Text color changes if highlighted
+              isHighlighted
+                  ? color
+                  : Colors.black87, // Text color changes if highlighted
             ),
           ),
         ],
@@ -1106,16 +1169,67 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   // Helper method to get supplier balance
   double _getSupplierBalance() {
-    // TODO: Implement actual supplier balance fetching
-    // For now, returning a mock value for demonstration
-    // You can replace this with actual balance from supplier data
     if (selectedSupplier != null) {
-      // Mock balance for demonstration - replace with actual balance
-      // You might need to add balance field to GetSuppliersModelData
-      // or fetch it from a separate API call
-      return 1000.0; // Mock positive balance
+      return selectedSupplier!.currentBalance;
     }
     return 0.0;
+  }
+
+  // Helper method to get supplier payment type
+  String _getSupplierPaymentType() {
+    if (selectedSupplier != null) {
+      return selectedSupplier!.paymentType;
+    }
+    return 'to_pay';
+  }
+
+  // Build supplier balance display under the dropdown
+  Widget _buildSupplierBalanceDisplay() {
+    double balance = _getSupplierBalance();
+    String paymentType = _getSupplierPaymentType();
+
+    // Color coding same as supplier list:
+    // Red for 'to_pay' (we owe TO the supplier)
+    // Green for 'to_receive' (supplier owes TO us)
+    Color textColor = paymentType == 'to_pay'
+        ? Colors.red
+        : paymentType == 'to_receive'
+            ? Colors.green
+            : Colors.black;
+
+    String balanceLabel = paymentType == 'to_pay'
+        ? 'Amount to Pay'
+        : paymentType == 'to_receive'
+            ? 'Amount to Receive'
+            : 'Current Balance';
+
+    IconData icon = paymentType == 'to_pay'
+        ? Icons.arrow_upward
+        : paymentType == 'to_receive'
+            ? Icons.arrow_downward
+            : Icons.balance;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(width: 10),
+        Icon(
+          icon,
+          size: 14,
+          color: textColor,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '$balanceLabel ₹${balance.toStringAsFixed(2)}',
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.27,
+            textColor,
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildStockRow(int index) {
@@ -1235,7 +1349,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     height: 40,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: TextFormField(
-                      initialValue: item.quantity,
+                      controller: _getQuantityController(index),
+                      focusNode: _getQuantityFocusNode(index),
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         hintText: 'Qty',
@@ -1374,19 +1489,26 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       runSpacing: 4,
                       children: [
                         if (item.salePrice.isNotEmpty)
-                          _buildDetailChip("Retail", "₹${item.salePrice}", Icons.sell, Colors.blue.shade600),
+                          _buildDetailChip("Retail", "₹${item.salePrice}",
+                              Icons.sell, Colors.blue.shade600),
                         if (item.purchaseRate.isNotEmpty)
-                          _buildDetailChip("Purchase", "₹${item.purchaseRate}", Icons.shopping_cart, Colors.green.shade600),
+                          _buildDetailChip("Purchase", "₹${item.purchaseRate}",
+                              Icons.shopping_cart, Colors.green.shade600),
                         if (item.mrp.isNotEmpty)
-                          _buildDetailChip("MRP", "₹${item.mrp}", Icons.local_offer, Colors.orange.shade600),
+                          _buildDetailChip("MRP", "₹${item.mrp}",
+                              Icons.local_offer, Colors.orange.shade600),
                         if (item.wholesale.isNotEmpty)
-                          _buildDetailChip("Wholesale", "₹${item.wholesale}", Icons.store, Colors.purple.shade600),
+                          _buildDetailChip("Wholesale", "₹${item.wholesale}",
+                              Icons.store, Colors.purple.shade600),
                         if (item.unit.isNotEmpty)
-                          _buildDetailChip("Unit", item.unit, Icons.straighten, Colors.indigo.shade600),
+                          _buildDetailChip("Unit", item.unit, Icons.straighten,
+                              Colors.indigo.shade600),
                         if (item.rack.isNotEmpty)
-                          _buildDetailChip("Rack", item.rack, Icons.shelves, Colors.teal.shade600),
+                          _buildDetailChip("Rack", item.rack, Icons.shelves,
+                              Colors.teal.shade600),
                         if (item.batchNumber.isNotEmpty)
-                          _buildDetailChip("Min Wholesale", item.batchNumber, Icons.numbers, Colors.brown.shade600),
+                          _buildDetailChip("Min Wholesale", item.batchNumber,
+                              Icons.numbers, Colors.brown.shade600),
                       ],
                     ),
                   ),
@@ -1423,7 +1545,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   // Auto-fill method for barcode scanning
   Timer? _barcodeTimer;
-  
+
   void _autoFillFromBarcode(int index, String barcode) {
     debugPrint('🔍 BARCODE AUTO-FILL TRIGGERED');
     debugPrint('   - Row index: $index');
@@ -1436,7 +1558,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
     // Cancel previous timer to debounce rapid barcode inputs
     _barcodeTimer?.cancel();
-    
+
     // Add delay to prevent multiple rapid API calls during barcode scanning
     _barcodeTimer = Timer(const Duration(milliseconds: 500), () {
       _performBarcodeAutoFill(index, barcode);
@@ -1551,6 +1673,24 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         _calculateTaxForStockItem(index, isRetail: false);
       });
 
+      // Auto-focus on quantity field with text selection after auto-fill
+      Future.delayed(const Duration(milliseconds: 200), () {
+        final quantityFocusNode = _getQuantityFocusNode(index);
+        final quantityController = _getQuantityController(index);
+
+        // Update controller text to match current quantity
+        quantityController.text = stockItems[index].quantity;
+
+        // Request focus and select all text
+        quantityFocusNode.requestFocus();
+        quantityController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: quantityController.text.length,
+        );
+
+        debugPrint('✅ AUTO-FOCUSED ON QUANTITY FIELD WITH TEXT SELECTION');
+      });
+
       debugPrint('✅ AUTO-FILL COMPLETED SUCCESSFULLY');
     } else {
       debugPrint('❌ NO PRODUCT FOUND FOR BARCODE: $barcode');
@@ -1570,24 +1710,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // First row - Unit, Rack, Minimum Units for Wholesale, Purchase Rate
+          // First row - Unit, Purchase Rate, Retail Price, MRP
           Row(
             children: [
               Expanded(
                 child: _buildExpandedUnitDropdown(index),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _buildExpandedRackDropdown(index),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _buildExpandedTextField(
-                  "Minimum Units for Wholesale",
-                  item.batchNumber, // Reusing batchNumber field for minimum units
-                  (value) =>
-                      setState(() => stockItems[index].batchNumber = value),
-                ),
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -1600,12 +1727,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   keyboardType: TextInputType.number,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Second row - Retail Price, MRP, Wholesale Price, Expiry Date
-          Row(
-            children: [
+              const SizedBox(width: 6),
               Expanded(
                 child: _buildExpandedTextField(
                   "Retail Price",
@@ -1634,6 +1756,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   keyboardType: TextInputType.number,
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Second row - Expiry Date, Wholesale Price, Minimum Units for Wholesale, Rack
+          Row(
+            children: [
+              Expanded(
+                child: _buildExpandedDatePicker(
+                  "Expiry Date",
+                  item.expDate,
+                  (date) => setState(() => stockItems[index].expDate = date),
+                ),
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: _buildExpandedTextField(
@@ -1651,11 +1786,16 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               ),
               const SizedBox(width: 6),
               Expanded(
-                child: _buildExpandedDatePicker(
-                  "Expiry Date",
-                  item.expDate,
-                  (date) => setState(() => stockItems[index].expDate = date),
+                child: _buildExpandedTextField(
+                  "Minimum Units for Wholesale",
+                  item.batchNumber, // Reusing batchNumber field for minimum units
+                  (value) =>
+                      setState(() => stockItems[index].batchNumber = value),
                 ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _buildExpandedRackDropdown(index),
               ),
             ],
           ),
@@ -1949,6 +2089,25 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 _calculateTaxForStockItem(index, isRetail: false);
               });
 
+              // Auto-focus on quantity field with text selection after product selection
+              Future.delayed(const Duration(milliseconds: 200), () {
+                final quantityFocusNode = _getQuantityFocusNode(index);
+                final quantityController = _getQuantityController(index);
+
+                // Update controller text to match current quantity
+                quantityController.text = stockItems[index].quantity;
+
+                // Request focus and select all text
+                quantityFocusNode.requestFocus();
+                quantityController.selection = TextSelection(
+                  baseOffset: 0,
+                  extentOffset: quantityController.text.length,
+                );
+
+                debugPrint(
+                    '✅ AUTO-FOCUSED ON QUANTITY FIELD WITH TEXT SELECTION FROM PRODUCT DROPDOWN');
+              });
+
               debugPrint('✅ PRODUCT DROPDOWN AUTO-FILL COMPLETED SUCCESSFULLY');
             }
           },
@@ -2149,7 +2308,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-  Widget _buildDetailChip(String label, String value, IconData icon, Color color) {
+  Widget _buildDetailChip(
+      String label, String value, IconData icon, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -2397,41 +2557,50 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   }
 
                   // Validate payment data if payment methods are provided
-                  Map<String, dynamic> apiPaymentData = _convertPaymentDataToApiFormat(paymentData);
-                  List<String>? paymentMethods = apiPaymentData['payment_methods'];
-                  List<Map<String, dynamic>>? paidMethods = apiPaymentData['paid_methods'];
+                  Map<String, dynamic> apiPaymentData =
+                      _convertPaymentDataToApiFormat(paymentData);
+                  List<String>? paymentMethods =
+                      apiPaymentData['payment_methods'];
+                  List<Map<String, dynamic>>? paidMethods =
+                      apiPaymentData['paid_methods'];
 
                   // Optional validation: if payment data is provided, ensure it's complete
                   if (paymentMethods != null && paymentMethods.isNotEmpty) {
                     debugPrint('✅ PAYMENT DATA PROVIDED - VALIDATING...');
                     debugPrint('   - Payment Methods: $paymentMethods');
                     debugPrint('   - Paid Methods: $paidMethods');
-                    
+
                     if (paidMethods == null || paidMethods.isEmpty) {
-                      debugPrint('❌ PAYMENT VALIDATION FAILED: Payment methods provided but no amounts specified');
+                      debugPrint(
+                          '❌ PAYMENT VALIDATION FAILED: Payment methods provided but no amounts specified');
                       showScaffoldError(
                           context: context,
-                          message: 'Please specify payment amounts for selected payment methods.');
+                          message:
+                              'Please specify payment amounts for selected payment methods.');
                       return;
                     }
-                    
+
                     // Check if any payment amount is zero or negative
                     bool hasInvalidAmount = paidMethods.any((method) {
-                      double amount = (method['amount'] as num?)?.toDouble() ?? 0.0;
+                      double amount =
+                          (method['amount'] as num?)?.toDouble() ?? 0.0;
                       return amount <= 0;
                     });
-                    
+
                     if (hasInvalidAmount) {
-                      debugPrint('❌ PAYMENT VALIDATION FAILED: One or more payment amounts are zero or negative');
+                      debugPrint(
+                          '❌ PAYMENT VALIDATION FAILED: One or more payment amounts are zero or negative');
                       showScaffoldError(
                           context: context,
-                          message: 'Payment amounts must be greater than zero.');
+                          message:
+                              'Payment amounts must be greater than zero.');
                       return;
                     }
-                    
+
                     debugPrint('✅ PAYMENT DATA VALIDATION PASSED');
                   } else {
-                    debugPrint('ℹ️ NO PAYMENT DATA PROVIDED - PROCEEDING WITHOUT PAYMENT INFO');
+                    debugPrint(
+                        'ℹ️ NO PAYMENT DATA PROVIDED - PROCEEDING WITHOUT PAYMENT INFO');
                   }
 
                   debugPrint(
@@ -2522,30 +2691,31 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         result['status'] == 'success') {
                       debugPrint(
                           '✅ FINISH PURCHASE ORDER SUCCESSFUL - SHOWING SUCCESS NOTIFICATION');
-                      
+
                       // Stop loading immediately after success
                       setState(() {
                         _isFinishingOrder = false;
                       });
-                      
+
                       showScaffold(
                           context: context,
-                          message:
-                              'Purchase order completed successfully!');
+                          message: 'Purchase order completed successfully!');
 
                       debugPrint(
                           '🔄 RESETTING FORM FIELDS AFTER SUCCESSFUL COMPLETION');
                       // Reset form after successful completion
                       _resetFormFields();
 
-                      debugPrint('🔄 TRIGGERING BACKGROUND SYNC TO UPDATE LOCAL DATA');
+                      debugPrint(
+                          '🔄 TRIGGERING BACKGROUND SYNC TO UPDATE LOCAL DATA');
                       // Trigger sync in background without waiting
                       Future.microtask(() async {
                         try {
                           final syncProvider =
                               Provider.of<SyncProvider>(context, listen: false);
                           await syncProvider.syncAllData(context);
-                          debugPrint('✅ BACKGROUND SYNC COMPLETED SUCCESSFULLY');
+                          debugPrint(
+                              '✅ BACKGROUND SYNC COMPLETED SUCCESSFULLY');
                         } catch (e) {
                           debugPrint(
                               '❌ BACKGROUND SYNC FAILED AFTER PURCHASE ORDER COMPLETION: $e');
@@ -2553,14 +2723,15 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         }
                       });
 
-                      debugPrint('✅ STAYING ON CURRENT PAGE WITH CLEARED FIELDS');
+                      debugPrint(
+                          '✅ STAYING ON CURRENT PAGE WITH CLEARED FIELDS');
                       // Stay on the same page - do not navigate away
                     } else {
                       // Stop loading on error
                       setState(() {
                         _isFinishingOrder = false;
                       });
-                      
+
                       final message = result is Map<String, dynamic>
                           ? (result['message'] ?? 'Unknown error')
                           : 'Unknown error';
@@ -2576,7 +2747,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     setState(() {
                       _isFinishingOrder = false;
                     });
-                    
+
                     debugPrint(
                         '💥 ERROR CALLING FINISH PURCHASE ORDER API: $e');
                     debugPrint(
