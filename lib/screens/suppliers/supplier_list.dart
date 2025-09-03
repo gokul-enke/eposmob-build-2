@@ -15,6 +15,7 @@ import '../../providers/supplier_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'add_supplier_modal.dart';
 
 class SupplierListScreen extends StatefulWidget {
   const SupplierListScreen({super.key});
@@ -545,183 +546,207 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
+        CustomRoundButtonWithIcon(
+          title: "Add New Supplier",
+          fct: () async {
+            // Show the add supplier modal
+            final result = await showAddSupplierModal(
+                context, MediaQuery.of(context).size);
+
+            // If the supplier was added successfully, refresh the list
+            if (result != null && result["status"] == "success") {
+              refreshData();
+            }
+          },
+          height: 50,
+          width: MediaQuery.of(context).size.width * 0.19,
+          icon: const Icon(
+            Icons.add,
+            color: Colors.white,
+          ),
+          fontSize: FontSize.s12,
+          size: MediaQuery.of(context).size,
+        ),
       ],
     );
   }
 
- Widget _buildSearchBar(Size size) {
-  return SizedBox(
-    height: 90,
-    child: Row(
-      children: [
-        // Name Search Field
-        Expanded(
-          flex: 2,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 10.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    "Name",
-                    style: buildCustomStyle(FontWeightManager.regular,
-                        FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
+  Widget _buildSearchBar(Size size) {
+    return SizedBox(
+      height: 90,
+      child: Row(
+        children: [
+          // Name Search Field
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 10.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      "Name",
+                      style: buildCustomStyle(FontWeightManager.regular,
+                          FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
+                    ),
                   ),
-                ),
-                buildColumnWidgetForTextFields(
-                  height: 45,
-                  width: double.infinity, // Take full available width
-                  onchanged: (value) {
-                    if (value != null) {
-                      Future.microtask(() {
-                        if (value.isEmpty &&
-                            searchEmailController.text.isEmpty &&
-                            searchPhoneController.text.isEmpty) {
-                          Provider.of<SupplierProvider>(context, listen: false)
-                              .resetFilters();
-                        } else {
-                          searchSuppliers(
-                            name: value,
-                            email: searchEmailController.text,
-                            phone: searchPhoneController.text,
-                          );
-                        }
-                      });
-                    }
-                  },
-                  controller: searchTextController,
-                  size: size,
-                  hintText: 'Name',
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // Email Search Field
-        Expanded(
-          flex: 2,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 10.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    "Email",
-                    style: buildCustomStyle(FontWeightManager.regular,
-                        FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
+                  buildColumnWidgetForTextFields(
+                    height: 45,
+                    width: double.infinity, // Take full available width
+                    onchanged: (value) {
+                      if (value != null) {
+                        Future.microtask(() {
+                          if (value.isEmpty &&
+                              searchEmailController.text.isEmpty &&
+                              searchPhoneController.text.isEmpty) {
+                            Provider.of<SupplierProvider>(context,
+                                    listen: false)
+                                .resetFilters();
+                          } else {
+                            searchSuppliers(
+                              name: value,
+                              email: searchEmailController.text,
+                              phone: searchPhoneController.text,
+                            );
+                          }
+                        });
+                      }
+                    },
+                    controller: searchTextController,
+                    size: size,
+                    hintText: 'Name',
                   ),
-                ),
-                buildColumnWidgetForTextFields(
-                  height: 45,
-                  width: double.infinity, // Take full available width
-                  onchanged: (value) {
-                    if (value != null) {
-                      Future.microtask(() {
-                        if (value.isEmpty &&
-                            searchTextController.text.isEmpty &&
-                            searchPhoneController.text.isEmpty) {
-                          Provider.of<SupplierProvider>(context, listen: false)
-                              .resetFilters();
-                        } else {
-                          searchSuppliers(
-                            name: searchTextController.text,
-                            email: value,
-                            phone: searchPhoneController.text,
-                          );
-                        }
-                      });
-                    }
-                  },
-                  controller: searchEmailController,
-                  size: size,
-                  hintText: 'Email',
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
 
-        // Phone Search Field
-        Expanded(
-          flex: 2,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 10.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    "Phone",
-                    style: buildCustomStyle(FontWeightManager.regular,
-                        FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
+          // Email Search Field
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 10.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      "Email",
+                      style: buildCustomStyle(FontWeightManager.regular,
+                          FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
+                    ),
                   ),
-                ),
-                buildColumnWidgetForTextFields(
-                  height: 45,
-                  width: double.infinity, // Take full available width
-                  onchanged: (value) {
-                    if (value != null) {
-                      Future.microtask(() {
-                        if (value.isEmpty &&
-                            searchTextController.text.isEmpty &&
-                            searchEmailController.text.isEmpty) {
-                          Provider.of<SupplierProvider>(context, listen: false)
-                              .resetFilters();
-                        } else {
-                          searchSuppliers(
-                            name: searchTextController.text,
-                            email: searchEmailController.text,
-                            phone: value,
-                          );
-                        }
-                      });
-                    }
-                  },
-                  controller: searchPhoneController,
-                  size: size,
-                  hintText: 'Phone',
-                ),
-              ],
+                  buildColumnWidgetForTextFields(
+                    height: 45,
+                    width: double.infinity, // Take full available width
+                    onchanged: (value) {
+                      if (value != null) {
+                        Future.microtask(() {
+                          if (value.isEmpty &&
+                              searchTextController.text.isEmpty &&
+                              searchPhoneController.text.isEmpty) {
+                            Provider.of<SupplierProvider>(context,
+                                    listen: false)
+                                .resetFilters();
+                          } else {
+                            searchSuppliers(
+                              name: searchTextController.text,
+                              email: value,
+                              phone: searchPhoneController.text,
+                            );
+                          }
+                        });
+                      }
+                    },
+                    controller: searchEmailController,
+                    size: size,
+                    hintText: 'Email',
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
 
-        // Reset Button
-        Expanded(
-          flex: 2,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 10.0, top: 30),
-            child: CustomRoundButton(
-              title: "Reset",
-              boxColor: Colors.white,
-              textColor: ColorManager.kPrimaryColor,
-              fct: () {
-                setState(() {
-                  searchTextController.clear();
-                  searchEmailController.clear();
-                  searchPhoneController.clear();
-                });
-                Future.microtask(() {
-                  Provider.of<SupplierProvider>(context, listen: false)
-                      .resetFilters();
-                });
-              },
-              height: 45,
-              width: double.infinity, // Take full available width
-              fontSize: FontSize.s12,
+          // Phone Search Field
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 10.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      "Phone",
+                      style: buildCustomStyle(FontWeightManager.regular,
+                          FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
+                    ),
+                  ),
+                  buildColumnWidgetForTextFields(
+                    height: 45,
+                    width: double.infinity, // Take full available width
+                    onchanged: (value) {
+                      if (value != null) {
+                        Future.microtask(() {
+                          if (value.isEmpty &&
+                              searchTextController.text.isEmpty &&
+                              searchEmailController.text.isEmpty) {
+                            Provider.of<SupplierProvider>(context,
+                                    listen: false)
+                                .resetFilters();
+                          } else {
+                            searchSuppliers(
+                              name: searchTextController.text,
+                              email: searchEmailController.text,
+                              phone: value,
+                            );
+                          }
+                        });
+                      }
+                    },
+                    controller: searchPhoneController,
+                    size: size,
+                    hintText: 'Phone',
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+
+          // Reset Button
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 10.0, top: 30),
+              child: CustomRoundButton(
+                title: "Reset",
+                boxColor: Colors.white,
+                textColor: ColorManager.kPrimaryColor,
+                fct: () {
+                  setState(() {
+                    searchTextController.clear();
+                    searchEmailController.clear();
+                    searchPhoneController.clear();
+                  });
+                  Future.microtask(() {
+                    Provider.of<SupplierProvider>(context, listen: false)
+                        .resetFilters();
+                  });
+                },
+                height: 45,
+                width: double.infinity, // Take full available width
+                fontSize: FontSize.s12,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class SupplierDetailModal extends StatelessWidget {
@@ -740,9 +765,9 @@ class SupplierDetailModal extends StatelessWidget {
       backgroundColor: Colors.white,
       child: Container(
         constraints: BoxConstraints(
-               maxWidth: MediaQuery.of(context).size.width / 2,
-              maxHeight: MediaQuery.of(context).size.height * 0.7,
-              ),
+          maxWidth: MediaQuery.of(context).size.width / 2,
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -774,9 +799,7 @@ class SupplierDetailModal extends StatelessWidget {
               child: SingleChildScrollView(
                 // padding: const EdgeInsets.all(16),
                 child: Column(
-                  
                   children: [
-                    
                     const SizedBox(height: 16),
                     _buildInfoRow("Name", supplier.name),
                     const SizedBox(height: 8),
@@ -836,7 +859,7 @@ class SupplierDetailModal extends StatelessWidget {
           const SizedBox(width: 16),
           Expanded(
             child: Text(
-               value.isNotEmpty ? value : 'N/A',
+              value.isNotEmpty ? value : 'N/A',
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,

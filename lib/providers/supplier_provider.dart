@@ -228,24 +228,31 @@ class SupplierProvider with ChangeNotifier {
     required String name,
     required String email,
     required String phone,
-    required String address,
-    required String productCategories,
     required String accessToken,
+    required String balance,
+    required String paymentStatus, // "to_pay" or "to_receive"
+    required String address,
+    required String altPhone,
+    required List<int> productCategories,
   }) async {
     _isLoading = true;
     notifyListeners();
 
     final Map<String, dynamic> apiBodyData = {
-      'user': {
-        'name': name,
-        'email': email,
-        'phone': phone,
-      },
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'balance': double.tryParse(balance) ?? 0.0, // ✅ send number not string
+      'payment_type': paymentStatus,
       'address': address,
-      'product_categories': productCategories,
+      'alt_phone': altPhone,
+      // 'product_categories': productCategories,
     };
 
-    final url = Uri.parse(APPUrl.getSuppliers);
+    final url = Uri.parse(APPUrl.addSupplier);
+
+    debugPrint('Add Supplier API Body: ${json.encode(apiBodyData)}');
+    debugPrint('Add Supplier API URL: $url');
 
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -254,6 +261,7 @@ class SupplierProvider with ChangeNotifier {
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
     try {
       final response = await http.post(
         url,
@@ -268,22 +276,42 @@ class SupplierProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
+      debugPrint('Add Supplier API Response status: ${response.statusCode}');
+      debugPrint('Add Supplier API Response body: ${response.body}');
+      debugPrint('Add Supplier API Response body type: ${response.body.runtimeType}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Refresh the supplier list
+        // Refresh supplier list after adding
         await fetchSuppliers(accessToken: accessToken);
-        return json.decode(response.body);
+        final jsonResponse = json.decode(response.body);
+        return Map<String, dynamic>.from(jsonResponse);
       } else {
-        return {
-          'status': 'error',
-          'message': 'Failed to add supplier: ${response.body}'
-        };
+        // Handle non-200 status codes
+        try {
+          final errorResponse = json.decode(response.body);
+          final safeErrorResponse = Map<String, dynamic>.from(errorResponse);
+          return {
+            'status': 'error',
+            'message': safeErrorResponse['message'] ?? 'Failed to add supplier',
+            'errors': safeErrorResponse['data'] ?? {},
+          };
+        } catch (jsonError) {
+          // If response body is not valid JSON (e.g., HTML error page)
+          debugPrint('JSON parsing error: $jsonError');
+          return {
+            'status': 'error',
+            'message': 'Server error (Status: ${response.statusCode}). Please check your network connection and try again.',
+            'errors': {},
+          };
+        }
       }
     } catch (e) {
       _isLoading = false;
       notifyListeners();
+      debugPrint('Network/Exception error: $e');
       return {
         'status': 'error',
-        'message': 'Exception when adding supplier: $e'
+        'message': 'Network error: Please check your internet connection and try again.'
       };
     }
   }
