@@ -1786,7 +1786,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
         textAlign: TextAlign.center,
         style: buildCustomStyle(
           FontWeightManager.medium,
-          FontSize.s12,
+          FontSize.s14,
           0.18,
           ColorManager.kPrimaryColor,
         ),
@@ -1802,7 +1802,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
         textAlign: TextAlign.center,
         style: buildCustomStyle(
           FontWeightManager.medium,
-          FontSize.s9,
+          FontSize.s12,
           0.13,
           Colors.black,
         ),
@@ -2305,9 +2305,11 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                       children: [
                                                         _buildTableCell(
                                                             '${stock.productName}'),
-                                                        _buildTableCell(stock
-                                                                .barCode ??
-                                                            'N/A'), // Updated to show actual barcode
+                                                        _buildTableCell(() {
+                                                          final barcode = stock.barCode ?? 'N/A';
+                                                          debugPrint('🔍 DISPLAY BARCODE: "${barcode}" for product: ${stock.productName}');
+                                                          return barcode;
+                                                        }()), // Updated to show actual barcode
                                                         _buildTableCell(
                                                             '${stock.retailPrice}'),
                                                         _buildTableCell(
