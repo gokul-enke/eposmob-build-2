@@ -141,21 +141,6 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
     );
   }
 
-  Widget _buildTableCell(String text) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s9,
-          0.13,
-          Colors.black,
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -220,12 +205,14 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                         ),
                                         child: Table(
                                           columnWidths: const {
-                                            0: FlexColumnWidth(0.5), // No
-                                            1: FlexColumnWidth(2.0), // Name
+                                            0: FlexColumnWidth(0.4), // No
+                                            1: FlexColumnWidth(1.8), // Name
                                             2: FlexColumnWidth(2.0), // Email
-                                            3: FlexColumnWidth(1.5), // Phone
-                                            4: FlexColumnWidth(2.0), // Address
-                                            5: FlexColumnWidth(1.0), // Action
+                                            3: FlexColumnWidth(1.3), // Phone
+                                            4: FlexColumnWidth(1.5), // Address
+                                            5: FlexColumnWidth(1.2), // Balance
+                                            6: FlexColumnWidth(1.5), // Current Balance
+                                            7: FlexColumnWidth(0.8), // Action
                                           },
                                           border: null,
                                           defaultVerticalAlignment:
@@ -238,6 +225,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                 _buildTableHeader('Email'),
                                                 _buildTableHeader('Phone'),
                                                 _buildTableHeader('Address'),
+                                                _buildTableHeader('Balance'),
+                                                _buildTableHeader('Current Balance'),
                                                 _buildTableHeader('Action'),
                                               ],
                                             ),
@@ -318,17 +307,21 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                   : Table(
                                                       columnWidths: const {
                                                         0: FlexColumnWidth(
-                                                            0.5), // No
+                                                            0.4), // No
                                                         1: FlexColumnWidth(
-                                                            2.0), // Name
+                                                            1.8), // Name
                                                         2: FlexColumnWidth(
                                                             2.0), // Email
                                                         3: FlexColumnWidth(
-                                                            1.5), // Phone
+                                                            1.3), // Phone
                                                         4: FlexColumnWidth(
-                                                            2.0), // Address
+                                                            1.5), // Address
                                                         5: FlexColumnWidth(
-                                                            1.0), // Action
+                                                            1.2), // Balance
+                                                        6: FlexColumnWidth(
+                                                            1.5), // Current Balance
+                                                        7: FlexColumnWidth(
+                                                            0.8), // Action
                                                       },
                                                       border: null,
                                                       defaultVerticalAlignment:
@@ -381,6 +374,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                 textAlign:
                                                                     TextAlign
                                                                         .center,
+                                                                maxLines: 2,
+                                                                overflow: TextOverflow.ellipsis,
                                                                 style:
                                                                     buildCustomStyle(
                                                                   FontWeightManager
@@ -400,6 +395,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                 textAlign:
                                                                     TextAlign
                                                                         .center,
+                                                                maxLines: 2,
+                                                                overflow: TextOverflow.ellipsis,
                                                                 style:
                                                                     buildCustomStyle(
                                                                   FontWeightManager
@@ -434,8 +431,28 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                   const EdgeInsets
                                                                       .all(8.0),
                                                               child: Text(
-                                                                supplier.address ??
-                                                                    '',
+                                                                supplier.address.isNotEmpty ? supplier.address : 'N/A',
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
+                                                                maxLines: 2,
+                                                                overflow: TextOverflow.ellipsis,
+                                                                style:
+                                                                    buildCustomStyle(
+                                                                  FontWeightManager
+                                                                      .medium,
+                                                                  FontSize.s9,
+                                                                  0.13,
+                                                                  Colors.black,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(8.0),
+                                                              child: Text(
+                                                                supplier.balance,
                                                                 textAlign:
                                                                     TextAlign
                                                                         .center,
@@ -446,6 +463,29 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                   FontSize.s9,
                                                                   0.13,
                                                                   Colors.black,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(8.0),
+                                                              child: Text(
+                                                                supplier.currentBalance.toStringAsFixed(2),
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
+                                                                style:
+                                                                    buildCustomStyle(
+                                                                  FontWeightManager
+                                                                      .medium,
+                                                                  FontSize.s9,
+                                                                  0.13,
+                                                                  supplier.paymentType == 'to_pay' 
+                                                                    ? Colors.red 
+                                                                    : supplier.paymentType == 'to_receive' 
+                                                                      ? Colors.green 
+                                                                      : Colors.black,
                                                                 ),
                                                               ),
                                                             ),
@@ -807,12 +847,22 @@ class SupplierDetailModal extends StatelessWidget {
                     const SizedBox(height: 8),
                     _buildInfoRow("Phone", supplier.phone),
                     const SizedBox(height: 8),
+                    if (supplier.altPhone != null && supplier.altPhone!.isNotEmpty)
+                      ...[
+                        _buildInfoRow("Alternative Phone", supplier.altPhone!),
+                        const SizedBox(height: 8),
+                      ],
                     _buildInfoRow("Address", supplier.address),
                     const SizedBox(height: 8),
-                    _buildInfoRow(
-                        "Product Categories", supplier.productCategories),
+                    _buildInfoRow("Product Categories", supplier.productCategories),
                     const SizedBox(height: 8),
                     _buildInfoRow("Balance", supplier.balance),
+                    const SizedBox(height: 8),
+                    _buildInfoRowWithColor("Current Balance", supplier.currentBalance.toStringAsFixed(2), supplier.paymentType),
+                    const SizedBox(height: 8),
+                    _buildInfoRowWithColor("Balance Status", supplier.balanceStatus, supplier.paymentType),
+                    const SizedBox(height: 8),
+                    _buildInfoRow("Payment Type", supplier.paymentType),
                   ],
                 ),
               ),
@@ -865,6 +915,47 @@ class SupplierDetailModal extends StatelessWidget {
                 FontSize.s14,
                 0.21,
                 Colors.black,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRowWithColor(String label, String value, String paymentType) {
+    Color textColor = paymentType == 'to_pay' 
+        ? Colors.red 
+        : paymentType == 'to_receive' 
+          ? Colors.green 
+          : Colors.black;
+          
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(
+              "$label ",
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s14,
+                0.21,
+                Colors.black54,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+               value.isNotEmpty ? value : 'N/A',
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.21,
+                textColor,
               ),
             ),
           ),

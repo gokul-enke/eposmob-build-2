@@ -3,9 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:provider/provider.dart';
 import '../models/list_stock.dart' as stock_models;
-import '../providers/local_product_provider.dart';
 import '../resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -13,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// This provider handles:
 /// - Stock listing and pagination
 /// - Stock filtering and searching
-/// - Adding new stock entries
+/// - Adding new stock entries (locally and batch processing)
 /// - Updating existing stock details
 /// - Stock details retrieval
 class StockProvider extends ChangeNotifier {
@@ -23,6 +21,10 @@ class StockProvider extends ChangeNotifier {
       []; // Store all stocks for local filtering
   List<stock_models.ListStockModelData>? _filteredStockList = [];
   stock_models.ListStockModelData? _viewStockModelData;
+
+  // Local pending stock items for batch processing
+  List<Map<String, dynamic>> _pendingStockItems = [];
+  List<Map<String, dynamic>> _processedStockItems = [];
 
   // Pagination properties
   int _stockCurrentPage = 1;
@@ -38,10 +40,15 @@ class StockProvider extends ChangeNotifier {
 
   // Loading state
   bool _stockIsLoading = false;
+  bool _batchProcessingLoading = false;
 
   // Getters
   List<stock_models.ListStockModelData>? get listStockModelDataList =>
       _filteredStockList ?? _listStockModelDataList;
+
+  List<Map<String, dynamic>> get pendingStockItems => _pendingStockItems;
+  List<Map<String, dynamic>> get processedStockItems => _processedStockItems;
+  bool get batchProcessingLoading => _batchProcessingLoading;
 
   List<stock_models.ListStockModelData>? get allStocks => _allStocks;
 
@@ -97,6 +104,370 @@ class StockProvider extends ChangeNotifier {
 
     uniqueStores.sort();
     return ["All Stores", ...uniqueStores];
+  }
+
+  /// *********************** LOCAL STOCK MANAGEMENT ***************************************************
+  
+  /// Validate stock item locally before adding to pending list
+  Map<String, String?> validateStockItem(Map<String, dynamic> stockItem) {
+    Map<String, String?> errors = {};
+    
+    // Required field validations
+    if (stockItem['productId'] == null || stockItem['productId'].toString().isEmpty) {
+      errors['product'] = 'Product is required';
+    }
+    
+    if (stockItem['categoryId'] == null || stockItem['categoryId'].toString().isEmpty) {
+      errors['category'] = 'Category is required';
+    }
+    
+    if (stockItem['quantity'] == null || stockItem['quantity'].toString().isEmpty) {
+      errors['quantity'] = 'Quantity is required';
+    } else {
+      final qty = double.tryParse(stockItem['quantity'].toString());
+      if (qty == null || qty <= 0) {
+        errors['quantity'] = 'Quantity must be a positive number';
+      }
+    }
+    
+    if (stockItem['retailPrice'] == null || stockItem['retailPrice'].toString().isEmpty) {
+      errors['retailPrice'] = 'Retail price is required';
+    } else {
+      final price = double.tryParse(stockItem['retailPrice'].toString());
+      if (price == null || price <= 0) {
+        errors['retailPrice'] = 'Retail price must be a positive number';
+      }
+    }
+    
+    if (stockItem['purchaseRate'] == null || stockItem['purchaseRate'].toString().isEmpty) {
+      errors['purchaseRate'] = 'Purchase rate is required';
+    } else {
+      final price = double.tryParse(stockItem['purchaseRate'].toString());
+      if (price == null || price <= 0) {
+        errors['purchaseRate'] = 'Purchase rate must be a positive number';
+      }
+    }
+    
+    if (stockItem['unit'] == null || stockItem['unit'].toString().isEmpty) {
+      errors['unit'] = 'Unit is required';
+    }
+    
+    if (stockItem['expiryDate'] == null) {
+      errors['expiryDate'] = 'Expiry date is required';
+    }
+    
+    // Optional validations with defaults
+    if (stockItem['mrp'] != null && stockItem['mrp'].toString().isNotEmpty) {
+      final mrp = double.tryParse(stockItem['mrp'].toString());
+      if (mrp == null || mrp <= 0) {
+        errors['mrp'] = 'MRP must be a positive number';
+      }
+    }
+    
+    if (stockItem['wholesalePrice'] != null && stockItem['wholesalePrice'].toString().isNotEmpty) {
+      final price = double.tryParse(stockItem['wholesalePrice'].toString());
+      if (price == null || price <= 0) {
+        errors['wholesalePrice'] = 'Wholesale price must be a positive number';
+      }
+    }
+    
+    return errors;
+  }
+  
+  /// Add stock item to local pending list with validation
+  bool addStockItemLocally(Map<String, dynamic> stockItem) {
+    debugPrint('🔄 ADDING STOCK ITEM LOCALLY');
+    debugPrint('   - Stock Item Data: $stockItem');
+    
+    // Validate the stock item
+    Map<String, String?> validationErrors = validateStockItem(stockItem);
+    
+    if (validationErrors.isNotEmpty) {
+      debugPrint('❌ VALIDATION FAILED:');
+      validationErrors.forEach((field, error) {
+        debugPrint('   - $field: $error');
+      });
+      return false;
+    }
+    
+    // Add timestamp and unique ID for tracking
+    stockItem['localId'] = DateTime.now().millisecondsSinceEpoch.toString();
+    stockItem['addedAt'] = DateTime.now().toIso8601String();
+    stockItem['status'] = 'pending'; // pending, processing, success, failed
+    
+    _pendingStockItems.add(stockItem);
+    notifyListeners();
+    
+    debugPrint('✅ STOCK ITEM ADDED TO PENDING LIST');
+    debugPrint('   - Total pending items: ${_pendingStockItems.length}');
+    
+    return true;
+  }
+  
+  /// Remove stock item from pending list
+  void removeStockItemLocally(String localId) {
+    _pendingStockItems.removeWhere((item) => item['localId'] == localId);
+    notifyListeners();
+    debugPrint('🗑️ REMOVED STOCK ITEM FROM PENDING LIST: $localId');
+  }
+
+  /// Update existing stock item in pending list
+  bool updateStockItemLocally(String localId, Map<String, dynamic> updatedData) {
+    debugPrint('🔄 UPDATING STOCK ITEM LOCALLY');
+    debugPrint('   - Local ID: $localId');
+    debugPrint('   - Updated Data: $updatedData');
+    
+    // Find the item in pending list
+    int index = _pendingStockItems.indexWhere((item) => item['localId'] == localId);
+    
+    if (index == -1) {
+      debugPrint('❌ STOCK ITEM NOT FOUND IN PENDING LIST: $localId');
+      return false;
+    }
+    
+    // Validate the updated data
+    Map<String, String?> validationErrors = validateStockItem(updatedData);
+    
+    if (validationErrors.isNotEmpty) {
+      debugPrint('❌ UPDATE VALIDATION FAILED:');
+      validationErrors.forEach((field, error) {
+        debugPrint('   - $field: $error');
+      });
+      return false;
+    }
+    
+    // Update the item while preserving original metadata
+    final originalItem = _pendingStockItems[index];
+    _pendingStockItems[index] = {
+      ...updatedData,
+      'localId': originalItem['localId'], // Preserve original ID
+      'addedAt': originalItem['addedAt'], // Preserve original timestamp
+      'status': originalItem['status'], // Preserve status
+      'updatedAt': DateTime.now().toIso8601String(), // Add update timestamp
+    };
+    
+    notifyListeners();
+    
+    debugPrint('✅ STOCK ITEM UPDATED IN PENDING LIST');
+    debugPrint('   - Local ID: $localId');
+    
+    return true;
+  }
+  
+  /// Get stock item from pending list by local ID
+  Map<String, dynamic>? getPendingStockItem(String localId) {
+    try {
+      return _pendingStockItems.firstWhere((item) => item['localId'] == localId);
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  /// Clear all pending stock items
+  void clearPendingStockItems() {
+    _pendingStockItems.clear();
+    _processedStockItems.clear();
+    notifyListeners();
+    debugPrint('🧹 CLEARED ALL PENDING STOCK ITEMS');
+  }
+  
+  /// Get pending stock items count
+  int get pendingStockItemsCount => _pendingStockItems.length;
+  
+  /// Get processed stock items count
+  int get processedStockItemsCount => _processedStockItems.length;
+  
+  /// Get failed stock items count
+  int get failedStockItemsCount => _pendingStockItems.where((item) => item['status'] == 'failed').length;
+  
+  /// Reset failed items status to pending for retry
+  void resetFailedItemsForRetry() {
+    for (var item in _pendingStockItems) {
+      if (item['status'] == 'failed') {
+        item['status'] = 'pending';
+      }
+    }
+    notifyListeners();
+    debugPrint('🔄 RESET ${failedStockItemsCount} FAILED ITEMS TO PENDING FOR RETRY');
+  }
+  
+  /// *********************** BATCH PROCESS STOCK ITEMS ***************************************************
+  
+  /// Process all pending stock items via API calls
+  Future<Map<String, dynamic>> processPendingStockItems(String accessToken) async {
+    if (_pendingStockItems.isEmpty) {
+      return {
+        'success': false,
+        'message': 'No pending stock items to process',
+        'results': []
+      };
+    }
+    
+    debugPrint('🚀 STARTING BATCH PROCESSING OF ${_pendingStockItems.length} STOCK ITEMS');
+    
+    _batchProcessingLoading = true;
+    notifyListeners();
+    
+    List<Map<String, dynamic>> results = [];
+    List<Map<String, dynamic>> successfulItems = [];
+    List<Map<String, dynamic>> failedItems = [];
+    
+    try {
+      for (int i = 0; i < _pendingStockItems.length; i++) {
+        final stockItem = _pendingStockItems[i];
+        final localId = stockItem['localId'];
+        
+        debugPrint('📦 PROCESSING ITEM ${i + 1}/${_pendingStockItems.length} (ID: $localId)');
+        
+        // Update status to processing
+        stockItem['status'] = 'processing';
+        notifyListeners();
+        
+        try {
+          // Call the existing addProductStockAPI method
+          final result = await addProductStockAPI(
+            accessToken: accessToken,
+            productId: stockItem['productId'].toString(),
+            categoryId: stockItem['categoryId'].toString(),
+            quantity: stockItem['quantity'].toString(),
+            retailPrice: stockItem['retailPrice'].toString(),
+            purchaseRate: stockItem['purchaseRate'].toString(),
+            mrp: stockItem['mrp']?.toString() ?? stockItem['retailPrice'].toString(),
+            wholesalePrice: stockItem['wholesalePrice']?.toString() ?? stockItem['retailPrice'].toString(),
+            unit: stockItem['unit'].toString(),
+            supplierId: stockItem['supplierId'].toString(),
+            storeId: stockItem['storeId'].toString(),
+            expiryDate: stockItem['expiryDate'].toString(),
+            userId: stockItem['userId']?.toString() ?? '1',
+            purchaseVoucherId: stockItem['purchaseVoucherId']?.toString(),
+            purchaseId: stockItem['purchaseId']?.toString(),
+            taxAmountRetail: stockItem['taxAmountRetail']?.toString(),
+            taxAmountWholesale: stockItem['taxAmountWholesale']?.toString(),
+            wholesaleMinUnit: stockItem['wholesaleMinUnit']?.toString() ?? '1',
+            rack: stockItem['rack']?.toString() ?? '',
+            barcode: stockItem['barcode']?.toString() ?? '',
+            batchNumber: stockItem['batchNumber']?.toString() ?? '',
+            date: stockItem['date'].toString(),
+            purchaseDate: stockItem['purchaseDate'].toString(),
+            purchaseNumber: stockItem['purchaseNumber']?.toString(),
+            taxInclude: stockItem['taxInclude'] ?? false,
+            initialRetailPrice: stockItem['initialRetailPrice']?.toString() ?? stockItem['retailPrice'].toString(),
+            initialWholesalePrice: stockItem['initialWholesalePrice']?.toString() ?? stockItem['retailPrice'].toString(),
+            retailPriceTax: stockItem['retailPriceTax']?.toString(),
+            wholesalePriceTax: stockItem['wholesalePriceTax']?.toString(),
+          );
+          
+          if (result is Map<String, dynamic> && result['status'] == 'success') {
+            stockItem['status'] = 'success';
+            stockItem['apiResponse'] = result;
+            successfulItems.add(stockItem);
+            
+            results.add({
+              'localId': localId,
+              'status': 'success',
+              'message': 'Stock item added successfully',
+              'data': result['data'],
+              'itemIndex': i + 1,
+            });
+            
+            debugPrint('✅ ITEM ${i + 1} PROCESSED SUCCESSFULLY');
+          } else {
+            stockItem['status'] = 'failed';
+            stockItem['apiResponse'] = result;
+            failedItems.add(stockItem);
+            
+            String errorMessage = 'Failed to add stock item';
+            if (result is Map<String, dynamic> && result['message'] != null) {
+              errorMessage = result['message'].toString();
+            }
+            
+            results.add({
+              'localId': localId,
+              'status': 'failed',
+              'message': errorMessage,
+              'error': result,
+              'itemIndex': i + 1,
+            });
+            
+            debugPrint('❌ ITEM ${i + 1} FAILED: $errorMessage');
+          }
+        } catch (e) {
+          stockItem['status'] = 'failed';
+          stockItem['error'] = e.toString();
+          failedItems.add(stockItem);
+          
+          results.add({
+            'localId': localId,
+            'status': 'failed',
+            'message': 'Exception occurred: ${e.toString()}',
+            'error': e.toString(),
+            'itemIndex': i + 1,
+          });
+          
+          debugPrint('💥 ITEM ${i + 1} EXCEPTION: $e');
+        }
+        
+        notifyListeners();
+        
+        // Small delay between API calls to prevent overwhelming the server
+        if (i < _pendingStockItems.length - 1) {
+          await Future.delayed(const Duration(milliseconds: 200));
+        }
+      }
+      
+      // Move only successful items to processed list, keep failed items in pending
+      _processedStockItems.addAll(successfulItems);
+      
+      // Remove only successful items from pending list
+      _pendingStockItems.removeWhere((item) => 
+        successfulItems.any((successItem) => successItem['localId'] == item['localId']));
+      
+      // Reset failed items status back to 'pending' so they can be retried
+      for (var failedItem in failedItems) {
+        final pendingItem = _pendingStockItems.firstWhere(
+          (item) => item['localId'] == failedItem['localId'],
+          orElse: () => failedItem,
+        );
+        pendingItem['status'] = 'pending';
+      }
+      
+      debugPrint('🏁 BATCH PROCESSING COMPLETED');
+      debugPrint('   - Successful: ${successfulItems.length}');
+      debugPrint('   - Failed: ${failedItems.length}');
+      debugPrint('   - Total: ${results.length}');
+      debugPrint('   - Remaining in pending: ${_pendingStockItems.length}');
+      
+      String message = 'Batch processing completed: ${successfulItems.length} successful, ${failedItems.length} failed';
+      if (failedItems.isNotEmpty) {
+        message += '. Failed items remain in pending list for retry.';
+      }
+      
+      return {
+        'success': successfulItems.isNotEmpty,
+        'message': message,
+        'results': results,
+        'summary': {
+          'total': results.length,
+          'successful': successfulItems.length,
+          'failed': failedItems.length,
+          'successfulItems': successfulItems,
+          'failedItems': failedItems,
+          'remainingPending': _pendingStockItems.length,
+        }
+      };
+      
+    } catch (e) {
+      debugPrint('💥 BATCH PROCESSING EXCEPTION: $e');
+      return {
+        'success': false,
+        'message': 'Batch processing failed: ${e.toString()}',
+        'error': e.toString(),
+        'results': results,
+      };
+    } finally {
+      _batchProcessingLoading = false;
+      notifyListeners();
+    }
   }
 
   /// *********************** ADD TO STOCK API ***************************************************
@@ -585,6 +956,47 @@ class StockProvider extends ChangeNotifier {
     }
   }
 
+  //          *********************** SYNC STOCK DATA ***************************************************
+  
+  /// Sync stock data from server - fetches latest stock quantities and details
+  Future<Map<String, dynamic>> syncStockData(String accessToken) async {
+    debugPrint('🔄 STARTING DEDICATED STOCK DATA SYNC');
+    
+    try {
+      // Use existing stock listing API but with all data
+      await listStockAPI(
+        accessToken: accessToken,
+        page: 1,
+        loadAll: true, // Get large batch for sync
+        filterName: null,
+      );
+      
+      debugPrint('✅ Stock sync API successful');
+      
+      return {
+        'status': 'success',
+        'message': 'Stock data synced successfully',
+        'synced_count': _allStocks?.length ?? 0,
+      };
+    } catch (e) {
+      debugPrint('❌ Stock sync failed with error: $e');
+      return {
+        'status': 'failed',
+        'message': 'Stock sync failed: $e',
+      };
+    }
+  }
+  
+  /// Get stock sync summary for reporting
+  Map<String, dynamic> getStockSyncSummary() {
+    return {
+      'total_stocks': _allStocks?.length ?? 0,
+      'last_sync_time': DateTime.now().toIso8601String(),
+    };
+  }
+
+  //          *********************** CLEAR STOCK DATA ***************************************************
+  
   /// Clear all stock data
   void clearStockData() {
     _listStockModelDataList = [];
@@ -599,6 +1011,9 @@ class StockProvider extends ChangeNotifier {
     _stockFilterRack = null;
     _stockFilterStore = null;
     _stockIsLoading = false;
+    _batchProcessingLoading = false;
+    _pendingStockItems.clear();
+    _processedStockItems.clear();
     notifyListeners();
   }
 }
