@@ -86,6 +86,7 @@ class APPUrl {
   static String getSuppliers = '$baseURL/api/v1/get-suppliers';
   // static String listPurchases =
   //     '$baseURL/api/v1/purchases/list-purchase-order';
+  static String addSupplier = '$baseURL/api/v1/add-supplier';
   static String listPurchases = '$baseURL/api/v1/purchases/list-purchase-order';
   static String listPurchaseVoucher =
       '$baseURL/api/v1/purchases/voucher-searchbar';
