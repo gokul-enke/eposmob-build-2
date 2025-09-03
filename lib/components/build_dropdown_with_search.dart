@@ -62,7 +62,7 @@ class _BuildDropDownWithSearchState<T>
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _dropdownKey = GlobalKey();
 
-  final double _itemHeight = 48.0;
+  final double _minItemHeight = 48.0;
   final double _maxDropdownHeight = 200.0;
 
   @override
@@ -118,7 +118,7 @@ class _BuildDropDownWithSearchState<T>
       });
     }
 
-    _filterItems(_controller.text);
+    _filterItems(_controller.text); // No delay, updates instantly
   }
 
   void _onFocusChanged() {
@@ -144,9 +144,11 @@ class _BuildDropDownWithSearchState<T>
       if (!mounted) return;
 
       List<T> filtered;
-      if (query.isEmpty || !_userHasTyped) {
-        filtered = _userHasTyped ? widget.items : [];
+      if (query.isEmpty) {
+        // When query is empty, show all items
+        filtered = widget.items;
       } else {
+        // Filter items based on search query
         filtered = widget.items.where((item) {
           return widget
               .displayText(item)
@@ -155,10 +157,14 @@ class _BuildDropDownWithSearchState<T>
         }).toList();
       }
 
+      debugPrint(
+          '🔍 Filtering items - Query: "$query", Original count: ${widget.items.length}, Filtered count: ${filtered.length}');
+
       setState(() {
         _filteredItems = filtered;
         _selectedIndex = null;
-        _keyboardSelectedIndex = null;
+        _keyboardSelectedIndex =
+            null; // Reset keyboard selection when filtering
         _isLoading = false;
       });
 
@@ -315,7 +321,6 @@ class _BuildDropDownWithSearchState<T>
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 4),
       shrinkWrap: true,
-      itemExtent: _itemHeight,
       itemCount: _filteredItems.length,
       physics: const ClampingScrollPhysics(),
       itemBuilder: (context, index) {
@@ -354,6 +359,8 @@ class _BuildDropDownWithSearchState<T>
 
   void _onItemSelected(T item) {
     debugPrint('🎯 Selected item: ${widget.displayText(item)}');
+    debugPrint(
+        '🎯 Selected from filtered items: ${_filteredItems.map((i) => widget.displayText(i)).toList()}');
     _controller.text = widget.displayText(item);
     widget.onChanged(item);
     _hideDropdown();
@@ -372,10 +379,13 @@ class _BuildDropDownWithSearchState<T>
   void _scrollToSelectedItem() {
     if (_keyboardSelectedIndex == null || !_scrollController.hasClients) return;
 
-    final double scrollOffset = _keyboardSelectedIndex! * _itemHeight;
+    // Since we removed fixed item height, we'll use a simpler scrolling approach
     final double currentScroll = _scrollController.offset;
     final double visibleHeight = _maxDropdownHeight;
     const double bufferSpace = 4.0;
+    const double estimatedItemHeight = 48.0; // Use as fallback
+
+    final double scrollOffset = _keyboardSelectedIndex! * estimatedItemHeight;
 
     if (scrollOffset < currentScroll + bufferSpace) {
       _scrollController.animateTo(
@@ -383,10 +393,10 @@ class _BuildDropDownWithSearchState<T>
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
       );
-    } else if (scrollOffset + _itemHeight >
+    } else if (scrollOffset + estimatedItemHeight >
         currentScroll + visibleHeight - bufferSpace) {
       _scrollController.animateTo(
-        scrollOffset - visibleHeight + _itemHeight + bufferSpace,
+        scrollOffset - visibleHeight + estimatedItemHeight + bufferSpace,
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
       );
@@ -394,9 +404,16 @@ class _BuildDropDownWithSearchState<T>
   }
 
   void _handleKeyPress(RawKeyEvent event) {
-    if (!_isDropdownOpen || _filteredItems.isEmpty) return;
+    if (!_isDropdownOpen || _filteredItems.isEmpty) {
+      debugPrint(
+          '🚫 Key press ignored - Dropdown open: $_isDropdownOpen, Filtered items: ${_filteredItems.length}');
+      return;
+    }
 
     if (event is RawKeyDownEvent) {
+      debugPrint(
+          '⌨️ Key pressed: ${event.logicalKey}, Current keyboard index: $_keyboardSelectedIndex, Filtered items: ${_filteredItems.length}');
+
       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
         _navigateDown();
       } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
@@ -415,6 +432,8 @@ class _BuildDropDownWithSearchState<T>
   }
 
   void _navigateDown() {
+    debugPrint(
+        '🔽 Navigate Down - Filtered items count: ${_filteredItems.length}, Current index: $_keyboardSelectedIndex');
     setState(() {
       _selectedIndex = null;
       if (_keyboardSelectedIndex == null) {
@@ -426,6 +445,7 @@ class _BuildDropDownWithSearchState<T>
       }
     });
 
+    debugPrint('🔽 New keyboard selected index: $_keyboardSelectedIndex');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToSelectedItem();
     });
@@ -624,7 +644,8 @@ class _DropdownItemState<T> extends State<_DropdownItem<T>> {
       },
       child: GestureDetector(
         onTap: () {
-          debugPrint('👉 GestureDetector tapped: ${widget.displayText(widget.item)}');
+          debugPrint(
+              '👉 GestureDetector tapped: ${widget.displayText(widget.item)}');
           widget.onTap();
         },
         child: Material(
@@ -633,6 +654,8 @@ class _DropdownItemState<T> extends State<_DropdownItem<T>> {
             width: double.infinity,
             margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            constraints:
+                const BoxConstraints(minHeight: 32.0), // Reduced minimum height
             decoration: BoxDecoration(
               color: isHighlighted ? Colors.blue.shade50 : Colors.transparent,
               borderRadius: BorderRadius.circular(4),
@@ -644,7 +667,8 @@ class _DropdownItemState<T> extends State<_DropdownItem<T>> {
                 color: isHighlighted ? Colors.blue.shade800 : Colors.black87,
                 fontWeight: isHighlighted ? FontWeight.w600 : FontWeight.normal,
               ),
-              overflow: TextOverflow.ellipsis,
+              maxLines: null, // Allow unlimited lines
+              softWrap: true, // Enable text wrapping
             ),
           ),
         ),
