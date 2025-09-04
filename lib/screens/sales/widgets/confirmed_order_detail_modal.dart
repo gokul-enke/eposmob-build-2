@@ -435,15 +435,11 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
   }
 
   static String _formatDateTime(String isoDateString) {
-    final DateTime dateTime = DateTime.parse(isoDateString);
-    final DateFormat formatter = DateFormat('MMM dd, yyyy');
-    return formatter.format(dateTime);
+    return DateHelper.formatISODate(isoDateString);
   }
 
   static String _formatTime(String isoDateString) {
-    final DateTime dateTime = DateTime.parse(isoDateString);
-    final DateFormat formatter = DateFormat('hh:mm a');
-    return formatter.format(dateTime);
+    return DateHelper.formatISODateToIST(isoDateString);
   }
 
   void _printOrder(BuildContext context) {

@@ -22,6 +22,7 @@ class CustomerProvider extends ChangeNotifier {
   String? _filterName;
   String? _filterEmail;
   String? _filterPhone;
+  String? _filterBalance;
   bool _isLoading = false;
 
   // Getters
@@ -43,6 +44,7 @@ class CustomerProvider extends ChangeNotifier {
     String? filterName,
     String? filterEmail,
     String? filterPhone,
+    String? filterBalance,
     int page = 1,
   }) {
     if (_allCustomers == null || _allCustomers!.isEmpty) {
@@ -57,6 +59,7 @@ class CustomerProvider extends ChangeNotifier {
     _filterName = filterName;
     _filterEmail = filterEmail;
     _filterPhone = filterPhone;
+    _filterBalance = filterBalance;
     _currentPage = page;
 
     // Apply filters
@@ -83,6 +86,25 @@ class CustomerProvider extends ChangeNotifier {
           .where((customer) =>
               customer.phone != null && customer.phone!.contains(filterPhone))
           .toList();
+    }
+
+    // Apply balance filter
+    if (filterBalance != null && filterBalance.isNotEmpty) {
+      filteredList = filteredList.where((customer) {
+        double? balance = customer.balance;
+        if (balance == null) return false;
+
+        switch (filterBalance) {
+          case 'Positive (+ve)':
+            return balance > 0;
+          case 'Negative (-ve)':
+            return balance < 0;
+          case 'Zero (0)':
+            return balance == 0;
+          default:
+            return true; // 'All' or any other value
+        }
+      }).toList();
     }
 
     // Calculate pagination
@@ -114,6 +136,7 @@ class CustomerProvider extends ChangeNotifier {
     _filterName = null;
     _filterEmail = null;
     _filterPhone = null;
+    _filterBalance = null;
     _currentPage = 1;
 
     if (_allCustomers != null && _allCustomers!.isNotEmpty) {
@@ -129,6 +152,7 @@ class CustomerProvider extends ChangeNotifier {
         filterName: _filterName,
         filterEmail: _filterEmail,
         filterPhone: _filterPhone,
+        filterBalance: _filterBalance,
         page: page);
   }
 
@@ -274,13 +298,12 @@ class CustomerProvider extends ChangeNotifier {
     }
     try {
       debugPrint("Making API call to ${url.toString()}");
-      final response = await http.post(url,
-          body: json.encode(apiBodyData),
-          headers: {
-            'Authorization': 'Bearer $accessToken',
-            'Content-Type': 'application/json',
-            'X-Tenant': apiKey,
-          });
+      final response =
+          await http.post(url, body: json.encode(apiBodyData), headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      });
       debugPrint('API response status code: ${response.statusCode}');
       debugPrint('API response body: ${response.body}');
 
@@ -329,22 +352,22 @@ class CustomerProvider extends ChangeNotifier {
   }
 
   Future<dynamic> updateCustomer(
-      String accessToken,
-      String phone,
-      String name,
-      String email,
-      String address,
-      String pincode,
-      String city,
-      String state,
-      String country,
-      int customerId,
-      BuildContext context, {
-      String? altPhone,
-      String? gender,
-      String? dob,
-      int? storeId,
-    }) async {
+    String accessToken,
+    String phone,
+    String name,
+    String email,
+    String address,
+    String pincode,
+    String city,
+    String state,
+    String country,
+    int customerId,
+    BuildContext context, {
+    String? altPhone,
+    String? gender,
+    String? dob,
+    int? storeId,
+  }) async {
     debugPrint("updateCustomer API called");
     final Map<String, dynamic> apiBodyData = {
       'phone': phone,
@@ -357,7 +380,7 @@ class CustomerProvider extends ChangeNotifier {
       'country': country,
       'customer_id': customerId,
     };
-    
+
     // Add optional fields if provided
     if (altPhone != null && altPhone.isNotEmpty) {
       apiBodyData['alt_phone'] = altPhone;
@@ -382,13 +405,12 @@ class CustomerProvider extends ChangeNotifier {
     }
     try {
       debugPrint("Making API call to ${url.toString()}");
-      final response = await http.post(url,
-          body: json.encode(apiBodyData),
-          headers: {
-            'Authorization': 'Bearer $accessToken',
-            'Content-Type': 'application/json',
-            'X-Tenant': apiKey,
-          });
+      final response =
+          await http.post(url, body: json.encode(apiBodyData), headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      });
       debugPrint('API response status code: ${response.statusCode}');
       debugPrint('API response body: ${response.body}');
 

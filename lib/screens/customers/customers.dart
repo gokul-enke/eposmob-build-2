@@ -26,6 +26,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
   final customerNameController = TextEditingController();
   final customerEmailController = TextEditingController();
   final customerPhoneController = TextEditingController();
+  String selectedBalanceFilter = 'All'; // Balance filter state
   bool isInitialized = false;
 
   @override
@@ -71,6 +72,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
       filterName: customerNameController.text,
       filterEmail: customerEmailController.text,
       filterPhone: customerPhoneController.text,
+      filterBalance:
+          selectedBalanceFilter == 'All' ? null : selectedBalanceFilter,
       page: 1,
     );
   }
@@ -80,6 +83,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       customerNameController.clear();
       customerEmailController.clear();
       customerPhoneController.clear();
+      selectedBalanceFilter = 'All'; // Reset balance filter
     });
     Provider.of<CustomerProvider>(context, listen: false).resetFilters();
   }
@@ -169,31 +173,25 @@ class _CustomersScreenState extends State<CustomersScreen> {
                             ColorManager.textColor,
                           ),
                         ),
-                        CustomRoundButtonWithIcon(
+                        CustomRoundButton(
                           title: "Add New Customer",
                           fct: () {
                             sideBarController.index.value = 9;
                           },
-                          height: 50,
-                          width: size.width * 0.19,
-                          icon: const Icon(
-                            Icons.add,
-                            color: Colors.white,
-                          ),
-                          fontSize: FontSize.s12,
-                          size: size,
+                          fontSize: 12,
+                          height: 45,
+                          width: 150,
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
-                    SizedBox(
-                      height: 90,
-                      child: Row(
-                        children: [
-                          // Name Field
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 10.0),
+                    Column(
+                      children: [
+                        // First row with 4 filters
+                        Row(
+                          children: [
+                            // Name Field
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -211,8 +209,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                   ),
                                   buildColumnWidgetForTextFields(
                                     height: 45,
-                                    width: double
-                                        .infinity, // Changed to take full width
+                                    width: double.infinity,
                                     onchanged: (value) {
                                       searchCustomers();
                                     },
@@ -223,12 +220,11 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                 ],
                               ),
                             ),
-                          ),
 
-                          // Email Field
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 10.0),
+                            const SizedBox(width: 15),
+
+                            // Email Field
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -246,8 +242,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                   ),
                                   buildColumnWidgetForTextFields(
                                     height: 45,
-                                    width: double
-                                        .infinity, // Changed to take full width
+                                    width: double.infinity,
                                     onchanged: (value) {
                                       searchCustomers();
                                     },
@@ -258,12 +253,11 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                 ],
                               ),
                             ),
-                          ),
 
-                          // Phone Field
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 10.0),
+                            const SizedBox(width: 15),
+
+                            // Phone Field
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -281,8 +275,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                   ),
                                   buildColumnWidgetForTextFields(
                                     height: 45,
-                                    width: double
-                                        .infinity, // Changed to take full width
+                                    width: double.infinity,
                                     onchanged: (value) {
                                       searchCustomers();
                                     },
@@ -293,13 +286,102 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                 ],
                               ),
                             ),
-                          ),
 
-                          // Reset Button
-                          Expanded(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.only(left: 10.0, top: 30),
+                            const SizedBox(width: 15),
+
+                            // Balance Filter
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      "Balance",
+                                      style: buildCustomStyle(
+                                        FontWeightManager.regular,
+                                        FontSize.s14,
+                                        0.27,
+                                        Colors.black.withOpacity(0.6),
+                                      ),
+                                    ),
+                                  ),
+                                  BuildBoxShadowContainer(
+                                    circleRadius: 7,
+                                    height: 45,
+                                    width: double.infinity,
+                                    color: Colors.white,
+                                    child: DropdownButtonFormField<String>(
+                                      value: selectedBalanceFilter,
+                                      decoration: const InputDecoration(
+                                        border: InputBorder.none,
+                                        contentPadding: EdgeInsets.symmetric(
+                                            horizontal: 15, vertical: 12),
+                                        isDense: true,
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                      ),
+                                      dropdownColor: Colors.white,
+                                      hint: Text(
+                                        'Select Balance',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s11,
+                                          0.27,
+                                          ColorManager.textColor
+                                              .withOpacity(.5),
+                                        ),
+                                      ),
+                                      items: [
+                                        'All',
+                                        'Positive (+ve)',
+                                        'Negative (-ve)',
+                                        'Zero (0)'
+                                      ].map((String balance) {
+                                        return DropdownMenuItem<String>(
+                                          value: balance,
+                                          child: Text(
+                                            balance,
+                                            style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s11,
+                                              0.27,
+                                              ColorManager.textColor
+                                                  .withOpacity(.5),
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (String? value) {
+                                        setState(() {
+                                          selectedBalanceFilter =
+                                              value ?? 'All';
+                                        });
+                                        searchCustomers();
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        // Second row with Reset button
+                        Row(
+                          children: [
+                            // Empty space to push reset button to the end
+                            Expanded(
+                              flex: 3,
+                              child: Container(),
+                            ),
+
+                            const SizedBox(width: 15),
+
+                            // Reset Button
+                            Expanded(
                               child: CustomRoundButton(
                                 title: "Reset",
                                 boxColor: Colors.white,
@@ -308,14 +390,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                   resetSearch();
                                 },
                                 height: 45,
-                                width: double
-                                    .infinity, // Changed to take full width
+                                width: double.infinity,
                                 fontSize: FontSize.s12,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 20),
                     SizedBox(
@@ -518,9 +599,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                                                       _buildTableCell(
                                                                           customer.name ??
                                                                               ''),
-                                                                      _buildTableCell(
-                                                                          customer.balance.toString() ??
-                                                                              ''),
+                                                                      _buildTableCell(customer.balance !=
+                                                                              null
+                                                                          ? customer
+                                                                              .balance!
+                                                                              .toStringAsFixed(2)
+                                                                          : '0.00'),
                                                                       _buildTableCell(
                                                                           customer.phone ??
                                                                               ''),

@@ -141,7 +141,6 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -211,7 +210,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                             3: FlexColumnWidth(1.3), // Phone
                                             4: FlexColumnWidth(1.5), // Address
                                             5: FlexColumnWidth(1.2), // Balance
-                                            6: FlexColumnWidth(1.5), // Current Balance
+                                            6: FlexColumnWidth(
+                                                1.5), // Current Balance
                                             7: FlexColumnWidth(0.8), // Action
                                           },
                                           border: null,
@@ -226,7 +226,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                 _buildTableHeader('Phone'),
                                                 _buildTableHeader('Address'),
                                                 _buildTableHeader('Balance'),
-                                                _buildTableHeader('Current Balance'),
+                                                _buildTableHeader(
+                                                    'Current Balance'),
                                                 _buildTableHeader('Action'),
                                               ],
                                             ),
@@ -375,7 +376,9 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                     TextAlign
                                                                         .center,
                                                                 maxLines: 2,
-                                                                overflow: TextOverflow.ellipsis,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
                                                                 style:
                                                                     buildCustomStyle(
                                                                   FontWeightManager
@@ -396,7 +399,9 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                     TextAlign
                                                                         .center,
                                                                 maxLines: 2,
-                                                                overflow: TextOverflow.ellipsis,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
                                                                 style:
                                                                     buildCustomStyle(
                                                                   FontWeightManager
@@ -431,12 +436,18 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                   const EdgeInsets
                                                                       .all(8.0),
                                                               child: Text(
-                                                                supplier.address.isNotEmpty ? supplier.address : 'N/A',
+                                                                supplier.address
+                                                                        .isNotEmpty
+                                                                    ? supplier
+                                                                        .address
+                                                                    : 'N/A',
                                                                 textAlign:
                                                                     TextAlign
                                                                         .center,
                                                                 maxLines: 2,
-                                                                overflow: TextOverflow.ellipsis,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
                                                                 style:
                                                                     buildCustomStyle(
                                                                   FontWeightManager
@@ -452,7 +463,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                   const EdgeInsets
                                                                       .all(8.0),
                                                               child: Text(
-                                                                supplier.balance,
+                                                                supplier
+                                                                    .balance,
                                                                 textAlign:
                                                                     TextAlign
                                                                         .center,
@@ -471,7 +483,10 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                   const EdgeInsets
                                                                       .all(8.0),
                                                               child: Text(
-                                                                supplier.currentBalance.toStringAsFixed(2),
+                                                                supplier
+                                                                    .currentBalance
+                                                                    .toStringAsFixed(
+                                                                        2),
                                                                 textAlign:
                                                                     TextAlign
                                                                         .center,
@@ -481,11 +496,16 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                       .medium,
                                                                   FontSize.s9,
                                                                   0.13,
-                                                                  supplier.paymentType == 'to_pay' 
-                                                                    ? Colors.red 
-                                                                    : supplier.paymentType == 'to_receive' 
-                                                                      ? Colors.green 
-                                                                      : Colors.black,
+                                                                  supplier.paymentType ==
+                                                                          'to_pay'
+                                                                      ? Colors
+                                                                          .red
+                                                                      : supplier.paymentType ==
+                                                                              'to_receive'
+                                                                          ? Colors
+                                                                              .green
+                                                                          : Colors
+                                                                              .black,
                                                                 ),
                                                               ),
                                                             ),
@@ -522,13 +542,11 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                       supplierProvider
                                                                           .selectSupplier(
                                                                               supplier);
-                                                                      showDialog(
-                                                                        context:
-                                                                            context,
-                                                                        builder:
-                                                                            (context) =>
-                                                                                SupplierDetailModal(supplier: supplier),
-                                                                      );
+                                                                      // Navigate to supplier details using sidebar controller (like sales screen)
+                                                                      Get.find<
+                                                                              SideBarController>()
+                                                                          .index
+                                                                          .value = 57; // New index for supplier details
                                                                     },
                                                                     constraints:
                                                                         const BoxConstraints(
@@ -586,7 +604,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
-        CustomRoundButtonWithIcon(
+        CustomRoundButton(
           title: "Add New Supplier",
           fct: () async {
             // Show the add supplier modal
@@ -598,14 +616,9 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
               refreshData();
             }
           },
-          height: 50,
-          width: MediaQuery.of(context).size.width * 0.19,
-          icon: const Icon(
-            Icons.add,
-            color: Colors.white,
-          ),
-          fontSize: FontSize.s12,
-          size: MediaQuery.of(context).size,
+          fontSize: 12,
+          height: 45,
+          width: 150,
         ),
       ],
     );
@@ -847,20 +860,25 @@ class SupplierDetailModal extends StatelessWidget {
                     const SizedBox(height: 8),
                     _buildInfoRow("Phone", supplier.phone),
                     const SizedBox(height: 8),
-                    if (supplier.altPhone != null && supplier.altPhone!.isNotEmpty)
-                      ...[
-                        _buildInfoRow("Alternative Phone", supplier.altPhone!),
-                        const SizedBox(height: 8),
-                      ],
+                    if (supplier.altPhone != null &&
+                        supplier.altPhone!.isNotEmpty) ...[
+                      _buildInfoRow("Alternative Phone", supplier.altPhone!),
+                      const SizedBox(height: 8),
+                    ],
                     _buildInfoRow("Address", supplier.address),
                     const SizedBox(height: 8),
-                    _buildInfoRow("Product Categories", supplier.productCategories),
+                    _buildInfoRow(
+                        "Product Categories", supplier.productCategories),
                     const SizedBox(height: 8),
                     _buildInfoRow("Balance", supplier.balance),
                     const SizedBox(height: 8),
-                    _buildInfoRowWithColor("Current Balance", supplier.currentBalance.toStringAsFixed(2), supplier.paymentType),
+                    _buildInfoRowWithColor(
+                        "Current Balance",
+                        supplier.currentBalance.toStringAsFixed(2),
+                        supplier.paymentType),
                     const SizedBox(height: 8),
-                    _buildInfoRowWithColor("Balance Status", supplier.balanceStatus, supplier.paymentType),
+                    _buildInfoRowWithColor("Balance Status",
+                        supplier.balanceStatus, supplier.paymentType),
                     const SizedBox(height: 8),
                     _buildInfoRow("Payment Type", supplier.paymentType),
                   ],
@@ -923,13 +941,14 @@ class SupplierDetailModal extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRowWithColor(String label, String value, String paymentType) {
-    Color textColor = paymentType == 'to_pay' 
-        ? Colors.red 
-        : paymentType == 'to_receive' 
-          ? Colors.green 
-          : Colors.black;
-          
+  Widget _buildInfoRowWithColor(
+      String label, String value, String paymentType) {
+    Color textColor = paymentType == 'to_pay'
+        ? Colors.red
+        : paymentType == 'to_receive'
+            ? Colors.green
+            : Colors.black;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -950,7 +969,7 @@ class SupplierDetailModal extends StatelessWidget {
           const SizedBox(width: 16),
           Expanded(
             child: Text(
-               value.isNotEmpty ? value : 'N/A',
+              value.isNotEmpty ? value : 'N/A',
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,

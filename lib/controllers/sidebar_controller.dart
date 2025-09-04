@@ -56,10 +56,12 @@ import '../screens/product/widgets/stock_details.dart';
 import '../screens/sales/widgets/sales_order_details.dart';
 import '../widgets/category_list.dart';
 import 'package:pos_machine/screens/suppliers/supplier_list.dart';
+import 'package:pos_machine/screens/suppliers/supplier_details.dart';
 import 'package:pos_machine/screens/sales/confirmed_orders.dart';
 
 class SideBarController extends GetxController {
-  RxInt index = 0.obs; // Default to HomeNew, will be set based on user role during login
+  RxInt index =
+      0.obs; // Default to HomeNew, will be set based on user role during login
   RxBool isExpanded = false.obs;
   void toggleExpansion() {
     isExpanded.value = !isExpanded.value;
@@ -123,5 +125,6 @@ class SideBarController extends GetxController {
     ConfirmedOrdersScreen(), // 54 Confirmed Orders
     RestaurantPage(), // 55 Restaurant Page
     KitchenMaster(), // 56 Kitchen Master
+    SupplierDetailsScreen(), // 57 Supplier Details
   ];
 }

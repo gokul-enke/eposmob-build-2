@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
@@ -172,8 +173,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      DateFormat('d MMMM y').format(
-                          DateTime.now()), // Updated to show current date
+                      DateHelper.formatDate(DateTime.now()),
+                      // Updated to show current date
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,
@@ -379,9 +380,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                              color:
+                                  ColorManager.kPrimaryColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
@@ -423,7 +426,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ColorManager.textColor,
                             ),
                           ),
-                          Icon(Icons.more_vert, color: ColorManager.textColor.withOpacity(0.5)),
+                          Icon(Icons.more_vert,
+                              color: ColorManager.textColor.withOpacity(0.5)),
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -499,8 +503,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
           ),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         borderData: FlBorderData(show: false),
         minY: 0,
@@ -536,7 +542,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildAnalyticsChart() {
     // Dummy data for the bar chart
     final List<double> dummyData = [8, 12, 15, 10, 13];
-    final List<String> categories = ['Food', 'Drinks', 'Snacks', 'Dessert', 'Other'];
+    final List<String> categories = [
+      'Food',
+      'Drinks',
+      'Snacks',
+      'Dessert',
+      'Other'
+    ];
 
     return BarChart(
       BarChartData(
@@ -580,8 +592,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
           ),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         gridData: FlGridData(
           show: true,
@@ -603,7 +617,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 toY: entry.value,
                 color: ColorManager.kPrimaryColor,
                 width: 12,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(3)),
               ),
             ],
           );

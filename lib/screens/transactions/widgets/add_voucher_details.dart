@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -826,8 +827,8 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                                     wholesaleMinUnitController
                                                         .text,
                                                 expiryDate: selectedDate != null
-                                                    ? DateFormat('yyyy-MM-dd')
-                                                        .format(selectedDate!)
+                                                    ? DateHelper.formatDate(
+                                                        selectedDate!)
                                                     : '',
                                                 batchNumber:
                                                     batchNumberController.text,

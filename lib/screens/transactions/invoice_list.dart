@@ -671,9 +671,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                             'Invoice Number', invoice.invoiceNumber),
                         _buildDetailRow(
                             'Customer Name', invoice.customer.user.name),
+                        _buildDetailRow('Customer Phone', invoice.customer.user.phone),
+                        _buildDetailRow('Order Number', ""), //no order number
+
+
                         _buildDetailRow('Type', invoice.type),
                         _buildDetailRow('Invoice Date', invoice.invoiceDate),
-                        _buildDetailRow('Due Date', invoice.dueDate),
+                        _buildDetailRow('Due Date',invoice.dueDate),
                         _buildDetailRow('Amount', invoice.amount.toString()),
                         _buildDetailRow('Status', invoice.status),
                       ],
