@@ -1489,16 +1489,16 @@ class ThermalPrinter {
     }
 
     // Customer Email
-    if (customerEmail != null && customerEmail.isNotEmpty) {
-      bytes += generator.text(
-        'Email: $customerEmail',
-        styles: PosStyles(
-          fontType: fontType,
-          height: textSizeSmall,
-          width: textSizeSmall,
-        ),
-      );
-    }
+    // if (customerEmail != null && customerEmail.isNotEmpty) {
+    //   bytes += generator.text(
+    //     'Email: $customerEmail',
+    //     styles: PosStyles(
+    //       fontType: fontType,
+    //       height: textSizeSmall,
+    //       width: textSizeSmall,
+    //     ),
+    //   );
+    // }
 
     // Customer Address
     if (customerAddress != null && customerAddress.isNotEmpty) {

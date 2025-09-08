@@ -12,17 +12,21 @@ class DateHelper {
   }
 
   static String formatISODate(String isoDateString) {
-    DateTime date = DateTime.parse(isoDateString);
-    final DateFormat formatter = DateFormat('yyyy MMM dd');
-    return formatter.format(date);
+    DateTime utcDate = DateTime.parse(isoDateString);
+    DateTime istDate = utcDate.add(const Duration(hours: 5, minutes: 30));
+    final DateFormat formatter = DateFormat('dd-MM-yyyy hh:mm a ');
+    return formatter.format(istDate);
   }
 
   static String formatISODateToIST(String isoDateString) {
+    // Parse the incoming ISO date string
     DateTime utcDate = DateTime.parse(isoDateString);
-    DateTime istDate = utcDate
-        .add(const Duration(hours: 5, minutes: 30)); // Convert UTC to IST
-    final DateFormat formatter =
-        DateFormat('hh:mm a'); // 12-hour format with AM/PM
+
+    // Convert UTC to IST by adding 5 hours 30 minutes
+    DateTime istDate = utcDate.add(const Duration(hours: 5, minutes: 30));
+
+    // Format both date and time together
+    final DateFormat formatter = DateFormat('dd-MM-yyyy hh:mm a');
     return formatter.format(istDate);
   }
 }

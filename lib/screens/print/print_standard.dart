@@ -1107,8 +1107,8 @@ class StandardPrinter {
             pw.Text('Name: $customerName', style: customerDetailStyle),
           if (customerPhone != null && customerPhone.isNotEmpty)
             pw.Text('Phone: $customerPhone', style: customerDetailStyle),
-          if (customerEmail != null && customerEmail.isNotEmpty)
-            pw.Text('Email: $customerEmail', style: customerDetailStyle),
+          // if (customerEmail != null && customerEmail.isNotEmpty)
+          //   pw.Text('Email: $customerEmail', style: customerDetailStyle),
           if (customerAddress != null && customerAddress.isNotEmpty)
             pw.Text('Address: $customerAddress', style: customerDetailStyle),
         ],
