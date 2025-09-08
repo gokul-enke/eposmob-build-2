@@ -39,7 +39,11 @@ class _CustomerTransactionListScreenState
   // Add this with your other controllers
   final TextEditingController customerSearchController =
       TextEditingController();
+  // final TextEditingController customerPhoneController =
+  //     TextEditingController(); // Commented out - no backend API field yet
   String searchCustomer = '';
+  // String searchCustomerPhone = ''; // Commented out - no backend API field yet
+  String searchType = '';
   List<String> customerSuggestions =
       []; // This should be populated with your customer names
   List<String> filteredSuggestions = [];
@@ -143,6 +147,26 @@ class _CustomerTransactionListScreenState
           .toList();
     }
 
+    // Filter by customer phone - Commented out: no backend API field
+    // if (searchCustomerPhone.isNotEmpty) {
+    //   filteredList = filteredList
+    //       .where((transaction) =>
+    //           transaction.customerPhone != null &&
+    //           transaction.customerPhone!
+    //               .toLowerCase()
+    //               .contains(searchCustomerPhone.toLowerCase()))
+    //       .toList();
+    // }
+
+    // Filter by type
+    if (searchType.isNotEmpty && searchType != 'All') {
+      filteredList = filteredList
+          .where((transaction) =>
+              transaction.type != null &&
+              transaction.type!.toLowerCase() == searchType.toLowerCase())
+          .toList();
+    }
+
     // Filter by date
     if (selectedDate != null) {
       filteredList = filteredList.where((transaction) {
@@ -189,13 +213,16 @@ class _CustomerTransactionListScreenState
     // Clear the text controllers
     amountRefController.clear();
     customerSearchController.clear();
+    // customerPhoneController.clear(); // Commented out - no backend API field
     referenceSearchController.clear();
 
     // Reset the search variables
     setState(() {
       searchAmount = '';
       searchCustomer = '';
+      // searchCustomerPhone = ''; // Commented out - no backend API field
       searchReference = '';
+      searchType = '';
       selectedDate = null;
       currentPage = 1;
       _calendarKey++;
@@ -255,6 +282,8 @@ class _CustomerTransactionListScreenState
                   children: [
                     _buildDetailRow(
                         'Customer Name', transaction.customerName ?? 'No Name'),
+                    // _buildDetailRow(
+                    //     'Customer Phone', transaction.customerPhone ?? 'N/A'), // Commented out - no backend API field
                     _buildDetailRow('Date', transaction.date ?? 'N/A'),
                     _buildDetailRow('Type', transaction.type ?? 'N/A'),
                     _buildDetailRow('Transaction Type',
@@ -473,7 +502,7 @@ class _CustomerTransactionListScreenState
                 const SizedBox(height: 15),
                 Column(
                   children: [
-                    // First row with 4 fields
+                    // First row with 4 filters
                     Row(
                       children: [
                         // Amount Search Field
@@ -511,136 +540,210 @@ class _CustomerTransactionListScreenState
                           ),
                         ),
 
+                        const SizedBox(width: 15),
+
                         // Customer Name Search Field
                         Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 10.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Customer Name",
-                                    style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      FontSize.s14,
-                                      0.27,
-                                      Colors.black.withOpacity(0.6),
-                                    ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  "Customer Name",
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s14,
+                                    0.27,
+                                    Colors.black.withOpacity(0.6),
                                   ),
                                 ),
-                                CustomerAutocomplete(
-                                  size: size,
-                                  customerList: getCustomerSuggestions(),
-                                  controller: customerSearchController,
-                                  onSelected: (String selectedCustomer) {
+                              ),
+                              CustomerAutocomplete(
+                                size: size,
+                                customerList: getCustomerSuggestions(),
+                                controller: customerSearchController,
+                                onSelected: (String selectedCustomer) {
+                                  setState(() {
+                                    searchCustomer = selectedCustomer;
+                                    currentPage = 1;
+                                  });
+                                  applyFilters();
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(width: 15),
+
+                        // Type Filter
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  "Type",
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s14,
+                                    0.27,
+                                    Colors.black.withOpacity(0.6),
+                                  ),
+                                ),
+                              ),
+                              BuildBoxShadowContainer(
+                                circleRadius: 7,
+                                height: 45,
+                                width: double.infinity,
+                                color: Colors.white,
+                                child: DropdownButtonFormField<String>(
+                                  value: searchType.isEmpty ? null : searchType,
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 15, vertical: 12),
+                                    isDense: true,
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                  ),
+                                  dropdownColor: Colors.white,
+                                  hint: Text(
+                                    'Select Type',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s11,
+                                      0.27,
+                                      ColorManager.textColor.withOpacity(.5),
+                                    ),
+                                  ),
+                                  items: ['All', 'Credit', 'Debit']
+                                      .map((String type) {
+                                    return DropdownMenuItem<String>(
+                                      value: type,
+                                      child: Text(
+                                        type,
+                                        style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s11,
+                                          0.27,
+                                          ColorManager.textColor
+                                              .withOpacity(.5),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? value) {
                                     setState(() {
-                                      searchCustomer = selectedCustomer;
+                                      searchType = value ?? '';
                                       currentPage = 1;
                                     });
                                     applyFilters();
                                   },
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
+
+                        const SizedBox(width: 15),
 
                         // Reference ID Search Field
                         Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 10.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Reference ID",
-                                    style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      FontSize.s14,
-                                      0.27,
-                                      Colors.black.withOpacity(0.6),
-                                    ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  "Reference ID",
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s14,
+                                    0.27,
+                                    Colors.black.withOpacity(0.6),
                                   ),
                                 ),
-                                buildColumnWidgetForTextFields(
-                                  height: 45,
-                                  width: double.infinity,
-                                  onchanged: (value) {
-                                    setState(() {
-                                      searchReference = value!;
-                                      currentPage = 1;
-                                    });
-                                    applyFilters();
-                                  },
-                                  controller: referenceSearchController,
-                                  size: size,
-                                  hintText: 'Reference ID',
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        // Date Picker
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 10.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Date",
-                                    style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      FontSize.s14,
-                                      0.27,
-                                      Colors.black.withOpacity(0.6),
-                                    ),
-                                  ),
-                                ),
-                                BuildBoxShadowContainer(
-                                  circleRadius: 7,
-                                  height: 45,
-                                  width: double.infinity,
-                                  child: Center(
-                                    child: CalendarPickerTableCell(
-                                      key: ValueKey(_calendarKey),
-                                      onDateSelected: (DateTime date) {
-                                        setState(() {
-                                          selectedDate = date;
-                                          currentPage = 1;
-                                        });
-                                        applyFilters();
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                              buildColumnWidgetForTextFields(
+                                height: 45,
+                                width: double.infinity,
+                                onchanged: (value) {
+                                  setState(() {
+                                    searchReference = value!;
+                                    currentPage = 1;
+                                  });
+                                  applyFilters();
+                                },
+                                controller: referenceSearchController,
+                                size: size,
+                                hintText: 'Reference ID',
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
 
-                    // Second row with reset button
+                    const SizedBox(height: 15),
+
+                    // Second row with Date filter and Reset button
                     Row(
                       children: [
+                        // Date Picker
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  "Date",
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s14,
+                                    0.27,
+                                    Colors.black.withOpacity(0.6),
+                                  ),
+                                ),
+                              ),
+                              BuildBoxShadowContainer(
+                                circleRadius: 7,
+                                height: 45,
+                                width: double.infinity,
+                                child: Center(
+                                  child: CalendarPickerTableCell(
+                                    key: ValueKey(_calendarKey),
+                                    onDateSelected: (DateTime date) {
+                                      setState(() {
+                                        selectedDate = date;
+                                        currentPage = 1;
+                                      });
+                                      applyFilters();
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(width: 15),
+
                         // Empty space to push reset button to the end
                         Expanded(
-                          flex: 3,
+                          flex: 2,
                           child: Container(),
                         ),
+
+                        const SizedBox(width: 15),
 
                         // Reset Button
                         Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.only(top: 10.0),
+                            padding: const EdgeInsets.only(top: 30),
                             child: CustomRoundButton(
                               title: "Reset",
                               boxColor: Colors.white,
@@ -690,9 +793,11 @@ class _CustomerTransactionListScreenState
                                           1: FlexColumnWidth(2.0), // Name
                                           2: FlexColumnWidth(1.2), // Date
                                           3: FlexColumnWidth(1.5), // Amount
-                                          4: FlexColumnWidth(1.0), // Status
+                                          4: FlexColumnWidth(
+                                              1.5), // Reference ID
                                           5: FlexColumnWidth(1.0), // Type
-                                          6: FlexColumnWidth(1.0), // Action
+                                          6: FlexColumnWidth(1.0), // Status
+                                          7: FlexColumnWidth(1.0), // Action
                                         },
                                         border: null,
                                         defaultVerticalAlignment:
@@ -704,8 +809,9 @@ class _CustomerTransactionListScreenState
                                               _buildTableHeader('Name'),
                                               _buildTableHeader('Date'),
                                               _buildTableHeader('Amount'),
-                                              _buildTableHeader('Status'),
+                                              _buildTableHeader('Reference ID'),
                                               _buildTableHeader('Type'),
+                                              _buildTableHeader('Status'),
                                               _buildTableHeader('Action'),
                                             ],
                                           ),
@@ -793,10 +899,12 @@ class _CustomerTransactionListScreenState
                                                       3: FlexColumnWidth(
                                                           1.5), // Amount
                                                       4: FlexColumnWidth(
-                                                          1.0), // Status
+                                                          1.5), // Reference ID
                                                       5: FlexColumnWidth(
                                                           1.0), // Type
                                                       6: FlexColumnWidth(
+                                                          1.0), // Status
+                                                      7: FlexColumnWidth(
                                                           1.0), // Action
                                                     },
                                                     border: null,
@@ -832,13 +940,15 @@ class _CustomerTransactionListScreenState
                                                                 "${transaction.date ?? 'N/A'}"),
                                                             _buildTableCell(
                                                                 "${transaction.currency} ${transaction.amount}"),
-                                                            Center(
-                                                              child: _buildStatusChip(
-                                                                  "${transaction.status}"),
-                                                            ),
+                                                            _buildTableCell(
+                                                                "${transaction.referenceId ?? 'N/A'}"),
                                                             Center(
                                                               child: _buildTypeCell(
                                                                   "${transaction.type}"),
+                                                            ),
+                                                            Center(
+                                                              child: _buildStatusChip(
+                                                                  "${transaction.status}"),
                                                             ),
                                                             Center(
                                                               child: Padding(

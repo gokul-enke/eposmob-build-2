@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -112,7 +113,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   final Map<int, TextEditingController> productSearchControllers = {};
   final Map<int, TextEditingController> barcodeControllers = {};
   final Map<int, TextEditingController> quantityControllers = {};
-  
+
   // Expanded field controllers for each row
   final Map<int, TextEditingController> purchaseRateControllers = {};
   final Map<int, TextEditingController> retailPriceControllers = {};
@@ -185,7 +186,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         debugPrint('⚠️ Error disposing quantity controller: $e');
       }
     });
-    
+
     // Dispose expanded field controllers safely
     purchaseRateControllers.values.forEach((controller) {
       try {
@@ -305,7 +306,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       if (index < stockItems.length) {
         initialValue = stockItems[index].purchaseRate;
       }
-      purchaseRateControllers[index] = TextEditingController(text: initialValue);
+      purchaseRateControllers[index] =
+          TextEditingController(text: initialValue);
     }
     return purchaseRateControllers[index]!;
   }
@@ -404,45 +406,48 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   void _loadPendingStockItems() {
     final stockProvider = Provider.of<StockProvider>(context, listen: false);
     final pendingItems = stockProvider.pendingStockItems;
-    
-    debugPrint('🔄 LOADING PENDING STOCK ITEMS: ${pendingItems.length} items found');
-    
-          if (pendingItems.isNotEmpty) {
-        // Use addPostFrameCallback to ensure setState is called after build
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            setState(() {
-              // Clear existing stock items
-              stockItems.clear();
-              
-              // Load each pending item as an editable row
-              for (int i = 0; i < pendingItems.length; i++) {
-                final pendingItem = pendingItems[i];
-                final stockItem = _createStockItemFromPendingData(pendingItem, i);
-                stockItems.add(stockItem);
-              }
-              
-              // Add one empty row for new items
-              stockItems.add(StockItem());
-              
-              debugPrint('✅ LOADED ${pendingItems.length} PENDING ITEMS AS EDITABLE ROWS');
-            });
-            
-            // Update controllers with the loaded data
-            _updateControllersFromStockItems();
-          }
-        });
-      }
+
+    debugPrint(
+        '🔄 LOADING PENDING STOCK ITEMS: ${pendingItems.length} items found');
+
+    if (pendingItems.isNotEmpty) {
+      // Use addPostFrameCallback to ensure setState is called after build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            // Clear existing stock items
+            stockItems.clear();
+
+            // Load each pending item as an editable row
+            for (int i = 0; i < pendingItems.length; i++) {
+              final pendingItem = pendingItems[i];
+              final stockItem = _createStockItemFromPendingData(pendingItem, i);
+              stockItems.add(stockItem);
+            }
+
+            // Add one empty row for new items
+            stockItems.add(StockItem());
+
+            debugPrint(
+                '✅ LOADED ${pendingItems.length} PENDING ITEMS AS EDITABLE ROWS');
+          });
+
+          // Update controllers with the loaded data
+          _updateControllersFromStockItems();
+        }
+      });
+    }
   }
 
   /// Create a StockItem from pending stock data
-  StockItem _createStockItemFromPendingData(Map<String, dynamic> pendingData, int index) {
+  StockItem _createStockItemFromPendingData(
+      Map<String, dynamic> pendingData, int index) {
     debugPrint('🔄 CREATING STOCK ITEM FROM PENDING DATA (Index: $index)');
     debugPrint('   - Product ID: ${pendingData['productId']}');
     debugPrint('   - Product Name: ${pendingData['productName']}');
     debugPrint('   - Category Name: ${pendingData['categoryName']}');
     debugPrint('   - Local ID: ${pendingData['localId']}');
-    
+
     // Create a new StockItem with data from pending item
     final stockItem = StockItem(
       barcode: (pendingData['barcode'] ?? '').toString(),
@@ -455,54 +460,61 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       purchaseRate: (pendingData['purchaseRate'] ?? '0').toString(),
       unit: (pendingData['unit'] ?? '').toString(),
       rack: (pendingData['rack'] ?? '').toString(),
-      expDate: pendingData['expiryDate'] != null 
-          ? DateTime.tryParse(pendingData['expiryDate'].toString()) ?? DateTime.now().add(const Duration(days: 365))
+      expDate: pendingData['expiryDate'] != null
+          ? DateTime.tryParse(pendingData['expiryDate'].toString()) ??
+              DateTime.now().add(const Duration(days: 365))
           : DateTime.now().add(const Duration(days: 365)),
       batchNumber: (pendingData['wholesaleMinUnit'] ?? '1').toString(),
       supplier: (pendingData['supplierName'] ?? '').toString(),
-      supplierId: (pendingData['supplierId'] ?? 1) is int ? pendingData['supplierId'] : int.tryParse(pendingData['supplierId'].toString()) ?? 1,
+      supplierId: (pendingData['supplierId'] ?? 1) is int
+          ? pendingData['supplierId']
+          : int.tryParse(pendingData['supplierId'].toString()) ?? 1,
       isExpanded: false,
-      isSuccessfullyAdded: true, // Mark as successfully added since it's from pending
+      isSuccessfullyAdded:
+          true, // Mark as successfully added since it's from pending
       taxInclude: pendingData['taxInclude'] == true,
       retailPriceTax: (pendingData['retailPriceTax'] ?? '0.00').toString(),
-      wholesalePriceTax: (pendingData['wholesalePriceTax'] ?? '0.00').toString(),
+      wholesalePriceTax:
+          (pendingData['wholesalePriceTax'] ?? '0.00').toString(),
     );
-    
+
     // Set the API response to track this as a pending item
     stockItem.apiResponse = {
       'status': 'pending',
       'localId': pendingData['localId'],
       'message': 'Loaded from pending list'
     };
-    
+
     // Try to find and set the product data
     _setProductDataFromPending(stockItem, pendingData);
-    
+
     // Try to find and set the category data
     _setCategoryDataFromPending(stockItem, pendingData);
-    
+
     // Try to find and set the supplier data
     _setSupplierDataFromPending(stockItem, pendingData);
-    
+
     // Try to find and set the store data
     _setStoreDataFromPending(stockItem, pendingData);
-    
+
     debugPrint('✅ STOCK ITEM CREATED SUCCESSFULLY');
     return stockItem;
   }
 
   /// Set product data from pending item
-  void _setProductDataFromPending(StockItem stockItem, Map<String, dynamic> pendingData) {
+  void _setProductDataFromPending(
+      StockItem stockItem, Map<String, dynamic> pendingData) {
     try {
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
       final productId = pendingData['productId'];
-      
+
       if (productId != null) {
         final product = localProductProvider.products.firstWhere(
           (p) => p.productId == productId,
           orElse: () => GetProduct(),
         );
-        
+
         if (product.productId != null) {
           stockItem.productData = product;
           debugPrint('   - Product data set: ${product.productName}');
@@ -514,17 +526,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   /// Set category data from pending item
-  void _setCategoryDataFromPending(StockItem stockItem, Map<String, dynamic> pendingData) {
+  void _setCategoryDataFromPending(
+      StockItem stockItem, Map<String, dynamic> pendingData) {
     try {
-      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+      final categoryProvider =
+          Provider.of<CategoryProvider>(context, listen: false);
       final categoryName = pendingData['categoryName'];
-      
+
       if (categoryName != null && categoryProvider.category != null) {
         final category = categoryProvider.category!.firstWhere(
           (c) => c.categoryName == categoryName,
           orElse: () => categoryProvider.category!.first,
         );
-        
+
         stockItem.categoryData = category;
         debugPrint('   - Category data set: ${category.categoryName}');
       }
@@ -534,11 +548,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   /// Set supplier data from pending item
-  void _setSupplierDataFromPending(StockItem stockItem, Map<String, dynamic> pendingData) {
+  void _setSupplierDataFromPending(
+      StockItem stockItem, Map<String, dynamic> pendingData) {
     try {
-      final supplierProvider = Provider.of<SupplierProvider>(context, listen: false);
+      final supplierProvider =
+          Provider.of<SupplierProvider>(context, listen: false);
       final supplierId = pendingData['supplierId'];
-      
+
       if (supplierId != null && supplierProvider.supplierList != null) {
         // Convert supplierId to int if it's not already
         int? id;
@@ -547,13 +563,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         } else {
           id = int.tryParse(supplierId.toString());
         }
-        
+
         if (id != null) {
           final supplier = supplierProvider.supplierList!.firstWhere(
             (s) => s.id == id,
             orElse: () => supplierProvider.supplierList!.first,
           );
-          
+
           stockItem.supplierData = supplier;
           selectedSupplier = supplier; // Set the global selected supplier
           debugPrint('   - Supplier data set: ${supplier.name}');
@@ -565,11 +581,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   /// Set store data from pending item
-  void _setStoreDataFromPending(StockItem stockItem, Map<String, dynamic> pendingData) {
+  void _setStoreDataFromPending(
+      StockItem stockItem, Map<String, dynamic> pendingData) {
     try {
-      final purchaseProvider = Provider.of<PurchaseProvider>(context, listen: false);
+      final purchaseProvider =
+          Provider.of<PurchaseProvider>(context, listen: false);
       final storeId = pendingData['storeId'];
-      
+
       if (storeId != null && purchaseProvider.getStoreList != null) {
         // Convert storeId to int if it's not already
         int? id;
@@ -578,13 +596,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         } else {
           id = int.tryParse(storeId.toString());
         }
-        
+
         if (id != null) {
           final store = purchaseProvider.getStoreList!.firstWhere(
             (s) => s.id == id,
             orElse: () => purchaseProvider.getStoreList!.first,
           );
-          
+
           selectedStore = store; // Set the global selected store
           debugPrint('   - Store data set: ${store.name}');
         }
@@ -597,16 +615,16 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   /// Update all controllers with current stock item data
   void _updateControllersFromStockItems() {
     if (!mounted) return;
-    
+
     for (int i = 0; i < stockItems.length; i++) {
       final item = stockItems[i];
-      
+
       // Update barcode controller
       _getBarcodeController(i).text = item.barcode;
-      
+
       // Update quantity controller
       _getQuantityController(i).text = item.quantity;
-      
+
       // Update expanded field controllers
       _getPurchaseRateController(i).text = item.purchaseRate;
       _getRetailPriceController(i).text = item.salePrice;
@@ -614,7 +632,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       _getWholesaleController(i).text = item.wholesale;
       _getBatchNumberController(i).text = item.batchNumber;
     }
-    
+
     debugPrint('✅ UPDATED ALL CONTROLLERS WITH STOCK ITEM DATA');
   }
 
@@ -671,7 +689,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'unit': item.unit,
         'supplierId': selectedSupplier!.id,
         'storeId': selectedStore!.id,
-        'expiryDate': DateFormat('yyyy-MM-dd').format(item.expDate),
+        'expiryDate': DateHelper.formatDate(item.expDate),
         'userId': 1,
         'purchaseVoucherId': null,
         'purchaseId': null,
@@ -682,8 +700,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'rack': item.rack,
         'barcode': item.barcode,
         'batchNumber': item.batchNumber,
-        'date': DateFormat('yyyy-MM-dd').format(selectedDate),
-        'purchaseDate': DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
+        'date': DateHelper.formatDate(selectedDate),
+        'purchaseDate': DateHelper.formatDate(selectedPurchaseDate),
         'purchaseNumber': null,
         'taxInclude': item.taxInclude,
         'initialRetailPrice': item.salePrice,
@@ -836,7 +854,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       _getProductSearchController(index).clear();
       _getBarcodeController(index).clear();
       _getQuantityController(index).text = '1';
-      
+
       // Clear expanded field controllers
       _getPurchaseRateController(index).clear();
       _getRetailPriceController(index).clear();
@@ -978,7 +996,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 // Soft delete - hide the item instead of removing it
                 setState(() {
                   stockItems[index].isHidden = true;
-                  debugPrint('🗑️ SOFT DELETED (HIDDEN) STOCK ITEM AT INDEX $index');
+                  debugPrint(
+                      '🗑️ SOFT DELETED (HIDDEN) STOCK ITEM AT INDEX $index');
                 });
 
                 showScaffold(
@@ -1005,7 +1024,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   void _calculateTotalStockValue() {
     double total = 0.0;
     for (StockItem item in stockItems) {
-      if (item.isSuccessfullyAdded && !item.isHidden && item.purchaseRate.isNotEmpty) {
+      if (item.isSuccessfullyAdded &&
+          !item.isHidden &&
+          item.purchaseRate.isNotEmpty) {
         double purchaseRate = double.tryParse(item.purchaseRate) ?? 0.0;
         double quantity = double.tryParse(item.quantity) ?? 0.0;
         total += (purchaseRate * quantity);
@@ -1488,7 +1509,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             onDateSelected: onDateSelected,
             hintText: "Select $title",
             isRequired: title.toLowerCase().contains('date'),
-            firstDate: DateTime(2020), // Allow past dates for all general date fields
+            firstDate:
+                DateTime(2020), // Allow past dates for all general date fields
             lastDate: DateTime(2030),
             showQuickActions: false, // No quick actions for header dates
             isForExpiry: false, // These are not expiry dates
@@ -1707,11 +1729,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     return Consumer<StockProvider>(
       builder: (context, stockProvider, child) {
         // Only show payment section if there are successfully added items or pending items
-        bool hasSuccessfulItems =
-            stockItems.any((item) => item.isSuccessfullyAdded && !item.isHidden);
+        bool hasSuccessfulItems = stockItems
+            .any((item) => item.isSuccessfullyAdded && !item.isHidden);
         bool hasPendingItems = stockProvider.pendingStockItemsCount > 0;
-        bool hasEditableItems = stockItems.any((item) => 
-            item.isSuccessfullyAdded && !item.isHidden && item.apiResponse != null && 
+        bool hasEditableItems = stockItems.any((item) =>
+            item.isSuccessfullyAdded &&
+            !item.isHidden &&
+            item.apiResponse != null &&
             item.apiResponse!['status'] == 'pending');
 
         if (!hasSuccessfulItems && !hasPendingItems) {
@@ -2242,7 +2266,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         // Select all text when field is tapped
                         _getBarcodeController(index).selection = TextSelection(
                           baseOffset: 0,
-                          extentOffset: _getBarcodeController(index).text.length,
+                          extentOffset:
+                              _getBarcodeController(index).text.length,
                         );
                       },
                       onChanged: (value) {
@@ -2303,7 +2328,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         // Select all text when field is tapped
                         _getQuantityController(index).selection = TextSelection(
                           baseOffset: 0,
-                          extentOffset: _getQuantityController(index).text.length,
+                          extentOffset:
+                              _getQuantityController(index).text.length,
                         );
                       },
                       onChanged: (value) {
@@ -2371,7 +2397,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         ),
                       ],
                       // Spacing between delete and add buttons
-                      if (item.productData != null || item.isSuccessfullyAdded) 
+                      if (item.productData != null || item.isSuccessfullyAdded)
                         const SizedBox(width: 8),
                       // Add Stock Button (Only show if not already added)
                       if (!item.isSuccessfullyAdded) ...[
@@ -2642,7 +2668,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         debugPrint('   - Sale Price: ${stockItems[index].salePrice}');
         debugPrint('   - MRP: ${stockItems[index].mrp}');
         debugPrint('   - Unit: ${stockItems[index].unit}');
-        
+
         // Update controllers with new values
         _getRetailPriceController(index).text = stockItems[index].salePrice;
         _getMrpController(index).text = stockItems[index].mrp;
@@ -2688,7 +2714,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         stockItems[index].batchNumber =
             '1'; // Default minimum units for wholesale
         debugPrint('   - Batch Number: ${stockItems[index].batchNumber}');
-        
+
         // Update controllers with new values
         _getPurchaseRateController(index).text = stockItems[index].purchaseRate;
         _getWholesaleController(index).text = stockItems[index].wholesale;
@@ -2961,9 +2987,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             hintText: "Select $label",
             isRequired: label.toLowerCase().contains('expiry'),
             firstDate: DateTime.now(), // Expiry dates should be in the future
-            lastDate: DateTime.now().add(const Duration(days: 3650)), // 10 years from now
-            showQuickActions: true, // Enable quick date selection for expiry dates
-            isForExpiry: label.toLowerCase().contains('expiry'), // Show quick actions only for expiry dates
+            lastDate: DateTime.now()
+                .add(const Duration(days: 3650)), // 10 years from now
+            showQuickActions:
+                true, // Enable quick date selection for expiry dates
+            isForExpiry: label
+                .toLowerCase()
+                .contains('expiry'), // Show quick actions only for expiry dates
             isAllowEdit: true, // Allow text editing for expiry dates
           ),
         ),
@@ -3097,9 +3127,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 debugPrint('   - Sale Price: ${stockItems[index].salePrice}');
                 debugPrint('   - MRP: ${stockItems[index].mrp}');
                 debugPrint('   - Unit: ${stockItems[index].unit}');
-                
+
                 // Update controllers with new values
-                _getRetailPriceController(index).text = stockItems[index].salePrice;
+                _getRetailPriceController(index).text =
+                    stockItems[index].salePrice;
                 _getMrpController(index).text = stockItems[index].mrp;
 
                 // Auto-fill unit dropdown - find the matching unit key
@@ -3147,11 +3178,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     '1'; // Default minimum units for wholesale
                 debugPrint(
                     '   - Batch Number: ${stockItems[index].batchNumber}');
-                
+
                 // Update controllers with new values
-                _getPurchaseRateController(index).text = stockItems[index].purchaseRate;
-                _getWholesaleController(index).text = stockItems[index].wholesale;
-                _getBatchNumberController(index).text = stockItems[index].batchNumber;
+                _getPurchaseRateController(index).text =
+                    stockItems[index].purchaseRate;
+                _getWholesaleController(index).text =
+                    stockItems[index].wholesale;
+                _getBatchNumberController(index).text =
+                    stockItems[index].batchNumber;
               });
 
               // Trigger tax calculation for both retail and wholesale prices after product selection
@@ -3811,9 +3845,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                       final syncProvider =
                                           Provider.of<SyncProvider>(context,
                                               listen: false);
-                                      
+
                                       // Step 1: Quick stock-only sync for immediate updates
-                                      debugPrint('🔄 Starting stock-only sync...');
+                                      debugPrint(
+                                          '🔄 Starting stock-only sync...');
                                       bool stockSyncSuccess = await syncProvider
                                           .syncStockDataOnly(context);
                                       if (stockSyncSuccess) {
@@ -3823,12 +3858,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                         debugPrint(
                                             '⚠️ STOCK-ONLY SYNC SKIPPED (ALREADY RUNNING)');
                                       }
-                                      
+
                                       // Step 2: Full comprehensive sync for complete data consistency
-                                      debugPrint('🔄 Starting comprehensive sync...');
+                                      debugPrint(
+                                          '🔄 Starting comprehensive sync...');
                                       await syncProvider.syncAllData(context);
-                                      debugPrint('✅ COMPREHENSIVE SYNC COMPLETED SUCCESSFULLY');
-                                      
+                                      debugPrint(
+                                          '✅ COMPREHENSIVE SYNC COMPLETED SUCCESSFULLY');
                                     } catch (e) {
                                       debugPrint('❌ SYNC PROCESS FAILED: $e');
                                     }

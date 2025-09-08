@@ -32,13 +32,16 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
   final phoneNumberController = TextEditingController();
   final addressTextController = TextEditingController();
   final countryTextController = TextEditingController();
-  final pincodeTextController = TextEditingController();
 
   String? selectedStateId;
   String? selectedDistrictId;
+  String? selectedPincodeId;
+  bool isLoadingPincodes = false;
+  bool isLoadingDistricts = false;
 
   Key stateDropdownKey = UniqueKey();
   Key districtDropdownKey = UniqueKey();
+  Key pincodeDropdownKey = UniqueKey();
 
   @override
   void initState() {
@@ -146,17 +149,7 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               _buildDistrictDropdown(size, locationProvider),
-                              buildColumnWidgetForTextFields(
-                                controller: pincodeTextController,
-                                height: size.height * .07,
-                                width: size.width / 3.05,
-                                size: size,
-                                isLeft: false,
-                                readOnly: false,
-                                title: "Pincode",
-                                onchanged: (value) {},
-                                hintText: "",
-                              ),
+                              _buildPincodeDropdown(size, locationProvider),
                             ],
                           ),
                         ),
@@ -241,8 +234,12 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
       children: [
         BuildTextTile(
           title: "State",
-          textStyle: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-              0.27, Colors.black.withOpacity(0.6)),
+          textStyle: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s14,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
         ),
         BuildBoxShadowContainer(
           circleRadius: 7,
@@ -255,23 +252,62 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
             key: stateDropdownKey,
             isExpanded: true,
             value: selectedStateId,
-            hint: const Text("Select State"),
+            hint: Text(
+              "Select State",
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s12,
+                0.27,
+                ColorManager.textColor.withOpacity(.5),
+              ),
+            ),
             items: locationProvider.stateList.map((state) {
               return DropdownMenuItem<String>(
                 value: state.key,
-                child: Text(state.value),
+                child: Text(
+                  state.value,
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s12,
+                    0.27,
+                    ColorManager.textColor,
+                  ),
+                ),
               );
             }).toList(),
             onChanged: (String? newValue) async {
               setState(() {
                 selectedStateId = newValue;
                 selectedDistrictId = null;
+                selectedPincodeId = null;
+                districtDropdownKey = UniqueKey();
+                pincodeDropdownKey = UniqueKey();
+                isLoadingDistricts = true;
               });
               if (newValue != null) {
-                await locationProvider.listAllDistricts(
-                    stateId: newValue, accessToken: accessToken!);
+                try {
+                  await locationProvider.listAllDistricts(
+                      stateId: newValue, accessToken: accessToken!);
+                } catch (e) {
+                  debugPrint("Error loading districts: $e");
+                } finally {
+                  if (mounted) {
+                    setState(() {
+                      isLoadingDistricts = false;
+                    });
+                  }
+                }
+              } else {
+                setState(() {
+                  isLoadingDistricts = false;
+                });
               }
             },
+            underline: Container(),
+            icon: const Icon(
+              Icons.keyboard_arrow_down,
+              color: ColorManager.kPrimaryColor,
+            ),
           ),
         ),
       ],
@@ -298,23 +334,174 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
           padding: const EdgeInsets.only(left: 15),
           height: size.height * .07,
           width: size.width / 3,
-          child: DropdownButton<String>(
-            key: districtDropdownKey,
-            isExpanded: true,
-            value: selectedDistrictId,
-            hint: const Text("Select District"),
-            items: locationProvider.districtList.map((district) {
-              return DropdownMenuItem<String>(
-                value: district.key,
-                child: Text(district.value),
-              );
-            }).toList(),
-            onChanged: (String? newValue) {
-              setState(() {
-                selectedDistrictId = newValue;
-              });
-            },
+          child: isLoadingDistricts
+              ? const Center(
+                  child: SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: ColorManager.kPrimaryColor,
+                    ),
+                  ),
+                )
+              : DropdownButton<String>(
+                  key: districtDropdownKey,
+                  isExpanded: true,
+                  value: selectedDistrictId,
+                  hint: Text(
+                    selectedStateId == null
+                        ? "Select State First"
+                        : locationProvider.districtList.isEmpty
+                            ? "No districts available"
+                            : "Select District",
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s12,
+                      0.27,
+                      selectedStateId == null
+                          ? Colors.grey
+                          : ColorManager.textColor.withOpacity(.5),
+                    ),
+                  ),
+                  items: locationProvider.districtList.isEmpty
+                      ? []
+                      : locationProvider.districtList.map((district) {
+                          return DropdownMenuItem<String>(
+                            value: district.key,
+                            child: Text(
+                              district.value,
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s12,
+                                0.27,
+                                ColorManager.textColor,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                  onChanged: (selectedStateId == null || isLoadingDistricts)
+                      ? null
+                      : (String? newValue) async {
+                          setState(() {
+                            selectedDistrictId = newValue;
+                            selectedPincodeId = null;
+                            pincodeDropdownKey = UniqueKey();
+                            isLoadingPincodes = true;
+                          });
+                          if (newValue != null) {
+                            String? accessToken =
+                                Provider.of<AuthModel>(context, listen: false)
+                                    .token;
+                            try {
+                              await locationProvider.listAllPincodes(
+                                  districtId: newValue,
+                                  accessToken: accessToken!);
+                            } catch (e) {
+                              debugPrint("Error loading pincodes: $e");
+                            } finally {
+                              if (mounted) {
+                                setState(() {
+                                  isLoadingPincodes = false;
+                                });
+                              }
+                            }
+                          } else {
+                            setState(() {
+                              isLoadingPincodes = false;
+                            });
+                          }
+                        },
+                  underline: Container(),
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down,
+                    color: ColorManager.kPrimaryColor,
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPincodeDropdown(Size size, LocationProvider locationProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        BuildTextTile(
+          title: "Pincode",
+          textStyle: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s14,
+            0.27,
+            Colors.black.withOpacity(0.6),
           ),
+        ),
+        BuildBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          margin: const EdgeInsets.only(left: 20),
+          padding: const EdgeInsets.only(left: 15),
+          height: size.height * .07,
+          width: size.width / 3.05,
+          child: isLoadingPincodes
+              ? const Center(
+                  child: SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: ColorManager.kPrimaryColor,
+                    ),
+                  ),
+                )
+              : DropdownButton<String>(
+                  key: pincodeDropdownKey,
+                  isExpanded: true,
+                  value: selectedPincodeId,
+                  hint: Text(
+                    selectedDistrictId == null
+                        ? "Select District First"
+                        : locationProvider.pincodeList.isEmpty
+                            ? "No pincodes available"
+                            : "Select Pincode",
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s12,
+                      0.27,
+                      selectedDistrictId == null
+                          ? Colors.grey
+                          : ColorManager.textColor.withOpacity(.5),
+                    ),
+                  ),
+                  items: locationProvider.pincodeList.isEmpty
+                      ? []
+                      : locationProvider.pincodeList.map((pincode) {
+                          return DropdownMenuItem<String>(
+                            value: pincode.key,
+                            child: Text(
+                              pincode.value,
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s12,
+                                0.27,
+                                ColorManager.textColor,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                  onChanged: (selectedDistrictId == null || isLoadingPincodes)
+                      ? null
+                      : (String? newValue) {
+                          setState(() {
+                            selectedPincodeId = newValue;
+                          });
+                        },
+                  underline: Container(),
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down,
+                    color: ColorManager.kPrimaryColor,
+                  ),
+                ),
         ),
       ],
     );
@@ -352,12 +539,26 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
                     orElse: () => const MapEntry("unknown", "Unknown District"),
                   )
                   .value;
-                  
+
+              String pincodeName = locationProvider.pincodeList
+                  .firstWhere(
+                    (pincode) => pincode.key == selectedPincodeId,
+                    orElse: () => const MapEntry("unknown", "Unknown Pincode"),
+                  )
+                  .value;
+
               debugPrint("Preparing API call with data:");
-              debugPrint("Phone: ${phoneNumberController.text.replaceAll("-", "")}");
-              debugPrint("Name: ${firstNameTextController.text} ${lastNameTextController.text}");
+              debugPrint(
+                  "Phone: ${phoneNumberController.text.replaceAll("-", "")}");
+              debugPrint(
+                  "Name: ${firstNameTextController.text} ${lastNameTextController.text}");
               debugPrint("Email: ${emailTextController.text}");
-              debugPrint("State: $stateName, District: $districtName");
+              debugPrint(
+                  "State: $stateName, District: $districtName, Pincode: $pincodeName");
+              debugPrint(
+                  "Selected IDs - State: $selectedStateId, District: $selectedDistrictId, Pincode: $selectedPincodeId");
+              debugPrint(
+                  "Available pincodes count: ${locationProvider.pincodeList.length}");
 
               final response = await CustomerProvider().addCustomer(
                 accessToken ?? "",
@@ -366,34 +567,35 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
                 "${firstNameTextController.text} ${lastNameTextController.text}",
                 emailTextController.text,
                 addressTextController.text,
-                pincodeTextController.text,
+                pincodeName, // Use selected pincode name instead of text field
                 districtName, // Note: API expects district in city field
                 stateName,
                 countryTextController.text,
                 context,
               );
-              
+
               debugPrint("API response received: $response");
-              
+
               // Close loading dialog
               Navigator.pop(context);
-              
+
               if (response["status"] == "success") {
-                debugPrint("Customer added successfully: ${response["message"]}");
+                debugPrint(
+                    "Customer added successfully: ${response["message"]}");
                 showScaffold(
-                  context: context, 
-                  message: response["message"] ?? "Customer added successfully"
-                );
+                    context: context,
+                    message:
+                        response["message"] ?? "Customer added successfully");
                 _clearFields();
               } else {
                 // Handle error case
                 String errorMessage = "";
-                
+
                 if (response.containsKey("errors")) {
                   // Extract error messages from API response
                   Map<String, dynamic> errors = response["errors"];
                   List<String> errorMessages = [];
-                  
+
                   errors.forEach((field, messages) {
                     if (messages is List) {
                       for (var message in messages) {
@@ -403,34 +605,28 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
                       errorMessages.add("$field: $messages");
                     }
                   });
-                  
+
                   errorMessage = errorMessages.join("\n");
                   debugPrint("Validation errors: $errorMessage");
                 } else {
-                  errorMessage = response["message"] ?? "Failed to add customer";
+                  errorMessage =
+                      response["message"] ?? "Failed to add customer";
                   debugPrint("Error message: $errorMessage");
                 }
-                
+
                 // Show error to user
-                showScaffoldError(
-                  context: context,
-                  message: errorMessage
-                );
+                showScaffoldError(context: context, message: errorMessage);
               }
             } catch (error) {
               debugPrint("Exception occurred during API call: $error");
               Navigator.pop(context); // Close loading dialog
-              showScaffoldError(
-                context: context, 
-                message: 'Error: $error'
-              );
+              showScaffoldError(context: context, message: 'Error: $error');
             }
           } else {
             debugPrint("Form validation failed");
             showScaffoldError(
-              context: context,
-              message: "Please fill all required fields correctly"
-            );
+                context: context,
+                message: "Please fill all required fields correctly");
           }
         },
         height: 50,
@@ -444,7 +640,6 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
     if (mounted) {
       setState(() {
         emailTextController.clear();
-        pincodeTextController.clear();
         phoneNumberController.clear();
         lastNameTextController.clear();
         firstNameTextController.clear();
@@ -452,8 +647,12 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
         countryTextController.clear();
         selectedDistrictId = null;
         selectedStateId = null;
-        districtDropdownKey = GlobalKey();
-        stateDropdownKey = GlobalKey();
+        selectedPincodeId = null;
+        isLoadingDistricts = false;
+        isLoadingPincodes = false;
+        districtDropdownKey = UniqueKey();
+        stateDropdownKey = UniqueKey();
+        pincodeDropdownKey = UniqueKey();
       });
     }
   }

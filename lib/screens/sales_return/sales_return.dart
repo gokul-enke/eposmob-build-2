@@ -172,9 +172,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         accessToken: accessToken ?? '',
         orderNumber: orderNumberController.text,
         customerId: selectedCustomerID,
-        date: selectedDate != null
-            ? DateFormat('yyyy-MM-dd').format(selectedDate!)
-            : '',
+        date: selectedDate != null ? DateHelper.formatDate(selectedDate!) : '',
         page: page,
       );
 
@@ -333,253 +331,259 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   const SizedBox(
                     height: 15,
                   ),
-                  SizedBox(
-                    height: 100,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Order Number",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              buildColumnWidgetForTextFields(
-                                height: 50,
-                                width: 120,
-                                onchanged: (value) {},
-                                controller: orderNumberController,
-                                size: size,
-                                hintText: 'Order Number',
-                              ),
-                            ],
-                          ),
-                        ),
+                  // Search and filters section commented out
+                  // SizedBox(
+                  //   height: 100,
+                  //   child: ListView(
+                  //     scrollDirection: Axis.horizontal,
+                  //     physics: const BouncingScrollPhysics(),
+                  //     children: [
+                  //       Padding(
+                  //         padding: const EdgeInsets.only(left: 10.0),
+                  //         child: Column(
+                  //           crossAxisAlignment: CrossAxisAlignment.start,
+                  //           children: [
+                  //             Padding(
+                  //               padding: const EdgeInsets.all(8.0),
+                  //               child: Text(
+                  //                 "Order Number",
+                  //                 style: buildCustomStyle(
+                  //                   FontWeightManager.regular,
+                  //                   FontSize.s14,
+                  //                   0.27,
+                  //                   Colors.black.withOpacity(0.6),
+                  //                 ),
+                  //               ),
+                  //             ),
+                  //             buildColumnWidgetForTextFields(
+                  //               height: 50,
+                  //               width: 120,
+                  //               onchanged: (value) {},
+                  //               controller: orderNumberController,
+                  //               size: size,
+                  //               hintText: 'Order Number',
+                  //             ),
+                  //           ],
+                  //         ),
+                  //       ),
+                  //       // Date
+                  //       Padding(
+                  //         padding: const EdgeInsets.only(left: 10.0),
+                  //         child: Column(
+                  //           crossAxisAlignment: CrossAxisAlignment.start,
+                  //           children: [
+                  //             Padding(
+                  //               padding: const EdgeInsets.all(8.0),
+                  //               child: Text(
+                  //                 "Date",
+                  //                 style: buildCustomStyle(
+                  //                   FontWeightManager.regular,
+                  //                   FontSize.s14,
+                  //                   0.27,
+                  //                   Colors.black.withOpacity(0.6),
+                  //                 ),
+                  //               ),
+                  //             ),
+                  //             BuildBoxShadowContainer(
+                  //               circleRadius: 7,
+                  //               height: 50,
+                  //               width: 150,
+                  //               child: Center(
+                  //                 child: CalendarPickerTableCell(
+                  //                   onDateSelected: (DateTime date) {
+                  //                     selectedDate = date;
+                  //                   },
+                  //                 ),
+                  //               ),
+                  //             ),
+                  //           ],
+                  //         ),
+                  //       ),
+                  //       SizedBox(
+                  //         width: 200,
+                  //         child: Padding(
+                  //           padding: const EdgeInsets.only(left: 10.0, top: 35),
+                  //           child: ProductAutocomplete(
+                  //             autocompleteProductKey: _autocompleteProductKey,
+                  //             size: size,
+                  //             onSelected: (GetProduct selectedProduct,
+                  //                 Stock? selectedStock) {},
+                  //             productList: productProvider.productList!,
+                  //           ),
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                  // SizedBox(
+                  //   height: 90,
+                  //   child: ListView(
+                  //     scrollDirection: Axis.horizontal,
+                  //     physics: const BouncingScrollPhysics(),
+                  //     children: [
+                  //       Padding(
+                  //         padding: const EdgeInsets.only(left: 15.0),
+                  //         child: SizedBox(
+                  //           height: size.height * .07,
+                  //           width: 215,
+                  //           child: _buildMobileNumberInput(size: size),
+                  //         ),
+                  //       ),
+                  //       Padding(
+                  //         padding: const EdgeInsets.only(left: 10.0, top: 25),
+                  //         child: Column(
+                  //           crossAxisAlignment: CrossAxisAlignment.start,
+                  //           mainAxisAlignment: MainAxisAlignment.start,
+                  //           children: [
+                  //             CustomRoundButton(
+                  //               title: "Search",
+                  //               fct: () {
+                  //                 searchOrders(1);
+                  //               },
+                  //               height: 45,
+                  //               width: size.width * 0.09,
+                  //               fontSize: FontSize.s12,
+                  //             ),
+                  //           ],
+                  //         ),
+                  //       ),
+                  //       Padding(
+                  //         padding: const EdgeInsets.only(left: 10.0, top: 25),
+                  //         child: Column(
+                  //           children: [
+                  //             CustomRoundButton(
+                  //               title: "Reset",
+                  //               boxColor: Colors.white,
+                  //               textColor: ColorManager.kPrimaryColor,
+                  //               fct: resetSearch,
+                  //               height: 45,
+                  //               width: size.width * 0.09,
+                  //               fontSize: FontSize.s12,
+                  //             ),
+                  //           ],
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  // Order details displayed as simple text instead of cards
+                  Consumer<SalesProvider>(
+                    builder: (context, orderProvider, child) {
+                      List<ListOrderModelData> orders = orderProvider.orders;
 
-                        // Date
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "Date",
+                      if (isOrderSelected && orders.isNotEmpty) {
+                        try {
+                          // Find the selected order
+                          final order = orders.firstWhere(
+                            (order) =>
+                                order.orderNumber.toString() ==
+                                selectedOrderNumber,
+                            orElse: () => orders.firstWhere(
+                              (order) => order.id.toString() == selectedOrderId,
+                              orElse: () => ListOrderModelData(
+                                id: int.tryParse(selectedOrderId ?? "0"),
+                                orderNumber: selectedOrderNumber,
+                                orderDate: DateTime.now(),
+                                customerName: "Order #$selectedOrderNumber",
+                              ),
+                            ),
+                          );
+
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Order Number: ${order.orderNumber}',
                                   style: buildCustomStyle(
                                     FontWeightManager.regular,
                                     FontSize.s14,
+                                    0.25,
+                                    ColorManager.textColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Date: ${DateHelper.formatDate(order.orderDate ?? DateTime.now())}',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s14,
+                                    0.25,
+                                    Colors.grey.shade600,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Customer: ${order.customerName ?? "N/A"}',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s14,
+                                    0.25,
+                                    Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        } catch (e) {
+                          debugPrint('Error displaying selected order: $e');
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Order Number: $selectedOrderNumber',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s16,
                                     0.27,
-                                    Colors.black.withOpacity(0.6),
+                                    ColorManager.textColor,
                                   ),
                                 ),
-                              ),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                height: 50,
-                                width: 150,
-                                child: Center(
-                                  child: CalendarPickerTableCell(
-                                    onDateSelected: (DateTime date) {
-                                      selectedDate = date;
-                                    },
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Date: ${DateHelper.formatDate(DateTime.now())}',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s16,
+                                    0.27,
+                                    ColorManager.textColor,
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(
-                          width: 200,
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 10.0, top: 35),
-                            child: ProductAutocomplete(
-                              autocompleteProductKey: _autocompleteProductKey,
-                              // autoCompletefocusNode: FocusNode(),
-                              size: size,
-                              onSelected: (GetProduct selectedProduct,
-                                  Stock? selectedStock) {},
-                              productList: productProvider.productList!,
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Customer: Order #$selectedOrderNumber',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s16,
+                                    0.27,
+                                    ColorManager.textColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      } else {
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            'No order selected',
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s16,
+                              0.27,
+                              Colors.grey,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(
-                    height: 90,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 15.0),
-                          child: SizedBox(
-                            height: size.height * .07,
-                            width: 215,
-                            child: _buildMobileNumberInput(size: size),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10.0, top: 25),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              CustomRoundButton(
-                                title: "Search",
-                                fct: () {
-                                  searchOrders(1);
-                                },
-                                height: 45,
-                                width: size.width * 0.09,
-                                fontSize: FontSize.s12,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10.0, top: 25),
-                          child: Column(
-                            children: [
-                              CustomRoundButton(
-                                title: "Reset",
-                                boxColor: Colors.white,
-                                textColor: ColorManager.kPrimaryColor,
-                                fct: resetSearch,
-                                height: 45,
-                                width: size.width * 0.09,
-                                fontSize: FontSize.s12,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Orders Found",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s20, 0.30, ColorManager.textColor),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  SizedBox(
-                    height: 160, // Set a height for the card list
-                    child: Center(
-                      child: Consumer<SalesProvider>(
-                          builder: (context, orderProvider, child) {
-                        List<ListOrderModelData> orders = orderProvider.orders;
-                        return ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: isOrderSelected
-                              ? 1
-                              : orders
-                                  .length, // Show one or all based on selection
-                          itemBuilder: (context, index) {
-                            if (isOrderSelected) {
-                              // Display only the selected order's title
-                              try {
-                                // Try to find the order by order number instead of ID
-                                final order = orders.firstWhere(
-                                  (order) =>
-                                      order.orderNumber.toString() ==
-                                      selectedOrderNumber,
-                                  orElse: () {
-                                    // If order not found by order number, try by ID
-                                    try {
-                                      return orders.firstWhere(
-                                        (order) =>
-                                            order.id.toString() ==
-                                            selectedOrderId,
-                                        orElse: () {
-                                          // If still not found, create a placeholder
-                                          debugPrint(
-                                              'Order not found in loaded orders, creating placeholder');
-                                          return ListOrderModelData(
-                                            id: int.tryParse(
-                                                selectedOrderId ?? "0"),
-                                            orderNumber: selectedOrderNumber,
-                                            orderDate: DateTime.now(),
-                                            customerName:
-                                                "Order #$selectedOrderNumber",
-                                          );
-                                        },
-                                      );
-                                    } catch (e) {
-                                      debugPrint(
-                                          'Error finding order by ID: $e');
-                                      return ListOrderModelData(
-                                        id: int.tryParse(
-                                            selectedOrderId ?? "0"),
-                                        orderNumber: selectedOrderNumber,
-                                        orderDate: DateTime.now(),
-                                        customerName:
-                                            "Order #$selectedOrderNumber",
-                                      );
-                                    }
-                                  },
-                                );
-
-                                debugPrint(
-                                    'Displaying order card: ${order.orderNumber}');
-
-                                return _buildOrderCard(
-                                  context,
-                                  orderId: order.id.toString(),
-                                  orderNumber: order.orderNumber.toString(),
-                                  date: order.orderDate.toString(),
-                                  customer:
-                                      order.customerName?.toString() ?? "N/A",
-                                );
-                              } catch (e) {
-                                debugPrint(
-                                    'Error displaying selected order: $e');
-                                // Fallback to show a placeholder card
-                                return _buildOrderCard(
-                                  context,
-                                  orderId: selectedOrderId ?? "0",
-                                  orderNumber: selectedOrderNumber ?? "0",
-                                  date: DateTime.now().toIso8601String(),
-                                  customer: "Order #$selectedOrderNumber",
-                                );
-                              }
-                            } else {
-                              final order = orders[index];
-                              return _buildOrderCard(
-                                context,
-                                orderId: order.id.toString(),
-                                orderNumber: order.orderNumber.toString(),
-                                date: order.orderDate.toString(),
-                                customer:
-                                    order.customerName?.toString() ?? "N/A",
-                              );
-                            }
-                          },
                         );
-                      }),
-                    ),
+                      }
+                    },
                   ),
                   // PaginationControl(
                   //   currentPage:
@@ -627,242 +631,244 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     );
   }
 
-  Widget _buildOrderCard(
-    BuildContext context, {
-    required String orderId,
-    required String orderNumber,
-    required String date,
-    required String customer,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedOrderId = orderId; // Set the selected order ID
-          selectedOrderNumber = orderNumber;
-          isOrderSelected = true; // Update the selection state
-        });
-        getOrderDetails(orderNumber);
-        // debugPrint('Card tapped for Order ID: $orderId');
-      },
-      child: Card(
-        elevation: 1,
-        margin: const EdgeInsets.all(8),
-        child: BuildBoxShadowContainer(
-          circleRadius: 7,
-          width: 250,
-          padding: const EdgeInsets.all(16),
-          color: Colors.white,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Order Number: $orderNumber',
-                style: const TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Date: ${DateHelper.formatDate(DateTime.parse(date))}',
-                style: const TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Customer: $customer',
-                style: const TextStyle(fontSize: 14),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // _buildOrderCard method commented out since it's no longer used
+  // Widget _buildOrderCard(
+  //   BuildContext context, {
+  //   required String orderId,
+  //   required String orderNumber,
+  //   required String date,
+  //   required String customer,
+  // }) {
+  //   return GestureDetector(
+  //     onTap: () {
+  //       setState(() {
+  //         selectedOrderId = orderId; // Set the selected order ID
+  //         selectedOrderNumber = orderNumber;
+  //         isOrderSelected = true; // Update the selection state
+  //       });
+  //       getOrderDetails(orderNumber);
+  //       // debugPrint('Card tapped for Order ID: $orderId');
+  //     },
+  //     child: Card(
+  //       elevation: 1,
+  //       margin: const EdgeInsets.all(8),
+  //       child: BuildBoxShadowContainer(
+  //         circleRadius: 7,
+  //         width: 250,
+  //         padding: const EdgeInsets.all(16),
+  //         color: Colors.white,
+  //         child: Column(
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           mainAxisSize: MainAxisSize.min,
+  //           children: [
+  //             Text(
+  //               'Order Number: $orderNumber',
+  //               style: const TextStyle(fontSize: 14),
+  //             ),
+  //             const SizedBox(height: 8),
+  //             Text(
+  //               'Date: ${DateHelper.formatDate(DateTime.parse(date))}',
+  //               style: const TextStyle(fontSize: 14),
+  //             ),
+  //             const SizedBox(height: 8),
+  //             Text(
+  //               'Customer: $customer',
+  //               style: const TextStyle(fontSize: 14),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
-  Widget _buildMobileNumberInput({
-    required Size size,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: BuildBoxShadowContainer(
-            circleRadius: 7,
-            alignment: Alignment.centerLeft,
-            margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-            padding: const EdgeInsets.only(left: 15),
-            height: size.height * .07,
-            width: size.width / 3,
-            child: Autocomplete<CustomerListModelData>(
-              key: _autocompletePhoneKey, // Set the key here
-              optionsBuilder: (mobileNumberTextController) async {
-                // debugPrint(mobileNumberTextController.text);
-                if (mobileNumberTextController.text.isEmpty) {
-                  setState(() {
-                    isCustomerFound = false; // Reset validity
-                  });
-                  return const Iterable<CustomerListModelData>.empty();
-                }
-
-                String? accessToken =
-                    Provider.of<AuthModel>(context, listen: false).token;
-                // debugPrint("accessToken From AuthModel $accessToken");
-                // debugPrint(mobileNumberTextController.text);
-
-                try {
-                  final response = await CustomerProvider().findCustomerByPhone(
-                      accessToken ?? "",
-                      mobileNumberTextController.text,
-                      context);
-
-                  if (response["status"] == "success") {
-                    CustomerListModel customerListModel =
-                        CustomerListModel.fromJson(response);
-                    List<CustomerListModelData>? filteredCustomerList =
-                        customerListModel.data;
-
-                    if (mobileNumberTextController.text.length == 10 &&
-                        filteredCustomerList!.length == 1) {
-                      setState(() {
-                        isCustomerFound = true;
-                      });
-                    } else {
-                      setState(() {
-                        isCustomerFound = false;
-                      });
-                    }
-
-                    return filteredCustomerList!.isNotEmpty
-                        ? filteredCustomerList
-                        : const Iterable<CustomerListModelData>.empty();
-                  } else {
-                    // debugPrint('Error in response: ${response["message"]}');
-                  }
-                } catch (error, stackTrace) {
-                  debugPrint('Exception caught: $error');
-                  debugPrint(
-                      'Stack Trace for findCustomerByPhone: $stackTrace');
-                }
-                setState(() {
-                  isCustomerFound = false;
-                });
-                return const Iterable<
-                    CustomerListModelData>.empty(); // Return empty if no customers found
-              },
-              displayStringForOption: (CustomerListModelData customer) =>
-                  "${customer.name} ${customer.phone}",
-              onSelected: (CustomerListModelData selection) {
-                String? accessToken =
-                    Provider.of<AuthModel>(context, listen: false).token;
-                // debugPrint("accessToken From AuthModel $accessToken");
-                Provider.of<CartProvider>(context, listen: false)
-                    .fetchCartDataFromApi(
-                        customerId: selection.id ?? 0,
-                        accessToken: accessToken ?? '');
-                setState(() {
-                  mobileNumberText = "";
-                  selectedCustomerID = selection.id!;
-                  selectedCustomerPhone = selection.phone;
-                  selectedCustomer = selection;
-                });
-              },
-              fieldViewBuilder: (BuildContext context,
-                  TextEditingController mobileNumberTextController,
-                  FocusNode focusNode,
-                  VoidCallback onFieldSubmitted) {
-                return TextField(
-                  controller: mobileNumberTextController,
-                  focusNode: focusNode,
-                  decoration: InputDecoration(
-                    hintText: 'Enter mobile number',
-                    hintStyle: buildCustomStyle(
-                      FontWeight.w500,
-                      12,
-                      0.27,
-                      Colors.grey.withOpacity(.5),
-                    ),
-                    border: InputBorder.none,
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      mobileNumberText = value;
-                      selectedCustomerID = null;
-                      selectedCustomerPhone = null;
-                      selectedCustomer = null;
-                    });
-                  },
-                  style: buildCustomStyle(
-                    FontWeight.w500,
-                    12,
-                    0.27,
-                    Colors.black.withOpacity(.5),
-                  ),
-                );
-              },
-              optionsViewBuilder: (BuildContext context,
-                  AutocompleteOnSelected<CustomerListModelData> onSelected,
-                  Iterable<CustomerListModelData> options) {
-                return Align(
-                  alignment: Alignment.topLeft,
-                  child: Material(
-                    elevation: 4,
-                    child: Container(
-                      width: MediaQuery.of(context).size.width / 3,
-                      color: Colors.white,
-                      constraints: const BoxConstraints(maxHeight: 200),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(8.0),
-                        shrinkWrap: true,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: options.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          final CustomerListModelData option =
-                              options.elementAt(index);
-                          return MouseRegion(
-                            onEnter: (_) {
-                              setState(() {
-                                hoverMap[index] = true;
-                              });
-                            },
-                            onExit: (_) {
-                              setState(() {
-                                hoverMap[index] = false;
-                              });
-                            },
-                            child: GestureDetector(
-                              onTap: () {
-                                onSelected(option);
-                              },
-                              child: Container(
-                                color: hoverMap[index] == true
-                                    ? Colors.grey[200]
-                                    : Colors.white,
-                                child: ListTile(
-                                  title: Text(
-                                    "${option.name} ${option.phone}",
-                                    style: buildCustomStyle(
-                                      FontWeight.w500,
-                                      12,
-                                      0.27,
-                                      Colors.black.withOpacity(.5),
-                                    ),
-                                  ),
-                                  hoverColor: Colors.grey[200],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  // _buildMobileNumberInput method commented out since search functionality is removed
+  // Widget _buildMobileNumberInput({
+  //   required Size size,
+  // }) {
+  //   return Row(
+  //     mainAxisAlignment: MainAxisAlignment.start,
+  //     crossAxisAlignment: CrossAxisAlignment.center,
+  //     children: [
+  //       Expanded(
+  //         child: BuildBoxShadowContainer(
+  //           circleRadius: 7,
+  //           alignment: Alignment.centerLeft,
+  //           margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+  //           padding: const EdgeInsets.only(left: 15),
+  //           height: size.height * .07,
+  //           width: size.width / 3,
+  //           child: Autocomplete<CustomerListModelData>(
+  //             key: _autocompletePhoneKey, // Set the key here
+  //             optionsBuilder: (mobileNumberTextController) async {
+  //               // debugPrint(mobileNumberTextController.text);
+  //               if (mobileNumberTextController.text.isEmpty) {
+  //                 setState(() {
+  //                   isCustomerFound = false; // Reset validity
+  //                 });
+  //                 return const Iterable<CustomerListModelData>.empty();
+  //               }
+  //
+  //               String? accessToken =
+  //                   Provider.of<AuthModel>(context, listen: false).token;
+  //               // debugPrint("accessToken From AuthModel $accessToken");
+  //               // debugPrint(mobileNumberTextController.text);
+  //
+  //               try {
+  //                 final response = await CustomerProvider().findCustomerByPhone(
+  //                     accessToken ?? "",
+  //                     mobileNumberTextController.text,
+  //                     context);
+  //
+  //                 if (response["status"] == "success") {
+  //                   CustomerListModel customerListModel =
+  //                       CustomerListModel.fromJson(response);
+  //                   List<CustomerListModelData>? filteredCustomerList =
+  //                       customerListModel.data;
+  //
+  //                   if (mobileNumberTextController.text.length == 10 &&
+  //                       filteredCustomerList!.length == 1) {
+  //                     setState(() {
+  //                       isCustomerFound = true;
+  //                     });
+  //                   } else {
+  //                     setState(() {
+  //                       isCustomerFound = false;
+  //                     });
+  //                   }
+  //
+  //                   return filteredCustomerList!.isNotEmpty
+  //                       ? filteredCustomerList
+  //                       : const Iterable<CustomerListModelData>.empty();
+  //                 } else {
+  //                   // debugPrint('Error in response: ${response["message"]}');
+  //                 }
+  //               } catch (error, stackTrace) {
+  //                 debugPrint('Exception caught: $error');
+  //                 debugPrint(
+  //                     'Stack Trace for findCustomerByPhone: $stackTrace');
+  //               }
+  //               setState(() {
+  //                 isCustomerFound = false;
+  //               });
+  //               return const Iterable<
+  //                   CustomerListModelData>.empty(); // Return empty if no customers found
+  //             },
+  //             displayStringForOption: (CustomerListModelData customer) =>
+  //                 "${customer.name} ${customer.phone}",
+  //             onSelected: (CustomerListModelData selection) {
+  //               String? accessToken =
+  //                   Provider.of<AuthModel>(context, listen: false).token;
+  //               // debugPrint("accessToken From AuthModel $accessToken");
+  //               Provider.of<CartProvider>(context, listen: false)
+  //                   .fetchCartDataFromApi(
+  //                       customerId: selection.id ?? 0,
+  //                       accessToken: accessToken ?? '');
+  //               setState(() {
+  //                 mobileNumberText = "";
+  //                 selectedCustomerID = selection.id!;
+  //                 selectedCustomerPhone = selection.phone;
+  //                 selectedCustomer = selection;
+  //               });
+  //             },
+  //             fieldViewBuilder: (BuildContext context,
+  //                 TextEditingController mobileNumberTextController,
+  //                 FocusNode focusNode,
+  //                 VoidCallback onFieldSubmitted) {
+  //               return TextField(
+  //                 controller: mobileNumberTextController,
+  //                 focusNode: focusNode,
+  //                 decoration: InputDecoration(
+  //                   hintText: 'Enter mobile number',
+  //                   hintStyle: buildCustomStyle(
+  //                     FontWeight.w500,
+  //                     12,
+  //                     0.27,
+  //                     Colors.grey.withOpacity(.5),
+  //                   ),
+  //                   border: InputBorder.none,
+  //                 ),
+  //                 onChanged: (value) {
+  //                   setState(() {
+  //                     mobileNumberText = value;
+  //                     selectedCustomerID = null;
+  //                     selectedCustomerPhone = null;
+  //                     selectedCustomer = null;
+  //                   });
+  //                 },
+  //                 style: buildCustomStyle(
+  //                   FontWeight.w500,
+  //                   12,
+  //                   0.27,
+  //                   Colors.black.withOpacity(.5),
+  //                 ),
+  //               );
+  //             },
+  //             optionsViewBuilder: (BuildContext context,
+  //                 AutocompleteOnSelected<CustomerListModelData> onSelected,
+  //                 Iterable<CustomerListModelData> options) {
+  //               return Align(
+  //                 alignment: Alignment.topLeft,
+  //                 child: Material(
+  //                   elevation: 4,
+  //                   child: Container(
+  //                     width: MediaQuery.of(context).size.width / 3,
+  //                     color: Colors.white,
+  //                     constraints: const BoxConstraints(maxHeight: 200),
+  //                     child: ListView.builder(
+  //                       padding: const EdgeInsets.all(8.0),
+  //                       shrinkWrap: true,
+  //                       physics: const BouncingScrollPhysics(),
+  //                       itemCount: options.length,
+  //                       itemBuilder: (BuildContext context, int index) {
+  //                         final CustomerListModelData option =
+  //                             options.elementAt(index);
+  //                         return MouseRegion(
+  //                           onEnter: (_) {
+  //                             setState(() {
+  //                               hoverMap[index] = true;
+  //                             });
+  //                           },
+  //                           onExit: (_) {
+  //                             setState(() {
+  //                               hoverMap[index] = false;
+  //                             });
+  //                           },
+  //                           child: GestureDetector(
+  //                             onTap: () {
+  //                               onSelected(option);
+  //                             },
+  //                             child: Container(
+  //                               color: hoverMap[index] == true
+  //                                   ? Colors.grey[200]
+  //                                   : Colors.white,
+  //                               child: ListTile(
+  //                                 title: Text(
+  //                                   "${option.name} ${option.phone}",
+  //                                   style: buildCustomStyle(
+  //                                     FontWeight.w500,
+  //                                     12,
+  //                                     0.27,
+  //                                     Colors.black.withOpacity(.5),
+  //                                   ),
+  //                                 ),
+  //                                 hoverColor: Colors.grey[200],
+  //                               ),
+  //                             ),
+  //                           ),
+  //                         );
+  //                       },
+  //                     ),
+  //                   ),
+  //                 ),
+  //               );
+  //             },
+  //           ),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 
   void _showReturnDialog(
     BuildContext context, {
