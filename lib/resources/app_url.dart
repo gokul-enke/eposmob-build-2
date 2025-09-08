@@ -128,6 +128,7 @@ class APPUrl {
   static String detailsOfInvoice = '$baseURL/api/v1/invoice/invoice-details';
   static String listStates = '$baseURL/api/v1/location/get-states';
   static String listDistricts = '$baseURL/api/v1/location/get-district';
+  static String listPincodes = '$baseURL/api/v1/location/list-pincodes';
 
   static String customerAccountBook =
       '$baseURL/api/v1/reports/customer-account-book';

@@ -65,6 +65,14 @@ class CustomerListModelData {
   // Financial fields
   final double? balance;
 
+  // Address fields
+  final String? address;
+  final String? pincode;
+  final String? city;
+  final String? state;
+  final String? country;
+  final String? district;
+
   // Related data
   final List<CustomerTransaction>? transactions;
   final List<CustomerOrder>? orders;
@@ -93,6 +101,12 @@ class CustomerListModelData {
     this.minRedeemablePoints,
     this.pricePerPoint,
     this.balance,
+    this.address,
+    this.pincode,
+    this.city,
+    this.state,
+    this.country,
+    this.district,
     this.transactions,
     this.orders,
   });
@@ -128,6 +142,12 @@ class CustomerListModelData {
         minRedeemablePoints: json["min_redeemable_points"],
         pricePerPoint: json["price_per_point"]?.toDouble(),
         balance: json["balance"]?.toDouble(),
+        address: json["address"],
+        pincode: json["pin_code"] ?? json["pincode"],
+        city: json["city"],
+        state: json["state"],
+        country: json["country"],
+        district: json["district"],
         transactions: json["transactions"] == null
             ? []
             : List<CustomerTransaction>.from(json["transactions"]
@@ -162,6 +182,12 @@ class CustomerListModelData {
         "min_redeemable_points": minRedeemablePoints,
         "price_per_point": pricePerPoint,
         "balance": balance,
+        "address": address,
+        "pin_code": pincode,
+        "city": city,
+        "state": state,
+        "country": country,
+        "district": district,
         "transactions": transactions == null
             ? []
             : List<dynamic>.from(transactions!.map((x) => x.toJson())),

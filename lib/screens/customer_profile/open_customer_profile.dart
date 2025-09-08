@@ -4,6 +4,7 @@ import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/screens/customer_profile/widgets/customer_address_view_widget.dart';
 import 'package:pos_machine/screens/customer_profile/widgets/customer_chat_widget.dart';
 import 'package:pos_machine/screens/customer_profile/widgets/customer_information_edit_widget.dart';
 import 'package:pos_machine/screens/customer_profile/widgets/customer_information_view_widget.dart';
@@ -104,6 +105,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
           _buildSidebarButton(1, 'Edit Details', ImageAssets.lock),
           _buildSidebarButton(2, 'Transactions', ImageAssets.transactionIcon),
           _buildSidebarButton(3, 'All Orders', ImageAssets.saleIcon),
+          _buildSidebarButton(6, 'Customer Address', ImageAssets.userIcon),
           _buildSidebarButton(4, 'Loyalty Card', ImageAssets.cardIcon),
           _buildSidebarButton(5, 'Chat', ImageAssets.supportIcon),
         ],
@@ -199,6 +201,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
       CustomerOrdersWidget(size: size, customer: customer),
       CustomerLoyaltyWidget(size: size, customer: customer),
       CustomerChatWidget(size: size, customer: customer),
+      CustomerAddressViewWidget(size: size, customer: customer),
     ];
     return pages[selectedIndex];
   }
