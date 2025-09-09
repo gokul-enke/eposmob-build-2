@@ -147,6 +147,8 @@ class BillingPageState extends State<BillingPage>
   // Add these variables for keyboard navigation in customer list
   int? _highlightedCustomerIndex;
   final FocusNode _customerTextFieldFocus = FocusNode();
+  FocusNode? _autocompleteFocusNode; // Store reference to Autocomplete's focusNode
+  TextEditingController? _autocompleteController; // Store reference to Autocomplete's controller
   final ScrollController _customerScrollController = ScrollController();
   List<CustomerListModelData> _currentCustomerOptions = [];
   final double _customerItemHeight = 48.0; // Height for customer list items
@@ -2451,6 +2453,10 @@ class BillingPageState extends State<BillingPage>
                           debugPrint(
                               "🎨 fieldViewBuilder called - controller text: '${autoCompleteController.text}'");
 
+                          // Store references to the Autocomplete's focusNode and controller for use in clear button
+                          _autocompleteFocusNode = focusNode;
+                          _autocompleteController = autoCompleteController;
+
                           // **FIX: Sync the autocomplete controller with our state**
                           if (mobileNumberText?.isNotEmpty == true &&
                               autoCompleteController.text != mobileNumberText) {
@@ -2849,7 +2855,6 @@ class BillingPageState extends State<BillingPage>
                           .clearSelectedCustomer(),
 
                       setState(() {
-                        _autocompletePhoneKey = GlobalKey();
                         mobileNumberTextController.clear();
                         mobileNumberText = "";
                         selectedCustomerID = null;
@@ -2862,6 +2867,15 @@ class BillingPageState extends State<BillingPage>
                             "  - Reset manual selection (clear button pressed)");
                       }),
 
+                      // Clear the autocomplete controller as well
+                      // We need to do this after setState to ensure the fieldViewBuilder has access to the controller
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (_autocompleteController != null) {
+                          _autocompleteController!.clear();
+                          debugPrint("  - Cleared autocomplete controller");
+                        }
+                      }),
+
                       debugPrint("  - After clear:"),
                       debugPrint(
                           "    - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'"),
@@ -2872,7 +2886,17 @@ class BillingPageState extends State<BillingPage>
                       showScaffold(
                         context: context,
                         message: 'Customer Details Cleared Successfully',
-                      )
+                      ),
+
+                      // Focus on customer autocomplete field after clearing
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (_autocompleteFocusNode != null) {
+                          FocusScope.of(context).requestFocus(_autocompleteFocusNode!);
+                        } else {
+                          // Fallback to customer text field focus if autocomplete focus node is not available
+                          FocusScope.of(context).requestFocus(_customerTextFieldFocus);
+                        }
+                      })
                     },
                     child: Center(
                       child: WebsafeSvg.asset(
@@ -4677,7 +4701,6 @@ class BillingPageState extends State<BillingPage>
         "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
 
     setState(() {
-      _autocompletePhoneKey = GlobalKey();
       _autocompleteProductKey = GlobalKey();
       isCustomerFound = false;
 

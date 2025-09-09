@@ -1,3 +1,22 @@
 git tag v0.1.0-dev.148
 git push build v0.1.0-dev.148
 git push origin v0.1.0-dev.143
+
+HYPERSOUK_W9DNqq4uR9Zjpoe4Rw4WQhsV2u7Ay9Zi
+
+https://eposdemo.hypersouq.in
+
+HYPERSOUK_kPqBy55O63n5cdlfwXRLDN6VFBqJF2jW
+
+attender@hypersouq.in
+123456
+
+kitchenmaster@hypersouq.in
+123456
+
+salesexecutive@hypersouq.in
+123456
+
+SOUQPOINT_S9z2X9Vef2bwrlvBS1befpCVJPxkmFqI
+salesexecutive@souqpoint.in
+123456
