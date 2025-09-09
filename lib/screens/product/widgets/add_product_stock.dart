@@ -1934,7 +1934,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildSummaryCard(
-                  'Total Payable',
+                  'Total Due Amount',
                   '₹${totalPayable.toStringAsFixed(2)}',
                   Icons.payment_outlined,
                   totalPayable >= 0

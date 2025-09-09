@@ -7,6 +7,7 @@ import '../providers/invoice_provider.dart';
 import '../providers/purchase_provider.dart';
 import '../providers/stock_provider.dart';
 import '../providers/auth_model.dart';
+import '../providers/supplier_provider.dart';
 
 /// Comprehensive sync provider that handles synchronization of all data
 /// across the application. Follows the Provider Pattern preference for
@@ -71,7 +72,11 @@ class SyncProvider extends ChangeNotifier {
       _updateProgress(0.75, "Syncing purchase data...");
       await _syncPurchaseData(context, accessToken);
 
-      // Step 7: Complete (100%)
+      // Step 7: Sync Suppliers (95%)
+      _updateProgress(0.95, "Syncing suppliers...");
+      await _syncSuppliers(context, accessToken);
+
+      // Step 8: Complete (100%)
       _updateProgress(1.0, "Sync completed successfully!");
       _lastSyncTime = DateTime.now();
       
@@ -205,6 +210,19 @@ class SyncProvider extends ChangeNotifier {
     }
   }
 
+  /// Sync suppliers from API
+  Future<void> _syncSuppliers(BuildContext context, String accessToken) async {
+    try {
+      debugPrint("🚚 Syncing suppliers...");
+      final supplierProvider = Provider.of<SupplierProvider>(context, listen: false);
+      await supplierProvider.fetchSuppliers(accessToken: accessToken);
+      debugPrint("✅ Suppliers synced successfully");
+    } catch (e) {
+      debugPrint("❌ Failed to sync suppliers: $e");
+      throw Exception('Failed to sync suppliers: $e');
+    }
+  }
+
   /// Start sync process
   void _startSync() {
     _isSyncing = true;
@@ -270,12 +288,16 @@ class SyncProvider extends ChangeNotifier {
       debugPrint("🔄 Starting stock-only sync after successful stock operations...");
       debugPrint("Access Token: ${accessToken.substring(0, 20)}...");
 
-      // Step 1: Sync Products (50%) - Updates stock quantities in LocalProductProvider
-      _updateProgress(0.2, "Updating product stock quantities...");
+      // Step 1: Sync Suppliers (20%)
+      _updateProgress(0.2, "Syncing supplier data...");
+      await _syncSuppliers(context, accessToken);
+
+      // Step 2: Sync Products (50%) - Updates stock quantities in LocalProductProvider
+      _updateProgress(0.5, "Updating product stock quantities...");
       await _syncProducts(context, accessToken);
 
-      // Step 2: Sync Stock Data (100%) - Updates StockProvider for inventory screens
-      _updateProgress(0.5, "Syncing stock inventory data...");
+      // Step 3: Sync Stock Data (80%) - Updates StockProvider for inventory screens
+      _updateProgress(0.8, "Syncing stock inventory data...");
       await _syncStockData(context, accessToken);
 
       // Complete
