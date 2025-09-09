@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_multiselect_dropdown.dart';
+import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/category_list.dart';
@@ -11,38 +11,28 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
 import 'package:provider/provider.dart';
 
-import '../../components/build_container_box.dart';
-import '../../components/build_round_button.dart';
-import '../../components/build_title.dart';
 import '../../providers/auth_model.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
-import '../../resources/style_manager.dart';
 
-Future<dynamic> showAddSupplierModal(BuildContext context, Size size) {
+Future<dynamic> showAddSupplierModal(BuildContext context, Size size, {bool showCreateAnother = true}) {
   return showDialog(
     context: context,
     barrierDismissible: true,
     builder: (BuildContext context) {
       return Dialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
         ),
-        backgroundColor: Colors.transparent,
+        elevation: 8,
+        backgroundColor: Colors.white,
         child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
+          constraints: BoxConstraints(
+            maxWidth: size.width / 2,
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
           ),
-          padding: const EdgeInsets.all(20),
-          child: const AddSupplierModal(),
+          padding: const EdgeInsets.all(24),
+          child: AddSupplierModal(showCreateAnother: showCreateAnother),
         ),
       );
     },
@@ -50,7 +40,9 @@ Future<dynamic> showAddSupplierModal(BuildContext context, Size size) {
 }
 
 class AddSupplierModal extends StatefulWidget {
-  const AddSupplierModal({Key? key}) : super(key: key);
+  final bool showCreateAnother;
+  
+  const AddSupplierModal({Key? key, this.showCreateAnother = true}) : super(key: key);
 
   @override
   State<AddSupplierModal> createState() => _AddSupplierModalState();
@@ -106,161 +98,155 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     Get.put(SideBarController());
 
-    return SingleChildScrollView(
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 10.0, bottom: 20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Add New Supplier',
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s20, 0.30, ColorManager.textColor),
-                  ),
-                ],
+    return Form(
+      key: _formKey,
+      child: ListView(
+        shrinkWrap: true,
+        physics: const BouncingScrollPhysics(),
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Add New Supplier",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Row 1: Name, Email
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        "Name",
-                        nameTextController,
-                        TextInputType.text,
-                        size,
-                        isRequired: true,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildTextField(
-                        "Email Address",
-                        emailTextController,
-                        TextInputType.emailAddress,
-                        size,
-                        validator: validateEmail,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 15),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.black),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const Text(
+            "Enter supplier details to add them to your system",
+            style: TextStyle(fontSize: 16, color: Colors.black54),
+          ),
+          const SizedBox(height: 16),
+          // Row 1: Name, Email
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Name TextField
+              buildColumnWidgetForTextFields(
+                autofocus: true,
+                isStarRed: true,
+                controller: nameTextController,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'This field is required';
+                  }
+                  return null;
+                },
+                onchanged: (value) {
+                  // Remove validation loop - only validate on submit
+                },
+                hintText: 'Supplier Name',
+                size: size,
+                width: size.width / 4.5,
+              ),
+              // Email TextField
+              buildColumnWidgetForTextFields(
+                autofocus: true,
+                controller: emailTextController,
+                keyboardType: TextInputType.emailAddress,
+                validator: validateEmail,
+                onchanged: (value) {
+                  // Remove validation loop - only validate on submit
+                },
+                hintText: 'Email Address',
+                size: size,
+                width: size.width / 4.5,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
-                // Row 2: Phone, Alt Phone
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        "Phone Number",
-                        phoneNumberController,
-                        TextInputType.number,
-                        size,
-                        inputFormatter: PhoneNumberFormatter(),
-                        validator: validatePhoneNumber,
-                        isRequired: true,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildTextField(
-                        "Alternative Phone",
-                        altPhoneNumberController,
-                        TextInputType.number,
-                        size,
-                        inputFormatter: PhoneNumberFormatter(),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 15),
+          // Row 2: Phone, Alt Phone
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Phone Number TextField
+              buildColumnWidgetForTextFields(
+                autofocus: true,
+                isStarRed: true,
+                controller: phoneNumberController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [PhoneNumberFormatter()],
+                validator: validatePhoneNumber,
+                onchanged: (value) {
+                  // Remove validation loop - only validate on submit
+                },
+                hintText: 'Phone Number',
+                size: size,
+                width: size.width / 4.5,
+              ),
+              // Alternative Phone TextField
+              buildColumnWidgetForTextFields(
+                autofocus: true,
+                controller: altPhoneNumberController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [PhoneNumberFormatter()],
+                onchanged: (value) {
+                  // Remove validation loop - only validate on submit
+                },
+                hintText: 'Alternative Phone',
+                size: size,
+                width: size.width / 4.5,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
-                // Row 3: Address, Balance
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        "Address",
-                        addressTextController,
-                        // hint: 'address',
-                        TextInputType.text,
-                        size,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildTextField(
-                        "Balance",
-                        balanceTextController,
-                        TextInputType.numberWithOptions(decimal: true),
-                        size,
-                        inputFormatter: FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d+\.?\d{0,2}')),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 15),
+          // Row 3: Address, Balance
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Address TextField
+              buildColumnWidgetForTextFields(
+                autofocus: true,
+                controller: addressTextController,
+                onchanged: (value) {
+                  // Remove validation loop - only validate on submit
+                },
+                hintText: 'Address',
+                size: size,
+                width: size.width / 4.5,
+              ),
+              // Balance TextField
+              buildColumnWidgetForTextFields(
+                autofocus: true,
+                controller: balanceTextController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+                ],
+                onchanged: (value) {
+                  // Remove validation loop - only validate on submit
+                },
+                hintText: 'Balance',
+                size: size,
+                width: size.width / 4.5,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
-                // Row 4: Product Categories Dropdown
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildCategoryMultiSelect(context, size),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 15),
+          // Product Categories Section
+          _buildCategoryMultiSelect(context, size),
+          const SizedBox(height: 16),
 
-                // Row 5: Payment Radio Buttons
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
-                      child: Text(
-                        "Payment",
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s16,
-                          0.27,
-                          ColorManager.textColor,
-                        ),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildRadioOption(
-                            "To Pay",
-                            PaymentType.toPay,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildRadioOption(
-                            "To Receive",
-                            PaymentType.toReceive,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 25),
-                _buildActionButtons(size, accessToken),
-                const SizedBox(height: 25),
-              ],
-            ),
-          ],
-        ),
+          // Payment Section
+          _buildPaymentSection(size),
+          const SizedBox(height: 16),
+
+          // Action Buttons
+          _buildActionButtons(size, accessToken),
+        ],
       ),
     );
   }
@@ -269,99 +255,71 @@ Widget _buildCategoryMultiSelect(BuildContext context, Size size) {
   final categoryProvider = Provider.of<CategoryProvider>(context);
   final categories = categoryProvider.category ?? [];
 
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
-      Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Text(
-          "Product Categories",
-          style: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s16,
-            0.27,
-            ColorManager.textColor,
-          ),
+      SizedBox(
+        width: size.width / 2.2,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            BuildMultiSelectDropDownWithSearch<Category>(
+              hintText: 'Select Categories',
+              items: categories,
+              selectedItems: selectedCategories,
+              displayText: (cat) => cat.categoryName ?? "Unknown",
+              onChanged: (selected) {
+                setState(() {
+                  selectedCategories = selected;
+                });
+              },
+            ),
+          ],
         ),
       ),
-      BuildMultiSelectDropDownWithSearch<Category>(
-        hintText: "Select Categories",
-        items: categories,
-        selectedItems: selectedCategories,
-        displayText: (cat) => cat.categoryName ?? "Unknown",
-        onChanged: (selected) {
-          setState(() {
-            selectedCategories = selected;
-          });
-        },
+    ],
+  );
+}
+
+Widget _buildPaymentSection(Size size) {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      SizedBox(
+        width: size.width / 2.2,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Payment Type *",
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.black.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildRadioOption(
+                  "To Pay",
+                  PaymentType.toPay,
+                ),
+                const SizedBox(width: 24),
+                _buildRadioOption(
+                  "To Receive",
+                  PaymentType.toReceive,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     ],
   );
 }
 
 
-  Widget _buildTextField(String title, TextEditingController controller,
-      TextInputType keyboardType, Size size,
-      {FormFieldValidator<String>? validator,
-      TextInputFormatter? inputFormatter,
-      bool isRequired = false,
-      String? hint}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            BuildTextTile(
-              title: title,
-              textStyle: buildCustomStyle(FontWeightManager.regular,
-                  FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
-            ),
-            if (isRequired)
-              Text(
-                ' *',
-                style: buildCustomStyle(
-                    FontWeightManager.regular, FontSize.s14, 0.27, Colors.red),
-              ),
-          ],
-        ),
-        BuildBoxShadowContainer(
-          circleRadius: 7,
-          alignment: Alignment.centerLeft,
-          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          padding: const EdgeInsets.only(left: 15),
-          height: size.height * .07,
-          width: size.width,
-          child: TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            inputFormatters: inputFormatter != null ? [inputFormatter] : null,
-            cursorColor: ColorManager.kPrimaryColor,
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              hintText: hint,
-              hintStyle: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s12,
-                0.27,
-                Colors.grey,
-              ),
-            ),
-            validator: validator ??
-                (isRequired
-                    ? (value) {
-                        if (value == null || value.isEmpty) {
-                          return '$title is required';
-                        }
-                        return null;
-                      }
-                    : null),
-            style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
-                0.27, ColorManager.textColor.withOpacity(.5)),
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildRadioOption(String title, PaymentType value) {
     return Row(
@@ -378,11 +336,9 @@ Widget _buildCategoryMultiSelect(BuildContext context, Size size) {
         ),
         Text(
           title,
-          style: buildCustomStyle(
-            FontWeightManager.regular,
-            FontSize.s14,
-            0.27,
-            Colors.black.withOpacity(0.7),
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.black.withOpacity(0.7),
           ),
         ),
       ],
@@ -390,55 +346,62 @@ Widget _buildCategoryMultiSelect(BuildContext context, Size size) {
   }
 
   Widget _buildActionButtons(Size size, String? accessToken) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // Close Button
-          CustomRoundButton(
-            title: "Close",
-            fct: () {
-              Navigator.pop(context);
-            },
-            height: 50,
-            width: 120,
-            fontSize: FontSize.s12,
-            textColor: Colors.blue,
-            borderColor: Colors.blue,
-            boxColor: Colors.white,
-          ),
-          const SizedBox(width: 10),
-          // Create & Another Button
-          CustomRoundButton(
-            title: "Create & Another",
-            fct: () async {
-              if (_formKey.currentState!.validate()) {
-                await _submitForm(accessToken, createAnother: true);
-              }
-            },
-            height: 50,
-            width: 150,
-            fontSize: FontSize.s12,
-            textColor: Colors.white,
-            borderColor: ColorManager.kPrimaryColor,
-            boxColor: ColorManager.kPrimaryColor,
-          ),
-          const SizedBox(width: 10),
-          // Create Button
-          CustomRoundButton(
-            title: "Create",
-            fct: () async {
-              if (_formKey.currentState!.validate()) {
-                await _submitForm(accessToken, createAnother: false);
-              }
-            },
-            height: 50,
-            width: 120,
-            fontSize: FontSize.s12,
-          ),
-        ],
+    List<Widget> buttons = [
+      // Close Button
+      CustomRoundButton(
+        title: "Close",
+        fontSize: FontSize.s12,
+        height: MediaQuery.of(context).size.height * .05,
+        width: 120,
+        textColor: Colors.blue,
+        borderColor: Colors.blue,
+        boxColor: Colors.white,
+        fct: () async {
+          Navigator.pop(context, null);
+        },
       ),
+    ];
+
+    // Add Create & Another Button only if showCreateAnother is true
+    if (widget.showCreateAnother) {
+      buttons.addAll([
+        const SizedBox(width: 10),
+        CustomRoundButton(
+          title: "Create & Another",
+          fontSize: FontSize.s12,
+          height: MediaQuery.of(context).size.height * .05,
+          width: 150,
+          textColor: Colors.white,
+          borderColor: ColorManager.kPrimaryColor,
+          boxColor: ColorManager.kPrimaryColor,
+          fct: () async {
+            if (_formKey.currentState!.validate()) {
+              await _submitForm(accessToken, createAnother: true);
+            }
+          },
+        ),
+      ]);
+    }
+
+    buttons.addAll([
+      const SizedBox(width: 10),
+      // Create Button
+      CustomRoundButton(
+        title: "Create Supplier",
+        fontSize: FontSize.s12,
+        height: MediaQuery.of(context).size.height * .05,
+        width: 140,
+        fct: () async {
+          if (_formKey.currentState!.validate()) {
+            await _submitForm(accessToken, createAnother: false);
+          }
+        },
+      ),
+    ]);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: buttons,
     );
   }
 

@@ -686,6 +686,15 @@ class StockProvider extends ChangeNotifier {
             stock_models.ListStockModel listStockModel =
                 stock_models.ListStockModel.fromJson(jsonData);
 
+            // Debug: Log barcode data for first few items
+            if (listStockModel.data != null && listStockModel.data!.isNotEmpty) {
+              debugPrint('🔍 BARCODE DEBUG - First 3 stock items:');
+              for (int i = 0; i < (listStockModel.data!.length > 3 ? 3 : listStockModel.data!.length); i++) {
+                final stock = listStockModel.data![i];
+                debugPrint('  Item $i: Product=${stock.productName}, Barcode=${stock.barCode}');
+              }
+            }
+
             if (loadAll) {
               _allStocks = listStockModel.data;
               applyStockFiltersLocally(page: 1);
@@ -788,13 +797,24 @@ class StockProvider extends ChangeNotifier {
 
     // Apply barcode filter
     if (filterBarcode != null && filterBarcode.isNotEmpty) {
+      debugPrint('🔍 BARCODE FILTER DEBUG:');
+      debugPrint('  Filter value: "$filterBarcode"');
+      debugPrint('  Items before filter: ${filteredList.length}');
+      
       filteredList = filteredList
-          .where((stock) =>
-              stock.barCode != null &&
-              stock.barCode!
-                  .toLowerCase()
-                  .contains(filterBarcode.toLowerCase()))
+          .where((stock) {
+            final matches = stock.barCode != null &&
+                stock.barCode!
+                    .toLowerCase()
+                    .contains(filterBarcode.toLowerCase());
+            if (stock.barCode != null) {
+              debugPrint('  Checking: "${stock.barCode}" -> $matches');
+            }
+            return matches;
+          })
           .toList();
+      
+      debugPrint('  Items after filter: ${filteredList.length}');
     }
 
     // Apply rack filter

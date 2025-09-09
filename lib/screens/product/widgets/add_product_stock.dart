@@ -29,6 +29,7 @@ import 'package:intl/intl.dart';
 import 'dart:async'; // Added for Timer
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/components/build_restricted_payment_selector.dart';
+import 'package:pos_machine/screens/suppliers/add_supplier_modal.dart';
 
 class StockItem {
   String barcode;
@@ -1553,20 +1554,92 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            BuildDropDownWithSearch<Supplier>(
-              title: "Supplier",
-              hintText: "Select Supplier",
-              value: selectedSupplier,
-              items: supplierList,
-              onChanged: (value) {
-                setState(() {
-                  selectedSupplier = value;
-                });
-              },
-              displayText: (supplier) => supplier.name,
-              searchController: supplierSearchController,
-              isRequired: true,
-              searchHintText: "Search for supplier...",
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: BuildDropDownWithSearch<Supplier>(
+                    title: "Supplier",
+                    hintText: "Select Supplier",
+                    value: selectedSupplier,
+                    items: supplierList,
+                    onChanged: (value) {
+                      setState(() {
+                        selectedSupplier = value;
+                      });
+                    },
+                    displayText: (supplier) => supplier.name,
+                    searchController: supplierSearchController,
+                    isRequired: true,
+                    searchHintText: "Search for supplier...",
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Add Supplier Button
+                BuildBoxShadowContainer(
+                  height: MediaQuery.of(context).size.height * .07,
+                  width: 50,
+                  circleRadius: 5,
+                  child: InkWell(
+                    onTap: () async {
+                      debugPrint("ADD NEW SUPPLIER BUTTON PRESSED");
+                      final result = await showAddSupplierModal(context, MediaQuery.of(context).size, showCreateAnother: false);
+                      if (result != null &&
+                          result is Map &&
+                          result['status'] == 'success') {
+                        final createdPhone = (result['phone'] ?? '').toString();
+                        final createdName = (result['name'] ?? '').toString();
+                        
+                        // Try to fetch the newly created supplier by phone and auto-select
+                        try {
+                          String? accessToken =
+                              Provider.of<AuthModel>(context, listen: false)
+                                  .token;
+                          if (accessToken != null) {
+                            // Refresh supplier list to include the new supplier
+                            await Provider.of<SupplierProvider>(context, listen: false)
+                                .fetchSuppliers(accessToken: accessToken);
+                            
+                            // Find the newly created supplier in the updated list
+                            final updatedSupplierList = Provider.of<SupplierProvider>(context, listen: false).supplierList ?? [];
+                            final newSupplier = updatedSupplierList.firstWhere(
+                              (supplier) => supplier.phone == createdPhone,
+                              orElse: () => updatedSupplierList.first,
+                            );
+                            
+                            setState(() {
+                              selectedSupplier = newSupplier;
+                            });
+                            
+                            debugPrint("✅ NEW SUPPLIER AUTO-SELECTED: ${newSupplier.name}");
+                          }
+                        } catch (e) {
+                          debugPrint("❌ ERROR AUTO-SELECTING NEW SUPPLIER: $e");
+                          // Fallback: just refresh the supplier list
+                          try {
+                            String? accessToken =
+                                Provider.of<AuthModel>(context, listen: false)
+                                    .token;
+                            if (accessToken != null) {
+                              await Provider.of<SupplierProvider>(context, listen: false)
+                                  .fetchSuppliers(accessToken: accessToken);
+                            }
+                          } catch (refreshError) {
+                            debugPrint("❌ ERROR REFRESHING SUPPLIER LIST: $refreshError");
+                          }
+                        }
+                      }
+                    },
+                    child: const Center(
+                      child: Icon(
+                        Icons.add,
+                        size: 27,
+                        color: ColorManager.kButtonGreen,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
             // Current Balance Display
             if (selectedSupplier != null) ...[
@@ -2064,7 +2137,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         ),
         const SizedBox(width: 6),
         Text(
-          '$balanceLabel ₹${balance.toStringAsFixed(2)}',
+          '$balanceLabel ₹${balance.abs().toStringAsFixed(2)}',
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s12,

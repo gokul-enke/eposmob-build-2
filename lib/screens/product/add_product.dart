@@ -580,7 +580,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
             text,
             style: buildCustomStyle(
               FontWeightManager.medium,
-              FontSize.s12,
+              FontSize.s14,
               0.18,
               ColorManager.kPrimaryColor,
             ),
@@ -600,7 +600,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
             text,
             style: buildCustomStyle(
               FontWeightManager.medium,
-              FontSize.s12,
+              FontSize.s13,
               0.18,
               Colors.black,
             ),
@@ -1323,7 +1323,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
             text,
             style: buildCustomStyle(
               FontWeightManager.medium,
-              FontSize.s9,
+              FontSize.s12,
               0.13,
               Colors.black,
             ),
