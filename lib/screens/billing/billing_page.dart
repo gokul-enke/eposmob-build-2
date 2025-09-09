@@ -615,6 +615,18 @@ class BillingPageState extends State<BillingPage>
             CustomerListModel.fromJson(response);
         setState(() {
           customerList = customerListModel.data; // Store the customer list
+          
+          // Check if auto-assign is enabled in app settings
+          final appSettingsProvider =
+              Provider.of<AppSettingsProvider>(context, listen: false);
+          final bool autoAssignEnabled =
+              appSettingsProvider.appSettings?.autoAssignDefaultCustomer ?? true;
+
+          if (!autoAssignEnabled) {
+            debugPrint("🔧 APP SETTINGS: Auto-assign default customer is DISABLED - only fetching customer list");
+            return; // Exit early, only customer list is fetched
+          }
+
           CustomerListModelData? salesCustomer;
 
           if (customerList!.isNotEmpty) {
@@ -4838,6 +4850,17 @@ class BillingPageState extends State<BillingPage>
     debugPrint(
         "🔄 BILLING: Sales executive changed, updating default customer...");
 
+    // Check if auto-assign is enabled in app settings
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final bool autoAssignEnabled =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomer ?? true;
+
+    if (!autoAssignEnabled) {
+      debugPrint("🔧 APP SETTINGS: Auto-assign default customer is DISABLED, skipping sales executive change");
+      return;
+    }
+
     // Don't reset if customer was manually selected (either from list or phone entry)
     if (_isCustomerManuallySelected &&
         (selectedCustomerID != null || mobileNumberText?.isNotEmpty == true)) {
@@ -4939,6 +4962,17 @@ class BillingPageState extends State<BillingPage>
 
   void _onUserSwitched() {
     debugPrint("🔄 BILLING: User switched, updating default customer...");
+
+    // Check if auto-assign is enabled in app settings
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final bool autoAssignEnabled =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomer ?? true;
+
+    if (!autoAssignEnabled) {
+      debugPrint("🔧 APP SETTINGS: Auto-assign default customer is DISABLED, skipping user switch");
+      return;
+    }
 
     // Clear current customer selection
     Provider.of<CustomerSelectionProvider>(context, listen: false)

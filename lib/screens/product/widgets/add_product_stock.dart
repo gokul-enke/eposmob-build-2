@@ -686,7 +686,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'mrp': item.mrp.isNotEmpty ? item.mrp : item.salePrice,
         'wholesalePrice':
             item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
-        'unit': item.unit,
+        'unit': item.selectedUnit, // Changed to send unit ID instead of unit name
         'supplierId': selectedSupplier!.id,
         'storeId': selectedStore!.id,
         'expiryDate': DateFormat('yyyy-MM-dd').format(item.expDate),
@@ -888,7 +888,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       'mrp': item.mrp.isNotEmpty ? item.mrp : item.salePrice,
       'wholesalePrice':
           item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
-      'unit': item.unit,
+      'unit': item.selectedUnit, // Changed to send unit ID instead of unit name
       'supplierId': selectedSupplier?.id ?? item.supplierId,
       'storeId': selectedStore?.id ?? 1,
       'expiryDate': DateFormat('yyyy-MM-dd').format(item.expDate),
