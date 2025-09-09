@@ -29,6 +29,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
   final TextEditingController searchTextController = TextEditingController();
   final TextEditingController searchEmailController = TextEditingController();
   final TextEditingController searchPhoneController = TextEditingController();
+  String selectedBalanceFilter = 'All';
   bool initLoading = false;
 
   @override
@@ -104,6 +105,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
     String name = '',
     String email = '',
     String phone = '',
+    String balance = 'All',
   }) {
     try {
       String? accessToken =
@@ -118,6 +120,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
         supplierName: name,
         supplierEmail: email,
         supplierPhone: phone,
+        filterBalance: balance,
       );
     } catch (error) {
       debugPrint("❌ Supplier search error: ${error.toString()}");
@@ -653,7 +656,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                         Future.microtask(() {
                           if (value.isEmpty &&
                               searchEmailController.text.isEmpty &&
-                              searchPhoneController.text.isEmpty) {
+                              searchPhoneController.text.isEmpty &&
+                              selectedBalanceFilter == 'All') {
                             Provider.of<SupplierProvider>(context,
                                     listen: false)
                                 .resetFilters();
@@ -662,6 +666,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                               name: value,
                               email: searchEmailController.text,
                               phone: searchPhoneController.text,
+                              balance: selectedBalanceFilter,
                             );
                           }
                         });
@@ -700,7 +705,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                         Future.microtask(() {
                           if (value.isEmpty &&
                               searchTextController.text.isEmpty &&
-                              searchPhoneController.text.isEmpty) {
+                              searchPhoneController.text.isEmpty &&
+                              selectedBalanceFilter == 'All') {
                             Provider.of<SupplierProvider>(context,
                                     listen: false)
                                 .resetFilters();
@@ -709,6 +715,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                               name: searchTextController.text,
                               email: value,
                               phone: searchPhoneController.text,
+                              balance: selectedBalanceFilter,
                             );
                           }
                         });
@@ -747,7 +754,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                         Future.microtask(() {
                           if (value.isEmpty &&
                               searchTextController.text.isEmpty &&
-                              searchEmailController.text.isEmpty) {
+                              searchEmailController.text.isEmpty &&
+                              selectedBalanceFilter == 'All') {
                             Provider.of<SupplierProvider>(context,
                                     listen: false)
                                 .resetFilters();
@@ -756,6 +764,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                               name: searchTextController.text,
                               email: searchEmailController.text,
                               phone: value,
+                              balance: selectedBalanceFilter,
                             );
                           }
                         });
@@ -764,6 +773,92 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                     controller: searchPhoneController,
                     size: size,
                     hintText: 'Phone',
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Balance Filter Dropdown
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 10.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      "Balance",
+                      style: buildCustomStyle(FontWeightManager.regular,
+                          FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
+                    ),
+                  ),
+                  BuildBoxShadowContainer(
+                    circleRadius: 7,
+                    alignment: Alignment.centerLeft,
+                    margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+                    padding: const EdgeInsets.only(left: 15),
+                    height: 45,
+                    width: double.infinity,
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: selectedBalanceFilter,
+                      hint: Text(
+                        "Select Balance",
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s12,
+                          0.27,
+                          ColorManager.textColor.withOpacity(.5),
+                        ),
+                      ),
+                      items: ['All', 'Positive (+ve)', 'Negative (-ve)', 'Zero (0)']
+                          .map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(
+                            value,
+                            style: buildCustomStyle(
+                              FontWeightManager.regular,
+                              FontSize.s12,
+                              0.27,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            selectedBalanceFilter = newValue;
+                          });
+                          Future.microtask(() {
+                            if (newValue == 'All' &&
+                                searchTextController.text.isEmpty &&
+                                searchEmailController.text.isEmpty &&
+                                searchPhoneController.text.isEmpty) {
+                              Provider.of<SupplierProvider>(context,
+                                      listen: false)
+                                  .resetFilters();
+                            } else {
+                              searchSuppliers(
+                                name: searchTextController.text,
+                                email: searchEmailController.text,
+                                phone: searchPhoneController.text,
+                                balance: newValue,
+                              );
+                            }
+                          });
+                        }
+                      },
+                      underline: Container(),
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: ColorManager.kPrimaryColor,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -784,6 +879,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                     searchTextController.clear();
                     searchEmailController.clear();
                     searchPhoneController.clear();
+                    selectedBalanceFilter = 'All';
                   });
                   Future.microtask(() {
                     Provider.of<SupplierProvider>(context, listen: false)
