@@ -229,6 +229,16 @@ class _KitchenMasterState extends State<KitchenMaster> {
           debugPrint(
               '   📊 ID: ${status.id}, Value: "${status.value}", Description: "${status.description}"');
         }
+        
+        // Test the dynamic status mapping
+        debugPrint('🧪 === TESTING DYNAMIC STATUS MAPPING ===');
+        final startId = _findStatusIdByValue('START');
+        final readyId = _findStatusIdByValue('READY');
+        final servedId = _findStatusIdByValue('SERVED');
+        debugPrint('🧪 START ID: $startId');
+        debugPrint('🧪 READY ID: $readyId');
+        debugPrint('🧪 SERVED ID: $servedId');
+        debugPrint('🧪 ======================================');
       } else {
         debugPrint(
             '❌ Failed to fetch cart item statuses: ${response['message']}');
@@ -268,6 +278,12 @@ class _KitchenMasterState extends State<KitchenMaster> {
       debugPrint('🆔 Final ID: $finalId');
       debugPrint('🔢 Quantity: $quantity');
       debugPrint('💬 Notes: $notes');
+      debugPrint('🔍 Status Analysis:');
+      debugPrint('   - Raw status type: ${rawStatus.runtimeType}');
+      debugPrint('   - Is numeric: ${int.tryParse(rawStatus ?? '') != null}');
+      if (int.tryParse(rawStatus ?? '') != null) {
+        debugPrint('   - Numeric value: ${int.tryParse(rawStatus ?? '')}');
+      }
       debugPrint('========================');
 
       return KitchenOrderItem(
@@ -378,6 +394,50 @@ class _KitchenMasterState extends State<KitchenMaster> {
     }
   }
 
+  // Helper method to find status ID by value
+  int? _findStatusIdByValue(String value) {
+    if (_availableStatuses.isEmpty) {
+      debugPrint('⚠️ No available statuses loaded yet');
+      return null;
+    }
+    
+    final status = _availableStatuses.firstWhere(
+      (s) => s.value.toUpperCase() == value.toUpperCase(),
+      orElse: () => CartItemStatus(id: 0, value: '', description: ''),
+    );
+    
+    if (status.id == 0) {
+      debugPrint('⚠️ Status value "$value" not found in available statuses');
+      return null;
+    }
+    
+    debugPrint('🔍 Found status ID ${status.id} for value "$value"');
+    return status.id;
+  }
+
+  // Helper method to find status value by ID
+  String? _findStatusValueById(int id) {
+    if (_availableStatuses.isEmpty) {
+      debugPrint('⚠️ No available statuses loaded yet');
+      return null;
+    }
+    
+    final status = _availableStatuses.firstWhere(
+      (s) => s.id == id,
+      orElse: () => CartItemStatus(id: 0, value: '', description: ''),
+    );
+    
+    if (status.id == 0) {
+      debugPrint('⚠️ Status ID $id not found in available statuses');
+      return null;
+    }
+    
+    debugPrint('🔍 Found status value "${status.value}" for ID $id');
+    return status.value;
+  }
+
+
+
   ItemStatus _mapItemStatus(String? status) {
     debugPrint('🔄 Mapping status: "$status"');
 
@@ -387,6 +447,8 @@ class _KitchenMasterState extends State<KitchenMaster> {
     }
 
     ItemStatus result;
+    
+    // First try to match by string value
     switch (status.toUpperCase()) {
       case 'START':
         result = ItemStatus.preparing;
@@ -401,25 +463,35 @@ class _KitchenMasterState extends State<KitchenMaster> {
         debugPrint('   → ItemStatus.served (SERVED)');
         break;
       default:
-        // Check if it's a numeric status ID
+        // Check if it's a numeric status ID and try to find the corresponding value
         final statusId = int.tryParse(status);
         if (statusId != null) {
           debugPrint('   → Numeric status ID detected: $statusId');
-          // Map based on the status IDs we know from the API
-          // Based on your API response: {"id": 49,"value": "START","description": "Start"}
-          if (statusId == 49) {
-            // START status ID - but this means it's already started!
-            result = ItemStatus.preparing;
-            debugPrint(
-                '   → ItemStatus.preparing (ID 49 = START - already started)');
-          } else if (statusId == 50) {
-            // READY status ID
-            result = ItemStatus.ready;
-            debugPrint('   → ItemStatus.ready (ID 50 = READY)');
-          } else if (statusId == 51) {
-            // SERVED status ID
-            result = ItemStatus.served;
-            debugPrint('   → ItemStatus.served (ID 51 = SERVED)');
+          
+          // Try to find the status value for this ID
+          final statusValue = _findStatusValueById(statusId);
+          if (statusValue != null) {
+            debugPrint('   → Found status value: "$statusValue" for ID $statusId');
+            
+            // Map based on the found status value
+            switch (statusValue.toUpperCase()) {
+              case 'START':
+                result = ItemStatus.preparing;
+                debugPrint('   → ItemStatus.preparing (ID $statusId = $statusValue)');
+                break;
+              case 'READY':
+                result = ItemStatus.ready;
+                debugPrint('   → ItemStatus.ready (ID $statusId = $statusValue)');
+                break;
+              case 'SERVED':
+                result = ItemStatus.served;
+                debugPrint('   → ItemStatus.served (ID $statusId = $statusValue)');
+                break;
+              default:
+                result = ItemStatus.pending;
+                debugPrint('   → ItemStatus.pending (unknown value: "$statusValue" for ID $statusId)');
+                break;
+            }
           } else {
             result = ItemStatus.pending;
             debugPrint('   → ItemStatus.pending (unknown ID: $statusId)');
@@ -663,7 +735,17 @@ class _KitchenMasterState extends State<KitchenMaster> {
         accessToken: authModel.token ?? '',
       );
 
-      debugPrint('📥 API Response: $response');
+      // Enhanced debug prints for API response
+      debugPrint('📥 === FULL API RESPONSE ===');
+      debugPrint('📥 Raw Response: $response');
+      debugPrint('📥 Response Type: ${response.runtimeType}');
+      debugPrint('📥 Response Keys: ${response.keys.toList()}');
+      
+      // Print each key-value pair for better debugging
+      response.forEach((key, value) {
+        debugPrint('📥   $key: $value (${value.runtimeType})');
+      });
+      
       debugPrint('📊 Response Status: ${response['status']}');
       debugPrint('💬 Response Message: ${response['message']}');
 
@@ -672,6 +754,18 @@ class _KitchenMasterState extends State<KitchenMaster> {
 
         // Check if status actually changed
         final data = response['data'];
+        debugPrint('📊 Data Section: $data');
+        
+        if (data != null) {
+          debugPrint('📊 Data Type: ${data.runtimeType}');
+          debugPrint('📊 Data Keys: ${data.keys.toList()}');
+          
+          // Print each data key-value pair
+          data.forEach((key, value) {
+            debugPrint('📊   $key: $value (${value.runtimeType})');
+          });
+        }
+        
         final oldStatus = data?['old_status']?.toString();
         final newStatus = data?['new_status']?.toString();
         final statusValue = data?['status_value']?.toString();
@@ -703,6 +797,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
       } else {
         debugPrint('❌ Failed to update cart item status');
         debugPrint('❌ Error: ${response['message']}');
+        debugPrint('❌ Full Error Response: $response');
         if (mounted) {
           showScaffoldError(
             context: context,
@@ -712,6 +807,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
       }
     } catch (e) {
       debugPrint('❌ Exception updating cart item status: $e');
+      debugPrint('❌ Exception Type: ${e.runtimeType}');
       debugPrint('❌ Stack trace: ${StackTrace.current}');
       if (mounted) {
         showScaffoldError(
@@ -1124,31 +1220,6 @@ class _OrderQueuePanel extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButton(
-      String text, Color color, VoidCallback onTap, bool compact) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: EdgeInsets.symmetric(vertical: compact ? 8 : 10),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withOpacity(0.3)),
-          ),
-          child: Center(
-            child: Text(
-              text,
-              style: buildCustomStyle(FontWeightManager.semiBold,
-                  compact ? FontSize.s10 : FontSize.s11, 0.21, color),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Color _getStatusColor(OrderStatus status) {
     switch (status) {
@@ -1659,6 +1730,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
               debugPrint('📦 Item: ${item.name}');
               debugPrint('🆔 Item ID: ${item.id}');
               debugPrint('📊 Current Status: ${item.status}');
+              debugPrint('📊 Current Status Type: ${item.status.runtimeType}');
               debugPrint(
                   '🔢 Available Statuses Count: ${widget.availableStatuses.length}');
 
@@ -1668,11 +1740,14 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                     '   Available: ID=${status.id}, Value="${status.value}", Desc="${status.description}"');
               }
 
+              debugPrint('🔍 === STATUS ENABLEMENT CHECK ===');
               final enabledStatuses = widget.availableStatuses.where((status) {
                 final isEnabled =
                     _shouldEnableStatus(status.value, item.status);
                 debugPrint(
                     '   📊 Status "${status.value}" (ID: ${status.id}, ${status.description}) enabled: $isEnabled');
+                debugPrint('      - Current item status: ${item.status}');
+                debugPrint('      - Status value to check: ${status.value}');
                 return isEnabled;
               }).toList();
 
@@ -1720,6 +1795,15 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                     debugPrint('📊 Status Value: ${status.value}');
                     debugPrint('🆔 Status ID: ${status.id}');
                     debugPrint('🔍 Current Item Status: ${item.status}');
+                    
+                    // Special debug for START COOKING action
+                    if (status.value.toUpperCase() == 'START') {
+                      debugPrint('🔥 === START COOKING ACTION TRIGGERED ===');
+                      debugPrint('🔥 Item Name: ${item.name}');
+                      debugPrint('🔥 Item Quantity: ${item.quantity}');
+                      debugPrint('🔥 Item Modifiers: ${item.modifiers}');
+                      debugPrint('🔥 Item Notes: ${item.notes}');
+                    }
 
                     // Extract cart item ID from the item ID (assuming format like "cartItemId_productName")
                     final parts = item.id.split('_');
@@ -1730,6 +1814,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
 
                     if (cartItemId != null) {
                       debugPrint('✅ Valid cart item ID found, calling API...');
+                      debugPrint('🔍 Using status ID ${status.id} for value "${status.value}"');
                       
                       // Set loading state
                       setState(() {
@@ -1938,18 +2023,6 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
     }
   }
 
-  String _getNextActionText(ItemStatus currentStatus) {
-    switch (currentStatus) {
-      case ItemStatus.pending:
-        return 'Start Cooking';
-      case ItemStatus.preparing:
-        return 'Mark Ready';
-      case ItemStatus.ready:
-        return 'Mark Served';
-      case ItemStatus.served:
-        return 'Completed';
-    }
-  }
 }
 
 class _KitchenStatsPanel extends StatelessWidget {
