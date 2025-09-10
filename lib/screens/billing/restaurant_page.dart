@@ -20,10 +20,11 @@ import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import '../../screens/customers/add_customer_modal.dart';
 import '../../screens/billing/widgets/payment_method_modal.dart';
-import 'package:pos_machine/helpers/amount_helper.dart'; // Add AmountHelper import
+
 import '../../components/build_round_button.dart'; // Add button import
 import '../../providers/keyboard_provider.dart'; // Add keyboard provider import
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
+import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
 
 class RestaurantPage extends StatefulWidget {
   const RestaurantPage({super.key});
@@ -2090,6 +2091,8 @@ class _OrderPanelState extends State<_OrderPanel> {
   double _percentageDiscount = 0.0;
   String _couponCode = "";
 
+
+
   @override
   void didUpdateWidget(covariant _OrderPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -2920,79 +2923,75 @@ class _OrderPanelState extends State<_OrderPanel> {
     );
   }
 
-  void _showDiscountModal() {
-    if (_selectedOrder == null) return;
+  // Helper method to check if any discount is applied
+  bool _hasDiscount() {
+    return _isCouponApplied ||
+        _flatDiscount > 0.0 ||
+        _percentageDiscount > 0.0 ||
+        _couponCode.isNotEmpty;
+  }
 
-    // Calculate current order total from cart items for discount calculation
-    List<dynamic> cartItems = [];
-    if (_selectedOrder['cart_items'] != null) {
-      if (_selectedOrder['cart_items']['cart_items'] is List) {
-        cartItems = _selectedOrder['cart_items']['cart_items'];
-      } else if (_selectedOrder['cart_items'] is List) {
-        cartItems = _selectedOrder['cart_items'];
-      }
-    } else if (_selectedOrder['cart'] != null) {
-      if (_selectedOrder['cart']['cart_items'] is List) {
-        cartItems = _selectedOrder['cart']['cart_items'];
-      } else if (_selectedOrder['cart']['items'] is List) {
-        cartItems = _selectedOrder['cart']['items'];
-      }
-    } else if (_selectedOrder['items'] is List) {
-      cartItems = _selectedOrder['items'];
-    } else if (_selectedOrder['order_items'] is List) {
-      cartItems = _selectedOrder['order_items'];
-    }
-
-    // Calculate subtotal for discount modal
+  void _showCouponModal() {
+    // Create a temporary LocalProductProvider instance for the CouponModal
+    // Calculate current order total for the modal
     double orderSubTotal = 0.0;
-    for (var item in cartItems) {
-      final quantity =
-          double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
-      final unitPrice = double.tryParse(item['unit_price']?.toString() ??
-              item['price']?.toString() ??
-              item['product_price']?.toString() ??
-              '0') ??
-          0.0;
-      orderSubTotal += quantity * unitPrice;
+    if (_selectedOrder != null) {
+      List<dynamic> cartItems = [];
+      if (_selectedOrder['cart_items'] != null) {
+        if (_selectedOrder['cart_items']['cart_items'] is List) {
+          cartItems = _selectedOrder['cart_items']['cart_items'];
+        } else if (_selectedOrder['cart_items'] is List) {
+          cartItems = _selectedOrder['cart_items'];
+        }
+      } else if (_selectedOrder['cart'] != null) {
+        if (_selectedOrder['cart']['cart_items'] is List) {
+          cartItems = _selectedOrder['cart']['cart_items'];
+        } else if (_selectedOrder['cart']['items'] is List) {
+          cartItems = _selectedOrder['cart']['items'];
+        }
+      } else if (_selectedOrder['items'] is List) {
+        cartItems = _selectedOrder['items'];
+      } else if (_selectedOrder['order_items'] is List) {
+        cartItems = _selectedOrder['order_items'];
+      }
+
+      for (var item in cartItems) {
+        final quantity =
+            double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+        final unitPrice = double.tryParse(item['unit_price']?.toString() ??
+                item['price']?.toString() ??
+                item['product_price']?.toString() ??
+                '0') ??
+            0.0;
+        orderSubTotal += quantity * unitPrice;
+      }
+
+      if (orderSubTotal == 0.0 && _selectedOrder['grand_total'] != null) {
+        orderSubTotal =
+            double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
+                0.0;
+      }
     }
 
-    // If we still have zero total, try getting it from order total as fallback
-    if (orderSubTotal == 0.0 && _selectedOrder['grand_total'] != null) {
-      orderSubTotal =
-          double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
-              0.0;
-    }
-
-    debugPrint(
-        '🎫 Discount Modal - Order Subtotal: ₹${orderSubTotal.toStringAsFixed(2)}');
-
+    // Create a wrapper that provides the LocalProductProvider interface for CouponModal
     showDialog(
       context: context,
-      builder: (context) => RestaurantCouponModal(
-        initialCouponCode: _couponCode,
-        isCouponApplied: _isCouponApplied,
+      builder: (context) => _RestaurantCouponModalWrapper(
         orderSubTotal: orderSubTotal,
-        currentFlatDiscount: _flatDiscount,
-        currentPercentageDiscount: _percentageDiscount,
+        initialCouponCode: _couponCode,
+        initialFlatDiscount: _flatDiscount,
+        initialPercentageDiscount: _percentageDiscount,
+        isCouponApplied: _isCouponApplied,
         onCouponAction: (couponCode, isApplied,
-            {flatDiscount, percentageDiscount}) {
+            {double? flatDiscount, double? percentageDiscount}) {
           setState(() {
             _couponCode = couponCode;
             _isCouponApplied = isApplied;
             _flatDiscount = flatDiscount ?? 0.0;
             _percentageDiscount = percentageDiscount ?? 0.0;
 
-            debugPrint('🎫 Discount Applied in Restaurant Page:');
-            debugPrint('  - Coupon Code: $_couponCode');
-            debugPrint('  - Is Applied: $_isCouponApplied');
-            debugPrint(
-                '  - Flat Discount: ₹${_flatDiscount.toStringAsFixed(2)}');
-            debugPrint(
-                '  - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
-
             // If clearing discount
             if (!isApplied) {
-              debugPrint('🧹 Clearing all discount values');
               _couponCode = "";
               _flatDiscount = 0.0;
               _percentageDiscount = 0.0;
@@ -3001,14 +3000,6 @@ class _OrderPanelState extends State<_OrderPanel> {
         },
       ),
     );
-  }
-
-  // Helper method to check if any discount is applied
-  bool _hasDiscount() {
-    return _isCouponApplied ||
-        _flatDiscount > 0.0 ||
-        _percentageDiscount > 0.0 ||
-        _couponCode.isNotEmpty;
   }
 
   // Method to refresh saved orders without clearing the selected order (for when editing)
@@ -4664,7 +4655,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () => _showDiscountModal(),
+                      onTap: () => _showCouponModal(),
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
@@ -6280,447 +6271,102 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 }
 
-// Custom Coupon Modal for Restaurant Page that doesn't depend on LocalProductProvider
-class RestaurantCouponModal extends StatefulWidget {
-  final String initialCouponCode;
-  final bool isCouponApplied;
+// Wrapper class to make CouponModal work with restaurant page's discount system
+class _RestaurantCouponModalWrapper extends StatefulWidget {
   final double orderSubTotal;
-  final double currentFlatDiscount;
-  final double currentPercentageDiscount;
-  final Function(String, bool,
-      {double? flatDiscount, double? percentageDiscount}) onCouponAction;
+  final String initialCouponCode;
+  final double initialFlatDiscount;
+  final double initialPercentageDiscount;
+  final bool isCouponApplied;
+  final Function(String, bool, {double? flatDiscount, double? percentageDiscount}) onCouponAction;
 
-  const RestaurantCouponModal({
-    Key? key,
-    required this.initialCouponCode,
-    required this.isCouponApplied,
+  const _RestaurantCouponModalWrapper({
     required this.orderSubTotal,
-    required this.currentFlatDiscount,
-    required this.currentPercentageDiscount,
+    required this.initialCouponCode,
+    required this.initialFlatDiscount,
+    required this.initialPercentageDiscount,
+    required this.isCouponApplied,
     required this.onCouponAction,
-  }) : super(key: key);
+  });
 
   @override
-  State<RestaurantCouponModal> createState() => _RestaurantCouponModalState();
+  State<_RestaurantCouponModalWrapper> createState() => _RestaurantCouponModalWrapperState();
 }
 
-class _RestaurantCouponModalState extends State<RestaurantCouponModal> {
-  late TextEditingController couponController;
-  late TextEditingController flatDiscountController;
-  late TextEditingController percentageDiscountController;
-  late bool isCouponApplied;
+class _RestaurantCouponModalWrapperState extends State<_RestaurantCouponModalWrapper> {
+  late MockLocalProductProvider _mockProvider;
 
   @override
   void initState() {
     super.initState();
-    couponController = TextEditingController(text: widget.initialCouponCode);
-    flatDiscountController = TextEditingController(
-        text: widget.currentFlatDiscount == 0.0
-            ? ''
-            : widget.currentFlatDiscount.toString());
-    percentageDiscountController = TextEditingController(
-        text: widget.currentPercentageDiscount == 0.0
-            ? ''
-            : widget.currentPercentageDiscount.toString());
-    isCouponApplied = widget.isCouponApplied;
-
-    // Add listeners for real-time calculation
-    flatDiscountController.addListener(() => setState(() {}));
-    percentageDiscountController.addListener(() => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    couponController.dispose();
-    flatDiscountController.dispose();
-    percentageDiscountController.dispose();
-    super.dispose();
+    _mockProvider = MockLocalProductProvider(
+      orderSubTotal: widget.orderSubTotal,
+      initialFlatDiscount: widget.initialFlatDiscount,
+      initialPercentageDiscount: widget.initialPercentageDiscount,
+      initialCouponCode: widget.initialCouponCode,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentFlatDiscount =
-        double.tryParse(flatDiscountController.text) ?? 0.0;
-    final currentPercentageDiscount =
-        double.tryParse(percentageDiscountController.text) ?? 0.0;
-
-    // Calculate the new total after applying current modal discounts
-    final percentageDiscountValue =
-        widget.orderSubTotal * (currentPercentageDiscount / 100);
-    final totalDiscount = currentFlatDiscount + percentageDiscountValue;
-    final newTotal = widget.orderSubTotal - totalDiscount;
-
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: BuildBoxShadowContainer(
-        circleRadius: 12,
-        color: Colors.white,
-        width: 450,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Discount & Coupon',
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s16,
-                    0.21,
-                    ColorManager.kPrimaryColor,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Discount Fields
-            Row(
-              children: [
-                // Flat Discount Field
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Flat Discount',
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s12,
-                          0.21,
-                          ColorManager.textColor,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      BuildBoxShadowContainer(
-                        circleRadius: 7,
-                        alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.only(left: 15),
-                        height: 50,
-                        child: TextField(
-                          controller: flatDiscountController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            hintText: '0.00',
-                            hintStyle: buildCustomStyle(
-                              FontWeight.w500,
-                              12,
-                              0.27,
-                              Colors.grey.withOpacity(.5),
-                            ),
-                            border: InputBorder.none,
-                          ),
-                          style: buildCustomStyle(
-                            FontWeight.w500,
-                            12,
-                            0.27,
-                            Colors.black.withOpacity(.5),
-                          ),
-                          onTap: () {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (flatDiscountController.text.isNotEmpty) {
-                                flatDiscountController.selection =
-                                    TextSelection(
-                                  baseOffset: 0,
-                                  extentOffset:
-                                      flatDiscountController.text.length,
-                                );
-                              }
-                            });
-                            Provider.of<KeyboardProvider>(context,
-                                    listen: false)
-                                .show(
-                              'number',
-                              flatDiscountController,
-                              replaceOnFirstInput: true,
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 15),
-                // Percentage Discount Field
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Percentage Discount (%)',
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s12,
-                          0.21,
-                          ColorManager.textColor,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      BuildBoxShadowContainer(
-                        circleRadius: 7,
-                        alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.only(left: 15),
-                        height: 50,
-                        child: TextField(
-                          controller: percentageDiscountController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            hintText: '0',
-                            hintStyle: buildCustomStyle(
-                              FontWeight.w500,
-                              12,
-                              0.27,
-                              Colors.grey.withOpacity(.5),
-                            ),
-                            border: InputBorder.none,
-                          ),
-                          style: buildCustomStyle(
-                            FontWeight.w500,
-                            12,
-                            0.27,
-                            Colors.black.withOpacity(.5),
-                          ),
-                          onTap: () {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (percentageDiscountController
-                                  .text.isNotEmpty) {
-                                percentageDiscountController.selection =
-                                    TextSelection(
-                                  baseOffset: 0,
-                                  extentOffset:
-                                      percentageDiscountController.text.length,
-                                );
-                              }
-                            });
-                            Provider.of<KeyboardProvider>(context,
-                                    listen: false)
-                                .show(
-                              'number',
-                              percentageDiscountController,
-                              replaceOnFirstInput: true,
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Coupon Code Field
-            Text(
-              'Coupon Code (Optional)',
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s12,
-                0.21,
-                ColorManager.textColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            BuildBoxShadowContainer(
-              circleRadius: 7,
-              alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.only(left: 15),
-              height: 50,
-              child: TextField(
-                controller: couponController,
-                enabled: (!isCouponApplied || couponController.text.isEmpty),
-                decoration: InputDecoration(
-                  hintText: 'Enter Coupon Code',
-                  hintStyle: buildCustomStyle(
-                    FontWeight.w500,
-                    12,
-                    0.27,
-                    Colors.grey.withOpacity(.5),
-                  ),
-                  border: InputBorder.none,
-                ),
-                style: buildCustomStyle(
-                  FontWeight.w500,
-                  12,
-                  0.27,
-                  Colors.black.withOpacity(.5),
-                ),
-                onTap: () {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (couponController.text.isNotEmpty) {
-                      couponController.selection = TextSelection(
-                        baseOffset: 0,
-                        extentOffset: couponController.text.length,
-                      );
-                    }
-                  });
-                  Provider.of<KeyboardProvider>(context, listen: false).show(
-                    'text',
-                    couponController,
-                    replaceOnFirstInput: true,
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Updated Total Display
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: ColorManager.kButtonGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Net Total:',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s14,
-                          0.21,
-                          ColorManager.textColor,
-                        ),
-                      ),
-                      Text(
-                        'INR ${AmountHelper.formatAmount(widget.orderSubTotal)}',
-                        style: buildCustomStyle(
-                          FontWeightManager.bold,
-                          FontSize.s15,
-                          0.21,
-                          ColorManager.kPrimaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Discount Amount:',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s14,
-                          0.21,
-                          ColorManager.textColorRed,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Text(
-                            'INR ${AmountHelper.formatAmount(totalDiscount)}',
-                            style: buildCustomStyle(
-                              FontWeightManager.bold,
-                              FontSize.s15,
-                              0.21,
-                              ColorManager.textColorRed,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '(${(widget.orderSubTotal > 0 ? ((totalDiscount / widget.orderSubTotal) * 100) : 0.0).toStringAsFixed(1)}%)',
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s12,
-                              0.21,
-                              ColorManager.textColorRed,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total after Discount:',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s14,
-                          0.21,
-                          ColorManager.textColor,
-                        ),
-                      ),
-                      Text(
-                        'INR ${AmountHelper.formatAmount(newTotal)}',
-                        style: buildCustomStyle(
-                          FontWeightManager.bold,
-                          FontSize.s15,
-                          0.21,
-                          ColorManager.kButtonGreen,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: CustomRoundButton(
-                    title: "Clear All",
-                    fct: () {
-                      setState(() {
-                        flatDiscountController.clear();
-                        percentageDiscountController.clear();
-                        couponController.clear();
-                      });
-                    },
-                    fontSize: FontSize.s14,
-                    height: 45,
-                    width: double.infinity,
-                    boxColor: Colors.grey.shade600,
-                    borderColor: Colors.grey.shade600,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 2,
-                  child: CustomRoundButton(
-                    title: "Apply Discount",
-                    fct: () {
-                      double flatDiscount =
-                          double.tryParse(flatDiscountController.text) ?? 0.0;
-                      double percentageDiscount =
-                          double.tryParse(percentageDiscountController.text) ??
-                              0.0;
-
-                      widget.onCouponAction(
-                        couponController.text,
-                        flatDiscount > 0 ||
-                            percentageDiscount > 0 ||
-                            couponController.text.isNotEmpty,
-                        flatDiscount: flatDiscount,
-                        percentageDiscount: percentageDiscount,
-                      );
-                      Navigator.of(context).pop();
-                    },
-                    fontSize: FontSize.s14,
-                    height: 45,
-                    width: double.infinity,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+    return ChangeNotifierProvider<LocalProductProvider>.value(
+      value: _mockProvider,
+      child: CouponModal(
+        initialCouponCode: widget.initialCouponCode,
+        isCouponApplied: widget.isCouponApplied,
+        onCouponAction: widget.onCouponAction,
       ),
     );
   }
 }
+
+// Mock LocalProductProvider that provides the interface needed by CouponModal
+class MockLocalProductProvider extends LocalProductProvider {
+  final double _orderSubTotal;
+  double _flatDiscount;
+  double _percentageDiscount;
+  String _couponCode;
+
+  MockLocalProductProvider({
+    required double orderSubTotal,
+    required double initialFlatDiscount,
+    required double initialPercentageDiscount,
+    required String initialCouponCode,
+  }) : _orderSubTotal = orderSubTotal,
+       _flatDiscount = initialFlatDiscount,
+       _percentageDiscount = initialPercentageDiscount,
+       _couponCode = initialCouponCode;
+
+  @override
+  Map<String, double> getCurrentDiscount() {
+    return {
+      'flatDiscount': _flatDiscount,
+      'percentageDiscount': _percentageDiscount,
+    };
+  }
+
+  @override
+  PriceSummary? get priceSummary {
+    final discount = (_flatDiscount + (_orderSubTotal * _percentageDiscount / 100));
+    return PriceSummary(
+      originalSubTotal: _orderSubTotal,
+      subTotal: _orderSubTotal,
+      discount: discount,
+      totalTax: 0.0,
+      netPayable: _orderSubTotal - discount,
+      netTotal: _orderSubTotal - discount,
+    );
+  }
+
+  @override
+  void applyDiscount({
+    required double flatDiscount,
+    required double percentageDiscount,
+  }) {
+    _flatDiscount = flatDiscount;
+    _percentageDiscount = percentageDiscount;
+    notifyListeners();
+  }
+}
+
+
