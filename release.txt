@@ -2,6 +2,7 @@ git tag v0.1.0-dev.152
 git push build v0.1.0-dev.152
 git push origin v0.1.0-dev.143
 
+# eposenke demo
 https://eposdemo.hypersouq.in
 EPOSENKE_84BFT1haKrbIJeosgyPH0OES1Y6DNkLx
 attender@eposenke.in
@@ -11,10 +12,17 @@ kitchenmaster@eposenke.in
 salesexecutive@eposenke.in
 123456
 
+# epos souqpoint
 SOUQPOINT_S9z2X9Vef2bwrlvBS1befpCVJPxkmFqI
 salesexecutive@souqpoint.in
 123456
 
+# epos eposenke
+EPOSENKE_KxUdXaoVWvIHzAZAdkva5lX4vqEw2KuF
+salesexecutive@eposenke.in
+123456
+
+# yougoit
 RESTOPOS_oidkN1BDC0Fl6ti5sFtkVpTg0gultasn
 salesexecutive@restopos.com
 123456

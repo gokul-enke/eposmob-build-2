@@ -113,8 +113,10 @@ class CategoryProvider extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
+    // Ensure we always send a valid page number; default to 1 if not provided
+    final int effectivePage = page ?? 1;
     final queryParameters = <String, String>{
-      'page': page.toString(),
+      'page': effectivePage.toString(),
     };
 
     if (filterName != null && filterName.isNotEmpty) {
@@ -202,8 +204,10 @@ class CategoryProvider extends ChangeNotifier {
     String? filterParent,
     int? page,
   }) async {
+    // Ensure we always send a valid page number; default to 1 if not provided
+    final int effectivePage = page ?? 1;
     final queryParameters = <String, String>{
-      'page': page.toString(),
+      'page': effectivePage.toString(),
     };
 
     if (filterName != null && filterName.isNotEmpty) {
