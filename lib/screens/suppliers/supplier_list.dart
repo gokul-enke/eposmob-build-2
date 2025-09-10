@@ -798,7 +798,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                   BuildBoxShadowContainer(
                     circleRadius: 7,
                     alignment: Alignment.centerLeft,
-                    margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
                     padding: const EdgeInsets.only(left: 15),
                     height: 45,
                     width: double.infinity,
@@ -814,8 +815,12 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                           ColorManager.textColor.withOpacity(.5),
                         ),
                       ),
-                      items: ['All', 'Positive (+ve)', 'Negative (-ve)', 'Zero (0)']
-                          .map((String value) {
+                      items: [
+                        'All',
+                        'Positive (+ve)',
+                        'Negative (-ve)',
+                        'Zero (0)'
+                      ].map((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
                           child: Text(

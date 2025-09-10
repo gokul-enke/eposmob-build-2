@@ -101,7 +101,7 @@ class SupplierProvider with ChangeNotifier {
     if (filterBalance != null && filterBalance.isNotEmpty) {
       filteredList = filteredList.where((supplier) {
         double balance = supplier.currentBalance;
-        
+
         switch (filterBalance) {
           case 'Positive (+ve)':
             return balance > 0;
@@ -301,7 +301,8 @@ class SupplierProvider with ChangeNotifier {
 
       debugPrint('Add Supplier API Response status: ${response.statusCode}');
       debugPrint('Add Supplier API Response body: ${response.body}');
-      debugPrint('Add Supplier API Response body type: ${response.body.runtimeType}');
+      debugPrint(
+          'Add Supplier API Response body type: ${response.body.runtimeType}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Refresh supplier list after adding
@@ -323,7 +324,8 @@ class SupplierProvider with ChangeNotifier {
           debugPrint('JSON parsing error: $jsonError');
           return {
             'status': 'error',
-            'message': 'Server error (Status: ${response.statusCode}). Please check your network connection and try again.',
+            'message':
+                'Server error (Status: ${response.statusCode}). Please check your network connection and try again.',
             'errors': {},
           };
         }
@@ -334,7 +336,8 @@ class SupplierProvider with ChangeNotifier {
       debugPrint('Network/Exception error: $e');
       return {
         'status': 'error',
-        'message': 'Network error: Please check your internet connection and try again.'
+        'message':
+            'Network error: Please check your internet connection and try again.'
       };
     }
   }

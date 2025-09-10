@@ -34,11 +34,15 @@ import 'package:pos_machine/screens/reports/account_book/account_book.dart';
 import 'package:pos_machine/screens/reports/product_sales_report/product_sales_report.dart';
 import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
 import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
+import 'package:pos_machine/screens/reports/sales_executive_report/sales_executive_report.dart';
+import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
+import 'package:pos_machine/screens/transactions/company_accounts/add_company_account.dart';
 import 'package:pos_machine/screens/sales/sales.dart';
 import 'package:pos_machine/screens/sales_return/sales_return.dart';
 import 'package:pos_machine/screens/sales_return/sales_return_list.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
 import 'package:pos_machine/screens/support/support.dart';
+import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
 import 'package:pos_machine/screens/transactions/invoice_list.dart';
 import 'package:pos_machine/screens/transactions/receipt_list.dart';
 import 'package:pos_machine/screens/transactions/receipt_voucher.dart';
@@ -126,5 +130,8 @@ class SideBarController extends GetxController {
     RestaurantPage(), // 55 Restaurant Page
     KitchenMaster(), // 56 Kitchen Master
     SupplierDetailsScreen(), // 57 Supplier Details
+    SalesExecutiveReportScreen(), // 58 Sales Executive Report
+    CompanyAccountsScreen(), // 59 Company Accounts
+    AddCompanyAccountScreen(), // 60 Add Company Account
   ];
 }

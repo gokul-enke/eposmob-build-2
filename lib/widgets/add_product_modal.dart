@@ -39,6 +39,8 @@ class _AddProductWithBarcodeModalState
       TextEditingController();
   final TextEditingController _productSellingPriceController =
       TextEditingController();
+  final TextEditingController _productPurchasePriceController =
+      TextEditingController();
   final TextEditingController _unitSearchController = TextEditingController();
   final TextEditingController _categorySearchController =
       TextEditingController();
@@ -63,6 +65,7 @@ class _AddProductWithBarcodeModalState
     _productMRPController.dispose();
     _productQuantityController.dispose();
     _productSellingPriceController.dispose();
+    _productPurchasePriceController.dispose();
     _unitSearchController.dispose();
     _categorySearchController.dispose();
     isLoading = false;
@@ -387,6 +390,35 @@ class _AddProductWithBarcodeModalState
                     hintText: 'Product MRP',
                     size: size,
                   ),
+                  // Product Purchase Price TextField
+                  buildColumnWidgetForTextFields(
+                    autofocus: true,
+                    isStarRed: true,
+                    controller: _productPurchasePriceController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,2}$')),
+                    ],
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'This field is required';
+                      }
+                      return null;
+                    },
+                    onchanged: (value) {
+                      // Remove validation loop - only validate on submit
+                    },
+                    hintText: 'Purchase Price',
+                    size: size,
+                    width: size.width / 4.5,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
                   // Product Selling Price TextField
                   buildColumnWidgetForTextFields(
                     autofocus: true,
@@ -410,13 +442,7 @@ class _AddProductWithBarcodeModalState
                     size: size,
                     width: size.width / 4.5,
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Product MRP TextField
+                  // Product Quantity TextField
                   buildColumnWidgetForTextFields(
                     width: size.width / 4.5,
                     autofocus: true,
@@ -504,6 +530,8 @@ class _AddProductWithBarcodeModalState
                             quantity: _productQuantityController.text,
                             barcode: _productBarcodeController.text,
                             accessToken: accessToken ?? "",
+                            // TODO: Add purchasePrice parameter when API supports it
+                            // purchasePrice: _productPurchasePriceController.text,
                           );
 
                           // Handle success response
