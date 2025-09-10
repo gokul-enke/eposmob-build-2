@@ -1035,6 +1035,283 @@ class _MenuPanelState extends State<_MenuPanel> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  void _showProductInfoDialog(BuildContext context, GetProduct product, bool compact) {
+    // Resolve primary image
+    String? primaryImage;
+    if (product.attachment != null && product.attachment!.isNotEmpty) {
+      for (var attachment in product.attachment!) {
+        if (attachment.isPrimary == 1) {
+          primaryImage = attachment.filePath;
+          break;
+        }
+      }
+      primaryImage ??= product.attachment!.first.filePath;
+    }
+
+    // Resolve category name from product model directly
+    final String? categoryName = product.category?.name;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: widget.isCompact ? 14 : 20,
+            vertical: widget.isCompact ? 14 : 20,
+          ),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+            width: widget.isCompact ? 380 : 520,
+            constraints: const BoxConstraints(maxHeight: 720),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.shade100, width: 1),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.restaurant_menu, color: Color(0xFF059669), size: 18),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              product.productName ?? 'Product',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                FontSize.s16,
+                                0.21,
+                                const Color(0xFF1E293B),
+                              ),
+                            ),
+                            if (product.price?.price != null)
+                              Text(
+                                '₹${product.price!.price}',
+                                style: buildCustomStyle(
+                                  FontWeightManager.bold,
+                                  FontSize.s14,
+                                  0.21,
+                                  const Color(0xFF059669),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: Icon(Icons.close, color: Colors.grey.shade600, size: 20),
+                        splashRadius: 18,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Image
+                        Container(
+                          height: widget.isCompact ? 220 : 300,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.grey.shade100,
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: primaryImage != null
+                              ? Image.network(
+                                  primaryImage!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Icon(Icons.image_not_supported, color: Colors.grey.shade500),
+                                )
+                              : Center(
+                                  child: Icon(Icons.image, color: Colors.grey.shade400, size: 36),
+                                ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Tags (VEG/NON-VEG, stock)
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            ..._buildFoodTypeTags(product, compact),
+                            if (!(product.stock != null && product.stock!.isNotEmpty &&
+                                product.stock!.any((s) => (s.quantity ?? 0) > 0)))
+                              _buildCompactTag('No Stock', const Color(0xFF6B7280), compact),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Basic details
+                        if (categoryName != null && categoryName.isNotEmpty)
+                          _buildKeyValueRow('Category', categoryName),
+                        if (product.sku != null && (product.sku ?? '').toString().isNotEmpty)
+                          _buildKeyValueRow('SKU', product.sku!),
+                        if (product.mrp != null)
+                          _buildKeyValueRow('MRP', '₹${product.mrp}'),
+                        if (product.price?.price != null)
+                          _buildKeyValueRow('Price', '₹${product.price!.price}'),
+                        
+                        if (product.barcode != null && (product.barcode ?? '').toString().isNotEmpty)
+                          _buildKeyValueRow('Barcode', product.barcode.toString()),
+                        if (product.stock != null && product.stock!.isNotEmpty)
+                          _buildKeyValueRow(
+                            'Stock Qty',
+                            product.stock!
+                                .map((s) => (s.quantity ?? 0).toString())
+                                .toList()
+                                .join(' / '),
+                          ),
+                        if (product.description != null && product.description!.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              product.description!,
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s12,
+                                0.21,
+                                const Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Footer with actions
+                Container(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.grey.shade100, width: 1),
+                    ),
+                    color: Colors.white,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.of(ctx).pop();
+                              widget.onItemAdd(product, 1);
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              height: widget.isCompact ? 44 : 48,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF059669),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF059669).withOpacity(0.25),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.add_shopping_cart, color: Colors.white, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Add to Order',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.semiBold,
+                                      FontSize.s14,
+                                      0.21,
+                                      Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildKeyValueRow(String key, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6.0),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              key,
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s12,
+                0.21,
+                const Color(0xFF1E293B),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.21,
+                const Color(0xFF64748B),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -1580,16 +1857,23 @@ class _MenuPanelState extends State<_MenuPanel> {
                           ),
                         ),
                         if (isAvailable)
-                          Container(
-                            padding: EdgeInsets.all(compact ? 2 : 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2563EB).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Icon(
-                              Icons.add,
-                              color: const Color(0xFF2563EB),
-                              size: compact ? 12 : 14,
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => _showProductInfoDialog(context, item, compact),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: EdgeInsets.all(compact ? 3 : 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Icon(
+                                  Icons.info_outline,
+                                  color: const Color(0xFF2563EB),
+                                  size: compact ? 12 : 14,
+                                ),
+                              ),
                             ),
                           ),
                       ],
@@ -3598,10 +3882,10 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
 
     int totalItems = cartItems.length;
-    int readyItems = cartItems.where((item) {
+    int servedItems = cartItems.where((item) {
       if (item is Map<String, dynamic> && item['status'] != null) {
-        final status = item['status'].toString().toLowerCase();
-        return status == 'ready' || status == 'served';
+        final status = item['status'].toString().toUpperCase();
+        return status == 'SERVED' || status == 'COMPLETED';
       }
       return false;
     }).length;
@@ -3643,7 +3927,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '$readyItems/$totalItems',
+                      '$servedItems/$totalItems',
                       style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           widget.isCompact ? FontSize.s11 : FontSize.s13,
@@ -3709,6 +3993,56 @@ class _OrderPanelState extends State<_OrderPanel> {
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  Color _statusColor(String? status) {
+    // Normalize against kitchen_master ItemStatus colors
+    // pending -> amber, preparing -> blue, ready -> green, served -> gray
+    final s = (status ?? '').toUpperCase();
+    switch (s) {
+      case 'PENDING':
+      case 'INIT':
+      case 'NEW':
+        return const Color(0xFFD97706); // amber
+      case 'START':
+      case 'PREPARING':
+      case 'COOKING':
+      case 'IN_PROGRESS':
+        return const Color(0xFF2563EB); // blue
+      case 'READY':
+        return const Color(0xFF059669); // green
+      case 'SERVED':
+      case 'COMPLETED':
+        return const Color(0xFF6B7280); // gray
+      case 'CANCELLED':
+        return const Color(0xFFDC2626); // red (extra)
+      default:
+        return const Color(0xFF6B7280);
+    }
+  }
+
+  String _statusTextForDisplay(String? status) {
+    final s = (status ?? '').toUpperCase();
+    switch (s) {
+      case 'PENDING':
+      case 'INIT':
+      case 'NEW':
+        return 'NEW';
+      case 'START':
+      case 'PREPARING':
+      case 'COOKING':
+      case 'IN_PROGRESS':
+        return 'STARTED';
+      case 'READY':
+        return 'READY';
+      case 'SERVED':
+      case 'COMPLETED':
+        return 'SERVED';
+      case 'CANCELLED':
+        return 'CANCELLED';
+      default:
+        return s.isEmpty ? 'NEW' : s;
     }
   }
 
@@ -3954,11 +4288,11 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   Widget _buildSavedOrderActionButtons(List<dynamic> cartItems) {
-    final allItemsReadyOrServed = cartItems.isNotEmpty &&
+    final allItemsServed = cartItems.isNotEmpty &&
         cartItems.every((item) {
           if (item is Map<String, dynamic> && item['status'] != null) {
-            final status = item['status'].toString().toLowerCase();
-            return status == 'ready' || status == 'served';
+            final status = item['status'].toString().toUpperCase();
+            return status == 'SERVED' || status == 'COMPLETED';
           }
           return false;
         });
@@ -4261,7 +4595,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: (cartItems.isEmpty ||
-                              !allItemsReadyOrServed ||
+                              !allItemsServed ||
                               _isLoadingConfirm)
                           ? null
                           : () => _confirmOrder(),
@@ -4271,13 +4605,13 @@ class _OrderPanelState extends State<_OrderPanel> {
                         height: widget.isCompact ? 44 : 48,
                         decoration: BoxDecoration(
                           color: (cartItems.isEmpty ||
-                                  !allItemsReadyOrServed ||
+                                  !allItemsServed ||
                                   _isLoadingConfirm)
                               ? const Color(0xFF94A3B8)
                               : const Color(0xFF2563EB),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: (cartItems.isNotEmpty &&
-                                  allItemsReadyOrServed &&
+                                  allItemsServed &&
                                   !_isLoadingConfirm)
                               ? [
                                   BoxShadow(
@@ -5363,8 +5697,17 @@ class _OrderPanelState extends State<_OrderPanel> {
     final totalPrice = double.tryParse(cartItem['total_price'].toString()) ??
         (quantity * unitPrice);
 
-    final status = cartItem['status']?.toString().toLowerCase();
-    final isRemovable = status != 'ready' && status != 'served';
+    final status = cartItem['status']?.toString();
+    final statusUpper = (status ?? '').toUpperCase();
+    final hasStarted = statusUpper == 'START' ||
+        statusUpper == 'PREPARING' ||
+        statusUpper == 'COOKING' ||
+        statusUpper == 'IN_PROGRESS' ||
+        statusUpper == 'READY' ||
+        statusUpper == 'SERVED' ||
+        statusUpper == 'COMPLETED';
+    final isRemovable = !hasStarted;
+    final statusText = _statusTextForDisplay(status);
 
     return Container(
       padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
@@ -5396,20 +5739,43 @@ class _OrderPanelState extends State<_OrderPanel> {
                 ),
               ),
               const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF059669).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '₹${totalPrice.toStringAsFixed(0)}',
-                  style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      widget.isCompact ? FontSize.s12 : FontSize.s14,
-                      0.21,
-                      const Color(0xFF059669)),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF059669).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '₹${totalPrice.toStringAsFixed(0)}',
+                      style: buildCustomStyle(
+                          FontWeightManager.bold,
+                          widget.isCompact ? FontSize.s12 : FontSize.s14,
+                          0.21,
+                          const Color(0xFF059669)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _statusColor(status).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _statusColor(status).withOpacity(0.4)),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        widget.isCompact ? FontSize.s10 : FontSize.s11,
+                        0.21,
+                        _statusColor(status),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
