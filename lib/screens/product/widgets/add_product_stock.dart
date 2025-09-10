@@ -1951,20 +1951,21 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Widget _buildSupplierBalanceBadge(double balance) {
-    String paymentType = _getSupplierPaymentType();
+    // Determine badge color/icon from current balance sign
+    // Positive => to pay (owe supplier) [red]
+    // Negative => to receive (supplier owes us) [green]
+    final bool isToPay = balance > 0;
+    final bool isToReceive = balance < 0;
 
-    // Color coding same as supplier list:
-    // Red for 'to_pay' (we owe TO the supplier)
-    // Green for 'to_receive' (supplier owes TO us)
-    Color badgeColor = paymentType == 'to_pay'
+    Color badgeColor = isToPay
         ? Colors.red
-        : paymentType == 'to_receive'
+        : isToReceive
             ? Colors.green
             : Colors.grey;
 
-    IconData icon = paymentType == 'to_pay'
+    IconData icon = isToPay
         ? Icons.arrow_upward
-        : paymentType == 'to_receive'
+        : isToReceive
             ? Icons.arrow_downward
             : Icons.balance;
 
@@ -2092,37 +2093,30 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     return 0.0;
   }
 
-  // Helper method to get supplier payment type
-  String _getSupplierPaymentType() {
-    if (selectedSupplier != null) {
-      return selectedSupplier!.paymentType;
-    }
-    return 'to_pay';
-  }
-
   // Build supplier balance display under the dropdown
   Widget _buildSupplierBalanceDisplay() {
     double balance = _getSupplierBalance();
-    String paymentType = _getSupplierPaymentType();
+    // Determine UI based on balance sign, not payment type
+    // Positive balance => we owe supplier (to pay)
+    // Negative balance => supplier owes us (to receive)
+    final bool isToPay = balance > 0;
+    final bool isToReceive = balance < 0;
 
-    // Color coding same as supplier list:
-    // Red for 'to_pay' (we owe TO the supplier)
-    // Green for 'to_receive' (supplier owes TO us)
-    Color textColor = paymentType == 'to_pay'
+    Color textColor = isToPay
         ? Colors.red
-        : paymentType == 'to_receive'
+        : isToReceive
             ? Colors.green
             : Colors.black;
 
-    String balanceLabel = paymentType == 'to_pay'
+    String balanceLabel = isToPay
         ? 'Amount to Pay'
-        : paymentType == 'to_receive'
+        : isToReceive
             ? 'Amount to Receive'
             : 'Current Balance';
 
-    IconData icon = paymentType == 'to_pay'
+    IconData icon = isToPay
         ? Icons.arrow_upward
-        : paymentType == 'to_receive'
+        : isToReceive
             ? Icons.arrow_downward
             : Icons.balance;
 
