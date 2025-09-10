@@ -20,10 +20,10 @@ import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import '../../screens/customers/add_customer_modal.dart';
 import '../../screens/billing/widgets/payment_method_modal.dart';
-import '../../screens/billing/widgets/coupon_modal.dart';
 import 'package:pos_machine/helpers/amount_helper.dart'; // Add AmountHelper import
 import '../../components/build_round_button.dart'; // Add button import
 import '../../providers/keyboard_provider.dart'; // Add keyboard provider import
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
 
 class RestaurantPage extends StatefulWidget {
   const RestaurantPage({super.key});
@@ -400,6 +400,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
       // Call the addToOrderAPI with status: "new"
       debugPrint('➡️ Calling CartProvider.addToOrderAPI');
+      final currentComment = _orderPanelKey.currentState?.orderComment ?? "";
       final response = await cartProvider.addToOrderAPI(
         items: items,
         cartIds: 0, // Use 0 for new cart since we're creating a new order
@@ -414,8 +415,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
         paidMethods: [], // Not applicable
         balanceAmount: "0", // Not applicable
         couponId: null, // Not applicable
-        comment: "Order for Table $_activeTableId", // Add a comment for context
-        deliveryMethodId: null, // Not applicable
+        comment: currentComment.isNotEmpty
+            ? currentComment
+            : "Order for Table $_activeTableId", // Add a comment for context
+        deliveryMethodId:
+            Provider.of<DeliveryMethodsProvider>(context, listen: false)
+                    .defaultDeliveryMethod
+                    ?.id ??
+                "11", // Default to Store Takeaway same as billing
         carNumber: null, // Not applicable
         status: "new", // Set status to "new"
         deliveryDate: null, // Not applicable
@@ -1035,7 +1042,8 @@ class _MenuPanelState extends State<_MenuPanel> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  void _showProductInfoDialog(BuildContext context, GetProduct product, bool compact) {
+  void _showProductInfoDialog(
+      BuildContext context, GetProduct product, bool compact) {
     // Resolve primary image
     String? primaryImage;
     if (product.attachment != null && product.attachment!.isNotEmpty) {
@@ -1061,216 +1069,234 @@ class _MenuPanelState extends State<_MenuPanel> {
             vertical: widget.isCompact ? 14 : 20,
           ),
           backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: Container(
-            width: widget.isCompact ? 380 : 520,
-            constraints: const BoxConstraints(maxHeight: 720),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey.shade100, width: 1),
+              width: widget.isCompact ? 380 : 520,
+              constraints: const BoxConstraints(maxHeight: 720),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom:
+                            BorderSide(color: Colors.grey.shade100, width: 1),
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(7),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF059669).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.restaurant_menu, color: Color(0xFF059669), size: 18),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              product.productName ?? 'Product',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: buildCustomStyle(
-                                FontWeightManager.semiBold,
-                                FontSize.s16,
-                                0.21,
-                                const Color(0xFF1E293B),
-                              ),
-                            ),
-                            if (product.price?.price != null)
-                              Text(
-                                '₹${product.price!.price}',
-                                style: buildCustomStyle(
-                                  FontWeightManager.bold,
-                                  FontSize.s14,
-                                  0.21,
-                                  const Color(0xFF059669),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        icon: Icon(Icons.close, color: Colors.grey.shade600, size: 20),
-                        splashRadius: 18,
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Content
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        // Image
                         Container(
-                          height: widget.isCompact ? 220 : 300,
-                          width: double.infinity,
+                          padding: const EdgeInsets.all(7),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: Colors.grey.shade100,
-                            border: Border.all(color: Colors.grey.shade200),
+                            color: const Color(0xFF059669).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          clipBehavior: Clip.antiAlias,
-                          child: primaryImage != null
-                              ? Image.network(
-                                  primaryImage!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Icon(Icons.image_not_supported, color: Colors.grey.shade500),
-                                )
-                              : Center(
-                                  child: Icon(Icons.image, color: Colors.grey.shade400, size: 36),
+                          child: const Icon(Icons.restaurant_menu,
+                              color: Color(0xFF059669), size: 18),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                product.productName ?? 'Product',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s16,
+                                  0.21,
+                                  const Color(0xFF1E293B),
                                 ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Tags (VEG/NON-VEG, stock)
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: [
-                            ..._buildFoodTypeTags(product, compact),
-                            if (!(product.stock != null && product.stock!.isNotEmpty &&
-                                product.stock!.any((s) => (s.quantity ?? 0) > 0)))
-                              _buildCompactTag('No Stock', const Color(0xFF6B7280), compact),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Basic details
-                        if (categoryName != null && categoryName.isNotEmpty)
-                          _buildKeyValueRow('Category', categoryName),
-                        if (product.sku != null && (product.sku ?? '').toString().isNotEmpty)
-                          _buildKeyValueRow('SKU', product.sku!),
-                        if (product.mrp != null)
-                          _buildKeyValueRow('MRP', '₹${product.mrp}'),
-                        if (product.price?.price != null)
-                          _buildKeyValueRow('Price', '₹${product.price!.price}'),
-                        
-                        if (product.barcode != null && (product.barcode ?? '').toString().isNotEmpty)
-                          _buildKeyValueRow('Barcode', product.barcode.toString()),
-                        if (product.stock != null && product.stock!.isNotEmpty)
-                          _buildKeyValueRow(
-                            'Stock Qty',
-                            product.stock!
-                                .map((s) => (s.quantity ?? 0).toString())
-                                .toList()
-                                .join(' / '),
-                          ),
-                        if (product.description != null && product.description!.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              product.description!,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.21,
-                                const Color(0xFF64748B),
                               ),
-                            ),
+                              if (product.price?.price != null)
+                                Text(
+                                  '₹${product.price!.price}',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.bold,
+                                    FontSize.s14,
+                                    0.21,
+                                    const Color(0xFF059669),
+                                  ),
+                                ),
+                            ],
                           ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          icon: Icon(Icons.close,
+                              color: Colors.grey.shade600, size: 20),
+                          splashRadius: 18,
+                        ),
                       ],
                     ),
                   ),
-                ),
 
-                // Footer with actions
-                Container(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: Colors.grey.shade100, width: 1),
-                    ),
-                    color: Colors.white,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () {
-                              Navigator.of(ctx).pop();
-                              widget.onItemAdd(product, 1);
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              height: widget.isCompact ? 44 : 48,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF059669),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF059669).withOpacity(0.25),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
+                  // Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Image
+                          Container(
+                            height: widget.isCompact ? 220 : 300,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.grey.shade100,
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: primaryImage != null
+                                ? Image.network(
+                                    primaryImage!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) => Icon(
+                                            Icons.image_not_supported,
+                                            color: Colors.grey.shade500),
+                                  )
+                                : Center(
+                                    child: Icon(Icons.image,
+                                        color: Colors.grey.shade400, size: 36),
                                   ),
-                                ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Tags (VEG/NON-VEG, stock)
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              ..._buildFoodTypeTags(product, compact),
+                              if (!(product.stock != null &&
+                                  product.stock!.isNotEmpty &&
+                                  product.stock!
+                                      .any((s) => (s.quantity ?? 0) > 0)))
+                                _buildCompactTag('No Stock',
+                                    const Color(0xFF6B7280), compact),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Basic details
+                          if (categoryName != null && categoryName.isNotEmpty)
+                            _buildKeyValueRow('Category', categoryName),
+                          if (product.sku != null &&
+                              (product.sku ?? '').toString().isNotEmpty)
+                            _buildKeyValueRow('SKU', product.sku!),
+                          if (product.mrp != null)
+                            _buildKeyValueRow('MRP', '₹${product.mrp}'),
+                          if (product.price?.price != null)
+                            _buildKeyValueRow(
+                                'Price', '₹${product.price!.price}'),
+
+                          if (product.barcode != null &&
+                              (product.barcode ?? '').toString().isNotEmpty)
+                            _buildKeyValueRow(
+                                'Barcode', product.barcode.toString()),
+                          if (product.stock != null &&
+                              product.stock!.isNotEmpty)
+                            _buildKeyValueRow(
+                              'Stock Qty',
+                              product.stock!
+                                  .map((s) => (s.quantity ?? 0).toString())
+                                  .toList()
+                                  .join(' / '),
+                            ),
+                          if (product.description != null &&
+                              product.description!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                product.description!,
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.21,
+                                  const Color(0xFF64748B),
+                                ),
                               ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.add_shopping_cart, color: Colors.white, size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Add to Order',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      FontSize.s14,
-                                      0.21,
-                                      Colors.white,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Footer with actions
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: Colors.grey.shade100, width: 1),
+                      ),
+                      color: Colors.white,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.of(ctx).pop();
+                                widget.onItemAdd(product, 1);
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                height: widget.isCompact ? 44 : 48,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF059669),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF059669)
+                                          .withOpacity(0.25),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.add_shopping_cart,
+                                        color: Colors.white, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Add to Order',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.semiBold,
+                                        FontSize.s14,
+                                        0.21,
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           ),
         );
       },
@@ -1365,7 +1391,8 @@ class _MenuPanelState extends State<_MenuPanel> {
         // Apply search filter
         if (_searchQuery.isNotEmpty) {
           items = items.where((product) {
-            return product.productName?.toLowerCase().contains(_searchQuery) ?? false;
+            return product.productName?.toLowerCase().contains(_searchQuery) ??
+                false;
           }).toList();
         }
 
@@ -1674,7 +1701,8 @@ class _MenuPanelState extends State<_MenuPanel> {
                             itemCount: items.length,
                             itemBuilder: (_, idx) {
                               final item = items[idx];
-                              return _buildMenuItem(item, widget.isCompact, context);
+                              return _buildMenuItem(
+                                  item, widget.isCompact, context);
                             },
                             physics: const BouncingScrollPhysics(),
                           ),
@@ -1860,12 +1888,14 @@ class _MenuPanelState extends State<_MenuPanel> {
                           Material(
                             color: Colors.transparent,
                             child: InkWell(
-                              onTap: () => _showProductInfoDialog(context, item, compact),
+                              onTap: () => _showProductInfoDialog(
+                                  context, item, compact),
                               borderRadius: BorderRadius.circular(6),
                               child: Container(
                                 padding: EdgeInsets.all(compact ? 3 : 4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF2563EB).withOpacity(0.1),
+                                  color:
+                                      const Color(0xFF2563EB).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Icon(
@@ -2026,7 +2056,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   bool _isLoadingOrders = false;
   bool _isLoadingOrderDetails = false;
   String? _error;
-  Set<String> _loadingCartItems =
+  final Set<String> _loadingCartItems =
       {}; // Track which cart items are being updated
   bool _isLoadingConfirm = false; // Loading state for Confirm button
 
@@ -2043,6 +2073,10 @@ class _OrderPanelState extends State<_OrderPanel> {
   double _balanceAmount = 0.0;
   bool _toCustomerCreditEnabled = false;
   double _toCustomerCreditAmount = 0.0; // Store the actual credit amount
+  String _orderComment = "";
+
+  // Expose current comment to parent (RestaurantPage) for new order flow
+  String get orderComment => _orderComment;
 
   // Customer Selection Variables
   CustomerListModelData? _selectedCustomer;
@@ -3143,8 +3177,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       _isDebitSelected = false;
       _cashAmount = "";
       _cardAmount = "";
-      _upiAmount = "";
-      _debitAmount = "";
+      _upiAmount = '';
+      _debitAmount = '';
+      _orderComment = "";
       _transactionNumber = "";
 
       // Clear discount state
@@ -3235,6 +3270,46 @@ class _OrderPanelState extends State<_OrderPanel> {
             '✅ Loaded payment method: $paymentMethod, Amount: ₹$paidAmount');
       }
 
+      // Load existing comment if available (supports multiple API shapes)
+      String? loadedComment = order['comment']?.toString();
+      loadedComment ??= order['order_comment']?.toString();
+
+      // From nested map: orderProps: { COMMENT: "..." }
+      if (loadedComment == null || loadedComment.isEmpty) {
+        final propsMap = order['orderProps'];
+        if (propsMap is Map && propsMap['COMMENT'] != null) {
+          loadedComment = propsMap['COMMENT']?.toString();
+        }
+      }
+
+      // From array: order_props: [{ code: COMMENT, value: "..." }]
+      if (loadedComment == null || loadedComment.isEmpty) {
+        final propsList = order['order_props'];
+        if (propsList is List) {
+          try {
+            final match = propsList.firstWhere(
+              (e) => (e is Map) && (e['code']?.toString()?.toUpperCase() == 'COMMENT'),
+              orElse: () => null,
+            );
+            if (match is Map && match['value'] != null) {
+              loadedComment = match['value']?.toString();
+            }
+          } catch (_) {}
+        }
+      }
+
+      // Normalize: strip surrounding quotes if present (API sometimes returns quoted strings)
+      if (loadedComment != null) {
+        loadedComment = loadedComment!.trim();
+        if (loadedComment!.startsWith('"') && loadedComment!.endsWith('"')) {
+          loadedComment = loadedComment!.substring(1, loadedComment!.length - 1);
+        }
+      }
+
+      setState(() {
+        _orderComment = loadedComment ?? '';
+      });
+
       // Load discount information if available
       final flatDiscount = order['flat_discount'];
       final percentageDiscount = order['percentage_discount'];
@@ -3278,6 +3353,150 @@ class _OrderPanelState extends State<_OrderPanel> {
         _isCardSelected ||
         _isUpiSelected ||
         _isDebitSelected;
+  }
+
+  // Comment editor dialog
+  void _showCommentDialog() {
+    final String initialComment = _orderComment.isNotEmpty
+        ? _orderComment
+        : (_selectedOrder?['comment']?.toString() ??
+            _selectedOrder?['order_comment']?.toString() ??
+            '');
+    final controller = TextEditingController(text: initialComment);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: BuildBoxShadowContainer(
+            circleRadius: 12,
+            color: Colors.white,
+            width: 500,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Add Comment',
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s16,
+                        0.21,
+                        ColorManager.kPrimaryColor,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Comment',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s12,
+                    0.21,
+                    ColorManager.textColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                BuildBoxShadowContainer(
+                  circleRadius: 7,
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.only(
+                      left: 15, right: 15, top: 8, bottom: 8),
+                  height: 110,
+                  child: TextField(
+                    controller: controller,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: 'Enter order comment',
+                      hintStyle: buildCustomStyle(
+                        FontWeight.w500,
+                        12,
+                        0.27,
+                        Colors.grey.withOpacity(.5),
+                      ),
+                      border: InputBorder.none,
+                    ),
+                    style: buildCustomStyle(
+                      FontWeight.w500,
+                      12,
+                      0.27,
+                      Colors.black.withOpacity(.8),
+                    ),
+                    onTap: () {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (controller.text.isNotEmpty) {
+                          controller.selection = TextSelection(
+                            baseOffset: 0,
+                            extentOffset: controller.text.length,
+                          );
+                        }
+                      });
+                      Provider.of<KeyboardProvider>(context, listen: false)
+                          .show('text', controller, replaceOnFirstInput: false);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CustomRoundButton(
+                        title: "Cancel",
+                        fct: () => Navigator.of(context).pop(),
+                        fontSize: FontSize.s14,
+                        height: 45,
+                        width: double.infinity,
+                        boxColor: Colors.grey.shade600,
+                        borderColor: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 2,
+                      child: CustomRoundButton(
+                        title: "Save Comment",
+                        fct: () {
+                          setState(() {
+                            _orderComment = controller.text.trim();
+                          });
+                          Navigator.of(context).pop();
+                        },
+                        fontSize: FontSize.s14,
+                        height: 45,
+                        width: double.infinity,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Default Delivery Method (mirror of BillingPage)
+  String _getDefaultDeliveryMethodId() {
+    try {
+      final deliveryMethodsProvider =
+          Provider.of<DeliveryMethodsProvider>(context, listen: false);
+      final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+      return defaultMethod?.id ??
+          "11"; // Fallback to Store Takeaway ID from API
+    } catch (e) {
+      return "11"; // Fallback to Store Takeaway ID from API
+    }
   }
 
   Widget _buildPaymentSummary() {
@@ -4594,6 +4813,59 @@ class _OrderPanelState extends State<_OrderPanel> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
+                      onTap: () => _showCommentDialog(),
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          border: Border.all(
+                            color: Colors.grey.shade300,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _orderComment.isNotEmpty
+                                    ? Icons.check_circle
+                                    : Icons.comment,
+                                color: _orderComment.isNotEmpty
+                                    ? const Color(0xFF059669)
+                                    : const Color(0xFF64748B),
+                                size: widget.isCompact ? 14 : 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  'Comment',
+                                  style: buildCustomStyle(
+                                      FontWeightManager.semiBold,
+                                      widget.isCompact
+                                          ? FontSize.s13
+                                          : FontSize.s14,
+                                      0.21,
+                                      const Color(0xFF64748B)),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
                       onTap: (cartItems.isEmpty ||
                               !allItemsServed ||
                               _isLoadingConfirm)
@@ -5104,8 +5376,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       final transactionId = _transactionNumber.isNotEmpty
           ? _transactionNumber
           : (_selectedOrder['transaction_number'] ?? '');
-      final comment =
-          _selectedOrder['comment'] ?? 'Order confirmed from restaurant';
+      final comment = _orderComment.isNotEmpty
+          ? _orderComment
+          : (_selectedOrder['comment'] ?? 'Order confirmed from restaurant');
 
       // Prepare payment method data
       String? paymentMethod;
@@ -5247,6 +5520,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         paidMethods: paidMethods.isNotEmpty ? paidMethods : null,
         status: 'confirmed',
         comment: comment,
+        deliveryMethodId: _getDefaultDeliveryMethodId(),
         // Add discount parameters
         flatDiscount: _flatDiscount > 0 ? _flatDiscount : null,
         percentageDiscount:
@@ -5483,6 +5757,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     );
   }
 
+  // Footer actions for current cart (New Order flow)
   Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
     return SafeArea(
       top: false,
@@ -5497,105 +5772,162 @@ class _OrderPanelState extends State<_OrderPanel> {
             ),
           ),
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
+            // Top: Comment button (full width)
+            SizedBox(
+              width: double.infinity,
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => widget.onNewOrder(),
+                  onTap: () => _showCommentDialog(),
                   borderRadius: BorderRadius.circular(12),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     height: widget.isCompact ? 44 : 48,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.grey.shade100,
                       border: Border.all(
-                        color: const Color(0xFF64748B),
+                        color: Colors.grey.shade300,
                         width: 1.5,
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
-                      child: Text(
-                        'New Order',
-                        style: buildCustomStyle(
-                            FontWeightManager.semiBold,
-                            widget.isCompact ? FontSize.s13 : FontSize.s14,
-                            0.21,
-                            const Color(0xFF64748B)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _orderComment.isNotEmpty
+                                ? Icons.check_circle
+                                : Icons.comment,
+                            color: _orderComment.isNotEmpty
+                                ? const Color(0xFF059669)
+                                : const Color(0xFF64748B),
+                            size: widget.isCompact ? 14 : 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Comment',
+                            style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                0.21,
+                                const Color(0xFF64748B)),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 2,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: (cartItems.isEmpty || widget.isLoadingSendToKitchen)
-                      ? null
-                      : () => widget.onSendToKitchen(),
-                  borderRadius: BorderRadius.circular(12),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: widget.isCompact ? 44 : 48,
-                    decoration: BoxDecoration(
-                      color:
-                          (cartItems.isEmpty || widget.isLoadingSendToKitchen)
-                              ? const Color(0xFF94A3B8)
-                              : const Color(0xFF059669),
+            const SizedBox(height: 12),
+            // Bottom row: New Order and Send to Kitchen
+            Row(
+              children: [
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => widget.onNewOrder(),
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: (cartItems.isNotEmpty &&
-                              !widget.isLoadingSendToKitchen)
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xFF059669).withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : [],
-                    ),
-                    child: Center(
-                      child: widget.isLoadingSendToKitchen
-                          ? SizedBox(
-                              width: widget.isCompact ? 16 : 20,
-                              height: widget.isCompact ? 16 : 20,
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.send,
-                                  color: Colors.white,
-                                  size: widget.isCompact ? 16 : 18,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Send to Kitchen',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      widget.isCompact
-                                          ? FontSize.s13
-                                          : FontSize.s14,
-                                      0.21,
-                                      Colors.white),
-                                ),
-                              ],
-                            ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(
+                            color: const Color(0xFF64748B),
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'New Order',
+                            style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                0.21,
+                                const Color(0xFF64748B)),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap:
+                          (cartItems.isEmpty || widget.isLoadingSendToKitchen)
+                              ? null
+                              : () => widget.onSendToKitchen(),
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: (cartItems.isEmpty ||
+                                  widget.isLoadingSendToKitchen)
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF059669),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: (cartItems.isNotEmpty &&
+                                  !widget.isLoadingSendToKitchen)
+                              ? [
+                                  BoxShadow(
+                                    color: const Color(0xFF059669)
+                                        .withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : [],
+                        ),
+                        child: Center(
+                          child: widget.isLoadingSendToKitchen
+                              ? SizedBox(
+                                  width: widget.isCompact ? 16 : 20,
+                                  height: widget.isCompact ? 16 : 20,
+                                  child: const CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.send,
+                                      color: Colors.white,
+                                      size: widget.isCompact ? 16 : 18,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Send to Kitchen',
+                                      style: buildCustomStyle(
+                                          FontWeightManager.semiBold,
+                                          widget.isCompact
+                                              ? FontSize.s13
+                                              : FontSize.s14,
+                                          0.21,
+                                          Colors.white),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -5743,7 +6075,8 @@ class _OrderPanelState extends State<_OrderPanel> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFF059669).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -5759,11 +6092,13 @@ class _OrderPanelState extends State<_OrderPanel> {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: _statusColor(status).withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _statusColor(status).withOpacity(0.4)),
+                      border: Border.all(
+                          color: _statusColor(status).withOpacity(0.4)),
                     ),
                     child: Text(
                       statusText,
