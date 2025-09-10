@@ -1,22 +1,20 @@
-git tag v0.1.0-dev.151
-git push build v0.1.0-dev.151
+git tag v0.1.0-dev.152
+git push build v0.1.0-dev.152
 git push origin v0.1.0-dev.143
 
-HYPERSOUK_W9DNqq4uR9Zjpoe4Rw4WQhsV2u7Ay9Zi
-
 https://eposdemo.hypersouq.in
-
-HYPERSOUK_kPqBy55O63n5cdlfwXRLDN6VFBqJF2jW
-
-attender@hypersouq.in
+EPOSENKE_84BFT1haKrbIJeosgyPH0OES1Y6DNkLx
+attender@eposenke.in
 123456
-
-kitchenmaster@hypersouq.in
+kitchenmaster@eposenke.in
 123456
-
-salesexecutive@hypersouq.in
+salesexecutive@eposenke.in
 123456
 
 SOUQPOINT_S9z2X9Vef2bwrlvBS1befpCVJPxkmFqI
 salesexecutive@souqpoint.in
+123456
+
+RESTOPOS_oidkN1BDC0Fl6ti5sFtkVpTg0gultasn
+salesexecutive@restopos.com
 123456

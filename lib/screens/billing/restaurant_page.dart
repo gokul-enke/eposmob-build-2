@@ -1010,7 +1010,7 @@ class _TablesPanel extends StatelessWidget {
   }
 }
 
-class _MenuPanel extends StatelessWidget {
+class _MenuPanel extends StatefulWidget {
   final ValueChanged<int?> onCategoryChanged;
   final int? activeCategoryId;
   final Function(GetProduct product, int quantity) onItemAdd;
@@ -1028,6 +1028,33 @@ class _MenuPanel extends StatelessWidget {
   });
 
   @override
+  State<_MenuPanel> createState() => _MenuPanelState();
+}
+
+class _MenuPanelState extends State<_MenuPanel> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query.toLowerCase();
+    });
+  }
+
+  void _clearSearch() {
+    setState(() {
+      _searchQuery = '';
+      _searchController.clear();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer2<CategoryProvider, LocalProductProvider>(
       builder: (context, categoryProvider, productProvider, _) {
@@ -1041,7 +1068,7 @@ class _MenuPanel extends StatelessWidget {
         }
 
         final categories = categoryProvider.category ?? [];
-        final selectedCategoryId = activeCategoryId ??
+        final selectedCategoryId = widget.activeCategoryId ??
             (categories.isNotEmpty ? categories.first.categoryId : null);
 
         // Get products for selected category
@@ -1058,13 +1085,20 @@ class _MenuPanel extends StatelessWidget {
           }
         }
 
+        // Apply search filter
+        if (_searchQuery.isNotEmpty) {
+          items = items.where((product) {
+            return product.productName?.toLowerCase().contains(_searchQuery) ?? false;
+          }).toList();
+        }
+
         // Calculate responsive grid columns with better aspect ratios
         int crossAxisCount;
         double childAspectRatio;
 
-        if (isCompact) {
+        if (widget.isCompact) {
           // Mobile/small tablet layout
-          if (screenSize.width > 600) {
+          if (widget.screenSize.width > 600) {
             crossAxisCount = 2;
             childAspectRatio =
                 1.7; // Balanced - prevents overflow while keeping compact
@@ -1075,11 +1109,11 @@ class _MenuPanel extends StatelessWidget {
           }
         } else {
           // Desktop/large tablet layout
-          if (screenSize.width > 1400) {
+          if (widget.screenSize.width > 1400) {
             crossAxisCount = 4;
             childAspectRatio =
                 1.6; // Balanced - prevents overflow while keeping compact
-          } else if (screenSize.width > 1000) {
+          } else if (widget.screenSize.width > 1000) {
             crossAxisCount = 3;
             childAspectRatio =
                 1.7; // Balanced - prevents overflow while keeping compact
@@ -1108,7 +1142,7 @@ class _MenuPanel extends StatelessWidget {
             children: [
               // Enhanced header
               Container(
-                padding: EdgeInsets.all(isCompact ? 16.0 : 20.0),
+                padding: EdgeInsets.all(widget.isCompact ? 16.0 : 20.0),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -1136,7 +1170,7 @@ class _MenuPanel extends StatelessWidget {
                       child: Icon(
                         Icons.restaurant_menu,
                         color: const Color(0xFF059669),
-                        size: isCompact ? 18 : 20,
+                        size: widget.isCompact ? 18 : 20,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1144,7 +1178,7 @@ class _MenuPanel extends StatelessWidget {
                       'Menu',
                       style: buildCustomStyle(
                           FontWeightManager.bold,
-                          isCompact ? FontSize.s16 : FontSize.s18,
+                          widget.isCompact ? FontSize.s16 : FontSize.s18,
                           0.30,
                           const Color(0xFF1E293B)),
                     ),
@@ -1169,7 +1203,7 @@ class _MenuPanel extends StatelessWidget {
               // Enhanced categories with modern styling
               if (categories.isNotEmpty)
                 Container(
-                  height: isCompact ? 56 : 64,
+                  height: widget.isCompact ? 56 : 64,
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: MouseRegion(
                     cursor: SystemMouseCursors.grab,
@@ -1185,7 +1219,7 @@ class _MenuPanel extends StatelessWidget {
                       child: ListView.separated(
                         physics: const BouncingScrollPhysics(),
                         padding: EdgeInsets.symmetric(
-                            horizontal: isCompact ? 12 : 16),
+                            horizontal: widget.isCompact ? 12 : 16),
                         scrollDirection: Axis.horizontal,
                         itemBuilder: (_, idx) {
                           final c = categories[idx];
@@ -1196,7 +1230,7 @@ class _MenuPanel extends StatelessWidget {
                               color: Colors.transparent,
                               child: InkWell(
                                 onTap: () {
-                                  onCategoryChanged(c.categoryId);
+                                  widget.onCategoryChanged(c.categoryId);
                                   // Update products for selected category
                                   if (c.categoryId == 0) {
                                     // "ALL" category
@@ -1211,8 +1245,8 @@ class _MenuPanel extends StatelessWidget {
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
                                   padding: EdgeInsets.symmetric(
-                                      horizontal: isCompact ? 16 : 20,
-                                      vertical: isCompact ? 8 : 10),
+                                      horizontal: widget.isCompact ? 16 : 20,
+                                      vertical: widget.isCompact ? 8 : 10),
                                   decoration: BoxDecoration(
                                     color: active
                                         ? const Color(0xFF2563EB)
@@ -1240,7 +1274,7 @@ class _MenuPanel extends StatelessWidget {
                                       c.categoryName ?? 'Unknown',
                                       style: buildCustomStyle(
                                           FontWeightManager.semiBold,
-                                          isCompact
+                                          widget.isCompact
                                               ? FontSize.s12
                                               : FontSize.s13,
                                           0.21,
@@ -1260,6 +1294,62 @@ class _MenuPanel extends StatelessWidget {
                     ),
                   ),
                 ),
+              // Search bar
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: widget.isCompact ? 12 : 16,
+                  vertical: 8,
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.grey.shade200,
+                      width: 1,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Search menu items...',
+                      hintStyle: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s14,
+                        0.21,
+                        Colors.grey.shade500,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: Colors.grey.shade500,
+                        size: widget.isCompact ? 18 : 20,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear,
+                                color: Colors.grey.shade500,
+                                size: widget.isCompact ? 18 : 20,
+                              ),
+                              onPressed: _clearSearch,
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: widget.isCompact ? 12 : 16,
+                        vertical: widget.isCompact ? 12 : 16,
+                      ),
+                    ),
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s14,
+                      0.21,
+                      const Color(0xFF1E293B),
+                    ),
+                  ),
+                ),
+              ),
               // Menu items
               Expanded(
                 child: items.isEmpty
@@ -1296,18 +1386,18 @@ class _MenuPanel extends StatelessWidget {
                             },
                           ),
                           child: GridView.builder(
-                            padding: EdgeInsets.all(isCompact ? 6 : 8),
+                            padding: EdgeInsets.all(widget.isCompact ? 6 : 8),
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: crossAxisCount,
-                              mainAxisSpacing: isCompact ? 6 : 8,
-                              crossAxisSpacing: isCompact ? 6 : 8,
+                              mainAxisSpacing: widget.isCompact ? 6 : 8,
+                              crossAxisSpacing: widget.isCompact ? 6 : 8,
                               childAspectRatio: childAspectRatio,
                             ),
                             itemCount: items.length,
                             itemBuilder: (_, idx) {
                               final item = items[idx];
-                              return _buildMenuItem(item, isCompact, context);
+                              return _buildMenuItem(item, widget.isCompact, context);
                             },
                             physics: const BouncingScrollPhysics(),
                           ),
@@ -1365,7 +1455,7 @@ class _MenuPanel extends StatelessWidget {
         child: InkWell(
           onTap: isAvailable
               ? () {
-                  onItemAdd(item, 1);
+                  widget.onItemAdd(item, 1);
                 }
               : null,
           borderRadius: BorderRadius.circular(12),
