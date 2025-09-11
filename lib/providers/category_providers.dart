@@ -152,8 +152,6 @@ class CategoryProvider extends ChangeNotifier {
             CategoryListModel.fromJson(jsonData);
 
         categoryList = categoryListModel.category;
-        // Assuming categoryDemo is still relevant
-        categoryList!.insert(0, categoryDemo);
 
         // Store the original unfiltered list only when no filtering is applied
         if (filterName == null && filterParent == null) {
@@ -242,8 +240,6 @@ class CategoryProvider extends ChangeNotifier {
         CategoryListModel categoryListModel =
             CategoryListModel.fromJson(jsonData);
 
-        searchCategoryList = categoryListModel.category;
-        searchCategoryList!.insert(0, categoryDemo);
         searchCategoryList = categoryListModel.category;
 
         // debugPrint("categoryListModel.pagination?.toString()");

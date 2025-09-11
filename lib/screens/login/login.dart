@@ -1040,14 +1040,14 @@ class _SignInScreenState extends State<SignInScreen> {
                                             // Don't block login if document config fails
                                           }
 
-                                          // Load categories during login
+                                          // Load categories during login (align with Category page)
                                           try {
                                             _updateLoadingState(true, "Loading categories...");
                                             final categoryProvider = Provider
                                                 .of<CategoryProvider>(
                                                 context,
                                                 listen: false);
-                                            await categoryProvider.listAllCategory();
+                                            await categoryProvider.searchAllCategory(page: 1);
                                             debugPrint(
                                                 "Categories loaded successfully during login");
                                           } catch (e) {

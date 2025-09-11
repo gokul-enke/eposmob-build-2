@@ -137,7 +137,8 @@ class SyncProvider extends ChangeNotifier {
     try {
       debugPrint("📂 Syncing categories...");
       final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
-      await categoryProvider.listAllCategory();
+      // Use the same loader as Category screen to keep lists consistent
+      await categoryProvider.searchAllCategory(page: 1);
       debugPrint("✅ Categories synced successfully");
     } catch (e) {
       debugPrint("❌ Failed to sync categories: $e");
