@@ -954,6 +954,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                                   executiveModelData
                                                           ?.userRole ??
                                                       "");
+
+
                                           SalesProvider salesProvider =
                                               Provider.of<SalesProvider>(
                                                   context,
@@ -1059,7 +1061,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                           _updateLoadingState(false, "");
 
                                           // Set appropriate home page based on user role
-                                          SideBarController sideBarController = Get.put(SideBarController());
+                                          final sideBarController = Get.find<SideBarController>();
                                           String userRole = executiveModelData?.userRole ?? "";
                                           
                                           switch (userRole) {

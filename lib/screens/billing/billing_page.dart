@@ -620,7 +620,7 @@ class BillingPageState extends State<BillingPage>
           final appSettingsProvider =
               Provider.of<AppSettingsProvider>(context, listen: false);
           final bool autoAssignEnabled =
-              appSettingsProvider.appSettings?.autoAssignDefaultCustomer ?? true;
+              appSettingsProvider.appSettings?.autoAssignDefaultCustomer ?? false;
 
           if (!autoAssignEnabled) {
             debugPrint("🔧 APP SETTINGS: Auto-assign default customer is DISABLED - only fetching customer list");

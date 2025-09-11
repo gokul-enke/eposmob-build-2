@@ -24,19 +24,19 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: _getAppBarTitle(),
-        centerTitle: true, // This centers the title
-        backgroundColor: Colors.blue[800],
-        foregroundColor: Colors.white,
-        elevation: 4,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () => _navigateToProfile(context),
-          ),
-        ],
-      ),
+      // appBar: AppBar(
+      //   title: _getAppBarTitle(),
+      //   centerTitle: true, // This centers the title
+      //   backgroundColor: Colors.blue[800],
+      //   foregroundColor: Colors.white,
+      //   elevation: 4,
+      //   actions: [
+      //     IconButton(
+      //       icon: const Icon(Icons.person),
+      //       onPressed: () => _navigateToProfile(context),
+      //     ),
+      //   ],
+      // ),
       body: _buildCurrentScreen(),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -110,34 +110,34 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
     }
   }
 
-  Widget _getAppBarTitle() {
-    final String title;
-    switch (_currentIndex) {
-      case 0:
-        title = 'New Order';
-        break;
-      case 1:
-        title = 'Billing';
-        break;
-      case 2:
-        title = 'Saved Orders';
-        break;
-      default:
-        title = 'POS System';
-        break;
-    }
+  // Widget _getAppBarTitle() {
+  //   final String title;
+  //   switch (_currentIndex) {
+  //     case 0:
+  //       title = 'New Order';
+  //       break;
+  //     case 1:
+  //       title = 'Billing';
+  //       break;
+  //     case 2:
+  //       title = 'Saved Orders';
+  //       break;
+  //     default:
+  //       title = 'POS System';
+  //       break;
+  //   }
 
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.5,
-      ),
-    );
-  }
+  //   return Text(
+  //     title,
+  //     style: const TextStyle(
+  //       fontSize: 20,
+  //       fontWeight: FontWeight.w700,
+  //       letterSpacing: 0.5,
+  //     ),
+  //   );
+  // }
 
-  void _navigateToProfile(BuildContext context) {
-    // Implement profile navigation
-  }
+  // void _navigateToProfile(BuildContext context) {
+  //   // Implement profile navigation
+  // }
 }
