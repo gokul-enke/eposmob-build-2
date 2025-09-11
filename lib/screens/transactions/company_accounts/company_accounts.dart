@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/models/company_accounts.dart';
+import 'package:pos_machine/providers/company_account_provider.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -18,102 +21,155 @@ class CompanyAccountsScreen extends StatefulWidget {
 
 class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
-  final TextEditingController fromDateController = TextEditingController();
-  final TextEditingController toDateController = TextEditingController();
+  // Commenting out date filters as dates are not coming from backend
+  // final TextEditingController fromDateController = TextEditingController();
+  // final TextEditingController toDateController = TextEditingController();
   String? selectedPaymentMethod;
   String? selectedType;
   String? selectedStatus;
   bool isLoading = false;
+  bool initLoading = false;
 
   // Company accounts data - will be populated from API
-  List<CompanyAccountData> accountsData = [];
+  // Removed local data model as we'll use provider data
 
   @override
   void initState() {
     super.initState();
-    loadAccountsData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadAccountsData();
+    });
   }
 
   Future<void> loadAccountsData() async {
-    setState(() {
-      isLoading = true;
-    });
     try {
-      // TODO: Implement actual API call to fetch company accounts
-      // CompanyAccountProvider provider = Provider.of<CompanyAccountProvider>(context, listen: false);
-      // await provider.fetchCompanyAccounts(context);
-      // setState(() {
-      //   accountsData = provider.companyAccounts;
-      // });
+      setState(() {
+        initLoading = true;
+      });
+
+      CompanyAccountProvider companyAccountProvider =
+          Provider.of<CompanyAccountProvider>(context, listen: false);
+      SharedPreferenceProvider sharedPrefProvider =
+          Provider.of<SharedPreferenceProvider>(context, listen: false);
+
+      String? token = await sharedPrefProvider.getToken();
+
+      debugPrint(
+          'Loading company accounts with token: ${token != null ? "Available" : "Missing"}');
+
+      if (token != null) {
+        await companyAccountProvider.loadAllCompanyAccounts(token);
+        debugPrint('Company accounts API call completed');
+
+        // Check if we have data after the API call
+        final accountsList =
+            companyAccountProvider.getCompanyAccountsList ?? [];
+        debugPrint('Number of accounts loaded: ${accountsList.length}');
+
+        // Handle API error responses (like "no data found")
+        if (accountsList.isEmpty && mounted) {
+          // Don't show error for "no data found" as it's a valid state
+          debugPrint('No company accounts data available');
+        }
+      } else {
+        debugPrint('No access token available');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content:
+                  Text('Authentication token missing. Please login again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     } catch (error) {
       debugPrint('Error loading company accounts: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading data: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = false;
+        });
+      }
     }
   }
 
   void searchAccounts() {
-    // TODO: Implement actual search/filter functionality
-    // Apply filters based on:
-    // - fromDateController.text
-    // - toDateController.text
-    // - selectedPaymentMethod
-    // - selectedType
-    // - selectedStatus
+    // Apply filters using provider
+    CompanyAccountProvider companyAccountProvider =
+        Provider.of<CompanyAccountProvider>(context, listen: false);
+
+    companyAccountProvider.applyFiltersLocally(
+      filterPaymentMethod: selectedPaymentMethod,
+      filterType: selectedType,
+      filterStatus: selectedStatus,
+      page: 1,
+    );
+
     debugPrint(
-        "Searching with filters - From: ${fromDateController.text}, To: ${toDateController.text}, Payment: $selectedPaymentMethod, Type: $selectedType, Status: $selectedStatus");
-    loadAccountsData();
+        "Searching with filters - Payment: $selectedPaymentMethod, Type: $selectedType, Status: $selectedStatus");
   }
 
   void resetFilters() {
     setState(() {
-      fromDateController.clear();
-      toDateController.clear();
+      // Commenting out date controllers as dates are not from backend
+      // fromDateController.clear();
+      // toDateController.clear();
       selectedPaymentMethod = null;
       selectedType = null;
       selectedStatus = null;
     });
-    loadAccountsData();
+
+    // Reset filters in provider
+    CompanyAccountProvider companyAccountProvider =
+        Provider.of<CompanyAccountProvider>(context, listen: false);
+    companyAccountProvider.resetFilters();
   }
 
-  // Date selection method
-  Future<void> _selectDate(BuildContext context,
-      {required bool isFromDate}) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: ColorManager.kPrimaryColor,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
-            ),
-            dialogBackgroundColor: Colors.white,
-            cardColor: Colors.white,
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      final formattedDate =
-          "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
-      if (isFromDate) {
-        fromDateController.text = formattedDate;
-      } else {
-        toDateController.text = formattedDate;
-      }
-      searchAccounts();
-    }
-  }
+  // Commenting out date selection method as dates are not coming from backend
+  // Future<void> _selectDate(BuildContext context,
+  //     {required bool isFromDate}) async {
+  //   final DateTime? picked = await showDatePicker(
+  //     context: context,
+  //     initialDate: DateTime.now(),
+  //     firstDate: DateTime(2000),
+  //     lastDate: DateTime(2100),
+  //     builder: (BuildContext context, Widget? child) {
+  //       return Theme(
+  //         data: ThemeData.light().copyWith(
+  //           colorScheme: const ColorScheme.light(
+  //             primary: ColorManager.kPrimaryColor,
+  //             onPrimary: Colors.white,
+  //             surface: Colors.white,
+  //             onSurface: Colors.black,
+  //           ),
+  //           dialogBackgroundColor: Colors.white,
+  //           cardColor: Colors.white,
+  //         ),
+  //         child: child!,
+  //       );
+  //     },
+  //   );
+  //
+  //   if (picked != null) {
+  //     final formattedDate =
+  //         "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
+  //     if (isFromDate) {
+  //       fromDateController.text = formattedDate;
+  //     } else {
+  //       toDateController.text = formattedDate;
+  //     }
+  //     searchAccounts();
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -164,16 +220,16 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
-        CustomRoundButton(
-          title: "New Company Account",
-          fct: () {
-            sideBarController.index.value =
-                60; // Navigate to Add Company Account screen
-          },
-          fontSize: 12,
-          height: 45,
-          width: 200,
-        ),
+        // CustomRoundButton(
+        //   title: "New Company Account",
+        //   fct: () {
+        //     sideBarController.index.value =
+        //         60; // Navigate to Add Company Account screen
+        //   },
+        //   fontSize: 12,
+        //   height: 45,
+        //   width: 200,
+        // ),
       ],
     );
   }
@@ -181,18 +237,23 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
   Widget _buildFilters(Size size) {
     return Column(
       children: [
-        // First row: From Date, To Date, Payment Method, Type
+        // First row: Payment Method, Type (Commented out date filters)
         SizedBox(
           height: 90,
           child: Row(
             children: [
-              Expanded(flex: 1, child: _buildFromDateFilter()),
-              const SizedBox(width: 15),
-              Expanded(flex: 1, child: _buildToDateFilter()),
-              const SizedBox(width: 15),
+              // Commenting out date filters as dates are not from backend
+              // Expanded(flex: 1, child: _buildFromDateFilter()),
+              // const SizedBox(width: 15),
+              // Expanded(flex: 1, child: _buildToDateFilter()),
+              // const SizedBox(width: 15),
               Expanded(flex: 1, child: _buildPaymentMethodFilter()),
               const SizedBox(width: 15),
               Expanded(flex: 1, child: _buildTypeFilter()),
+              const SizedBox(width: 15),
+              Expanded(flex: 1, child: Container()), // Empty space
+              const SizedBox(width: 15),
+              Expanded(flex: 1, child: Container()), // Empty space
             ],
           ),
         ),
@@ -229,95 +290,96 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
     );
   }
 
-  Widget _buildFromDateFilter() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            "From Date",
-            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                0.27, Colors.black.withOpacity(0.6)),
-          ),
-        ),
-        const SizedBox(height: 8),
-        BuildBoxShadowContainer(
-          height: 45,
-          width: double.infinity,
-          circleRadius: 7,
-          child: TextFormField(
-            controller: fromDateController,
-            onTap: () => _selectDate(context, isFromDate: true),
-            readOnly: true,
-            cursorColor: ColorManager.kPrimaryColor,
-            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                0.18, ColorManager.textColor),
-            decoration: decoration.copyWith(
-              hintText: "DD/MM/YYYY",
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
-              prefixIcon: Container(
-                padding: const EdgeInsets.all(8),
-                child: Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: ColorManager.kPrimaryColor,
-                ),
-              ),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildToDateFilter() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            "To Date",
-            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                0.27, Colors.black.withOpacity(0.6)),
-          ),
-        ),
-        const SizedBox(height: 8),
-        BuildBoxShadowContainer(
-          height: 45,
-          width: double.infinity,
-          circleRadius: 7,
-          child: TextFormField(
-            controller: toDateController,
-            onTap: () => _selectDate(context, isFromDate: false),
-            readOnly: true,
-            cursorColor: ColorManager.kPrimaryColor,
-            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                0.18, ColorManager.textColor),
-            decoration: decoration.copyWith(
-              hintText: "DD/MM/YYYY",
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
-              prefixIcon: Container(
-                padding: const EdgeInsets.all(8),
-                child: Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: ColorManager.kPrimaryColor,
-                ),
-              ),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  // Commenting out date filter methods as dates are not coming from backend
+  // Widget _buildFromDateFilter() {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Padding(
+  //         padding: const EdgeInsets.all(8.0),
+  //         child: Text(
+  //           "From Date",
+  //           style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+  //               0.27, Colors.black.withOpacity(0.6)),
+  //         ),
+  //       ),
+  //       const SizedBox(height: 8),
+  //       BuildBoxShadowContainer(
+  //         height: 45,
+  //         width: double.infinity,
+  //         circleRadius: 7,
+  //         child: TextFormField(
+  //           controller: fromDateController,
+  //           onTap: () => _selectDate(context, isFromDate: true),
+  //           readOnly: true,
+  //           cursorColor: ColorManager.kPrimaryColor,
+  //           style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+  //               0.18, ColorManager.textColor),
+  //           decoration: decoration.copyWith(
+  //             hintText: "DD/MM/YYYY",
+  //             hintStyle: buildCustomStyle(FontWeightManager.medium,
+  //                 FontSize.s10, 0.18, ColorManager.textColor),
+  //             prefixIcon: Container(
+  //               padding: const EdgeInsets.all(8),
+  //               child: Icon(
+  //                 Icons.calendar_today,
+  //                 size: 16,
+  //                 color: ColorManager.kPrimaryColor,
+  //               ),
+  //             ),
+  //             filled: true,
+  //             fillColor: Colors.white,
+  //           ),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
+  //
+  // Widget _buildToDateFilter() {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Padding(
+  //         padding: const EdgeInsets.all(8.0),
+  //         child: Text(
+  //           "To Date",
+  //           style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
+  //               0.27, Colors.black.withOpacity(0.6)),
+  //         ),
+  //       ),
+  //       const SizedBox(height: 8),
+  //       BuildBoxShadowContainer(
+  //         height: 45,
+  //         width: double.infinity,
+  //         circleRadius: 7,
+  //         child: TextFormField(
+  //           controller: toDateController,
+  //           onTap: () => _selectDate(context, isFromDate: false),
+  //           readOnly: true,
+  //           cursorColor: ColorManager.kPrimaryColor,
+  //           style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+  //               0.18, ColorManager.textColor),
+  //           decoration: decoration.copyWith(
+  //             hintText: "DD/MM/YYYY",
+  //             hintStyle: buildCustomStyle(FontWeightManager.medium,
+  //                 FontSize.s10, 0.18, ColorManager.textColor),
+  //             prefixIcon: Container(
+  //               padding: const EdgeInsets.all(8),
+  //               child: Icon(
+  //                 Icons.calendar_today,
+  //                 size: 16,
+  //                 color: ColorManager.kPrimaryColor,
+  //               ),
+  //             ),
+  //             filled: true,
+  //             fillColor: Colors.white,
+  //           ),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 
   Widget _buildPaymentMethodFilter() {
     return Column(
@@ -357,17 +419,25 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
                 ),
               ),
               DropdownMenuItem(
-                value: "Cash",
+                value: "COD",
                 child: Text(
-                  "Cash",
+                  "COD",
                   style: buildCustomStyle(FontWeightManager.medium,
                       FontSize.s10, 0.18, ColorManager.textColor),
                 ),
               ),
               DropdownMenuItem(
-                value: "Bank Transfer",
+                value: "CASH",
                 child: Text(
-                  "Bank Transfer",
+                  "CASH",
+                  style: buildCustomStyle(FontWeightManager.medium,
+                      FontSize.s10, 0.18, ColorManager.textColor),
+                ),
+              ),
+              DropdownMenuItem(
+                value: "Online",
+                child: Text(
+                  "Online",
                   style: buildCustomStyle(FontWeightManager.medium,
                       FontSize.s10, 0.18, ColorManager.textColor),
                 ),
@@ -381,9 +451,9 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
                 ),
               ),
               DropdownMenuItem(
-                value: "Credit Card",
+                value: "Cheque",
                 child: Text(
-                  "Credit Card",
+                  "Cheque",
                   style: buildCustomStyle(FontWeightManager.medium,
                       FontSize.s10, 0.18, ColorManager.textColor),
                 ),
@@ -439,17 +509,17 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
                 ),
               ),
               DropdownMenuItem(
-                value: "Income",
+                value: "Cash",
                 child: Text(
-                  "Income",
+                  "Cash",
                   style: buildCustomStyle(FontWeightManager.medium,
                       FontSize.s10, 0.18, ColorManager.textColor),
                 ),
               ),
               DropdownMenuItem(
-                value: "Expense",
+                value: "Bank",
                 child: Text(
-                  "Expense",
+                  "Bank",
                   style: buildCustomStyle(FontWeightManager.medium,
                       FontSize.s10, 0.18, ColorManager.textColor),
                 ),
@@ -505,25 +575,25 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
                 ),
               ),
               DropdownMenuItem(
-                value: "Completed",
+                value: "Credit",
                 child: Text(
-                  "Completed",
+                  "Credit",
                   style: buildCustomStyle(FontWeightManager.medium,
                       FontSize.s10, 0.18, ColorManager.textColor),
                 ),
               ),
               DropdownMenuItem(
-                value: "Pending",
+                value: "Debit",
                 child: Text(
-                  "Pending",
+                  "Debit",
                   style: buildCustomStyle(FontWeightManager.medium,
                       FontSize.s10, 0.18, ColorManager.textColor),
                 ),
               ),
               DropdownMenuItem(
-                value: "Failed",
+                value: "Balanced",
                 child: Text(
-                  "Failed",
+                  "Balanced",
                   style: buildCustomStyle(FontWeightManager.medium,
                       FontSize.s10, 0.18, ColorManager.textColor),
                 ),
@@ -543,107 +613,119 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
 
   Widget _buildAccountsTable() {
     return Expanded(
-      child: isLoading
-          ? const Center(child: CircularProgressIndicator.adaptive())
-          : BuildBoxShadowContainer(
-              margin: const EdgeInsets.only(top: 5),
-              circleRadius: 7,
-              offsetValue: const Offset(2, 2),
-              blurRadius: 8.0,
-              color: Colors.white,
-              child: Column(
-                children: [
-                  // Table header
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: ColorManager.tableBGColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          offset: Offset(0, 2),
-                          blurRadius: 2.0,
-                        ),
-                      ],
-                    ),
-                    child: Table(
-                      columnWidths: const {
-                        0: FlexColumnWidth(2.0), // Name
-                        1: FlexColumnWidth(1.8), // Payment Method Type
-                        2: FlexColumnWidth(1.2), // Type
-                        3: FlexColumnWidth(1.5), // Received Amount
-                        4: FlexColumnWidth(1.5), // Sent Amount
-                        5: FlexColumnWidth(1.2), // Status
-                        6: FlexColumnWidth(1.0), // Action
-                      },
-                      children: [
-                        TableRow(
-                          children: [
-                            _buildTableHeader("Name"),
-                            _buildTableHeader("Payment Method Type"),
-                            _buildTableHeader("Type"),
-                            _buildTableHeader("Received Amount"),
-                            _buildTableHeader("Sent Amount"),
-                            _buildTableHeader("Status"),
-                            _buildTableHeader("Action"),
+      child: Consumer<CompanyAccountProvider>(
+        builder: (context, companyAccountProvider, child) {
+          final isLoading = companyAccountProvider.isLoading || initLoading;
+          final accountsList =
+              companyAccountProvider.getCompanyAccountsList ?? [];
+
+          return isLoading
+              ? const Center(child: CircularProgressIndicator.adaptive())
+              : BuildBoxShadowContainer(
+                  margin: const EdgeInsets.only(top: 5),
+                  circleRadius: 7,
+                  offsetValue: const Offset(2, 2),
+                  blurRadius: 8.0,
+                  color: Colors.white,
+                  child: Column(
+                    children: [
+                      // Table header
+                      Container(
+                        decoration: const BoxDecoration(
+                          color: ColorManager.tableBGColor,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              offset: Offset(0, 2),
+                              blurRadius: 2.0,
+                            ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                  // Table body
-                  Expanded(
-                    child: accountsData.isEmpty
-                        ? _buildNoDataFoundUI()
-                        : SingleChildScrollView(
-                            child: Table(
-                              columnWidths: const {
-                                0: FlexColumnWidth(2.0),
-                                1: FlexColumnWidth(1.8),
-                                2: FlexColumnWidth(1.2),
-                                3: FlexColumnWidth(1.5),
-                                4: FlexColumnWidth(1.5),
-                                5: FlexColumnWidth(1.2),
-                                6: FlexColumnWidth(1.0),
-                              },
-                              children:
-                                  accountsData.asMap().entries.map((entry) {
-                                final int index = entry.key;
-                                final account = entry.value;
-                                return TableRow(
-                                  decoration: BoxDecoration(
-                                    color: index % 2 == 0
-                                        ? Colors.white
-                                        : Colors.grey.withOpacity(0.1),
-                                  ),
-                                  children: [
-                                    _buildTableCell(account.name),
-                                    _buildTableCell(account.paymentMethodType),
-                                    Center(child: _buildTypeChip(account.type)),
-                                    _buildTableCell(
-                                        "₹${account.receivedAmount.toStringAsFixed(2)}"),
-                                    _buildTableCell(
-                                        "₹${account.sentAmount.toStringAsFixed(2)}"),
-                                    Center(
-                                        child:
-                                            _buildStatusChip(account.status)),
-                                    Center(
-                                      child: IconButton(
-                                        icon: Icon(Icons.visibility,
-                                            size: 18,
-                                            color: ColorManager.kPrimaryColor),
-                                        onPressed: () =>
-                                            _showAccountDetails(account),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
+                        child: Table(
+                          columnWidths: const {
+                            0: FlexColumnWidth(2.0), // Name
+                            1: FlexColumnWidth(1.8), // Payment Method Type
+                            2: FlexColumnWidth(1.2), // Type
+                            3: FlexColumnWidth(1.5), // Received Amount
+                            4: FlexColumnWidth(1.5), // Sent Amount
+                            5: FlexColumnWidth(1.2), // Status
+                            6: FlexColumnWidth(1.0), // Action
+                          },
+                          children: [
+                            TableRow(
+                              children: [
+                                _buildTableHeader("Name"),
+                                _buildTableHeader("Payment Method Type"),
+                                _buildTableHeader("Type"),
+                                _buildTableHeader("Received Amount"),
+                                _buildTableHeader("Sent Amount"),
+                                _buildTableHeader("Status"),
+                                _buildTableHeader("Action"),
+                              ],
                             ),
-                          ),
+                          ],
+                        ),
+                      ),
+                      // Table body
+                      Expanded(
+                        child: accountsList.isEmpty
+                            ? _buildNoDataFoundUI()
+                            : SingleChildScrollView(
+                                child: Table(
+                                  columnWidths: const {
+                                    0: FlexColumnWidth(2.0),
+                                    1: FlexColumnWidth(1.8),
+                                    2: FlexColumnWidth(1.2),
+                                    3: FlexColumnWidth(1.5),
+                                    4: FlexColumnWidth(1.5),
+                                    5: FlexColumnWidth(1.2),
+                                    6: FlexColumnWidth(1.0),
+                                  },
+                                  children:
+                                      accountsList.asMap().entries.map((entry) {
+                                    final int index = entry.key;
+                                    final account = entry.value;
+                                    return TableRow(
+                                      decoration: BoxDecoration(
+                                        color: index % 2 == 0
+                                            ? Colors.white
+                                            : Colors.grey.withOpacity(0.1),
+                                      ),
+                                      children: [
+                                        _buildTableCell(account.name ?? "N/A"),
+                                        _buildTableCell(
+                                            account.paymentMethodsString),
+                                        Center(
+                                            child: _buildTypeChip(
+                                                account.type ?? "Unknown")),
+                                        _buildTableCell(
+                                            "₹${account.formattedReceived}"),
+                                        _buildTableCell(
+                                            "₹${account.formattedSent}"),
+                                        Center(
+                                            child: _buildStatusChip(
+                                                account.accountStatus)),
+                                        Center(
+                                          child: IconButton(
+                                            icon: Icon(Icons.visibility,
+                                                size: 18,
+                                                color:
+                                                    ColorManager.kPrimaryColor),
+                                            onPressed: () =>
+                                                _showAccountDetails(account),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                );
+        },
+      ),
     );
   }
 
@@ -660,6 +742,20 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
           Text('No company accounts found',
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s18,
                   0.27, ColorManager.textColor)),
+          const SizedBox(height: 8),
+          Text('No company account data available at this time',
+              style: buildCustomStyle(
+                  FontWeightManager.regular, FontSize.s14, 0.27, Colors.grey)),
+          const SizedBox(height: 15),
+          CustomRoundButton(
+            title: "Refresh",
+            boxColor: ColorManager.kPrimaryColor,
+            textColor: Colors.white,
+            fct: loadAccountsData,
+            height: 35,
+            width: 120,
+            fontSize: FontSize.s12,
+          ),
         ],
       ),
     );
@@ -688,11 +784,10 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
   }
 
   Widget _buildTypeChip(String type) {
-    Color backgroundColor = type.toLowerCase() == 'income'
+    Color backgroundColor = type.toLowerCase() == 'cash'
         ? Colors.green.withOpacity(0.1)
-        : Colors.red.withOpacity(0.1);
-    Color textColor =
-        type.toLowerCase() == 'income' ? Colors.green : Colors.red;
+        : Colors.blue.withOpacity(0.1);
+    Color textColor = type.toLowerCase() == 'cash' ? Colors.green : Colors.blue;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -708,17 +803,21 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
     Color backgroundColor;
     Color textColor;
     switch (status.toLowerCase()) {
-      case 'completed':
+      case 'credit':
         backgroundColor = Colors.green.withOpacity(0.1);
         textColor = Colors.green;
         break;
-      case 'pending':
-        backgroundColor = Colors.orange.withOpacity(0.1);
-        textColor = Colors.orange;
-        break;
-      default:
+      case 'debit':
         backgroundColor = Colors.red.withOpacity(0.1);
         textColor = Colors.red;
+        break;
+      case 'balanced':
+        backgroundColor = Colors.blue.withOpacity(0.1);
+        textColor = Colors.blue;
+        break;
+      default:
+        backgroundColor = Colors.grey.withOpacity(0.1);
+        textColor = Colors.grey;
     }
 
     return Container(
@@ -731,7 +830,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
     );
   }
 
-  void _showAccountDetails(CompanyAccountData account) {
+  void _showAccountDetails(CompanyAccountsData account) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -740,13 +839,14 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Name: ${account.name}'),
-            Text('Payment Method: ${account.paymentMethodType}'),
-            Text('Type: ${account.type}'),
-            Text(
-                'Received Amount: ₹${account.receivedAmount.toStringAsFixed(2)}'),
-            Text('Sent Amount: ₹${account.sentAmount.toStringAsFixed(2)}'),
-            Text('Status: ${account.status}'),
+            Text('Name: ${account.name ?? "N/A"}'),
+            Text('Payment Methods: ${account.paymentMethodsString}'),
+            Text('Type: ${account.type ?? "N/A"}'),
+            Text('Received Amount: ₹${account.formattedReceived}'),
+            Text('Sent Amount: ₹${account.formattedSent}'),
+            Text('Balance: ₹${account.formattedBalance}'),
+            Text('Status: ${account.accountStatus}'),
+            Text('Transactions: ${account.transactionCount}'),
           ],
         ),
         actions: [
@@ -758,21 +858,21 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
   }
 }
 
-// Data model for Company Account
-class CompanyAccountData {
-  final String name;
-  final String paymentMethodType;
-  final String type;
-  final double receivedAmount;
-  final double sentAmount;
-  final String status;
-
-  CompanyAccountData({
-    required this.name,
-    required this.paymentMethodType,
-    required this.type,
-    required this.receivedAmount,
-    required this.sentAmount,
-    required this.status,
-  });
-}
+// Removing the old local data model since we're using the API model
+// class CompanyAccountData {
+//   final String name;
+//   final String paymentMethodType;
+//   final String type;
+//   final double receivedAmount;
+//   final double sentAmount;
+//   final String status;
+//
+//   CompanyAccountData({
+//     required this.name,
+//     required this.paymentMethodType,
+//     required this.type,
+//     required this.receivedAmount,
+//     required this.sentAmount,
+//     required this.status,
+//   });
+// }

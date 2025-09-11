@@ -163,4 +163,9 @@ class APPUrl {
   static String updateCartItemStatus =
       '$baseURL/api/v1/cart/update-cart-item-status';
   static String generateBarcode = '$baseURL/api/v1/product/generate-barcode';
+  
+
+  static String getSalesExecutiveReport = '$baseURL/api/v1/sales-executive-report';
+  static String getCompanyaccounts =
+      '$baseURL/api/v1/accounts/company-accounts';
 }

@@ -5,6 +5,7 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/models/sales_executive_report.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -44,20 +45,91 @@ class _SalesExecutiveReportScreenState
       SalesExecutiveProvider salesExecutiveProvider =
           Provider.of<SalesExecutiveProvider>(context, listen: false);
 
+      // Fetch sales executives first
       await salesExecutiveProvider.fetchSalesExecutives(context);
+
+      // Then fetch sales executive report data
+      await fetchSalesExecutiveReport();
     } catch (error) {
-      debugPrint('Error loading sales executives: $error');
+      debugPrint('Error loading sales executive data: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading data: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> fetchSalesExecutiveReport() async {
+    try {
+      SalesExecutiveProvider salesExecutiveProvider =
+          Provider.of<SalesExecutiveProvider>(context, listen: false);
+
+      String? fromDate;
+      String? toDate;
+
+      // Convert DD/MM/YYYY to YYYY-MM-DD format for API if dates are provided
+      if (fromDateController.text.isNotEmpty) {
+        List<String> fromDateParts = fromDateController.text.split('/');
+        if (fromDateParts.length == 3) {
+          fromDate =
+              '${fromDateParts[2]}-${fromDateParts[1].padLeft(2, '0')}-${fromDateParts[0].padLeft(2, '0')}';
+        }
+      }
+
+      if (toDateController.text.isNotEmpty) {
+        List<String> toDateParts = toDateController.text.split('/');
+        if (toDateParts.length == 3) {
+          toDate =
+              '${toDateParts[2]}-${toDateParts[1].padLeft(2, '0')}-${toDateParts[0].padLeft(2, '0')}';
+        }
+      }
+
+      debugPrint(
+          '📊 Fetching report with dates - From: $fromDate, To: $toDate');
+
+      final response = await salesExecutiveProvider.getSalesExecutiveReport(
+        context: context,
+        fromDate: fromDate,
+        toDate: toDate,
+      );
+
+      if (response != null && response['status'] == 'error') {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text(response['message'] ?? 'Failed to fetch report data'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (error) {
+      debugPrint('❌ Error fetching sales executive report: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error fetching report: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   void searchSalesExecutives() {
-    // Apply date filters if needed
-    // For now, just refresh the data since we're showing only current user
-    loadInitData();
+    // Fetch report data with current date filters
+    fetchSalesExecutiveReport();
   }
 
   void resetSearch() {
@@ -65,7 +137,13 @@ class _SalesExecutiveReportScreenState
       fromDateController.clear();
       toDateController.clear();
     });
-    loadInitData();
+
+    // Clear report data and fetch fresh data
+    SalesExecutiveProvider salesExecutiveProvider =
+        Provider.of<SalesExecutiveProvider>(context, listen: false);
+    salesExecutiveProvider.clearReportData();
+
+    fetchSalesExecutiveReport();
   }
 
   // Date selection method
@@ -303,8 +381,10 @@ class _SalesExecutiveReportScreenState
     return Expanded(
       child: Consumer<SalesExecutiveProvider>(
           builder: (context, salesExecutiveProvider, child) {
-        final isLoading = salesExecutiveProvider.isLoading;
-        final currentUser = salesExecutiveProvider.getCurrentUser(context);
+        final isLoading = salesExecutiveProvider.isLoading ||
+            salesExecutiveProvider.isReportLoading;
+        final reportList = salesExecutiveProvider.salesExecutiveReportList;
+        final reportError = salesExecutiveProvider.reportError;
 
         return Column(
           children: [
@@ -371,51 +451,60 @@ class _SalesExecutiveReportScreenState
                                     PointerDeviceKind.trackpad,
                                   },
                                 ),
-                                child: currentUser == null
-                                    ? _buildNoDataFoundUI()
-                                    : SingleChildScrollView(
-                                        physics: const BouncingScrollPhysics(),
-                                        scrollDirection: Axis.vertical,
-                                        child: Table(
-                                          columnWidths: const {
-                                            0: FlexColumnWidth(
-                                                2.0), // Executive Name
-                                            1: FlexColumnWidth(1.5), // Phone
-                                            2: FlexColumnWidth(
-                                                1.5), // Total Orders
-                                            3: FlexColumnWidth(
-                                                1.5), // Total Sales
-                                            4: FlexColumnWidth(
-                                                1.5), // UPI Sales
-                                            5: FlexColumnWidth(
-                                                1.5), // Cash Sales
-                                          },
-                                          border: null,
-                                          defaultVerticalAlignment:
-                                              TableCellVerticalAlignment.middle,
-                                          children: [
-                                            TableRow(
-                                              decoration: const BoxDecoration(
-                                                color: Colors.white,
-                                              ),
-                                              children: [
-                                                _buildTableCell(
-                                                    "ExicutiveName"),
-                                                _buildTableCell(
-                                                    "phone number"),
-                                                _buildTableCell(
-                                                    "0"), // TODO: Fetch actual orders count
-                                                _buildTableCell(
-                                                    "₹0.00"), // TODO: Fetch actual total sales
-                                                _buildTableCell(
-                                                    "₹0.00"), // TODO: Fetch actual UPI sales
-                                                _buildTableCell(
-                                                    "₹0.00"), // TODO: Fetch actual cash sales
-                                              ],
+                                child: reportError != null
+                                    ? _buildErrorUI(reportError)
+                                    : reportList.isEmpty
+                                        ? _buildNoDataFoundUI()
+                                        : SingleChildScrollView(
+                                            physics:
+                                                const BouncingScrollPhysics(),
+                                            scrollDirection: Axis.vertical,
+                                            child: Table(
+                                              columnWidths: const {
+                                                0: FlexColumnWidth(
+                                                    2.0), // Executive Name
+                                                1: FlexColumnWidth(
+                                                    1.5), // Phone
+                                                2: FlexColumnWidth(
+                                                    1.5), // Total Orders
+                                                3: FlexColumnWidth(
+                                                    1.5), // Total Sales
+                                                4: FlexColumnWidth(
+                                                    1.5), // UPI Sales
+                                                5: FlexColumnWidth(
+                                                    1.5), // Cash Sales
+                                              },
+                                              border: null,
+                                              defaultVerticalAlignment:
+                                                  TableCellVerticalAlignment
+                                                      .middle,
+                                              children:
+                                                  reportList.map((report) {
+                                                return TableRow(
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                    color: Colors.white,
+                                                  ),
+                                                  children: [
+                                                    _buildTableCell(
+                                                        report.name ?? "N/A"),
+                                                    _buildTableCell(
+                                                        report.phone ?? "N/A"),
+                                                    _buildTableCell(report
+                                                            .orderCount
+                                                            ?.toString() ??
+                                                        "0"),
+                                                    _buildTableCell(
+                                                        "₹${report.formattedTotalSales}"),
+                                                    _buildTableCell(
+                                                        "₹${report.formattedUpiSales}"),
+                                                    _buildTableCell(
+                                                        "₹${report.formattedCashSales}"),
+                                                  ],
+                                                );
+                                              }).toList(),
                                             ),
-                                          ],
-                                        ),
-                                      ),
+                                          ),
                               ),
                             ),
                           ),
@@ -439,13 +528,13 @@ class _SalesExecutiveReportScreenState
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(
-            Icons.person_outline,
+            Icons.bar_chart_outlined,
             size: 60,
             color: ColorManager.kPrimaryColor.withOpacity(0.7),
           ),
           const SizedBox(height: 15),
           Text(
-            'No executive data found',
+            'No report data found',
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s18,
@@ -455,13 +544,68 @@ class _SalesExecutiveReportScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            'Unable to load current user information',
+            'Try adjusting the date filters or check back later',
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
               0.20,
               Colors.grey,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorUI(String error) {
+    return Container(
+      height: double.infinity,
+      width: double.infinity,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 60,
+            color: Colors.red.withOpacity(0.7),
+          ),
+          const SizedBox(height: 15),
+          Text(
+            'Error Loading Report',
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s18,
+              0.27,
+              ColorManager.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              error,
+              textAlign: TextAlign.center,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.20,
+                Colors.grey,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () => fetchSalesExecutiveReport(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: ColorManager.kPrimaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Retry'),
           ),
         ],
       ),
