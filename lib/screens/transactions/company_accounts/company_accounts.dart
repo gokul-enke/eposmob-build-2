@@ -695,24 +695,40 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
                                         _buildTableCell(account.name ?? "N/A"),
                                         _buildTableCell(
                                             account.paymentMethodsString),
-                                        Center(
+                                        TableCell(
+                                          verticalAlignment:
+                                              TableCellVerticalAlignment.middle,
+                                          child: Center(
                                             child: _buildTypeChip(
-                                                account.type ?? "Unknown")),
+                                                account.type ?? "Unknown"),
+                                          ),
+                                        ),
                                         _buildTableCell(
                                             "₹${account.formattedReceived}"),
                                         _buildTableCell(
                                             "₹${account.formattedSent}"),
-                                        Center(
+                                        TableCell(
+                                          verticalAlignment:
+                                              TableCellVerticalAlignment.middle,
+                                          child: Center(
                                             child: _buildStatusChip(
-                                                account.accountStatus)),
-                                        Center(
-                                          child: IconButton(
-                                            icon: Icon(Icons.visibility,
+                                                account.accountStatus),
+                                          ),
+                                        ),
+                                        TableCell(
+                                          verticalAlignment:
+                                              TableCellVerticalAlignment.middle,
+                                          child: Center(
+                                            child: IconButton(
+                                              icon: Icon(
+                                                Icons.visibility,
                                                 size: 18,
                                                 color:
-                                                    ColorManager.kPrimaryColor),
-                                            onPressed: () =>
-                                                _showAccountDetails(account),
+                                                    ColorManager.kPrimaryColor,
+                                              ),
+                                              onPressed: () =>
+                                                  _showAccountDetails(account),
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -762,23 +778,38 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
   }
 
   Widget _buildTableHeader(String title) {
-    return Padding(
+    return Container(
+      alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-      child: Text(title,
-          textAlign: TextAlign.center,
-          style: buildCustomStyle(FontWeightManager.medium, FontSize.s12, 0.18,
-              ColorManager.kPrimaryColor)),
+      child: Text(
+        title,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s12,
+          0.18,
+          ColorManager.kPrimaryColor,
+        ),
+      ),
     );
   }
 
   TableCell _buildTableCell(String content) {
     return TableCell(
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Text(content,
-            textAlign: TextAlign.center,
-            style: buildCustomStyle(
-                FontWeightManager.medium, FontSize.s9, 0.13, Colors.black)),
+      verticalAlignment: TableCellVerticalAlignment.middle,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+        alignment: Alignment.center,
+        child: Text(
+          content,
+          textAlign: TextAlign.center,
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s9,
+            0.13,
+            Colors.black,
+          ),
+        ),
       ),
     );
   }
@@ -833,27 +864,466 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
   void _showAccountDetails(CompanyAccountsData account) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Account Details'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Name: ${account.name ?? "N/A"}'),
-            Text('Payment Methods: ${account.paymentMethodsString}'),
-            Text('Type: ${account.type ?? "N/A"}'),
-            Text('Received Amount: ₹${account.formattedReceived}'),
-            Text('Sent Amount: ₹${account.formattedSent}'),
-            Text('Balance: ₹${account.formattedBalance}'),
-            Text('Status: ${account.accountStatus}'),
-            Text('Transactions: ${account.transactionCount}'),
-          ],
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context), child: Text('Close')),
+        elevation: 8,
+        backgroundColor: Colors.white,
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.6,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Account Details',
+                    style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s18,
+                      0.27,
+                      Colors.black,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close,
+                        size: 20, color: Colors.black54),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Body: scrollable content with 3 sections
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    // 1) Account Information
+                    _buildSectionCard(
+                      title: 'Account Information',
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Left column
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildDetailRow(
+                                      'Account Name', account.name ?? 'N/A'),
+                                  const SizedBox(height: 16),
+                                  _buildDetailRow('Status', ''),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        account.accountStatus.toLowerCase() ==
+                                                'credit'
+                                            ? Icons.check_circle
+                                            : account.accountStatus
+                                                        .toLowerCase() ==
+                                                    'debit'
+                                                ? Icons.remove_circle
+                                                : Icons.radio_button_checked,
+                                        color: account.accountStatus
+                                                    .toLowerCase() ==
+                                                'credit'
+                                            ? Colors.green
+                                            : account.accountStatus
+                                                        .toLowerCase() ==
+                                                    'debit'
+                                                ? Colors.red
+                                                : Colors.blue,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        account.accountStatus,
+                                        style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s12,
+                                          0.18,
+                                          Colors.black87,
+                                        ),
+                                      )
+                                    ],
+                                  )
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            // Right column
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      SizedBox(
+                                        width: 150,
+                                        child: Text(
+                                          'Type',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s14,
+                                            0.21,
+                                            Colors.black54,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      _buildPill(account.type ?? 'N/A'),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      SizedBox(
+                                        width: 150,
+                                        child: Text(
+                                          'Payment Methods',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s14,
+                                            0.21,
+                                            Colors.black54,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Wrap(
+                                          spacing: 8,
+                                          runSpacing: 8,
+                                          children:
+                                              (account.paymentMethod ?? [])
+                                                  .map((m) => _buildPill(m))
+                                                  .toList(),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 2) Financial Summary
+                    _buildSectionCard(
+                      title: 'Financial Summary',
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Received Amount',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.18,
+                                        Colors.black87,
+                                      )),
+                                  const SizedBox(height: 6),
+                                  _amountText('₹${account.formattedReceived}',
+                                      Colors.green),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Sent Amount',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.18,
+                                        Colors.black87,
+                                      )),
+                                  const SizedBox(height: 6),
+                                  _amountText(
+                                      '₹${account.formattedSent}', Colors.red),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Balance',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.18,
+                                        Colors.black87,
+                                      )),
+                                  const SizedBox(height: 6),
+                                  _amountText('₹${account.formattedBalance}',
+                                      Colors.blueGrey),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 3) Company Account Transactions
+                    _buildTransactionsSection(account),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Footer actions
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  CustomRoundButton(
+                    title: 'Close',
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    borderColor: ColorManager.kPrimaryColor,
+                    fct: () => Navigator.pop(context),
+                    height: 45,
+                    width: 120,
+                    fontSize: FontSize.s12,
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Section card with title
+  Widget _buildSectionCard(
+      {required String title, required Widget child, bool showDivider = true}) {
+    return BuildBoxShadowContainer(
+      circleRadius: 10,
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            child: Text(
+              title,
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s14,
+                0.21,
+                Colors.black87,
+              ),
+            ),
+          ),
+          if (showDivider) const Divider(height: 1, color: Colors.black12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: child,
+          ),
         ],
       ),
+    );
+  }
+
+  // Small rounded pill chip
+  Widget _buildPill(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text.toUpperCase(),
+        style: const TextStyle(
+          color: Colors.blue,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _amountText(String text, Color color) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: color,
+        fontWeight: FontWeight.bold,
+        fontSize: 14,
+      ),
+    );
+  }
+
+  Widget _buildTransactionsSection(CompanyAccountsData account) {
+    return _buildSectionCard(
+      title: 'Company Account Transactions',
+      showDivider: false,
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: EdgeInsets.zero,
+        title: const SizedBox.shrink(),
+        trailing: const Icon(Icons.keyboard_arrow_up),
+        children: [
+          const SizedBox(height: 8),
+          // Table header
+          Container(
+            color: Colors.grey.shade100,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: const [
+                Expanded(
+                    child: Text('AMOUNT',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.black54,
+                            letterSpacing: 0.5))),
+                Expanded(
+                    child: Text('TYPE',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.black54,
+                            letterSpacing: 0.5))),
+                Expanded(
+                    child: Text('REFERENCE',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.black54,
+                            letterSpacing: 0.5))),
+                Expanded(
+                    child: Text('DATE',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.black54,
+                            letterSpacing: 0.5))),
+                Expanded(
+                    flex: 2,
+                    child: Text('DESCRIPTION',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.black54,
+                            letterSpacing: 0.5))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          if ((account.accountTransaction ?? []).isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24.0),
+              child: Center(
+                child: Text(
+                  'No transactions found',
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s12,
+                    0.18,
+                    Colors.black54,
+                  ),
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              height: 240,
+              child: ListView.builder(
+                itemCount: account.accountTransaction!.length,
+                itemBuilder: (context, index) {
+                  final tx = account.accountTransaction![index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8.0, vertical: 6.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text('₹${tx.formattedAmount}',
+                              style: const TextStyle(fontSize: 12)),
+                        ),
+                        Expanded(
+                          child: Text((tx.transactionType ?? '').toUpperCase(),
+                              style: const TextStyle(fontSize: 12)),
+                        ),
+                        Expanded(
+                          child: Text(tx.reference ?? '-',
+                              style: const TextStyle(fontSize: 12)),
+                        ),
+                        Expanded(
+                          child: Text(tx.date ?? '-',
+                              style: const TextStyle(fontSize: 12)),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: Text(tx.description ?? '-',
+                              style: const TextStyle(fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String title, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 150,
+          child: Text(
+            title,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s14,
+              0.21,
+              Colors.black54,
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            value.isNotEmpty ? value : 'N/A',
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.21,
+              Colors.black87,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
