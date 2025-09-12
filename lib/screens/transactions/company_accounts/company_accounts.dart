@@ -1185,12 +1185,8 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
     return _buildSectionCard(
       title: 'Company Account Transactions',
       showDivider: false,
-      child: ExpansionTile(
-        initiallyExpanded: true,
-        tilePadding: EdgeInsets.zero,
-        childrenPadding: EdgeInsets.zero,
-        title: const SizedBox.shrink(),
-        trailing: const Icon(Icons.keyboard_arrow_up),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 8),
           // Table header
