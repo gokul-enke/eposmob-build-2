@@ -37,6 +37,7 @@ import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales
 import 'package:pos_machine/screens/reports/sales_executive_report/sales_executive_report.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/add_company_account.dart';
+import 'package:pos_machine/screens/transactions/company_accounts/account_details_screen.dart'; // Added import
 import 'package:pos_machine/screens/sales/sales.dart';
 import 'package:pos_machine/screens/sales_return/sales_return.dart';
 import 'package:pos_machine/screens/sales_return/sales_return_list.dart';
@@ -133,5 +134,6 @@ class SideBarController extends GetxController {
     SalesExecutiveReportScreen(), // 58 Sales Executive Report
     CompanyAccountsScreen(), // 59 Company Accounts
     AddCompanyAccountScreen(), // 60 Add Company Account
+    AccountDetailsScreen(), // 61 Account Details Screen
   ];
 }

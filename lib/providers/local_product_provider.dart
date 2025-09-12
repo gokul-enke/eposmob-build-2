@@ -531,22 +531,22 @@ class LocalProductProvider extends ChangeNotifier {
   double get cartTotal {
     double subTotal = 0.0;
     double totalTax = 0.0; // Assuming you have a way to calculate tax
-    
+
     // Calculate subtotal from all cart items
     for (var item in _cartItems) {
       subTotal += (item.price ?? 0) * item.quantity;
     }
-    
+
     // Calculate discount amounts
     double flatDiscountAmount = _flatDiscount;
     double percentageDiscountAmount = (subTotal * _percentageDiscount / 100);
     double totalDiscount = flatDiscountAmount + percentageDiscountAmount;
-    
+
     // Ensure discount doesn't exceed subtotal
     if (totalDiscount > subTotal) {
       totalDiscount = subTotal;
     }
-    
+
     double netPayable = subTotal - totalDiscount;
     double netTotal = netPayable + totalTax;
 
@@ -718,6 +718,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? filterName,
     String? filterPrice,
     String? filterBarcode,
+    String? filterHsnCode,
     String? filterCreatedBy,
     String? filterProperties,
     String? filterStore,
@@ -743,6 +744,25 @@ class LocalProductProvider extends ChangeNotifier {
           .where((p) =>
               p.barcode != null &&
               p.barcode!.toLowerCase().contains(filterBarcode.toLowerCase()))
+          .toList();
+    }
+
+    // HSN Code filter - check both product level and stock level HSN codes
+    if (filterHsnCode != null && filterHsnCode.isNotEmpty) {
+      result = result
+          .where((p) =>
+              // Check product level HSN code
+              (p.hsnCode != null &&
+                  p.hsnCode!
+                      .toLowerCase()
+                      .contains(filterHsnCode.toLowerCase())) ||
+              // Check stock level HSN codes
+              (p.stock != null &&
+                  p.stock!.any((stock) =>
+                      stock.hsnCode != null &&
+                      stock.hsnCode!
+                          .toLowerCase()
+                          .contains(filterHsnCode.toLowerCase()))))
           .toList();
     }
 
@@ -2023,30 +2043,30 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("🏷️ APPLYING DISCOUNT");
     debugPrint("  - Flat Discount: $flatDiscount");
     debugPrint("  - Percentage Discount: $percentageDiscount%");
-    
+
     _flatDiscount = flatDiscount;
     _percentageDiscount = percentageDiscount;
-    
+
     // Recalculate totals by calling cartTotal getter
     cartTotal;
-    
+
     notifyListeners();
-    
+
     debugPrint("✅ DISCOUNT APPLIED SUCCESSFULLY");
   }
 
   /// Clears all applied discounts
   void clearDiscount() {
     debugPrint("🧹 CLEARING DISCOUNT");
-    
+
     _flatDiscount = 0.0;
     _percentageDiscount = 0.0;
-    
+
     // Recalculate totals by calling cartTotal getter
     cartTotal;
-    
+
     notifyListeners();
-    
+
     debugPrint("✅ DISCOUNT CLEARED SUCCESSFULLY");
   }
 

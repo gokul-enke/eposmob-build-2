@@ -9,6 +9,7 @@ import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/screens/transactions/company_accounts/account_details_screen.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
 
@@ -251,22 +252,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
               const SizedBox(width: 15),
               Expanded(flex: 1, child: _buildTypeFilter()),
               const SizedBox(width: 15),
-              Expanded(flex: 1, child: Container()), // Empty space
-              const SizedBox(width: 15),
-              Expanded(flex: 1, child: Container()), // Empty space
-            ],
-          ),
-        ),
-        // Second row: Status, Empty spaces, Reset Button
-        SizedBox(
-          height: 90,
-          child: Row(
-            children: [
-              Expanded(flex: 1, child: _buildStatusFilter()),
-              const SizedBox(width: 15),
-              Expanded(flex: 1, child: Container()),
-              const SizedBox(width: 15),
-              Expanded(flex: 1, child: Container()),
+              Expanded(flex: 1, child: _buildStatusFilter()), // Empty space
               const SizedBox(width: 15),
               Expanded(
                 flex: 1,
@@ -282,10 +268,39 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
                     fontSize: FontSize.s12,
                   ),
                 ),
-              ),
+              ), // Empty space
             ],
           ),
         ),
+        // Second row: Status, Empty spaces, Reset Button
+        // SizedBox(
+        //   height: 90,
+        //   child: Row(
+        //     children: [
+        //       Expanded(flex: 1, child: _buildStatusFilter()),
+        //       const SizedBox(width: 15),
+        //       Expanded(flex: 1, child: Container()),
+        //       const SizedBox(width: 15),
+        //       Expanded(flex: 1, child: Container()),
+        //       const SizedBox(width: 15),
+        //       Expanded(
+        //         flex: 1,
+        //         child: Padding(
+        //           padding: const EdgeInsets.only(top: 42),
+        //           child: CustomRoundButton(
+        //             title: "Reset",
+        //             boxColor: Colors.white,
+        //             textColor: ColorManager.kPrimaryColor,
+        //             fct: resetFilters,
+        //             height: 45,
+        //             width: double.infinity,
+        //             fontSize: FontSize.s12,
+        //           ),
+        //         ),
+        //       ),
+        //     ],
+        //   ),
+        // ),
       ],
     );
   }
@@ -726,8 +741,32 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
                                                 color:
                                                     ColorManager.kPrimaryColor,
                                               ),
-                                              onPressed: () =>
-                                                  _showAccountDetails(account),
+                                              onPressed: () async {
+                                                // Set the account data for the details screen
+                                                debugPrint(
+                                                    '=================== NAVIGATING TO ACCOUNT DETAILS ===================');
+                                                debugPrint(
+                                                    'Account being passed: ${account.name}');
+                                                debugPrint(
+                                                    'Account transaction count: ${account.accountTransaction?.length ?? 0}');
+                                                if (account.accountTransaction !=
+                                                        null &&
+                                                    account.accountTransaction!
+                                                        .isNotEmpty) {
+                                                  final firstTx = account
+                                                      .accountTransaction![0];
+                                                  debugPrint(
+                                                      'First transaction: transferFrom=${firstTx.transferFrom}, transferTo=${firstTx.transferTo}, amount=${firstTx.amount}, type=${firstTx.transactionType}, status=${firstTx.status}, date=${firstTx.date}');
+                                                }
+                                                AccountDetailsScreen
+                                                    .accountData = account;
+
+                                                // Navigate to the account details screen using the sidebar controller
+                                                sideBarController.index.value =
+                                                    61;
+                                                debugPrint(
+                                                    '=====================================================================');
+                                              },
                                             ),
                                           ),
                                         ),
@@ -861,263 +900,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
     );
   }
 
-  void _showAccountDetails(CompanyAccountsData account) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        elevation: 8,
-        backgroundColor: Colors.white,
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.6,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Account Details',
-                    style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      FontSize.s18,
-                      0.27,
-                      Colors.black,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close,
-                        size: 20, color: Colors.black54),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // Body: scrollable content with 3 sections
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    // 1) Account Information
-                    _buildSectionCard(
-                      title: 'Account Information',
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Left column
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildDetailRow(
-                                      'Account Name', account.name ?? 'N/A'),
-                                  const SizedBox(height: 16),
-                                  _buildDetailRow('Status', ''),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        account.accountStatus.toLowerCase() ==
-                                                'credit'
-                                            ? Icons.check_circle
-                                            : account.accountStatus
-                                                        .toLowerCase() ==
-                                                    'debit'
-                                                ? Icons.remove_circle
-                                                : Icons.radio_button_checked,
-                                        color: account.accountStatus
-                                                    .toLowerCase() ==
-                                                'credit'
-                                            ? Colors.green
-                                            : account.accountStatus
-                                                        .toLowerCase() ==
-                                                    'debit'
-                                                ? Colors.red
-                                                : Colors.blue,
-                                        size: 18,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        account.accountStatus,
-                                        style: buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          FontSize.s12,
-                                          0.18,
-                                          Colors.black87,
-                                        ),
-                                      )
-                                    ],
-                                  )
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 24),
-                            // Right column
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      SizedBox(
-                                        width: 150,
-                                        child: Text(
-                                          'Type',
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s14,
-                                            0.21,
-                                            Colors.black54,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      _buildPill(account.type ?? 'N/A'),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      SizedBox(
-                                        width: 150,
-                                        child: Text(
-                                          'Payment Methods',
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s14,
-                                            0.21,
-                                            Colors.black54,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Wrap(
-                                          spacing: 8,
-                                          runSpacing: 8,
-                                          children:
-                                              (account.paymentMethod ?? [])
-                                                  .map((m) => _buildPill(m))
-                                                  .toList(),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // 2) Financial Summary
-                    _buildSectionCard(
-                      title: 'Financial Summary',
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Received Amount',
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.18,
-                                        Colors.black87,
-                                      )),
-                                  const SizedBox(height: 6),
-                                  _amountText('₹${account.formattedReceived}',
-                                      Colors.green),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Sent Amount',
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.18,
-                                        Colors.black87,
-                                      )),
-                                  const SizedBox(height: 6),
-                                  _amountText(
-                                      '₹${account.formattedSent}', Colors.red),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Balance',
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.18,
-                                        Colors.black87,
-                                      )),
-                                  const SizedBox(height: 6),
-                                  _amountText('₹${account.formattedBalance}',
-                                      Colors.blueGrey),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // 3) Company Account Transactions
-                    _buildTransactionsSection(account),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Footer actions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  CustomRoundButton(
-                    title: 'Close',
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    borderColor: ColorManager.kPrimaryColor,
-                    fct: () => Navigator.pop(context),
-                    height: 45,
-                    width: 120,
-                    fontSize: FontSize.s12,
-                  ),
-                ],
-              )
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // Removed _showAccountDetails method since we're now using a separate page
 
   // Section card with title
   Widget _buildSectionCard(
@@ -1177,116 +960,6 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
         color: color,
         fontWeight: FontWeight.bold,
         fontSize: 14,
-      ),
-    );
-  }
-
-  Widget _buildTransactionsSection(CompanyAccountsData account) {
-    return _buildSectionCard(
-      title: 'Company Account Transactions',
-      showDivider: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 8),
-          // Table header
-          Container(
-            color: Colors.grey.shade100,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: const [
-                Expanded(
-                    child: Text('AMOUNT',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.black54,
-                            letterSpacing: 0.5))),
-                Expanded(
-                    child: Text('TYPE',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.black54,
-                            letterSpacing: 0.5))),
-                Expanded(
-                    child: Text('REFERENCE',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.black54,
-                            letterSpacing: 0.5))),
-                Expanded(
-                    child: Text('DATE',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.black54,
-                            letterSpacing: 0.5))),
-                Expanded(
-                    flex: 2,
-                    child: Text('DESCRIPTION',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.black54,
-                            letterSpacing: 0.5))),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          if ((account.accountTransaction ?? []).isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24.0),
-              child: Center(
-                child: Text(
-                  'No transactions found',
-                  style: buildCustomStyle(
-                    FontWeightManager.regular,
-                    FontSize.s12,
-                    0.18,
-                    Colors.black54,
-                  ),
-                ),
-              ),
-            )
-          else
-            SizedBox(
-              height: 240,
-              child: ListView.builder(
-                itemCount: account.accountTransaction!.length,
-                itemBuilder: (context, index) {
-                  final tx = account.accountTransaction![index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8.0, vertical: 6.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text('₹${tx.formattedAmount}',
-                              style: const TextStyle(fontSize: 12)),
-                        ),
-                        Expanded(
-                          child: Text((tx.transactionType ?? '').toUpperCase(),
-                              style: const TextStyle(fontSize: 12)),
-                        ),
-                        Expanded(
-                          child: Text(tx.reference ?? '-',
-                              style: const TextStyle(fontSize: 12)),
-                        ),
-                        Expanded(
-                          child: Text(tx.date ?? '-',
-                              style: const TextStyle(fontSize: 12)),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          flex: 2,
-                          child: Text(tx.description ?? '-',
-                              style: const TextStyle(fontSize: 12)),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          const SizedBox(height: 8),
-        ],
       ),
     );
   }

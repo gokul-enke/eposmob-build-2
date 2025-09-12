@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
+
 CompanyAccountsModel companyAccountsModelFromJson(String str) =>
     CompanyAccountsModel.fromJson(json.decode(str));
 
@@ -18,24 +20,52 @@ class CompanyAccountsModel {
   });
 
   factory CompanyAccountsModel.fromJson(Map<String, dynamic> json) {
-    print('🔍 CompanyAccountsModel.fromJson called with: ${json.toString()}');
-    print('🔍 Status: ${json["status"]}');
-    print('🔍 Message: ${json["message"]}');
-    print('🔍 Data type: ${json["data"].runtimeType}');
+    debugPrint(
+        '=================== COMPANY ACCOUNTS MODEL DEBUG ===================');
+    debugPrint(
+        '🔍 CompanyAccountsModel.fromJson called with: ${json.toString()}');
+    debugPrint('🔍 Status: ${json["status"]}');
+    debugPrint('🔍 Message: ${json["message"]}');
+    debugPrint('🔍 Data type: ${json["data"].runtimeType}');
     if (json["data"] is List) {
-      print('🔍 Data length: ${(json["data"] as List).length}');
+      debugPrint('🔍 Data length: ${(json["data"] as List).length}');
+      if ((json["data"] as List).isNotEmpty) {
+        debugPrint('🔍 First account data: ${(json["data"] as List)[0]}');
+        // Let's also check if the first account has transaction data
+        final firstAccount = (json["data"] as List)[0];
+        if (firstAccount is Map<String, dynamic>) {
+          debugPrint('🔍 First account keys: ${firstAccount.keys.toList()}');
+          debugPrint(
+              '🔍 First account accountTransaction: ${firstAccount["accountTransaction"]}');
+          if (firstAccount["accountTransaction"] is List) {
+            debugPrint(
+                '🔍 First account transaction count: ${(firstAccount["accountTransaction"] as List).length}');
+            if ((firstAccount["accountTransaction"] as List).isNotEmpty) {
+              debugPrint(
+                  '🔍 First transaction data: ${(firstAccount["accountTransaction"] as List)[0]}');
+            }
+          }
+        }
+      }
     }
 
-    return CompanyAccountsModel(
+    final model = CompanyAccountsModel(
       status: json["status"],
       message: json["message"],
       data: json["data"] == null
           ? []
           : List<CompanyAccountsData>.from(json["data"].map((x) {
-              print('🔍 Parsing account data: ${x.toString()}');
+              debugPrint('🔍 Parsing account data: ${x.toString()}');
               return CompanyAccountsData.fromJson(x);
             })),
     );
+
+    debugPrint(
+        '🔍 Parsed model: status=${model.status}, message=${model.message}, data length=${model.data?.length ?? 0}');
+    debugPrint(
+        '====================================================================');
+
+    return model;
   }
 
   Map<String, dynamic> toJson() => {
@@ -65,37 +95,54 @@ class CompanyAccountsData {
   });
 
   factory CompanyAccountsData.fromJson(Map<String, dynamic> json) {
-    print('💰 CompanyAccountsData.fromJson called with: ${json.toString()}');
-    print('💰 Name: ${json["name"]}');
-    print('💰 Payment methods: ${json["paymentMethod"]}');
-    print('💰 Type: ${json["type"]}');
-    print('💰 Received: ${json["received"]}');
-    print('💰 Sent: ${json["sent"]}');
+    debugPrint(
+        '💰 CompanyAccountsData.fromJson called with: ${json.toString()}');
+    debugPrint('💰 Name: ${json["name"]}');
+    debugPrint('💰 Payment methods: ${json["payment_method"]}');
+    debugPrint('💰 Type: ${json["type"]}');
+    debugPrint('💰 Received: ${json["received"]}');
+    debugPrint('💰 Sent: ${json["sent"]}');
+    debugPrint('💰 Account transactions: ${json["account_transaction"]}');
+    debugPrint(
+        '💰 Account transactions type: ${json["account_transaction"].runtimeType}');
+    if (json["account_transaction"] is List) {
+      debugPrint(
+          '💰 Account transactions length: ${(json["account_transaction"] as List).length}');
+      if ((json["account_transaction"] as List).isNotEmpty) {
+        debugPrint(
+            '💰 First transaction: ${(json["account_transaction"] as List)[0]}');
+      }
+    }
 
-    return CompanyAccountsData(
+    final account = CompanyAccountsData(
       name: json["name"] ?? "No Name",
-      paymentMethod: json["paymentMethod"] == null
+      paymentMethod: json["payment_method"] == null
           ? []
-          : List<String>.from(json["paymentMethod"]),
+          : List<String>.from(json["payment_method"]),
       type: json["type"] ?? "Unknown",
       received: json["received"]?.toString() ?? "0.000",
       sent: json["sent"], // Keep as dynamic to handle both int and string
-      accountTransaction: json["accountTransaction"] == null
+      accountTransaction: json["account_transaction"] == null
           ? []
-          : List<AccountTransaction>.from(json["accountTransaction"]
+          : List<AccountTransaction>.from(json["account_transaction"]
               .map((x) => AccountTransaction.fromJson(x))),
     );
+
+    debugPrint(
+        '💰 Parsed account: name=${account.name}, transactions count=${account.accountTransaction?.length ?? 0}');
+
+    return account;
   }
 
   Map<String, dynamic> toJson() => {
         "name": name,
-        "paymentMethod": paymentMethod == null
+        "payment_method": paymentMethod == null
             ? []
             : List<dynamic>.from(paymentMethod!.map((x) => x)),
         "type": type,
         "received": received,
         "sent": sent,
-        "accountTransaction": accountTransaction == null
+        "account_transaction": accountTransaction == null
             ? []
             : List<dynamic>.from(accountTransaction!.map((x) => x.toJson())),
       };
@@ -176,6 +223,11 @@ class AccountTransaction {
   final String? description;
   final String? date;
   final String? reference;
+  final String? transferFrom;
+  final String? transferTo;
+  final String? transferBy;
+  final String? receivedBy;
+  final String? status;
 
   AccountTransaction({
     this.id,
@@ -184,17 +236,49 @@ class AccountTransaction {
     this.description,
     this.date,
     this.reference,
+    this.transferFrom,
+    this.transferTo,
+    this.transferBy,
+    this.receivedBy,
+    this.status,
   });
 
-  factory AccountTransaction.fromJson(Map<String, dynamic> json) =>
-      AccountTransaction(
-        id: json["id"],
-        transactionType: json["transaction_type"] ?? json["transactionType"],
-        amount: json["amount"]?.toString() ?? "0.00",
-        description: json["description"] ?? "No Description",
-        date: json["date"] ?? json["created_at"],
-        reference: json["reference"] ?? json["transaction_reference"],
-      );
+  factory AccountTransaction.fromJson(Map<String, dynamic> json) {
+    // Debug print to see what data we're receiving
+    debugPrint(
+        '🧾 AccountTransaction.fromJson called with: ${json.toString()}');
+    debugPrint('🧾 transfer_from: ${json["transfer_from"]}');
+    debugPrint('🧾 transfer_to: ${json["transfer_to"]}');
+    debugPrint('🧾 amount: ${json["amount"]}');
+    debugPrint('🧾 transfer_type: ${json["transfer_type"]}');
+    debugPrint('🧾 transaction_type: ${json["transaction_type"]}');
+    debugPrint('🧾 transactionType: ${json["transactionType"]}');
+    debugPrint('🧾 status: ${json["status"]}');
+    debugPrint('🧾 date: ${json["date"]}');
+    debugPrint('🧾 created_at: ${json["created_at"]}');
+
+    final transaction = AccountTransaction(
+      id: json["id"],
+      transactionType: json["transaction_type"] ??
+          json["transactionType"] ??
+          json["transfer_type"] ??
+          json["type"],
+      amount: json["amount"]?.toString() ?? "0.00",
+      description: json["description"] ?? "No Description",
+      date: json["date"] ?? json["created_at"],
+      reference: json["reference"] ?? json["transaction_reference"],
+      transferFrom: json["transfer_from"],
+      transferTo: json["transfer_to"],
+      transferBy: json["transfer_by"],
+      receivedBy: json["received_by"],
+      status: json["status"],
+    );
+
+    debugPrint(
+        '🧾 Parsed transaction: transferFrom=${transaction.transferFrom}, transferTo=${transaction.transferTo}, amount=${transaction.amount}, type=${transaction.transactionType}, status=${transaction.status}, date=${transaction.date}');
+
+    return transaction;
+  }
 
   Map<String, dynamic> toJson() => {
         "id": id,
@@ -203,6 +287,11 @@ class AccountTransaction {
         "description": description,
         "date": date,
         "reference": reference,
+        "transfer_from": transferFrom,
+        "transfer_to": transferTo,
+        "transfer_by": transferBy,
+        "received_by": receivedBy,
+        "status": status,
       };
 
   // Helper methods

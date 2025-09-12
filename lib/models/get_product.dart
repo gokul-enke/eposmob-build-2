@@ -72,6 +72,7 @@ class GetProduct {
   final String? sku;
   final dynamic offerPrice;
   final dynamic productLocation;
+  final String? hsnCode; // Added HSN code field
 
   GetProduct({
     this.productId,
@@ -96,6 +97,7 @@ class GetProduct {
     this.sku,
     this.offerPrice,
     this.productLocation,
+    this.hsnCode, // Added HSN code field
   });
 
   factory GetProduct.fromJson(Map<String, dynamic> json) => GetProduct(
@@ -139,6 +141,7 @@ class GetProduct {
         sku: json["sku"],
         offerPrice: json["offer_price"],
         productLocation: json["product_location"],
+        hsnCode: json["hsn_code"], // Added HSN code field
       );
 
   Map<String, dynamic> toJson() => {
@@ -170,6 +173,7 @@ class GetProduct {
         "sku": sku,
         "offer_price": offerPrice,
         "product_location": productLocation,
+        "hsn_code": hsnCode, // Added HSN code field
       };
 }
 
@@ -441,6 +445,7 @@ class Stock {
   final String? date;
   final String? expiryDate;
   final String? rack;
+  final String? hsnCode; // Added HSN code field
 
   Stock({
     this.id,
@@ -455,6 +460,7 @@ class Stock {
     this.date,
     this.expiryDate,
     this.rack,
+    this.hsnCode, // Added HSN code field
   });
 
   factory Stock.fromJson(Map<String, dynamic> json) => Stock(
@@ -470,6 +476,7 @@ class Stock {
         date: json["date"],
         expiryDate: json["expiry_date"],
         rack: json["rack"],
+        hsnCode: json["hsn_code"], // Added HSN code field
       );
 
   Map<String, dynamic> toJson() => {
@@ -485,6 +492,7 @@ class Stock {
         "date": date,
         "expiry_date": expiryDate,
         "rack": rack,
+        "hsn_code": hsnCode, // Added HSN code field
       };
 }
 
