@@ -32,6 +32,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final TextEditingController storeController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
   final TextEditingController barcodeController = TextEditingController();
+  final TextEditingController hsnCodeController = TextEditingController();
   final TextEditingController categorySearchController =
       TextEditingController();
   final TextEditingController propertySearchController =
@@ -82,6 +83,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         filterName: productNameController.text,
         filterPrice: amountController.text,
         filterBarcode: barcodeController.text,
+        filterHsnCode: hsnCodeController.text,
         filterCreatedBy: createdByController.text,
         filterProperties: selectedProperty,
         filterStore: storeController.text,
@@ -112,6 +114,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         filterName: productNameController.text,
         filterPrice: amountController.text,
         filterBarcode: barcodeController.text,
+        filterHsnCode: hsnCodeController.text,
         filterCreatedBy: createdByController.text,
         filterProperties: selectedProperty,
         filterStore: storeController.text,
@@ -135,6 +138,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       storeController.clear();
       amountController.clear();
       barcodeController.clear();
+      hsnCodeController.clear();
       createdByController.clear();
       supplierIdController.clear();
 
@@ -842,10 +846,40 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Second row of filters - Properties, Store, Supplier, Reset Button
+                    // Second row of filters - HSN Code, Properties, Store, Supplier, Reset Button
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // HSN Code filter
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "HSN Code",
+                                style: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  FontSize.s14,
+                                  0.27,
+                                  Colors.black.withOpacity(0.6),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              buildColumnWidgetForTextFields(
+                                height: 45,
+                                onchanged: (value) {
+                                  searchProducts(1);
+                                },
+                                controller: hsnCodeController,
+                                size: size,
+                                hintText: 'HSN Code',
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+
                         // Product Properties
                         Expanded(
                           flex: 1,
@@ -987,30 +1021,29 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(width: 15),
+                      ],
+                    ),
 
-                        // Reset button
+                    const SizedBox(height: 20),
+
+                    // Third row - Reset button
+                    Row(
+                      children: [
+                        Expanded(flex: 2, child: Container()),
+                        const SizedBox(width: 15),
                         Expanded(
                           flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(
-                                  height: 30), // Space to align with labels
-                              SizedBox(
-                                height: 45,
-                                child: CustomRoundButton(
-                                  title: "Reset",
-                                  boxColor: Colors.white,
-                                  textColor: ColorManager.kPrimaryColor,
-                                  fct: resetSearch,
-                                  height: 45,
-                                  width: double
-                                      .infinity, // Take full available width
-                                  fontSize: FontSize.s12,
-                                ),
-                              ),
-                            ],
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 0),
+                            child: CustomRoundButton(
+                              title: "Reset",
+                              boxColor: Colors.white,
+                              textColor: ColorManager.kPrimaryColor,
+                              fct: resetSearch,
+                              height: 45,
+                              width: 100,
+                              fontSize: FontSize.s12,
+                            ),
                           ),
                         ),
                       ],

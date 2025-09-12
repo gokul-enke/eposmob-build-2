@@ -318,4 +318,225 @@ class CompanyAccountProvider extends ChangeNotifier {
     resetFilters();
     notifyListeners();
   }
+
+  //                 *********************** GET DETAILED ACCOUNT INFO WITH TRANSACTIONS API ***************************************************
+
+  Future<CompanyAccountsData?> getAccountDetailsWithTransactions({
+    required String accessToken,
+    required String accountName,
+  }) async {
+    debugPrint(
+        "getAccountDetailsWithTransactions API called for account: $accountName");
+
+    // First, try to find the account in our existing data
+    CompanyAccountsData? account;
+
+    // Check in the filtered list first
+    if (companyAccountsList != null) {
+      try {
+        account = companyAccountsList!.firstWhere(
+          (acc) => acc.name == accountName,
+        );
+
+        if (account.name != null && account.name == accountName) {
+          debugPrint("Found account in companyAccountsList");
+          debugPrint(
+              "Account transaction count: ${account.accountTransaction?.length ?? 0}");
+          // If account has transactions, return it directly
+          if (account.accountTransaction != null &&
+              account.accountTransaction!.isNotEmpty) {
+            return account;
+          }
+        }
+      } catch (e) {
+        debugPrint("Account not found in companyAccountsList: $e");
+      }
+    }
+
+    // Check in the full list
+    if (_allCompanyAccounts != null) {
+      try {
+        account = _allCompanyAccounts!.firstWhere(
+          (acc) => acc.name == accountName,
+        );
+
+        if (account.name != null && account.name == accountName) {
+          debugPrint("Found account in _allCompanyAccounts");
+          debugPrint(
+              "Account transaction count: ${account.accountTransaction?.length ?? 0}");
+          // If account has transactions, return it directly
+          if (account.accountTransaction != null &&
+              account.accountTransaction!.isNotEmpty) {
+            return account;
+          }
+        }
+      } catch (e) {
+        debugPrint("Account not found in _allCompanyAccounts: $e");
+      }
+    }
+
+    // If we reach here, the account either doesn't exist or doesn't have transaction data
+    // Try to fetch detailed data from API
+    debugPrint(
+        "Account not found in existing data or has no transactions, fetching from API");
+    return await _fetchDetailedAccountData(accessToken, accountName);
+  }
+
+  // Add a method to refresh account data with transactions
+  Future<CompanyAccountsData?> refreshAccountDataWithTransactions({
+    required String accessToken,
+    required String accountName,
+  }) async {
+    debugPrint(
+        "refreshAccountDataWithTransactions API called for account: $accountName");
+    return await _fetchDetailedAccountData(accessToken, accountName);
+  }
+
+  // Private method to fetch detailed account data from API
+  Future<CompanyAccountsData?> _fetchDetailedAccountData(
+      String accessToken, String accountName) async {
+    debugPrint("_fetchDetailedAccountData called for account: $accountName");
+
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    // Try different approaches to get detailed account info
+    // Approach 1: Try with include_transactions parameter
+    try {
+      final queryParameters = <String, String>{
+        'account_name': accountName,
+        'include_transactions': 'true',
+      };
+
+      final url = Uri.parse(APPUrl.getCompanyaccounts)
+          .replace(queryParameters: queryParameters);
+
+      debugPrint("Making detailed account API call to ${url.toString()}");
+
+      final response = await http.get(url, headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      });
+
+      debugPrint(
+          'Detailed account API response status code: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        try {
+          final jsonData = json.decode(response.body);
+          debugPrint(
+              '📊 Detailed account JSON response: ${jsonData.toString()}');
+
+          // Check if the response has the expected structure
+          if (jsonData is Map<String, dynamic> &&
+              jsonData.containsKey('data')) {
+            final data = jsonData['data'];
+            if (data is List && data.isNotEmpty) {
+              // Find the specific account in the response
+              for (var accountData in data) {
+                if (accountData is Map<String, dynamic> &&
+                    accountData.containsKey('name') &&
+                    accountData['name'] == accountName) {
+                  debugPrint('Found detailed account data for: $accountName');
+                  final account = CompanyAccountsData.fromJson(accountData);
+                  debugPrint(
+                      'Parsed detailed account with ${account.accountTransaction?.length ?? 0} transactions');
+                  return account;
+                }
+              }
+            } else if (data is Map<String, dynamic> &&
+                data.containsKey('name') &&
+                data['name'] == accountName) {
+              // Direct account data (not in a list)
+              debugPrint(
+                  'Found direct detailed account data for: $accountName');
+              final account = CompanyAccountsData.fromJson(data);
+              debugPrint(
+                  'Parsed detailed account with ${account.accountTransaction?.length ?? 0} transactions');
+              return account;
+            }
+          }
+        } catch (parseError) {
+          debugPrint('JSON parsing error for detailed account: $parseError');
+        }
+      } else {
+        debugPrint(
+            'Error in detailed account API response: ${response.reasonPhrase}');
+        debugPrint('Response body: ${response.body}');
+      }
+    } catch (error) {
+      debugPrint('Exception in _fetchDetailedAccountData (approach 1): $error');
+    }
+
+    // Approach 2: Try with account name as path parameter (if API supports it)
+    try {
+      final encodedAccountName = Uri.encodeComponent(accountName);
+      final url = Uri.parse('${APPUrl.getCompanyaccounts}/$encodedAccountName');
+
+      debugPrint("Making account details API call to ${url.toString()}");
+
+      final response = await http.get(url, headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      });
+
+      debugPrint(
+          'Account details API response status code: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        try {
+          final jsonData = json.decode(response.body);
+          debugPrint(
+              '📊 Account details JSON response: ${jsonData.toString()}');
+
+          // Check if the response has the expected structure
+          if (jsonData is Map<String, dynamic> &&
+              jsonData.containsKey('data')) {
+            final data = jsonData['data'];
+            if (data is Map<String, dynamic> &&
+                data.containsKey('name') &&
+                data['name'] == accountName) {
+              debugPrint('Found account details data for: $accountName');
+              final account = CompanyAccountsData.fromJson(data);
+              debugPrint(
+                  'Parsed account details with ${account.accountTransaction?.length ?? 0} transactions');
+              return account;
+            }
+          }
+        } catch (parseError) {
+          debugPrint('JSON parsing error for account details: $parseError');
+        }
+      } else {
+        debugPrint(
+            'Error in account details API response: ${response.reasonPhrase}');
+        debugPrint('Response body: ${response.body}');
+      }
+    } catch (error) {
+      debugPrint('Exception in _fetchDetailedAccountData (approach 2): $error');
+    }
+
+    // If we couldn't fetch detailed data, return what we have (if anything)
+    if (_allCompanyAccounts != null) {
+      try {
+        final account = _allCompanyAccounts!.firstWhere(
+          (acc) => acc.name == accountName,
+        );
+        debugPrint(
+            'Returning existing account data with ${account.accountTransaction?.length ?? 0} transactions');
+        return account;
+      } catch (e) {
+        debugPrint("Could not find account even in _allCompanyAccounts: $e");
+      }
+    }
+
+    debugPrint("Could not fetch detailed data for account: $accountName");
+    return null;
+  }
 }

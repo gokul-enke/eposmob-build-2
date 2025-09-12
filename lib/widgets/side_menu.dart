@@ -399,7 +399,8 @@ class _SideMenuState extends State<SideMenu> {
                     sideBarController.index.value == 48 ||
                     sideBarController.index.value == 47 ||
                     sideBarController.index.value == 59 ||
-                    sideBarController.index.value == 60,
+                    sideBarController.index.value == 60 ||
+                    sideBarController.index.value == 61
               ),
             ),
           if (_hasRole('sales_executive'))
