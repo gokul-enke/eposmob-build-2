@@ -593,7 +593,8 @@ class _EditOrderState extends State<EditOrder> {
                             autofocus:
                                 !appSettingsProvider.appSettings!.barcodeSales,
                             size: size,
-                            onSelected: (GetProduct selectedProduct, Stock? selectedStock) {
+                            onSelected: (GetProduct selectedProduct,
+                                Stock? selectedStock) {
                               setState(() {
                                 selectedProductIdController.text =
                                     selectedProduct.productId.toString();
@@ -766,7 +767,9 @@ class _EditOrderState extends State<EditOrder> {
                                     child: WebsafeSvg.asset(
                                       ImageAssets.oderlistCloseIcon,
                                       width: 27,
-                                      color: ColorManager.kButtonRed,
+                                      colorFilter: ColorFilter.mode(
+                                          ColorManager.kButtonRed,
+                                          BlendMode.srcIn),
                                     ),
                                   ),
                                 ],
@@ -1123,7 +1126,8 @@ class _EditOrderState extends State<EditOrder> {
                   children: [
                     WebsafeSvg.asset(
                       ImageAssets.cashIcon,
-                      color: Colors.black,
+                      colorFilter:
+                          const ColorFilter.mode(Colors.black, BlendMode.srcIn),
                       fit: BoxFit.none,
                     ),
                     Text(
@@ -1154,7 +1158,8 @@ class _EditOrderState extends State<EditOrder> {
                   children: [
                     WebsafeSvg.asset(
                       ImageAssets.creditCardIcon,
-                      color: Colors.black,
+                      colorFilter:
+                          const ColorFilter.mode(Colors.black, BlendMode.srcIn),
                       fit: BoxFit.none,
                     ),
                     Text(
@@ -1185,7 +1190,8 @@ class _EditOrderState extends State<EditOrder> {
                   children: [
                     WebsafeSvg.asset(
                       ImageAssets.creditCardIcon,
-                      color: Colors.black,
+                      colorFilter:
+                          const ColorFilter.mode(Colors.black, BlendMode.srcIn),
                       fit: BoxFit.none,
                     ),
                     Text(
@@ -1687,7 +1693,8 @@ class _EditOrderState extends State<EditOrder> {
                           child: WebsafeSvg.asset(
                             ImageAssets.oderlistCloseIcon,
                             width: 27,
-                            color: ColorManager.kButtonRed,
+                            colorFilter: const ColorFilter.mode(
+                                ColorManager.kButtonRed, BlendMode.srcIn),
                           ),
                         ),
                       ],
@@ -2068,7 +2075,9 @@ class _EditOrderState extends State<EditOrder> {
                     cartItems: orderDetails.data!.cart!.cartItems!,
                     formattedTotal: formattedTotal!,
                     savedTotal: savedTotal!,
-                    discountAmount: orderDetails.data!.priceSummary?.discount?.toString() ?? "0.00",
+                    discountAmount:
+                        orderDetails.data!.priceSummary?.discount?.toString() ??
+                            "0.00",
                     orderDate: orderDate,
                     orderNumber: orderDetails.data!.orderNumber ?? "",
                   ),

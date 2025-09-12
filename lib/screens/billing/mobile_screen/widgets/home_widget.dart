@@ -77,12 +77,13 @@ class _HomeWidgetState extends State<HomeWidget> {
 
   void _loadOrderIfNeeded() {
     if (widget.selectedOrderId != null) {
-      final provider = Provider.of<LocalProductProvider>(context, listen: false);
-      
+      final provider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
       // Check if we need to load the order
       if (provider.currentOrder?.id != widget.selectedOrderId) {
         provider.loadOrderForEditing(widget.selectedOrderId!);
-        
+
         // Show a message that order is loaded
         WidgetsBinding.instance.addPostFrameCallback((_) {
           showScaffold(
@@ -240,9 +241,8 @@ class _HomeWidgetState extends State<HomeWidget> {
   Widget build(BuildContext context) {
     return Consumer<LocalProductProvider>(
       builder: (context, provider, child) {
-        
         final isEditingOrder = provider.currentOrder != null;
-        
+
         return Column(
           children: [
             // Fixed Top Section - Product Entry
@@ -273,7 +273,8 @@ class _HomeWidgetState extends State<HomeWidget> {
                             _buildCartItemsSection(provider),
                             // Empty space if needed
                             if (provider.cartItems.length < 4)
-                              SizedBox(height: (4 - provider.cartItems.length) * 80),
+                              SizedBox(
+                                  height: (4 - provider.cartItems.length) * 80),
                           ],
                         ),
                       ),
@@ -288,7 +289,8 @@ class _HomeWidgetState extends State<HomeWidget> {
               elevation: 8,
               child: Container(
                 color: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: _buildActionButtons(provider, isEditingOrder),
               ),
             ),
@@ -381,7 +383,8 @@ class _HomeWidgetState extends State<HomeWidget> {
                   child: WebsafeSvg.asset(
                     ImageAssets.oderlistCloseIcon,
                     width: 27,
-                    color: ColorManager.kButtonRed,
+                    colorFilter: const ColorFilter.mode(
+                        ColorManager.kButtonRed, BlendMode.srcIn),
                   ),
                 ),
               ),
@@ -452,104 +455,107 @@ class _HomeWidgetState extends State<HomeWidget> {
     );
   }
 
-Widget _buildCartItemsSection(LocalProductProvider provider) {
-  final cartItems = provider.cartItems;
+  Widget _buildCartItemsSection(LocalProductProvider provider) {
+    final cartItems = provider.cartItems;
 
-  return Container(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      children: [
-        const Text(
-          'ORDER ITEMS',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.blueGrey,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          const Text(
+            'ORDER ITEMS',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.blueGrey,
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: cartItems.length,
-          itemBuilder: (_, index) {
-            final item = cartItems[index];
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[200]!),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                title: Text(
-                  item.product.productName ?? 'Unknown',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+          const SizedBox(height: 12),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: cartItems.length,
+            itemBuilder: (_, index) {
+              final item = cartItems[index];
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[200]!),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('${item.quantity} ${item.product.unit ?? ''}'),
-                    Text('₹${item.price?.toStringAsFixed(2) ?? '0.00'}'),
-                  ],
-                ),
-                trailing: SizedBox(
-                  width: 80, // Fixed width to prevent overflow
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                child: ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  title: Text(
+                    item.product.productName ?? 'Unknown',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '₹${(item.price! * item.quantity).toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14, // Slightly smaller font
-                        ),
-                      ),
-                      const SizedBox(height: 4), // Reduced spacing
-                      IconButton(
-                        icon: const Icon(Icons.delete, size: 20), // Smaller icon
-                        padding: EdgeInsets.zero, // Remove default padding
-                        constraints: const BoxConstraints(), // Remove constraints
-                        onPressed: () {
-                          provider.removeFromCart(
-                            item.product.productId!,
-                            item.selectedStock,
-                          );
-                        },
-                      ),
+                      Text('${item.quantity} ${item.product.unit ?? ''}'),
+                      Text('₹${item.price?.toStringAsFixed(2) ?? '0.00'}'),
                     ],
                   ),
+                  trailing: SizedBox(
+                    width: 80, // Fixed width to prevent overflow
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '₹${(item.price! * item.quantity).toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14, // Slightly smaller font
+                          ),
+                        ),
+                        const SizedBox(height: 4), // Reduced spacing
+                        IconButton(
+                          icon: const Icon(Icons.delete,
+                              size: 20), // Smaller icon
+                          padding: EdgeInsets.zero, // Remove default padding
+                          constraints:
+                              const BoxConstraints(), // Remove constraints
+                          onPressed: () {
+                            provider.removeFromCart(
+                              item.product.productId!,
+                              item.selectedStock,
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'TOTAL:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
               ),
-            );
-          },
-        ),
-        const Divider(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'TOTAL:',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+              Text(
+                '₹${provider.cartTotal.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Colors.green,
+                ),
               ),
-            ),
-            Text(
-              '₹${provider.cartTotal.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Colors.green,
-              ),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   void _saveOrder(LocalProductProvider provider, bool isEditingOrder) async {
     if (provider.cartItems.isEmpty) {
@@ -561,8 +567,8 @@ Widget _buildCartItemsSection(LocalProductProvider provider) {
     }
 
     // Validate that all items have valid pricing
-    bool hasInvalidPricing = provider.cartItems
-        .any((item) => item.price == null || item.price! < 0);
+    bool hasInvalidPricing =
+        provider.cartItems.any((item) => item.price == null || item.price! < 0);
 
     if (hasInvalidPricing) {
       showScaffoldError(
@@ -580,7 +586,8 @@ Widget _buildCartItemsSection(LocalProductProvider provider) {
           customerName: provider.currentOrder?.customerName,
           customerPhone: provider.currentOrder?.customerPhone,
           comment: provider.currentOrder?.comment ?? "",
-          deliveryMethod: provider.currentOrder?.deliveryMethod ?? "Store Takeaway",
+          deliveryMethod:
+              provider.currentOrder?.deliveryMethod ?? "Store Takeaway",
         );
 
         showScaffold(
@@ -616,7 +623,6 @@ Widget _buildCartItemsSection(LocalProductProvider provider) {
       });
 
       _focusTextField();
-
     } catch (e) {
       debugPrint("Error saving order: $e");
       showScaffoldError(
@@ -626,7 +632,8 @@ Widget _buildCartItemsSection(LocalProductProvider provider) {
     }
   }
 
-  Widget _buildActionButtons(LocalProductProvider provider, bool isEditingOrder) {
+  Widget _buildActionButtons(
+      LocalProductProvider provider, bool isEditingOrder) {
     return Row(
       children: [
         Expanded(
@@ -710,7 +717,8 @@ void showScaffold({required BuildContext context, required String message}) {
   );
 }
 
-void showScaffoldError({required BuildContext context, required String message}) {
+void showScaffoldError(
+    {required BuildContext context, required String message}) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(message),

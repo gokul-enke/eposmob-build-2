@@ -1027,7 +1027,10 @@ class _SalesScreenState extends State<SalesScreen> {
                                                   0x1A25D366), // ~10% opacity WhatsApp green
                                               child: WebsafeSvg.asset(
                                                 ImageAssets.whatsappIcon,
-                                                color: Colors.green,
+                                                colorFilter: const ColorFilter.mode(
+                                                  Colors.green,
+                                                  BlendMode.srcIn,
+                                                ),
                                                 fit: BoxFit.none,
                                               ),
                                             ),

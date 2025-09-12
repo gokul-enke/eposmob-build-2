@@ -99,8 +99,10 @@ class _DrawerListTileExpandableColumnState
                             color: Colors.white,
                             size: 20,
                           )
-                        : WebsafeSvg.asset(widget.iconPath!,
-                            color: Colors.white),
+                        : WebsafeSvg.asset(
+                            widget.iconPath!,
+                            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                          ),
                     trailing: _isExpanded
                         ? const Icon(
                             Icons.keyboard_arrow_up_sharp,
@@ -238,10 +240,13 @@ class _DrawerListTileExpandableColumnState
                     color: widget.selected
                         ? Colors.white
                         : ColorManager.kPrimaryColor)
-                : WebsafeSvg.asset(widget.iconPath!,
-                    color: widget.selected
-                        ? Colors.white
-                        : ColorManager.kPrimaryColor),
+                : WebsafeSvg.asset(
+                    widget.iconPath!,
+                    colorFilter: ColorFilter.mode(
+                      widget.selected ? Colors.white : ColorManager.kPrimaryColor,
+                      BlendMode.srcIn,
+                    ),
+                  ),
             title: Text(
               widget.title,
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,

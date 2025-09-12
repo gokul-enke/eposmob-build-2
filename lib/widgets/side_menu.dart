@@ -465,6 +465,18 @@ class _SideMenuState extends State<SideMenu> {
                 selected: sideBarController.index.value == 53,
               ),
             ),
+          if (_hasRole('sales_executive'))
+            Obx(
+              () => DrawerListTile(
+                iconPath: ImageAssets.consultingIcon,
+                title: 'Settings',
+                onTap: () {
+                  sideBarController.index.value = 62;
+                },
+                selected: sideBarController.index.value == 62 ||
+                    sideBarController.index.value == 63,
+              ),
+            ),
           DrawerListTile(
             iconPath: ImageAssets.logoutIcon,
             title: 'Logout',
@@ -628,7 +640,10 @@ class DrawerListTile extends StatelessWidget {
                 visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
                 minVerticalPadding: 0,
                 onTap: onTap,
-                leading: WebsafeSvg.asset(iconPath, color: Colors.white),
+                leading: WebsafeSvg.asset(
+                  iconPath,
+                  colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                ),
                 trailing: items != null
                     ? buildNotification(
                         item: items ?? 0,
@@ -669,10 +684,13 @@ class DrawerListTile extends StatelessWidget {
             visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
             minVerticalPadding: 0,
             onTap: onTap,
-            leading: WebsafeSvg.asset(iconPath,
-                color: ColorManager.kPrimaryColor
-                // color: selected ? Colors.white : ColorManager.kPrimaryColor
-                ),
+            leading: WebsafeSvg.asset(
+              iconPath,
+              colorFilter: ColorFilter.mode(
+                ColorManager.kPrimaryColor,
+                BlendMode.srcIn,
+              ),
+            ),
             trailing: items != null
                 ? buildNotification(
                     item: items ?? 0,

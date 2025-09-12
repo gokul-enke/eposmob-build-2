@@ -24,8 +24,9 @@ class PaymentMethodModal extends StatefulWidget {
   final double cartTotal;
   // Customer previous balance (positive = customer has credit; negative = customer owes)
   final double customerPrevBalance;
-  final Function(bool, bool, bool, bool, String, String, String, String, String,
-      bool) onPaymentMethodSelected;
+  final Function(
+          bool, bool, bool, bool, String, String, String, String, String, bool)
+      onPaymentMethodSelected;
 
   const PaymentMethodModal({
     Key? key,
@@ -76,9 +77,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
     // Initialize controllers - handle auto-filled values properly
     cashAmountController = TextEditingController(
-        text: widget.initialCashAmount.isEmpty
-                ? ""
-                : widget.initialCashAmount);
+        text: widget.initialCashAmount.isEmpty ? "" : widget.initialCashAmount);
     cardAmountController = TextEditingController(
         text:
             widget.initialCardAmount.isEmpty || widget.initialCardAmount == "0"
@@ -89,7 +88,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             ? ""
             : widget.initialUpiAmount);
     // Debit field removed. We'll map To Customer Credit to debit in the callback only.
-    
+
     transactionNumberController =
         TextEditingController(text: widget.initialTransactionNumber);
 
@@ -137,7 +136,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
     // To Customer Credit focus listener
     toCustomerCreditFocusNode.addListener(() {
-      if (toCustomerCreditFocusNode.hasFocus && toCustomerCreditController.text.isNotEmpty) {
+      if (toCustomerCreditFocusNode.hasFocus &&
+          toCustomerCreditController.text.isNotEmpty) {
         toCustomerCreditController.selection = TextSelection(
           baseOffset: 0,
           extentOffset: toCustomerCreditController.text.length,
@@ -152,8 +152,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         () => _handleAmountControllerChange('card', cardAmountController));
     upiAmountController.addListener(
         () => _handleAmountControllerChange('upi', upiAmountController));
-    toCustomerCreditController.addListener(
-        () => _handleAmountControllerChange('toCustomerCredit', toCustomerCreditController));
+    toCustomerCreditController.addListener(() => _handleAmountControllerChange(
+        'toCustomerCredit', toCustomerCreditController));
 
     // If there is an initial debit value (>0), reflect it as To Customer Credit
     final initDebit = double.tryParse(widget.initialDebitAmount) ?? 0.0;
@@ -199,8 +199,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     cardAmountFocusNode.dispose();
     upiAmountFocusNode.dispose();
     toCustomerCreditFocusNode.dispose();
-    toCustomerCreditController.removeListener(
-        () => _handleAmountControllerChange('toCustomerCredit', toCustomerCreditController));
+    toCustomerCreditController.removeListener(() =>
+        _handleAmountControllerChange(
+            'toCustomerCredit', toCustomerCreditController));
     toCustomerCreditController.dispose();
     super.dispose();
   }
@@ -211,7 +212,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
     double totalCollected = cashAmount + cardAmount + upiAmount;
-    
+
     double netDue;
     if (toCustomerCreditEnabled) {
       // Toggle ON: Include previous balance in calculation
@@ -221,7 +222,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       // Toggle OFF: Ignore previous balance completely
       netDue = widget.cartTotal;
     }
-    
+
     double balance = totalCollected - netDue;
     return balance > 0 ? balance : 0.0;
   }
@@ -232,7 +233,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
     double totalCollected = cashAmount + cardAmount + upiAmount;
-    
+
     double netDue;
     if (toCustomerCreditEnabled) {
       // Toggle ON: Include previous balance
@@ -241,9 +242,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       // Toggle OFF: Only current purchase
       netDue = widget.cartTotal;
     }
-    
+
     double balance = totalCollected - netDue;
-    
+
     // Calculate posting amounts
     Map<String, double> postingAmounts = {
       'cash': 0.0,
@@ -252,18 +253,19 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       'toCustomerCredit': 0.0,
       'balance': 0.0,
     };
-    
+
     if (balance <= 0) {
       // Not enough collected - all goes to settle purchase/dues
       postingAmounts['cash'] = cashAmount;
       postingAmounts['card'] = cardAmount;
       postingAmounts['upi'] = upiAmount;
-      
+
       // For Toggle ON case with insufficient funds, calculate partial credit settlement
       if (toCustomerCreditEnabled && widget.customerPrevBalance < 0) {
         // Customer owes money, partial payment reduces the debt
         double remainingDebt = netDue - totalCollected;
-        postingAmounts['toCustomerCredit'] = widget.customerPrevBalance + remainingDebt;
+        postingAmounts['toCustomerCredit'] =
+            widget.customerPrevBalance + remainingDebt;
       } else {
         postingAmounts['toCustomerCredit'] = 0.0;
       }
@@ -274,22 +276,22 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       if (toCustomerCreditEnabled) {
         toCredit = toCustomerCredit; // Amount specified for customer credit
       }
-      
+
       double cashBalance = balance - toCredit;
       if (cashBalance < 0) {
         cashBalance = 0.0;
         toCredit = balance; // Can't give more credit than available
       }
-      
+
       // Post the minimum required to settle the purchase
       double amountToSettle = netDue;
-      
+
       // Distribute settlement across payment methods proportionally
       if (totalCollected > 0) {
         double cashPortion = (cashAmount / totalCollected) * amountToSettle;
         double cardPortion = (cardAmount / totalCollected) * amountToSettle;
         double upiPortion = (upiAmount / totalCollected) * amountToSettle;
-        
+
         postingAmounts['cash'] = cashPortion;
         postingAmounts['card'] = cardPortion;
         postingAmounts['upi'] = upiPortion;
@@ -298,46 +300,50 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         postingAmounts['card'] = 0.0;
         postingAmounts['upi'] = 0.0;
       }
-      
+
       postingAmounts['toCustomerCredit'] = toCredit;
       postingAmounts['balance'] = cashBalance;
     }
-    
+
     return postingAmounts;
   }
 
   void _calculateBalance() {
     debugPrint('🧮 === CALCULATE BALANCE START ===');
-    
+
     double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
     double totalCollected = cashAmount + cardAmount + upiAmount;
-    
+
     double cashBal = 0.0;
-    
+
     if (toCustomerCreditEnabled) {
-      debugPrint('🔛 Toggle is ON - Calculating with customer credit consideration');
-      
+      debugPrint(
+          '🔛 Toggle is ON - Calculating with customer credit consideration');
+
       if (widget.customerPrevBalance < 0) {
         // Customer has debt - use transaction excess logic for consistency with auto-fill
         debugPrint('💳 Customer has debt - using transaction excess logic');
         final transactionExcess = totalCollected - widget.cartTotal;
-        debugPrint('💰 Transaction excess: ₹${transactionExcess.toStringAsFixed(2)}');
-        
+        debugPrint(
+            '💰 Transaction excess: ₹${transactionExcess.toStringAsFixed(2)}');
+
         if (transactionExcess > 0) {
           // Get the actual customer credit amount being allocated
           double actualCustomerCredit = toCustomerCredit;
-          
+
           // Clamp customer credit to available excess
           if (actualCustomerCredit > transactionExcess) {
             actualCustomerCredit = transactionExcess;
-            debugPrint('  - Clamped customer credit to transaction excess: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+            debugPrint(
+                '  - Clamped customer credit to transaction excess: ₹${actualCustomerCredit.toStringAsFixed(2)}');
           }
-          
+
           // Cash balance = transaction excess - customer credit
           cashBal = transactionExcess - actualCustomerCredit;
-          debugPrint('  - Cash Balance = Transaction Excess (₹${transactionExcess.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBal.toStringAsFixed(2)}');
+          debugPrint(
+              '  - Cash Balance = Transaction Excess (₹${transactionExcess.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBal.toStringAsFixed(2)}');
         } else {
           cashBal = 0.0;
           debugPrint('  - No transaction excess, cash balance = 0');
@@ -348,28 +354,34 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         // Net Due = Purchase Total - Customer Previous Balance
         double netDue = widget.cartTotal - widget.customerPrevBalance;
         debugPrint('💰 Net Due calculation:');
-        debugPrint('  - Purchase Total: ₹${widget.cartTotal.toStringAsFixed(2)}');
-        debugPrint('  - Customer Prev Balance: ₹${widget.customerPrevBalance.toStringAsFixed(2)}');
+        debugPrint(
+            '  - Purchase Total: ₹${widget.cartTotal.toStringAsFixed(2)}');
+        debugPrint(
+            '  - Customer Prev Balance: ₹${widget.customerPrevBalance.toStringAsFixed(2)}');
         debugPrint('  - Net Due: ₹${netDue.toStringAsFixed(2)}');
-        
+
         // Available balance = Total Collected - Net Due
         double availableBalance = totalCollected - netDue;
-        debugPrint('  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
-        debugPrint('  - Available Balance: ₹${availableBalance.toStringAsFixed(2)}');
-        
+        debugPrint(
+            '  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
+        debugPrint(
+            '  - Available Balance: ₹${availableBalance.toStringAsFixed(2)}');
+
         if (availableBalance > 0) {
           // Get the actual customer credit amount being allocated
           double actualCustomerCredit = toCustomerCredit;
-          
+
           // Clamp customer credit to available balance
           if (actualCustomerCredit > availableBalance) {
             actualCustomerCredit = availableBalance;
-            debugPrint('  - Clamped customer credit to available balance: ₹${actualCustomerCredit.toStringAsFixed(2)}');
+            debugPrint(
+                '  - Clamped customer credit to available balance: ₹${actualCustomerCredit.toStringAsFixed(2)}');
           }
-          
+
           // Cash balance = available balance - customer credit
           cashBal = availableBalance - actualCustomerCredit;
-          debugPrint('  - Cash Balance = Available Balance (₹${availableBalance.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBal.toStringAsFixed(2)}');
+          debugPrint(
+              '  - Cash Balance = Available Balance (₹${availableBalance.toStringAsFixed(2)}) - Customer Credit (₹${actualCustomerCredit.toStringAsFixed(2)}) = ₹${cashBal.toStringAsFixed(2)}');
         } else {
           cashBal = 0.0;
           debugPrint('  - No available balance, cash balance = 0');
@@ -379,22 +391,24 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       debugPrint('🔴 Toggle is OFF - Using simple calculation');
       // Toggle OFF: Simple calculation without previous balance
       cashBal = totalCollected - widget.cartTotal;
-      debugPrint('  - Cash Balance = Total Collected (₹${totalCollected.toStringAsFixed(2)}) - Cart Total (₹${widget.cartTotal.toStringAsFixed(2)}) = ₹${cashBal.toStringAsFixed(2)}');
+      debugPrint(
+          '  - Cash Balance = Total Collected (₹${totalCollected.toStringAsFixed(2)}) - Cart Total (₹${widget.cartTotal.toStringAsFixed(2)}) = ₹${cashBal.toStringAsFixed(2)}');
     }
-    
+
     // Clamp cash balance to never show negative values in UI
     // Negative balance means insufficient payment, but cash drawer can't give negative money
     if (cashBal < 0) {
-      debugPrint('🚫 Clamping negative cash balance (₹${cashBal.toStringAsFixed(2)}) to 0 for UI display');
+      debugPrint(
+          '🚫 Clamping negative cash balance (₹${cashBal.toStringAsFixed(2)}) to 0 for UI display');
       cashBal = 0.0;
     }
-    
+
     debugPrint('💵 Final cash balance: ₹${cashBal.toStringAsFixed(2)}');
-    
+
     setState(() {
       balanceAmount = cashBal;
     });
-    
+
     debugPrint('🧮 === CALCULATE BALANCE END ===\n');
   }
 
@@ -440,7 +454,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     setState(() {
       // Check if field has any text (including "0") to determine selection
       bool hasValue = controller.text.isNotEmpty;
-      
+
       if (hasValue) {
         switch (label) {
           case 'cash':
@@ -605,7 +619,6 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               color: ColorManager.kPrimaryColor,
             ),
 
-
             BuildPaymentRow(
               amount: 'INR ${widget.cartTotal.toStringAsFixed(2)}',
               title: 'Purchase Total',
@@ -672,82 +685,109 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                     setState(() {
                       debugPrint('=== TOGGLE TO CUSTOMER CREDIT ===');
                       debugPrint('Toggle value changed to: $value');
-                      
+
                       toCustomerCreditEnabled = value;
                       if (toCustomerCreditEnabled) {
-                        debugPrint('📈 TOGGLE ON - Enabling customer credit functionality');
-                        
+                        debugPrint(
+                            '📈 TOGGLE ON - Enabling customer credit functionality');
+
                         // Calculate current state
                         final currentBaseBalance = _computeBaseBalance();
-                        final cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
-                        final cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
-                        final upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-                        final totalCollected = cashAmount + cardAmount + upiAmount;
-                        final netDueWithToggle = widget.cartTotal - widget.customerPrevBalance;
+                        final cashAmount =
+                            double.tryParse(cashAmountController.text) ?? 0.0;
+                        final cardAmount =
+                            double.tryParse(cardAmountController.text) ?? 0.0;
+                        final upiAmount =
+                            double.tryParse(upiAmountController.text) ?? 0.0;
+                        final totalCollected =
+                            cashAmount + cardAmount + upiAmount;
+                        final netDueWithToggle =
+                            widget.cartTotal - widget.customerPrevBalance;
                         final netDueWithoutToggle = widget.cartTotal;
-                        
+
                         debugPrint('💰 Current Payment State:');
-                        debugPrint('  - Cash: ₹${cashAmount.toStringAsFixed(2)}');
-                        debugPrint('  - Card: ₹${cardAmount.toStringAsFixed(2)}');
+                        debugPrint(
+                            '  - Cash: ₹${cashAmount.toStringAsFixed(2)}');
+                        debugPrint(
+                            '  - Card: ₹${cardAmount.toStringAsFixed(2)}');
                         debugPrint('  - UPI: ₹${upiAmount.toStringAsFixed(2)}');
-                        debugPrint('  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
+                        debugPrint(
+                            '  - Total Collected: ₹${totalCollected.toStringAsFixed(2)}');
                         debugPrint('');
                         debugPrint('🎯 Purchase & Balance Info:');
-                        debugPrint('  - Purchase Total: ₹${widget.cartTotal.toStringAsFixed(2)}');
-                        debugPrint('  - Customer Prev Balance: ₹${widget.customerPrevBalance.toStringAsFixed(2)}');
-                        debugPrint('  - Net Due (Toggle OFF): ₹${netDueWithoutToggle.toStringAsFixed(2)}');
-                        debugPrint('  - Net Due (Toggle ON): ₹${netDueWithToggle.toStringAsFixed(2)}');
-                        debugPrint('  - Available Cash Balance: ₹${currentBaseBalance.toStringAsFixed(2)}');
+                        debugPrint(
+                            '  - Purchase Total: ₹${widget.cartTotal.toStringAsFixed(2)}');
+                        debugPrint(
+                            '  - Customer Prev Balance: ₹${widget.customerPrevBalance.toStringAsFixed(2)}');
+                        debugPrint(
+                            '  - Net Due (Toggle OFF): ₹${netDueWithoutToggle.toStringAsFixed(2)}');
+                        debugPrint(
+                            '  - Net Due (Toggle ON): ₹${netDueWithToggle.toStringAsFixed(2)}');
+                        debugPrint(
+                            '  - Available Cash Balance: ₹${currentBaseBalance.toStringAsFixed(2)}');
                         debugPrint('');
-                        
+
                         // Auto-fill logic with debt settlement priority
                         // Calculate transaction excess (money beyond purchase total)
-                        final transactionExcess = totalCollected - widget.cartTotal;
-                        
+                        final transactionExcess =
+                            totalCollected - widget.cartTotal;
+
                         if (transactionExcess > 0) {
                           double prefillAmount;
-                          
+
                           if (widget.customerPrevBalance < 0) {
                             // Customer owes money - prioritize debt settlement
-                            final customerDebt = widget.customerPrevBalance.abs(); // Convert negative to positive
-                            
+                            final customerDebt = widget.customerPrevBalance
+                                .abs(); // Convert negative to positive
+
                             debugPrint('💳 DEBT SETTLEMENT PRIORITY:');
-                            debugPrint('  - Customer Debt: ₹${customerDebt.toStringAsFixed(2)}');
-                            debugPrint('  - Transaction Excess: ₹${transactionExcess.toStringAsFixed(2)}');
-                            debugPrint('  - Available Base Balance: ₹${currentBaseBalance.toStringAsFixed(2)}');
-                            
+                            debugPrint(
+                                '  - Customer Debt: ₹${customerDebt.toStringAsFixed(2)}');
+                            debugPrint(
+                                '  - Transaction Excess: ₹${transactionExcess.toStringAsFixed(2)}');
+                            debugPrint(
+                                '  - Available Base Balance: ₹${currentBaseBalance.toStringAsFixed(2)}');
+
                             if (customerDebt <= transactionExcess) {
                               // Can settle full debt from transaction excess - auto-fill with debt amount
                               prefillAmount = customerDebt;
-                              debugPrint('  - Auto-filling with debt amount: ₹${prefillAmount.toStringAsFixed(2)} (can settle full debt)');
+                              debugPrint(
+                                  '  - Auto-filling with debt amount: ₹${prefillAmount.toStringAsFixed(2)} (can settle full debt)');
                             } else {
                               // Can't settle full debt - auto-fill with available transaction excess
                               prefillAmount = transactionExcess;
-                              debugPrint('  - Auto-filling with transaction excess: ₹${prefillAmount.toStringAsFixed(2)} (partial debt settlement)');
+                              debugPrint(
+                                  '  - Auto-filling with transaction excess: ₹${prefillAmount.toStringAsFixed(2)} (partial debt settlement)');
                             }
                           } else {
                             // Customer has positive/zero balance - use available base balance as before
                             prefillAmount = currentBaseBalance;
-                            debugPrint('  - Customer has credit/zero balance - auto-filling with base balance: ₹${prefillAmount.toStringAsFixed(2)}');
+                            debugPrint(
+                                '  - Customer has credit/zero balance - auto-filling with base balance: ₹${prefillAmount.toStringAsFixed(2)}');
                           }
-                          
-                          toCustomerCreditController.text = prefillAmount.toStringAsFixed(2);
+
+                          toCustomerCreditController.text =
+                              prefillAmount.toStringAsFixed(2);
                           toCustomerCredit = prefillAmount;
-                          debugPrint('✅ Auto-filled toCustomerCredit: ₹${prefillAmount.toStringAsFixed(2)}');
+                          debugPrint(
+                              '✅ Auto-filled toCustomerCredit: ₹${prefillAmount.toStringAsFixed(2)}');
                         } else {
                           toCustomerCreditController.clear();
                           toCustomerCredit = 0.0;
-                          debugPrint('ℹ️ No excess money available - field left empty');
+                          debugPrint(
+                              'ℹ️ No excess money available - field left empty');
                         }
                       } else {
-                        debugPrint('📉 TOGGLE OFF - Disabling customer credit functionality');
+                        debugPrint(
+                            '📉 TOGGLE OFF - Disabling customer credit functionality');
                         debugPrint('  - Clearing toCustomerCredit field');
-                        debugPrint('  - All excess money will go to cash balance');
-                        
+                        debugPrint(
+                            '  - All excess money will go to cash balance');
+
                         toCustomerCreditController.clear();
                         toCustomerCredit = 0.0;
                       }
-                      
+
                       debugPrint('');
                       _calculateBalance();
                       debugPrint('=== END TOGGLE OPERATION ===\n');
@@ -772,7 +812,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                     replaceOnFirstInput: true,
                   );
                 },
-                onchanged: (value) => _handleAmountControllerChange('toCustomerCredit', toCustomerCreditController),
+                onchanged: (value) => _handleAmountControllerChange(
+                    'toCustomerCredit', toCustomerCreditController),
               ),
               const SizedBox(height: 12),
             ],
@@ -806,8 +847,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               title: "Apply Payment Methods",
               fct: () {
                 // Map To Customer Credit to legacy debit params for callback compatibility
-                final double mappedCredit = double.tryParse(toCustomerCreditController.text) ?? 0.0;
-                final bool mappedIsDebitSelected = toCustomerCreditEnabled && mappedCredit > 0;
+                final double mappedCredit =
+                    double.tryParse(toCustomerCreditController.text) ?? 0.0;
+                final bool mappedIsDebitSelected =
+                    toCustomerCreditEnabled && mappedCredit > 0;
                 final String mappedDebitAmount = mappedIsDebitSelected
                     ? mappedCredit.toStringAsFixed(2)
                     : '';
@@ -866,7 +909,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   icon,
                   width: 14,
                   height: 14,
-                  color: isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                  colorFilter: ColorFilter.mode(
+                      isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                      BlendMode.srcIn),
                   fit: BoxFit.none,
                 ),
                 const SizedBox(width: 6),
@@ -892,28 +937,31 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             controller: controller,
             size: size,
             height: size.height * .06,
-            hintText: label == 'Balance' ? 'Auto-calculated' : 'Enter $label amount',
+            hintText:
+                label == 'Balance' ? 'Auto-calculated' : 'Enter $label amount',
             keyboardType: TextInputType.number,
             focusNode: focusNode,
             readOnly: label == 'Balance',
-            onTap: (label == 'Balance') ? null : () {
-              // Ensure full selection when tapping inside the field
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (controller.text.isNotEmpty && focusNode.hasFocus) {
-                  controller.selection = TextSelection(
-                    baseOffset: 0,
-                    extentOffset: controller.text.length,
-                  );
-                }
-              });
+            onTap: (label == 'Balance')
+                ? null
+                : () {
+                    // Ensure full selection when tapping inside the field
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (controller.text.isNotEmpty && focusNode.hasFocus) {
+                        controller.selection = TextSelection(
+                          baseOffset: 0,
+                          extentOffset: controller.text.length,
+                        );
+                      }
+                    });
 
-              // Show virtual numeric keyboard
-              Provider.of<KeyboardProvider>(context, listen: false).show(
-                'number',
-                controller,
-                replaceOnFirstInput: true,
-              );
-            },
+                    // Show virtual numeric keyboard
+                    Provider.of<KeyboardProvider>(context, listen: false).show(
+                      'number',
+                      controller,
+                      replaceOnFirstInput: true,
+                    );
+                  },
             onchanged: (value) =>
                 _handleAmountControllerChange(label.toLowerCase(), controller),
           ),
@@ -924,7 +972,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
   Widget _buildPostingPreview() {
     Map<String, double> postingAmounts = _getPostingAmounts();
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -961,9 +1009,11 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildPostingRow('To Customer Credit:', postingAmounts['toCustomerCredit']!, 
+                    _buildPostingRow('To Customer Credit:',
+                        postingAmounts['toCustomerCredit']!,
                         color: ColorManager.kButtonGreen),
-                    _buildPostingRow('Cash Balance:', postingAmounts['balance']!, 
+                    _buildPostingRow(
+                        'Cash Balance:', postingAmounts['balance']!,
                         color: ColorManager.kButtonGreen),
                     _buildNetDueRow(),
                   ],
@@ -1012,7 +1062,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     } else {
       netDue = widget.cartTotal;
     }
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -1046,17 +1096,21 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     final cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     final upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
     final totalCollected = cashAmount + cardAmount + upiAmount;
-    
+
     // Calculate different credit scenarios
     final currentTransactionExcess = totalCollected - widget.cartTotal;
-    final maxPossibleCredit = _computeBaseBalance(); // This includes previous balance effects
-    final customerOwesAmount = widget.customerPrevBalance < 0 ? widget.customerPrevBalance.abs() : 0.0;
-    
+    final maxPossibleCredit =
+        _computeBaseBalance(); // This includes previous balance effects
+    final customerOwesAmount =
+        widget.customerPrevBalance < 0 ? widget.customerPrevBalance.abs() : 0.0;
+
     debugPrint('🎯 MAX CREDIT HELPER CALCULATIONS:');
-    debugPrint('  - Current Transaction Excess: ₹${currentTransactionExcess.toStringAsFixed(2)}');
-    debugPrint('  - Max Possible Credit (with prev balance): ₹${maxPossibleCredit.toStringAsFixed(2)}');
+    debugPrint(
+        '  - Current Transaction Excess: ₹${currentTransactionExcess.toStringAsFixed(2)}');
+    debugPrint(
+        '  - Max Possible Credit (with prev balance): ₹${maxPossibleCredit.toStringAsFixed(2)}');
     debugPrint('  - Customer Owes: ₹${customerOwesAmount.toStringAsFixed(2)}');
-    
+
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -1085,14 +1139,17 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   child: GestureDetector(
                     onTap: () {
                       setState(() {
-                        toCustomerCreditController.text = maxPossibleCredit.toStringAsFixed(2);
+                        toCustomerCreditController.text =
+                            maxPossibleCredit.toStringAsFixed(2);
                         toCustomerCredit = maxPossibleCredit;
-                        debugPrint('📱 Quick fill: All available balance ₹${maxPossibleCredit.toStringAsFixed(2)}');
+                        debugPrint(
+                            '📱 Quick fill: All available balance ₹${maxPossibleCredit.toStringAsFixed(2)}');
                         _calculateBalance();
                       });
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 6, horizontal: 8),
                       decoration: BoxDecoration(
                         color: ColorManager.kPrimaryColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
@@ -1125,11 +1182,12 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                 ),
                 const SizedBox(width: 6),
               ],
-              
+
               // Cash Balance display (read-only)
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(4),
@@ -1152,7 +1210,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                           FontWeightManager.bold,
                           FontSize.s11,
                           0.12,
-                          balanceAmount > 0 ? ColorManager.kButtonGreen : Colors.grey.shade600,
+                          balanceAmount > 0
+                              ? ColorManager.kButtonGreen
+                              : Colors.grey.shade600,
                         ),
                       ),
                     ],

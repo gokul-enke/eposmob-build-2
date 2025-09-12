@@ -220,6 +220,13 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       onTap: () => navigate(53),
                       selected: sideBarController.index.value == 53,
                     )),
+              if (_hasRole('sales_executive'))
+                Obx(() => DrawerListTile(
+                      iconPath: ImageAssets.consultingIcon,
+                      title: 'Settings',
+                      onTap: () => navigate(62),
+                      selected: [62, 63].contains(sideBarController.index.value),
+                    )),
               DrawerListTile(
                 iconPath: ImageAssets.logoutIcon,
                 title: 'Logout',

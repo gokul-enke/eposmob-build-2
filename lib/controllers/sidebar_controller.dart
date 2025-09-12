@@ -35,15 +35,16 @@ import 'package:pos_machine/screens/reports/product_sales_report/product_sales_r
 import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
 import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
 import 'package:pos_machine/screens/reports/sales_executive_report/sales_executive_report.dart';
+import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/add_company_account.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/account_details_screen.dart'; // Added import
 import 'package:pos_machine/screens/sales/sales.dart';
 import 'package:pos_machine/screens/sales_return/sales_return.dart';
 import 'package:pos_machine/screens/sales_return/sales_return_list.dart';
-import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
+import 'package:pos_machine/screens/settings/settings.dart';
+import 'package:pos_machine/screens/settings/whatsapp_settings.dart';
 import 'package:pos_machine/screens/support/support.dart';
-import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
 import 'package:pos_machine/screens/transactions/invoice_list.dart';
 import 'package:pos_machine/screens/transactions/receipt_list.dart';
 import 'package:pos_machine/screens/transactions/receipt_voucher.dart';
@@ -135,5 +136,7 @@ class SideBarController extends GetxController {
     CompanyAccountsScreen(), // 59 Company Accounts
     AddCompanyAccountScreen(), // 60 Add Company Account
     AccountDetailsScreen(), // 61 Account Details Screen
+    SettingsScreen(), // 62 Settings Home
+    WhatsappSettingsScreen(), // 63 WhatsApp Settings
   ];
 }
