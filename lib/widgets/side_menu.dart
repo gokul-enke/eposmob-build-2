@@ -343,7 +343,29 @@ class _SideMenuState extends State<SideMenu> {
                   supplierProvider.fetchSuppliers(
                       accessToken: accessToken ?? '');
                 },
-                selected: sideBarController.index.value == 52,
+                selected: sideBarController.index.value == 52 ||
+                    sideBarController.index.value == 57,
+              ),
+            ),
+          if (_hasRole('sales_executive'))
+            Obx(
+              () => DrawerListTileExpandableColumn(
+                onTapTitle1: () {
+                  sideBarController.index.value = 58; // Sales Executive Report
+                },
+                onTapTitle2: () {
+                  // TODO: Add additional reports navigation
+                },
+                listTitle1: "Sales Executive Reports",
+                // listTitle2: "Other Reports",
+                iconPath: ImageAssets.transactionIcon,
+                title: 'Reports',
+                onTap: () {
+                  sideBarController.index.value =
+                      58; // Default to Sales Executive Report
+                },
+                selected: sideBarController.index.value ==
+                    58, // Add proper selected condition
               ),
             ),
           if (_hasRole('sales_executive'))
@@ -355,8 +377,12 @@ class _SideMenuState extends State<SideMenu> {
                 onTapTitle2: () {
                   sideBarController.index.value = 47;
                 },
+                onTapTitle3: () {
+                  sideBarController.index.value = 59; // Company Accounts
+                },
                 listTitle1: "Invoice",
                 listTitle2: "Receipts",
+                listTitle3: "Company Accounts",
                 iconPath: ImageAssets.transactionIcon,
                 title: 'Accounts',
                 onTap: () {
@@ -371,7 +397,9 @@ class _SideMenuState extends State<SideMenu> {
                     sideBarController.index.value == 24 ||
                     sideBarController.index.value == 25 ||
                     sideBarController.index.value == 48 ||
-                    sideBarController.index.value == 47,
+                    sideBarController.index.value == 47 ||
+                    sideBarController.index.value == 59 ||
+                    sideBarController.index.value == 60,
               ),
             ),
           if (_hasRole('sales_executive'))

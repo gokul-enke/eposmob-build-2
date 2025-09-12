@@ -174,64 +174,57 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
   Widget _buildSupplierDetails() {
     if (supplier == null) return const SizedBox();
 
-    return BuildBoxShadowContainer(
-      margin: const EdgeInsets.only(top: 5),
-      circleRadius: 7,
-      offsetValue: const Offset(2, 2),
-      blurRadius: 8.0,
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Supplier Information',
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s16,
-                0.27,
-                ColorManager.textColor,
-              ),
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Supplier Information',
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s16,
+              0.27,
+              ColorManager.textColor,
             ),
-            const SizedBox(height: 16),
-            _buildDetailRow('Name', supplier!.name),
-            const SizedBox(height: 8),
-            _buildDetailRow(
-                'Email', supplier!.email.isNotEmpty ? supplier!.email : 'N/A'),
-            const SizedBox(height: 8),
-            _buildDetailRow(
-                'Phone', supplier!.phone.isNotEmpty ? supplier!.phone : 'N/A'),
-            const SizedBox(height: 8),
-            _buildDetailRow(
-                'Alternative Phone',
-                (supplier!.altPhone != null && supplier!.altPhone!.isNotEmpty)
-                    ? supplier!.altPhone!
-                    : 'N/A'),
-            const SizedBox(height: 8),
-            _buildDetailRow('Address',
-                supplier!.address.isNotEmpty ? supplier!.address : 'N/A'),
-            const SizedBox(height: 8),
-            _buildDetailRow(
-                'Product Categories',
-                supplier!.productCategories.isNotEmpty
-                    ? supplier!.productCategories
-                    : 'N/A'),
-            const SizedBox(height: 8),
-            _buildDetailRow('Balance',
-                supplier!.balance.isNotEmpty ? supplier!.balance : 'N/A'),
-            const SizedBox(height: 8),
-            _buildDetailRowWithColor(
-                'Current Balance',
-                supplier!.currentBalance.toStringAsFixed(2),
-                supplier!.paymentType),
-            const SizedBox(height: 8),
-            _buildDetailRowWithColor('Balance Status', supplier!.balanceStatus,
-                supplier!.paymentType),
-            const SizedBox(height: 8),
-            _buildDetailRow('Payment Type', supplier!.paymentType),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          _buildDetailRow('Name', supplier!.name),
+          const SizedBox(height: 8),
+          _buildDetailRow(
+              'Email', supplier!.email.isNotEmpty ? supplier!.email : 'N/A'),
+          const SizedBox(height: 8),
+          _buildDetailRow(
+              'Phone', supplier!.phone.isNotEmpty ? supplier!.phone : 'N/A'),
+          const SizedBox(height: 8),
+          _buildDetailRow(
+              'Alternative Phone',
+              (supplier!.altPhone != null && supplier!.altPhone!.isNotEmpty)
+                  ? supplier!.altPhone!
+                  : 'N/A'),
+          const SizedBox(height: 8),
+          _buildDetailRow('Address',
+              supplier!.address.isNotEmpty ? supplier!.address : 'N/A'),
+          const SizedBox(height: 8),
+          _buildDetailRow(
+              'Product Categories',
+              supplier!.productCategories.isNotEmpty
+                  ? supplier!.productCategories
+                  : 'N/A'),
+          const SizedBox(height: 8),
+          _buildDetailRow('Balance',
+              supplier!.balance.isNotEmpty ? supplier!.balance : 'N/A'),
+          const SizedBox(height: 8),
+          _buildDetailRowWithColor(
+              'Current Balance',
+              supplier!.currentBalance.toStringAsFixed(2),
+              supplier!.paymentType),
+          const SizedBox(height: 8),
+          _buildDetailRowWithColor(
+              'Balance Status', supplier!.balanceStatus, supplier!.paymentType),
+          const SizedBox(height: 8),
+          _buildDetailRow('Payment Type', supplier!.paymentType),
+        ],
       ),
     );
   }

@@ -20,6 +20,7 @@ class SupplierProvider with ChangeNotifier {
   String? _filterName;
   String? _filterEmail;
   String? _filterPhone;
+  String? _filterBalance;
 
   List<Supplier>? get supplierList => _supplierList;
   bool get isLoading => _isLoading;
@@ -51,6 +52,7 @@ class SupplierProvider with ChangeNotifier {
     String? supplierName,
     String? supplierEmail,
     String? supplierPhone,
+    String? filterBalance,
     int page = 1,
   }) {
     if (_allSuppliers == null || _allSuppliers!.isEmpty) {
@@ -65,6 +67,7 @@ class SupplierProvider with ChangeNotifier {
     _filterName = supplierName;
     _filterEmail = supplierEmail;
     _filterPhone = supplierPhone;
+    _filterBalance = filterBalance;
     _currentPage = page;
 
     // Apply filters
@@ -92,6 +95,24 @@ class SupplierProvider with ChangeNotifier {
               .toLowerCase()
               .contains(supplierPhone.toLowerCase()))
           .toList();
+    }
+
+    // Apply balance filter
+    if (filterBalance != null && filterBalance.isNotEmpty) {
+      filteredList = filteredList.where((supplier) {
+        double balance = supplier.currentBalance;
+
+        switch (filterBalance) {
+          case 'Positive (+ve)':
+            return balance > 0;
+          case 'Negative (-ve)':
+            return balance < 0;
+          case 'Zero (0)':
+            return balance == 0;
+          default:
+            return true; // 'All' or any other value
+        }
+      }).toList();
     }
 
     // Calculate pagination
@@ -123,6 +144,7 @@ class SupplierProvider with ChangeNotifier {
     _filterName = null;
     _filterEmail = null;
     _filterPhone = null;
+    _filterBalance = null;
     _currentPage = 1;
 
     if (_allSuppliers != null && _allSuppliers!.isNotEmpty) {
@@ -160,6 +182,7 @@ class SupplierProvider with ChangeNotifier {
         supplierName: _filterName,
         supplierEmail: _filterEmail,
         supplierPhone: _filterPhone,
+        filterBalance: _filterBalance,
         page: page);
   }
 
@@ -278,7 +301,8 @@ class SupplierProvider with ChangeNotifier {
 
       debugPrint('Add Supplier API Response status: ${response.statusCode}');
       debugPrint('Add Supplier API Response body: ${response.body}');
-      debugPrint('Add Supplier API Response body type: ${response.body.runtimeType}');
+      debugPrint(
+          'Add Supplier API Response body type: ${response.body.runtimeType}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Refresh supplier list after adding
@@ -300,7 +324,8 @@ class SupplierProvider with ChangeNotifier {
           debugPrint('JSON parsing error: $jsonError');
           return {
             'status': 'error',
-            'message': 'Server error (Status: ${response.statusCode}). Please check your network connection and try again.',
+            'message':
+                'Server error (Status: ${response.statusCode}). Please check your network connection and try again.',
             'errors': {},
           };
         }
@@ -311,7 +336,8 @@ class SupplierProvider with ChangeNotifier {
       debugPrint('Network/Exception error: $e');
       return {
         'status': 'error',
-        'message': 'Network error: Please check your internet connection and try again.'
+        'message':
+            'Network error: Please check your internet connection and try again.'
       };
     }
   }
