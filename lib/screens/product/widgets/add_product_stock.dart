@@ -27,6 +27,7 @@ import 'package:provider/provider.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'dart:async'; // Added for Timer
+import 'dart:convert';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/components/build_restricted_payment_selector.dart';
 import 'package:pos_machine/screens/suppliers/add_supplier_modal.dart';
@@ -150,6 +151,39 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     });
     // Tax calculation will be triggered when product data is available
     // No need to calculate tax for empty stock items in initState
+  }
+
+  /// Set supplier data from pending item
+  void _setSupplierDataFromPending(
+      StockItem stockItem, Map<String, dynamic> pendingData) {
+    try {
+      final supplierProvider =
+          Provider.of<SupplierProvider>(context, listen: false);
+      final supplierId = pendingData['supplierId'];
+
+      if (supplierId != null && supplierProvider.supplierList != null) {
+        // Convert supplierId to int if it's not already
+        int? id;
+        if (supplierId is int) {
+          id = supplierId;
+        } else {
+          id = int.tryParse(supplierId.toString());
+        }
+
+        if (id != null) {
+          final supplier = supplierProvider.supplierList!.firstWhere(
+            (s) => s.id == id,
+            orElse: () => supplierProvider.supplierList!.first,
+          );
+
+          stockItem.supplierData = supplier;
+          selectedSupplier = supplier; // Set the global selected supplier
+          debugPrint('   - Supplier data set: ${supplier.name}');
+        }
+      }
+    } catch (e) {
+      debugPrint('   - Could not set supplier data: $e');
+    }
   }
 
   @override
@@ -358,9 +392,25 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   Future<void> _initializeData() async {
     // Initialize any required data
+    await _loadCategories(); // Ensure categories are fresh
     await _loadSuppliers();
     await _loadUnits(); // Load units
     await _loadRacks(); // Load racks
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categoryProvider =
+          Provider.of<CategoryProvider>(context, listen: false);
+      // Load categories the same way as Add Category screen
+      await categoryProvider.searchAllCategory(page: 1);
+      final total = categoryProvider.searchCategory?.length ??
+          categoryProvider.category?.length ??
+          0;
+      debugPrint('📥 Categories loaded (searchCategory preferred): $total');
+    } catch (e) {
+      debugPrint('Error loading categories: $e');
+    }
   }
 
   Future<void> _loadSuppliers() async {
@@ -531,52 +581,59 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     try {
       final categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
-      final categoryName = pendingData['categoryName'];
+      final categoryList = categoryProvider.category;
+      if (categoryList != null && categoryList.isNotEmpty) {
+        final dynamic categoryNameDyn = pendingData['categoryName'];
+        final String? categoryName =
+            categoryNameDyn != null ? categoryNameDyn.toString() : null;
+        final dynamic categoryIdDyn = pendingData['categoryId'];
+        final int? categoryId = categoryIdDyn is int
+            ? categoryIdDyn
+            : int.tryParse(categoryIdDyn?.toString() ?? '');
+        final String? categorySlug = pendingData['categorySlug']?.toString();
 
-      if (categoryName != null && categoryProvider.category != null) {
-        final category = categoryProvider.category!.firstWhere(
-          (c) => c.categoryName == categoryName,
-          orElse: () => categoryProvider.category!.first,
-        );
+        Category? matchingCategory;
+        // 1) Try by ID
+        if (categoryId != null) {
+          try {
+            matchingCategory = categoryList.firstWhere(
+                (c) => c.categoryId == categoryId);
+          } catch (_) {}
+        }
+        // 2) Try by slug
+        if (matchingCategory == null && categorySlug != null) {
+          try {
+            matchingCategory = categoryList.firstWhere(
+                (c) => (c.categorySlug ?? '') == categorySlug);
+          } catch (_) {}
+        }
+        // 3) Try by name (case-insensitive)
+        if (matchingCategory == null && categoryName != null) {
+          final target = categoryName.trim().toLowerCase();
+          try {
+            matchingCategory = categoryList.firstWhere((c) =>
+                (c.categoryName ?? '').trim().toLowerCase() == target);
+          } catch (_) {}
+        }
+        // 4) Fallback to first non-ALL
+        if (matchingCategory == null) {
+          try {
+            matchingCategory = categoryList.firstWhere(
+                (c) => (c.categoryName ?? '').toUpperCase() != 'ALL');
+          } catch (_) {
+            matchingCategory = categoryList.first;
+          }
+        }
 
-        stockItem.categoryData = category;
-        debugPrint('   - Category data set: ${category.categoryName}');
+        // Assign
+        final mc = matchingCategory ?? categoryList.first;
+        stockItem.categoryData = mc;
+        stockItem.category = mc.categoryName ?? '';
+        debugPrint(
+            '   - Category data set: ${mc.categoryName} (ID: ${mc.categoryId})');
       }
     } catch (e) {
       debugPrint('   - Could not set category data: $e');
-    }
-  }
-
-  /// Set supplier data from pending item
-  void _setSupplierDataFromPending(
-      StockItem stockItem, Map<String, dynamic> pendingData) {
-    try {
-      final supplierProvider =
-          Provider.of<SupplierProvider>(context, listen: false);
-      final supplierId = pendingData['supplierId'];
-
-      if (supplierId != null && supplierProvider.supplierList != null) {
-        // Convert supplierId to int if it's not already
-        int? id;
-        if (supplierId is int) {
-          id = supplierId;
-        } else {
-          id = int.tryParse(supplierId.toString());
-        }
-
-        if (id != null) {
-          final supplier = supplierProvider.supplierList!.firstWhere(
-            (s) => s.id == id,
-            orElse: () => supplierProvider.supplierList!.first,
-          );
-
-          stockItem.supplierData = supplier;
-          selectedSupplier = supplier; // Set the global selected supplier
-          debugPrint('   - Supplier data set: ${supplier.name}');
-        }
-      }
-    } catch (e) {
-      debugPrint('   - Could not set supplier data: $e');
     }
   }
 
@@ -686,10 +743,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'mrp': item.mrp.isNotEmpty ? item.mrp : item.salePrice,
         'wholesalePrice':
             item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
-        'unit': item.unit,
+        'unit': item.selectedUnit, // Changed to send unit ID instead of unit name
         'supplierId': selectedSupplier!.id,
         'storeId': selectedStore!.id,
-        'expiryDate': DateHelper.formatDate(item.expDate),
+        'expiryDate': DateFormat('yyyy-MM-dd').format(item.expDate),
         'userId': 1,
         'purchaseVoucherId': null,
         'purchaseId': null,
@@ -700,8 +757,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'rack': item.rack,
         'barcode': item.barcode,
         'batchNumber': item.batchNumber,
-        'date': DateHelper.formatDate(selectedDate),
-        'purchaseDate': DateHelper.formatDate(selectedPurchaseDate),
+        'date': DateFormat('yyyy-MM-dd').format(selectedDate),
+        'purchaseDate': DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
         'purchaseNumber': null,
         'taxInclude': item.taxInclude,
         'initialRetailPrice': item.salePrice,
@@ -888,7 +945,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       'mrp': item.mrp.isNotEmpty ? item.mrp : item.salePrice,
       'wholesalePrice':
           item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
-      'unit': item.unit,
+      'unit': item.selectedUnit, // Changed to send unit ID instead of unit name
       'supplierId': selectedSupplier?.id ?? item.supplierId,
       'storeId': selectedStore?.id ?? 1,
       'expiryDate': DateFormat('yyyy-MM-dd').format(item.expDate),
@@ -1934,7 +1991,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildSummaryCard(
-                  'Total Payable',
+                  'Total Due Amount',
                   '₹${totalPayable.toStringAsFixed(2)}',
                   Icons.payment_outlined,
                   totalPayable >= 0
@@ -1951,20 +2008,21 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Widget _buildSupplierBalanceBadge(double balance) {
-    String paymentType = _getSupplierPaymentType();
+    // Determine badge color/icon from current balance sign
+    // Positive => to pay (owe supplier) [red]
+    // Negative => to receive (supplier owes us) [green]
+    final bool isToPay = balance > 0;
+    final bool isToReceive = balance < 0;
 
-    // Color coding same as supplier list:
-    // Red for 'to_pay' (we owe TO the supplier)
-    // Green for 'to_receive' (supplier owes TO us)
-    Color badgeColor = paymentType == 'to_pay'
+    Color badgeColor = isToPay
         ? Colors.red
-        : paymentType == 'to_receive'
+        : isToReceive
             ? Colors.green
             : Colors.grey;
 
-    IconData icon = paymentType == 'to_pay'
+    IconData icon = isToPay
         ? Icons.arrow_upward
-        : paymentType == 'to_receive'
+        : isToReceive
             ? Icons.arrow_downward
             : Icons.balance;
 
@@ -2092,37 +2150,30 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     return 0.0;
   }
 
-  // Helper method to get supplier payment type
-  String _getSupplierPaymentType() {
-    if (selectedSupplier != null) {
-      return selectedSupplier!.paymentType;
-    }
-    return 'to_pay';
-  }
-
   // Build supplier balance display under the dropdown
   Widget _buildSupplierBalanceDisplay() {
     double balance = _getSupplierBalance();
-    String paymentType = _getSupplierPaymentType();
+    // Determine UI based on balance sign, not payment type
+    // Positive balance => we owe supplier (to pay)
+    // Negative balance => supplier owes us (to receive)
+    final bool isToPay = balance > 0;
+    final bool isToReceive = balance < 0;
 
-    // Color coding same as supplier list:
-    // Red for 'to_pay' (we owe TO the supplier)
-    // Green for 'to_receive' (supplier owes TO us)
-    Color textColor = paymentType == 'to_pay'
+    Color textColor = isToPay
         ? Colors.red
-        : paymentType == 'to_receive'
+        : isToReceive
             ? Colors.green
             : Colors.black;
 
-    String balanceLabel = paymentType == 'to_pay'
+    String balanceLabel = isToPay
         ? 'Amount to Pay'
-        : paymentType == 'to_receive'
+        : isToReceive
             ? 'Amount to Receive'
             : 'Current Balance';
 
-    IconData icon = paymentType == 'to_pay'
+    IconData icon = isToPay
         ? Icons.arrow_upward
-        : paymentType == 'to_receive'
+        : isToReceive
             ? Icons.arrow_downward
             : Icons.balance;
 
@@ -3082,6 +3133,16 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               debugPrint('   - Row index: $index');
               debugPrint(
                   '   - Product: ${product.productName} (ID: ${product.productId})');
+              // Print all available product details as pretty JSON for debugging
+              try {
+                final encoder = const JsonEncoder.withIndent('  ');
+                final productJson = product.toJson();
+                final pretty = encoder.convert(productJson);
+                debugPrint('📦 Selected product full details (pretty JSON):');
+                debugPrint(pretty);
+              } catch (e) {
+                debugPrint('⚠️ Failed to serialize product to JSON: $e');
+              }
 
               setState(() {
                 debugPrint(
@@ -3101,19 +3162,64 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       '🔍 SEARCHING FOR CATEGORY: ${product.category!.name}');
                   final categoryProvider =
                       Provider.of<CategoryProvider>(context, listen: false);
-                  final categoryList = categoryProvider.category;
-                  if (categoryList != null) {
-                    // Find category by name from ProductCategory
-                    final matchingCategory = categoryList.firstWhere(
-                      (cat) => cat.categoryName == product.category!.name,
-                      orElse: () =>
-                          categoryList.first, // fallback to first category
-                    );
-                    stockItems[index].categoryData = matchingCategory;
-                    stockItems[index].category =
-                        matchingCategory.categoryName ?? '';
+                  // Prefer searchCategory (same source as Add Category screen), fallback to category
+                  List<Category>? categoryList =
+                      categoryProvider.searchCategory;
+                  if (categoryList == null || categoryList.isEmpty) {
+                    categoryList = categoryProvider.category;
+                  }
+                  if (categoryList != null && categoryList.isNotEmpty) {
+                    // Debug print all loaded categories for visibility
+                    debugPrint('📚 Loaded categories (${categoryList.length}):');
+                    for (final cat in categoryList) {
+                      debugPrint(
+                          '   - ID: ${cat.categoryId}, Name: ${cat.categoryName}, Slug: ${cat.categorySlug}');
+                    }
+                    Category? matchingCategory;
+                    // 1) Match by categoryId
+                    if (product.categoryId != null) {
+                      try {
+                        matchingCategory = categoryList.firstWhere(
+                            (cat) => cat.categoryId == product.categoryId);
+                      } catch (_) {}
+                    }
+                    // 2) Match by slug
+                    if (matchingCategory == null &&
+                        product.category?.slug != null) {
+                      try {
+                        matchingCategory = categoryList.firstWhere((cat) =>
+                            (cat.categorySlug ?? '') ==
+                            (product.category!.slug ?? ''));
+                      } catch (_) {}
+                    }
+                    // 3) Match by name (case-insensitive, trimmed)
+                    if (matchingCategory == null &&
+                        product.category?.name != null) {
+                      final targetName =
+                          (product.category!.name ?? '').trim().toLowerCase();
+                      try {
+                        matchingCategory = categoryList.firstWhere((cat) =>
+                            (cat.categoryName ?? '')
+                                .trim()
+                                .toLowerCase() ==
+                            targetName);
+                      } catch (_) {}
+                    }
+                    // 4) Fallback to first non-ALL
+                    if (matchingCategory == null) {
+                      try {
+                        matchingCategory = categoryList.firstWhere((cat) =>
+                            (cat.categoryName ?? '').toUpperCase() != 'ALL');
+                      } catch (_) {
+                        matchingCategory = categoryList.first;
+                      }
+                    }
+                    // Ensure non-null assignment and remove lint warnings
+                    final mc = matchingCategory ?? categoryList.first;
+                    stockItems[index].categoryData = mc;
+                    stockItems[index].category = mc.categoryName ?? '';
                     debugPrint(
-                        '   - Category: ${matchingCategory.categoryName}');
+                        '   - Category: ${mc.categoryName} (ID: ${mc.categoryId}, slug: ${mc.categorySlug})');
                   }
                 }
 

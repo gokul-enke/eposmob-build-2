@@ -14,7 +14,7 @@ class DateHelper {
   static String formatISODate(String isoDateString) {
     DateTime utcDate = DateTime.parse(isoDateString);
     DateTime istDate = utcDate.add(const Duration(hours: 5, minutes: 30));
-    final DateFormat formatter = DateFormat('dd-MM-yyyy hh:mm a');
+    final DateFormat formatter = DateFormat('dd-MM-yyyy');
     return formatter.format(istDate);
   }
 

@@ -171,7 +171,7 @@ class _SideMenuState extends State<SideMenu> {
             child: RichText(
               textAlign: TextAlign.center,
               text: TextSpan(
-                text: 'Smart',
+                text: 'Cloud',
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s18, 0.27, ColorManager.textColor),
                 children: <TextSpan>[
@@ -570,7 +570,7 @@ class _SideMenuState extends State<SideMenu> {
           ),
           Center(
             child: Text(
-              '2025 SmartPOS App',
+              '2025 CloudPOS App',
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
                   0.16, ColorManager.textColor),
             ),

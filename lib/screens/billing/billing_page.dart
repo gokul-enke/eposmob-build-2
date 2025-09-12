@@ -147,6 +147,8 @@ class BillingPageState extends State<BillingPage>
   // Add these variables for keyboard navigation in customer list
   int? _highlightedCustomerIndex;
   final FocusNode _customerTextFieldFocus = FocusNode();
+  FocusNode? _autocompleteFocusNode; // Store reference to Autocomplete's focusNode
+  TextEditingController? _autocompleteController; // Store reference to Autocomplete's controller
   final ScrollController _customerScrollController = ScrollController();
   List<CustomerListModelData> _currentCustomerOptions = [];
   final double _customerItemHeight = 48.0; // Height for customer list items
@@ -613,6 +615,18 @@ class BillingPageState extends State<BillingPage>
             CustomerListModel.fromJson(response);
         setState(() {
           customerList = customerListModel.data; // Store the customer list
+          
+          // Check if auto-assign is enabled in app settings
+          final appSettingsProvider =
+              Provider.of<AppSettingsProvider>(context, listen: false);
+          final bool autoAssignEnabled =
+              appSettingsProvider.appSettings?.autoAssignDefaultCustomer ?? false;
+
+          if (!autoAssignEnabled) {
+            debugPrint("🔧 APP SETTINGS: Auto-assign default customer is DISABLED - only fetching customer list");
+            return; // Exit early, only customer list is fetched
+          }
+
           CustomerListModelData? salesCustomer;
 
           if (customerList!.isNotEmpty) {
@@ -2451,6 +2465,10 @@ class BillingPageState extends State<BillingPage>
                           debugPrint(
                               "🎨 fieldViewBuilder called - controller text: '${autoCompleteController.text}'");
 
+                          // Store references to the Autocomplete's focusNode and controller for use in clear button
+                          _autocompleteFocusNode = focusNode;
+                          _autocompleteController = autoCompleteController;
+
                           // **FIX: Sync the autocomplete controller with our state**
                           if (mobileNumberText?.isNotEmpty == true &&
                               autoCompleteController.text != mobileNumberText) {
@@ -2849,7 +2867,6 @@ class BillingPageState extends State<BillingPage>
                           .clearSelectedCustomer(),
 
                       setState(() {
-                        _autocompletePhoneKey = GlobalKey();
                         mobileNumberTextController.clear();
                         mobileNumberText = "";
                         selectedCustomerID = null;
@@ -2862,6 +2879,15 @@ class BillingPageState extends State<BillingPage>
                             "  - Reset manual selection (clear button pressed)");
                       }),
 
+                      // Clear the autocomplete controller as well
+                      // We need to do this after setState to ensure the fieldViewBuilder has access to the controller
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (_autocompleteController != null) {
+                          _autocompleteController!.clear();
+                          debugPrint("  - Cleared autocomplete controller");
+                        }
+                      }),
+
                       debugPrint("  - After clear:"),
                       debugPrint(
                           "    - salesExecutivemobileNumberText: '$salesExecutivemobileNumberText'"),
@@ -2872,7 +2898,17 @@ class BillingPageState extends State<BillingPage>
                       showScaffold(
                         context: context,
                         message: 'Customer Details Cleared Successfully',
-                      )
+                      ),
+
+                      // Focus on customer autocomplete field after clearing
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (_autocompleteFocusNode != null) {
+                          FocusScope.of(context).requestFocus(_autocompleteFocusNode!);
+                        } else {
+                          // Fallback to customer text field focus if autocomplete focus node is not available
+                          FocusScope.of(context).requestFocus(_customerTextFieldFocus);
+                        }
+                      })
                     },
                     child: Center(
                       child: WebsafeSvg.asset(
@@ -4677,7 +4713,6 @@ class BillingPageState extends State<BillingPage>
         "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
 
     setState(() {
-      _autocompletePhoneKey = GlobalKey();
       _autocompleteProductKey = GlobalKey();
       isCustomerFound = false;
 
@@ -4815,6 +4850,17 @@ class BillingPageState extends State<BillingPage>
     debugPrint(
         "🔄 BILLING: Sales executive changed, updating default customer...");
 
+    // Check if auto-assign is enabled in app settings
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final bool autoAssignEnabled =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomer ?? true;
+
+    if (!autoAssignEnabled) {
+      debugPrint("🔧 APP SETTINGS: Auto-assign default customer is DISABLED, skipping sales executive change");
+      return;
+    }
+
     // Don't reset if customer was manually selected (either from list or phone entry)
     if (_isCustomerManuallySelected &&
         (selectedCustomerID != null || mobileNumberText?.isNotEmpty == true)) {
@@ -4916,6 +4962,17 @@ class BillingPageState extends State<BillingPage>
 
   void _onUserSwitched() {
     debugPrint("🔄 BILLING: User switched, updating default customer...");
+
+    // Check if auto-assign is enabled in app settings
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final bool autoAssignEnabled =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomer ?? true;
+
+    if (!autoAssignEnabled) {
+      debugPrint("🔧 APP SETTINGS: Auto-assign default customer is DISABLED, skipping user switch");
+      return;
+    }
 
     // Clear current customer selection
     Provider.of<CustomerSelectionProvider>(context, listen: false)

@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import 'package:pos_machine/screens/billing/billing_page.dart';
+import 'package:pos_machine/screens/billing/billing_page_responsive.dart';
 import 'package:pos_machine/screens/billing/kitchen_master.dart';
 import 'package:pos_machine/screens/billing/restaurant_page.dart';
 import 'package:pos_machine/screens/category/add_category.dart';
@@ -118,7 +118,7 @@ class SideBarController extends GetxController {
     LocationManagementScreen(), //43
     LocationManagementScreen(), //44
     CategoryList(), //45 Home Old
-    BillingPage(), //46 Billing Page
+    BillingPageResponsive(), //46 Billing Page
     ReceiptListScreen(), //47 Receipt List
     ViewReceiptDetailsWidget(), //48 Receipt Details
     SalesReturnScreen(), //49 Sales Return

@@ -9,6 +9,7 @@ import 'package:pos_machine/models/get_product.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -52,6 +53,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
   // Add focus nodes for proper keyboard handling
   final FocusNode _categoryFocusNode = FocusNode();
   final FocusNode _productFocusNode = FocusNode();
+  // Track selection for sidebar UI including the injected 'ALL' at index 0
+  int _selectedUiCategoryIndex = 0;
 
   @override
   void initState() {
@@ -194,7 +197,20 @@ class _SideBarProductListState extends State<SideBarProductList> {
           margin: const EdgeInsets.symmetric(vertical: 10),
           child: Consumer<CategoryProvider>(
             builder: (context, categoryProvider, child) {
-              final categories = categoryProvider.category ?? [];
+              // Prefer the same list used by Category page; fallback to category
+              final rawCategories =
+                  categoryProvider.searchCategory ?? categoryProvider.category ?? [];
+              // Inject a local 'ALL' entry only for this sidebar view
+              final allCategory = Category(
+                categoryId: 0,
+                categoryName: 'ALL',
+                categorySlug: 'ALL',
+                productsCount: 0,
+                categoryImage: null,
+                categoryIcon: null,
+                parent: null,
+              );
+              final categories = [allCategory, ...rawCategories];
 
               return categories.isEmpty
                   ? const Center(child: CircularProgressIndicator())
@@ -217,34 +233,40 @@ class _SideBarProductListState extends State<SideBarProductList> {
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemBuilder: (context, index) {
                             final category = categories[index];
-                            final isSelected =
-                                index == categoryProvider.selectedCategoryIndex;
+                            // Use local UI selection to allow selecting 'ALL' visually
+                            final isSelected = index == _selectedUiCategoryIndex;
 
                             return GestureDetector(
                               behavior: HitTestBehavior.opaque,
                               onTap: () {
+                                // Handle ALL locally without changing provider selected index
+                                if (category.categoryId == 0) {
+                                  Provider.of<LocalProductProvider>(context,
+                                          listen: false)
+                                      .refreshProducts();
+                                  setState(() {
+                                    _selectedUiCategoryIndex = index; // highlight ALL
+                                  });
+                                  return;
+                                }
+
+                                // Map UI index to provider index by offsetting -1
+                                final providerIndex = index - 1;
                                 categoryProvider.selectCategory(
-                                  index,
+                                  providerIndex,
                                   category.categoryName ?? '',
                                   category.productsCount ?? 0,
                                 );
 
-                                // Filter products by selected category
-                                if (category.categoryId == 0) {
-                                  // "ALL" category selected
-                                  Provider.of<LocalProductProvider>(context,
-                                          listen: false)
-                                      .refreshProducts();
-                                } else {
-                                  // Specific category selected
-                                  Provider.of<LocalProductProvider>(context,
-                                          listen: false)
-                                      .listAllProducts(
-                                          categoryId: category.categoryId);
-                                }
+                                // Filter products by specific category
+                                Provider.of<LocalProductProvider>(context,
+                                        listen: false)
+                                    .listAllProducts(
+                                        categoryId: category.categoryId);
 
-                                // Force rebuild to ensure UI updates
-                                setState(() {});
+                                setState(() {
+                                  _selectedUiCategoryIndex = index; // highlight selected
+                                });
                               },
                               child: Container(
                                 width: 85,
