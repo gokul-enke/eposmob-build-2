@@ -954,6 +954,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                                   executiveModelData
                                                           ?.userRole ??
                                                       "");
+
+
                                           SalesProvider salesProvider =
                                               Provider.of<SalesProvider>(
                                                   context,
@@ -1040,14 +1042,14 @@ class _SignInScreenState extends State<SignInScreen> {
                                             // Don't block login if document config fails
                                           }
 
-                                          // Load categories during login
+                                          // Load categories during login (align with Category page)
                                           try {
                                             _updateLoadingState(true, "Loading categories...");
                                             final categoryProvider = Provider
                                                 .of<CategoryProvider>(
                                                 context,
                                                 listen: false);
-                                            await categoryProvider.listAllCategory();
+                                            await categoryProvider.searchAllCategory(page: 1);
                                             debugPrint(
                                                 "Categories loaded successfully during login");
                                           } catch (e) {
@@ -1059,7 +1061,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                           _updateLoadingState(false, "");
 
                                           // Set appropriate home page based on user role
-                                          SideBarController sideBarController = Get.put(SideBarController());
+                                          final sideBarController = Get.find<SideBarController>();
                                           String userRole = executiveModelData?.userRole ?? "";
                                           
                                           switch (userRole) {

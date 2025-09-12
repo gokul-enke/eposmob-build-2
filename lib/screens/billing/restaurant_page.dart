@@ -20,10 +20,11 @@ import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import '../../screens/customers/add_customer_modal.dart';
 import '../../screens/billing/widgets/payment_method_modal.dart';
-import '../../screens/billing/widgets/coupon_modal.dart';
-import 'package:pos_machine/helpers/amount_helper.dart'; // Add AmountHelper import
+
 import '../../components/build_round_button.dart'; // Add button import
 import '../../providers/keyboard_provider.dart'; // Add keyboard provider import
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
+import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
 
 class RestaurantPage extends StatefulWidget {
   const RestaurantPage({super.key});
@@ -400,6 +401,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
       // Call the addToOrderAPI with status: "new"
       debugPrint('➡️ Calling CartProvider.addToOrderAPI');
+      final currentComment = _orderPanelKey.currentState?.orderComment ?? "";
       final response = await cartProvider.addToOrderAPI(
         items: items,
         cartIds: 0, // Use 0 for new cart since we're creating a new order
@@ -414,8 +416,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
         paidMethods: [], // Not applicable
         balanceAmount: "0", // Not applicable
         couponId: null, // Not applicable
-        comment: "Order for Table $_activeTableId", // Add a comment for context
-        deliveryMethodId: null, // Not applicable
+        comment: currentComment.isNotEmpty
+            ? currentComment
+            : "Order for Table $_activeTableId", // Add a comment for context
+        deliveryMethodId:
+            Provider.of<DeliveryMethodsProvider>(context, listen: false)
+                    .defaultDeliveryMethod
+                    ?.id ??
+                "11", // Default to Store Takeaway same as billing
         carNumber: null, // Not applicable
         status: "new", // Set status to "new"
         deliveryDate: null, // Not applicable
@@ -1010,7 +1018,7 @@ class _TablesPanel extends StatelessWidget {
   }
 }
 
-class _MenuPanel extends StatelessWidget {
+class _MenuPanel extends StatefulWidget {
   final ValueChanged<int?> onCategoryChanged;
   final int? activeCategoryId;
   final Function(GetProduct product, int quantity) onItemAdd;
@@ -1028,6 +1036,329 @@ class _MenuPanel extends StatelessWidget {
   });
 
   @override
+  State<_MenuPanel> createState() => _MenuPanelState();
+}
+
+class _MenuPanelState extends State<_MenuPanel> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  void _showProductInfoDialog(
+      BuildContext context, GetProduct product, bool compact) {
+    // Resolve primary image
+    String? primaryImage;
+    if (product.attachment != null && product.attachment!.isNotEmpty) {
+      for (var attachment in product.attachment!) {
+        if (attachment.isPrimary == 1) {
+          primaryImage = attachment.filePath;
+          break;
+        }
+      }
+      primaryImage ??= product.attachment!.first.filePath;
+    }
+
+    // Resolve category name from product model directly
+    final String? categoryName = product.category?.name;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: widget.isCompact ? 14 : 20,
+            vertical: widget.isCompact ? 14 : 20,
+          ),
+          backgroundColor: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: widget.isCompact ? 380 : 520,
+              constraints: const BoxConstraints(maxHeight: 720),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom:
+                            BorderSide(color: Colors.grey.shade100, width: 1),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF059669).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.restaurant_menu,
+                              color: Color(0xFF059669), size: 18),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                product.productName ?? 'Product',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s16,
+                                  0.21,
+                                  const Color(0xFF1E293B),
+                                ),
+                              ),
+                              if (product.price?.price != null)
+                                Text(
+                                  '₹${product.price!.price}',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.bold,
+                                    FontSize.s14,
+                                    0.21,
+                                    const Color(0xFF059669),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          icon: Icon(Icons.close,
+                              color: Colors.grey.shade600, size: 20),
+                          splashRadius: 18,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Image
+                          Container(
+                            height: widget.isCompact ? 220 : 300,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.grey.shade100,
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: primaryImage != null
+                                ? Image.network(
+                                    primaryImage!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) => Icon(
+                                            Icons.image_not_supported,
+                                            color: Colors.grey.shade500),
+                                  )
+                                : Center(
+                                    child: Icon(Icons.image,
+                                        color: Colors.grey.shade400, size: 36),
+                                  ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Tags (VEG/NON-VEG, stock)
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              ..._buildFoodTypeTags(product, compact),
+                              if (!(product.stock != null &&
+                                  product.stock!.isNotEmpty &&
+                                  product.stock!
+                                      .any((s) => (s.quantity ?? 0) > 0)))
+                                _buildCompactTag('No Stock',
+                                    const Color(0xFF6B7280), compact),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Basic details
+                          if (categoryName != null && categoryName.isNotEmpty)
+                            _buildKeyValueRow('Category', categoryName),
+                          if (product.sku != null &&
+                              (product.sku ?? '').toString().isNotEmpty)
+                            _buildKeyValueRow('SKU', product.sku!),
+                          if (product.mrp != null)
+                            _buildKeyValueRow('MRP', '₹${product.mrp}'),
+                          if (product.price?.price != null)
+                            _buildKeyValueRow(
+                                'Price', '₹${product.price!.price}'),
+
+                          if (product.barcode != null &&
+                              (product.barcode ?? '').toString().isNotEmpty)
+                            _buildKeyValueRow(
+                                'Barcode', product.barcode.toString()),
+                          if (product.stock != null &&
+                              product.stock!.isNotEmpty)
+                            _buildKeyValueRow(
+                              'Stock Qty',
+                              product.stock!
+                                  .map((s) => (s.quantity ?? 0).toString())
+                                  .toList()
+                                  .join(' / '),
+                            ),
+                          if (product.description != null &&
+                              product.description!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                product.description!,
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.21,
+                                  const Color(0xFF64748B),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Footer with actions
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: Colors.grey.shade100, width: 1),
+                      ),
+                      color: Colors.white,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.of(ctx).pop();
+                                widget.onItemAdd(product, 1);
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                height: widget.isCompact ? 44 : 48,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF059669),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF059669)
+                                          .withOpacity(0.25),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.add_shopping_cart,
+                                        color: Colors.white, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Add to Order',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.semiBold,
+                                        FontSize.s14,
+                                        0.21,
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildKeyValueRow(String key, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6.0),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              key,
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s12,
+                0.21,
+                const Color(0xFF1E293B),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.21,
+                const Color(0xFF64748B),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query.toLowerCase();
+    });
+  }
+
+  void _clearSearch() {
+    setState(() {
+      _searchQuery = '';
+      _searchController.clear();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer2<CategoryProvider, LocalProductProvider>(
       builder: (context, categoryProvider, productProvider, _) {
@@ -1041,7 +1372,7 @@ class _MenuPanel extends StatelessWidget {
         }
 
         final categories = categoryProvider.category ?? [];
-        final selectedCategoryId = activeCategoryId ??
+        final selectedCategoryId = widget.activeCategoryId ??
             (categories.isNotEmpty ? categories.first.categoryId : null);
 
         // Get products for selected category
@@ -1058,13 +1389,21 @@ class _MenuPanel extends StatelessWidget {
           }
         }
 
+        // Apply search filter
+        if (_searchQuery.isNotEmpty) {
+          items = items.where((product) {
+            return product.productName?.toLowerCase().contains(_searchQuery) ??
+                false;
+          }).toList();
+        }
+
         // Calculate responsive grid columns with better aspect ratios
         int crossAxisCount;
         double childAspectRatio;
 
-        if (isCompact) {
+        if (widget.isCompact) {
           // Mobile/small tablet layout
-          if (screenSize.width > 600) {
+          if (widget.screenSize.width > 600) {
             crossAxisCount = 2;
             childAspectRatio =
                 1.7; // Balanced - prevents overflow while keeping compact
@@ -1075,11 +1414,11 @@ class _MenuPanel extends StatelessWidget {
           }
         } else {
           // Desktop/large tablet layout
-          if (screenSize.width > 1400) {
+          if (widget.screenSize.width > 1400) {
             crossAxisCount = 4;
             childAspectRatio =
                 1.6; // Balanced - prevents overflow while keeping compact
-          } else if (screenSize.width > 1000) {
+          } else if (widget.screenSize.width > 1000) {
             crossAxisCount = 3;
             childAspectRatio =
                 1.7; // Balanced - prevents overflow while keeping compact
@@ -1108,7 +1447,7 @@ class _MenuPanel extends StatelessWidget {
             children: [
               // Enhanced header
               Container(
-                padding: EdgeInsets.all(isCompact ? 16.0 : 20.0),
+                padding: EdgeInsets.all(widget.isCompact ? 16.0 : 20.0),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -1136,7 +1475,7 @@ class _MenuPanel extends StatelessWidget {
                       child: Icon(
                         Icons.restaurant_menu,
                         color: const Color(0xFF059669),
-                        size: isCompact ? 18 : 20,
+                        size: widget.isCompact ? 18 : 20,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1144,7 +1483,7 @@ class _MenuPanel extends StatelessWidget {
                       'Menu',
                       style: buildCustomStyle(
                           FontWeightManager.bold,
-                          isCompact ? FontSize.s16 : FontSize.s18,
+                          widget.isCompact ? FontSize.s16 : FontSize.s18,
                           0.30,
                           const Color(0xFF1E293B)),
                     ),
@@ -1169,7 +1508,7 @@ class _MenuPanel extends StatelessWidget {
               // Enhanced categories with modern styling
               if (categories.isNotEmpty)
                 Container(
-                  height: isCompact ? 56 : 64,
+                  height: widget.isCompact ? 56 : 64,
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: MouseRegion(
                     cursor: SystemMouseCursors.grab,
@@ -1185,7 +1524,7 @@ class _MenuPanel extends StatelessWidget {
                       child: ListView.separated(
                         physics: const BouncingScrollPhysics(),
                         padding: EdgeInsets.symmetric(
-                            horizontal: isCompact ? 12 : 16),
+                            horizontal: widget.isCompact ? 12 : 16),
                         scrollDirection: Axis.horizontal,
                         itemBuilder: (_, idx) {
                           final c = categories[idx];
@@ -1196,7 +1535,7 @@ class _MenuPanel extends StatelessWidget {
                               color: Colors.transparent,
                               child: InkWell(
                                 onTap: () {
-                                  onCategoryChanged(c.categoryId);
+                                  widget.onCategoryChanged(c.categoryId);
                                   // Update products for selected category
                                   if (c.categoryId == 0) {
                                     // "ALL" category
@@ -1211,8 +1550,8 @@ class _MenuPanel extends StatelessWidget {
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
                                   padding: EdgeInsets.symmetric(
-                                      horizontal: isCompact ? 16 : 20,
-                                      vertical: isCompact ? 8 : 10),
+                                      horizontal: widget.isCompact ? 16 : 20,
+                                      vertical: widget.isCompact ? 8 : 10),
                                   decoration: BoxDecoration(
                                     color: active
                                         ? const Color(0xFF2563EB)
@@ -1240,7 +1579,7 @@ class _MenuPanel extends StatelessWidget {
                                       c.categoryName ?? 'Unknown',
                                       style: buildCustomStyle(
                                           FontWeightManager.semiBold,
-                                          isCompact
+                                          widget.isCompact
                                               ? FontSize.s12
                                               : FontSize.s13,
                                           0.21,
@@ -1260,6 +1599,62 @@ class _MenuPanel extends StatelessWidget {
                     ),
                   ),
                 ),
+              // Search bar
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: widget.isCompact ? 12 : 16,
+                  vertical: 8,
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.grey.shade200,
+                      width: 1,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Search menu items...',
+                      hintStyle: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s14,
+                        0.21,
+                        Colors.grey.shade500,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: Colors.grey.shade500,
+                        size: widget.isCompact ? 18 : 20,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear,
+                                color: Colors.grey.shade500,
+                                size: widget.isCompact ? 18 : 20,
+                              ),
+                              onPressed: _clearSearch,
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: widget.isCompact ? 12 : 16,
+                        vertical: widget.isCompact ? 12 : 16,
+                      ),
+                    ),
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s14,
+                      0.21,
+                      const Color(0xFF1E293B),
+                    ),
+                  ),
+                ),
+              ),
               // Menu items
               Expanded(
                 child: items.isEmpty
@@ -1296,18 +1691,19 @@ class _MenuPanel extends StatelessWidget {
                             },
                           ),
                           child: GridView.builder(
-                            padding: EdgeInsets.all(isCompact ? 6 : 8),
+                            padding: EdgeInsets.all(widget.isCompact ? 6 : 8),
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: crossAxisCount,
-                              mainAxisSpacing: isCompact ? 6 : 8,
-                              crossAxisSpacing: isCompact ? 6 : 8,
+                              mainAxisSpacing: widget.isCompact ? 6 : 8,
+                              crossAxisSpacing: widget.isCompact ? 6 : 8,
                               childAspectRatio: childAspectRatio,
                             ),
                             itemCount: items.length,
                             itemBuilder: (_, idx) {
                               final item = items[idx];
-                              return _buildMenuItem(item, isCompact, context);
+                              return _buildMenuItem(
+                                  item, widget.isCompact, context);
                             },
                             physics: const BouncingScrollPhysics(),
                           ),
@@ -1365,7 +1761,7 @@ class _MenuPanel extends StatelessWidget {
         child: InkWell(
           onTap: isAvailable
               ? () {
-                  onItemAdd(item, 1);
+                  widget.onItemAdd(item, 1);
                 }
               : null,
           borderRadius: BorderRadius.circular(12),
@@ -1490,16 +1886,25 @@ class _MenuPanel extends StatelessWidget {
                           ),
                         ),
                         if (isAvailable)
-                          Container(
-                            padding: EdgeInsets.all(compact ? 2 : 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2563EB).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Icon(
-                              Icons.add,
-                              color: const Color(0xFF2563EB),
-                              size: compact ? 12 : 14,
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => _showProductInfoDialog(
+                                  context, item, compact),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: EdgeInsets.all(compact ? 3 : 4),
+                                decoration: BoxDecoration(
+                                  color:
+                                      const Color(0xFF2563EB).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Icon(
+                                  Icons.info_outline,
+                                  color: const Color(0xFF2563EB),
+                                  size: compact ? 12 : 14,
+                                ),
+                              ),
                             ),
                           ),
                       ],
@@ -1652,7 +2057,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   bool _isLoadingOrders = false;
   bool _isLoadingOrderDetails = false;
   String? _error;
-  Set<String> _loadingCartItems =
+  final Set<String> _loadingCartItems =
       {}; // Track which cart items are being updated
   bool _isLoadingConfirm = false; // Loading state for Confirm button
 
@@ -1669,6 +2074,10 @@ class _OrderPanelState extends State<_OrderPanel> {
   double _balanceAmount = 0.0;
   bool _toCustomerCreditEnabled = false;
   double _toCustomerCreditAmount = 0.0; // Store the actual credit amount
+  String _orderComment = "";
+
+  // Expose current comment to parent (RestaurantPage) for new order flow
+  String get orderComment => _orderComment;
 
   // Customer Selection Variables
   CustomerListModelData? _selectedCustomer;
@@ -1681,6 +2090,8 @@ class _OrderPanelState extends State<_OrderPanel> {
   double _flatDiscount = 0.0;
   double _percentageDiscount = 0.0;
   String _couponCode = "";
+
+
 
   @override
   void didUpdateWidget(covariant _OrderPanel oldWidget) {
@@ -2512,79 +2923,75 @@ class _OrderPanelState extends State<_OrderPanel> {
     );
   }
 
-  void _showDiscountModal() {
-    if (_selectedOrder == null) return;
+  // Helper method to check if any discount is applied
+  bool _hasDiscount() {
+    return _isCouponApplied ||
+        _flatDiscount > 0.0 ||
+        _percentageDiscount > 0.0 ||
+        _couponCode.isNotEmpty;
+  }
 
-    // Calculate current order total from cart items for discount calculation
-    List<dynamic> cartItems = [];
-    if (_selectedOrder['cart_items'] != null) {
-      if (_selectedOrder['cart_items']['cart_items'] is List) {
-        cartItems = _selectedOrder['cart_items']['cart_items'];
-      } else if (_selectedOrder['cart_items'] is List) {
-        cartItems = _selectedOrder['cart_items'];
-      }
-    } else if (_selectedOrder['cart'] != null) {
-      if (_selectedOrder['cart']['cart_items'] is List) {
-        cartItems = _selectedOrder['cart']['cart_items'];
-      } else if (_selectedOrder['cart']['items'] is List) {
-        cartItems = _selectedOrder['cart']['items'];
-      }
-    } else if (_selectedOrder['items'] is List) {
-      cartItems = _selectedOrder['items'];
-    } else if (_selectedOrder['order_items'] is List) {
-      cartItems = _selectedOrder['order_items'];
-    }
-
-    // Calculate subtotal for discount modal
+  void _showCouponModal() {
+    // Create a temporary LocalProductProvider instance for the CouponModal
+    // Calculate current order total for the modal
     double orderSubTotal = 0.0;
-    for (var item in cartItems) {
-      final quantity =
-          double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
-      final unitPrice = double.tryParse(item['unit_price']?.toString() ??
-              item['price']?.toString() ??
-              item['product_price']?.toString() ??
-              '0') ??
-          0.0;
-      orderSubTotal += quantity * unitPrice;
+    if (_selectedOrder != null) {
+      List<dynamic> cartItems = [];
+      if (_selectedOrder['cart_items'] != null) {
+        if (_selectedOrder['cart_items']['cart_items'] is List) {
+          cartItems = _selectedOrder['cart_items']['cart_items'];
+        } else if (_selectedOrder['cart_items'] is List) {
+          cartItems = _selectedOrder['cart_items'];
+        }
+      } else if (_selectedOrder['cart'] != null) {
+        if (_selectedOrder['cart']['cart_items'] is List) {
+          cartItems = _selectedOrder['cart']['cart_items'];
+        } else if (_selectedOrder['cart']['items'] is List) {
+          cartItems = _selectedOrder['cart']['items'];
+        }
+      } else if (_selectedOrder['items'] is List) {
+        cartItems = _selectedOrder['items'];
+      } else if (_selectedOrder['order_items'] is List) {
+        cartItems = _selectedOrder['order_items'];
+      }
+
+      for (var item in cartItems) {
+        final quantity =
+            double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+        final unitPrice = double.tryParse(item['unit_price']?.toString() ??
+                item['price']?.toString() ??
+                item['product_price']?.toString() ??
+                '0') ??
+            0.0;
+        orderSubTotal += quantity * unitPrice;
+      }
+
+      if (orderSubTotal == 0.0 && _selectedOrder['grand_total'] != null) {
+        orderSubTotal =
+            double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
+                0.0;
+      }
     }
 
-    // If we still have zero total, try getting it from order total as fallback
-    if (orderSubTotal == 0.0 && _selectedOrder['grand_total'] != null) {
-      orderSubTotal =
-          double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
-              0.0;
-    }
-
-    debugPrint(
-        '🎫 Discount Modal - Order Subtotal: ₹${orderSubTotal.toStringAsFixed(2)}');
-
+    // Create a wrapper that provides the LocalProductProvider interface for CouponModal
     showDialog(
       context: context,
-      builder: (context) => RestaurantCouponModal(
-        initialCouponCode: _couponCode,
-        isCouponApplied: _isCouponApplied,
+      builder: (context) => _RestaurantCouponModalWrapper(
         orderSubTotal: orderSubTotal,
-        currentFlatDiscount: _flatDiscount,
-        currentPercentageDiscount: _percentageDiscount,
+        initialCouponCode: _couponCode,
+        initialFlatDiscount: _flatDiscount,
+        initialPercentageDiscount: _percentageDiscount,
+        isCouponApplied: _isCouponApplied,
         onCouponAction: (couponCode, isApplied,
-            {flatDiscount, percentageDiscount}) {
+            {double? flatDiscount, double? percentageDiscount}) {
           setState(() {
             _couponCode = couponCode;
             _isCouponApplied = isApplied;
             _flatDiscount = flatDiscount ?? 0.0;
             _percentageDiscount = percentageDiscount ?? 0.0;
 
-            debugPrint('🎫 Discount Applied in Restaurant Page:');
-            debugPrint('  - Coupon Code: $_couponCode');
-            debugPrint('  - Is Applied: $_isCouponApplied');
-            debugPrint(
-                '  - Flat Discount: ₹${_flatDiscount.toStringAsFixed(2)}');
-            debugPrint(
-                '  - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
-
             // If clearing discount
             if (!isApplied) {
-              debugPrint('🧹 Clearing all discount values');
               _couponCode = "";
               _flatDiscount = 0.0;
               _percentageDiscount = 0.0;
@@ -2593,14 +3000,6 @@ class _OrderPanelState extends State<_OrderPanel> {
         },
       ),
     );
-  }
-
-  // Helper method to check if any discount is applied
-  bool _hasDiscount() {
-    return _isCouponApplied ||
-        _flatDiscount > 0.0 ||
-        _percentageDiscount > 0.0 ||
-        _couponCode.isNotEmpty;
   }
 
   // Method to refresh saved orders without clearing the selected order (for when editing)
@@ -2769,8 +3168,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       _isDebitSelected = false;
       _cashAmount = "";
       _cardAmount = "";
-      _upiAmount = "";
-      _debitAmount = "";
+      _upiAmount = '';
+      _debitAmount = '';
+      _orderComment = "";
       _transactionNumber = "";
 
       // Clear discount state
@@ -2861,6 +3261,46 @@ class _OrderPanelState extends State<_OrderPanel> {
             '✅ Loaded payment method: $paymentMethod, Amount: ₹$paidAmount');
       }
 
+      // Load existing comment if available (supports multiple API shapes)
+      String? loadedComment = order['comment']?.toString();
+      loadedComment ??= order['order_comment']?.toString();
+
+      // From nested map: orderProps: { COMMENT: "..." }
+      if (loadedComment == null || loadedComment.isEmpty) {
+        final propsMap = order['orderProps'];
+        if (propsMap is Map && propsMap['COMMENT'] != null) {
+          loadedComment = propsMap['COMMENT']?.toString();
+        }
+      }
+
+      // From array: order_props: [{ code: COMMENT, value: "..." }]
+      if (loadedComment == null || loadedComment.isEmpty) {
+        final propsList = order['order_props'];
+        if (propsList is List) {
+          try {
+            final match = propsList.firstWhere(
+              (e) => (e is Map) && (e['code']?.toString()?.toUpperCase() == 'COMMENT'),
+              orElse: () => null,
+            );
+            if (match is Map && match['value'] != null) {
+              loadedComment = match['value']?.toString();
+            }
+          } catch (_) {}
+        }
+      }
+
+      // Normalize: strip surrounding quotes if present (API sometimes returns quoted strings)
+      if (loadedComment != null) {
+        loadedComment = loadedComment!.trim();
+        if (loadedComment!.startsWith('"') && loadedComment!.endsWith('"')) {
+          loadedComment = loadedComment!.substring(1, loadedComment!.length - 1);
+        }
+      }
+
+      setState(() {
+        _orderComment = loadedComment ?? '';
+      });
+
       // Load discount information if available
       final flatDiscount = order['flat_discount'];
       final percentageDiscount = order['percentage_discount'];
@@ -2904,6 +3344,150 @@ class _OrderPanelState extends State<_OrderPanel> {
         _isCardSelected ||
         _isUpiSelected ||
         _isDebitSelected;
+  }
+
+  // Comment editor dialog
+  void _showCommentDialog() {
+    final String initialComment = _orderComment.isNotEmpty
+        ? _orderComment
+        : (_selectedOrder?['comment']?.toString() ??
+            _selectedOrder?['order_comment']?.toString() ??
+            '');
+    final controller = TextEditingController(text: initialComment);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: BuildBoxShadowContainer(
+            circleRadius: 12,
+            color: Colors.white,
+            width: 500,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Add Comment',
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s16,
+                        0.21,
+                        ColorManager.kPrimaryColor,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Comment',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s12,
+                    0.21,
+                    ColorManager.textColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                BuildBoxShadowContainer(
+                  circleRadius: 7,
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.only(
+                      left: 15, right: 15, top: 8, bottom: 8),
+                  height: 110,
+                  child: TextField(
+                    controller: controller,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: 'Enter order comment',
+                      hintStyle: buildCustomStyle(
+                        FontWeight.w500,
+                        12,
+                        0.27,
+                        Colors.grey.withOpacity(.5),
+                      ),
+                      border: InputBorder.none,
+                    ),
+                    style: buildCustomStyle(
+                      FontWeight.w500,
+                      12,
+                      0.27,
+                      Colors.black.withOpacity(.8),
+                    ),
+                    onTap: () {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (controller.text.isNotEmpty) {
+                          controller.selection = TextSelection(
+                            baseOffset: 0,
+                            extentOffset: controller.text.length,
+                          );
+                        }
+                      });
+                      Provider.of<KeyboardProvider>(context, listen: false)
+                          .show('text', controller, replaceOnFirstInput: false);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CustomRoundButton(
+                        title: "Cancel",
+                        fct: () => Navigator.of(context).pop(),
+                        fontSize: FontSize.s14,
+                        height: 45,
+                        width: double.infinity,
+                        boxColor: Colors.grey.shade600,
+                        borderColor: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 2,
+                      child: CustomRoundButton(
+                        title: "Save Comment",
+                        fct: () {
+                          setState(() {
+                            _orderComment = controller.text.trim();
+                          });
+                          Navigator.of(context).pop();
+                        },
+                        fontSize: FontSize.s14,
+                        height: 45,
+                        width: double.infinity,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Default Delivery Method (mirror of BillingPage)
+  String _getDefaultDeliveryMethodId() {
+    try {
+      final deliveryMethodsProvider =
+          Provider.of<DeliveryMethodsProvider>(context, listen: false);
+      final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+      return defaultMethod?.id ??
+          "11"; // Fallback to Store Takeaway ID from API
+    } catch (e) {
+      return "11"; // Fallback to Store Takeaway ID from API
+    }
   }
 
   Widget _buildPaymentSummary() {
@@ -3508,10 +4092,10 @@ class _OrderPanelState extends State<_OrderPanel> {
     }
 
     int totalItems = cartItems.length;
-    int readyItems = cartItems.where((item) {
+    int servedItems = cartItems.where((item) {
       if (item is Map<String, dynamic> && item['status'] != null) {
-        final status = item['status'].toString().toLowerCase();
-        return status == 'ready' || status == 'served';
+        final status = item['status'].toString().toUpperCase();
+        return status == 'SERVED' || status == 'COMPLETED';
       }
       return false;
     }).length;
@@ -3553,7 +4137,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '$readyItems/$totalItems',
+                      '$servedItems/$totalItems',
                       style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           widget.isCompact ? FontSize.s11 : FontSize.s13,
@@ -3619,6 +4203,56 @@ class _OrderPanelState extends State<_OrderPanel> {
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  Color _statusColor(String? status) {
+    // Normalize against kitchen_master ItemStatus colors
+    // pending -> amber, preparing -> blue, ready -> green, served -> gray
+    final s = (status ?? '').toUpperCase();
+    switch (s) {
+      case 'PENDING':
+      case 'INIT':
+      case 'NEW':
+        return const Color(0xFFD97706); // amber
+      case 'START':
+      case 'PREPARING':
+      case 'COOKING':
+      case 'IN_PROGRESS':
+        return const Color(0xFF2563EB); // blue
+      case 'READY':
+        return const Color(0xFF059669); // green
+      case 'SERVED':
+      case 'COMPLETED':
+        return const Color(0xFF6B7280); // gray
+      case 'CANCELLED':
+        return const Color(0xFFDC2626); // red (extra)
+      default:
+        return const Color(0xFF6B7280);
+    }
+  }
+
+  String _statusTextForDisplay(String? status) {
+    final s = (status ?? '').toUpperCase();
+    switch (s) {
+      case 'PENDING':
+      case 'INIT':
+      case 'NEW':
+        return 'NEW';
+      case 'START':
+      case 'PREPARING':
+      case 'COOKING':
+      case 'IN_PROGRESS':
+        return 'STARTED';
+      case 'READY':
+        return 'READY';
+      case 'SERVED':
+      case 'COMPLETED':
+        return 'SERVED';
+      case 'CANCELLED':
+        return 'CANCELLED';
+      default:
+        return s.isEmpty ? 'NEW' : s;
     }
   }
 
@@ -3864,11 +4498,11 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 
   Widget _buildSavedOrderActionButtons(List<dynamic> cartItems) {
-    final allItemsReadyOrServed = cartItems.isNotEmpty &&
+    final allItemsServed = cartItems.isNotEmpty &&
         cartItems.every((item) {
           if (item is Map<String, dynamic> && item['status'] != null) {
-            final status = item['status'].toString().toLowerCase();
-            return status == 'ready' || status == 'served';
+            final status = item['status'].toString().toUpperCase();
+            return status == 'SERVED' || status == 'COMPLETED';
           }
           return false;
         });
@@ -4021,7 +4655,7 @@ class _OrderPanelState extends State<_OrderPanel> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () => _showDiscountModal(),
+                      onTap: () => _showCouponModal(),
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
@@ -4170,8 +4804,61 @@ class _OrderPanelState extends State<_OrderPanel> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
+                      onTap: () => _showCommentDialog(),
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          border: Border.all(
+                            color: Colors.grey.shade300,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _orderComment.isNotEmpty
+                                    ? Icons.check_circle
+                                    : Icons.comment,
+                                color: _orderComment.isNotEmpty
+                                    ? const Color(0xFF059669)
+                                    : const Color(0xFF64748B),
+                                size: widget.isCompact ? 14 : 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  'Comment',
+                                  style: buildCustomStyle(
+                                      FontWeightManager.semiBold,
+                                      widget.isCompact
+                                          ? FontSize.s13
+                                          : FontSize.s14,
+                                      0.21,
+                                      const Color(0xFF64748B)),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
                       onTap: (cartItems.isEmpty ||
-                              !allItemsReadyOrServed ||
+                              !allItemsServed ||
                               _isLoadingConfirm)
                           ? null
                           : () => _confirmOrder(),
@@ -4181,13 +4868,13 @@ class _OrderPanelState extends State<_OrderPanel> {
                         height: widget.isCompact ? 44 : 48,
                         decoration: BoxDecoration(
                           color: (cartItems.isEmpty ||
-                                  !allItemsReadyOrServed ||
+                                  !allItemsServed ||
                                   _isLoadingConfirm)
                               ? const Color(0xFF94A3B8)
                               : const Color(0xFF2563EB),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: (cartItems.isNotEmpty &&
-                                  allItemsReadyOrServed &&
+                                  allItemsServed &&
                                   !_isLoadingConfirm)
                               ? [
                                   BoxShadow(
@@ -4680,8 +5367,9 @@ class _OrderPanelState extends State<_OrderPanel> {
       final transactionId = _transactionNumber.isNotEmpty
           ? _transactionNumber
           : (_selectedOrder['transaction_number'] ?? '');
-      final comment =
-          _selectedOrder['comment'] ?? 'Order confirmed from restaurant';
+      final comment = _orderComment.isNotEmpty
+          ? _orderComment
+          : (_selectedOrder['comment'] ?? 'Order confirmed from restaurant');
 
       // Prepare payment method data
       String? paymentMethod;
@@ -4823,6 +5511,7 @@ class _OrderPanelState extends State<_OrderPanel> {
         paidMethods: paidMethods.isNotEmpty ? paidMethods : null,
         status: 'confirmed',
         comment: comment,
+        deliveryMethodId: _getDefaultDeliveryMethodId(),
         // Add discount parameters
         flatDiscount: _flatDiscount > 0 ? _flatDiscount : null,
         percentageDiscount:
@@ -5059,6 +5748,7 @@ class _OrderPanelState extends State<_OrderPanel> {
     );
   }
 
+  // Footer actions for current cart (New Order flow)
   Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
     return SafeArea(
       top: false,
@@ -5073,105 +5763,162 @@ class _OrderPanelState extends State<_OrderPanel> {
             ),
           ),
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
+            // Top: Comment button (full width)
+            SizedBox(
+              width: double.infinity,
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => widget.onNewOrder(),
+                  onTap: () => _showCommentDialog(),
                   borderRadius: BorderRadius.circular(12),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     height: widget.isCompact ? 44 : 48,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.grey.shade100,
                       border: Border.all(
-                        color: const Color(0xFF64748B),
+                        color: Colors.grey.shade300,
                         width: 1.5,
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
-                      child: Text(
-                        'New Order',
-                        style: buildCustomStyle(
-                            FontWeightManager.semiBold,
-                            widget.isCompact ? FontSize.s13 : FontSize.s14,
-                            0.21,
-                            const Color(0xFF64748B)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _orderComment.isNotEmpty
+                                ? Icons.check_circle
+                                : Icons.comment,
+                            color: _orderComment.isNotEmpty
+                                ? const Color(0xFF059669)
+                                : const Color(0xFF64748B),
+                            size: widget.isCompact ? 14 : 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Comment',
+                            style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                0.21,
+                                const Color(0xFF64748B)),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 2,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: (cartItems.isEmpty || widget.isLoadingSendToKitchen)
-                      ? null
-                      : () => widget.onSendToKitchen(),
-                  borderRadius: BorderRadius.circular(12),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: widget.isCompact ? 44 : 48,
-                    decoration: BoxDecoration(
-                      color:
-                          (cartItems.isEmpty || widget.isLoadingSendToKitchen)
-                              ? const Color(0xFF94A3B8)
-                              : const Color(0xFF059669),
+            const SizedBox(height: 12),
+            // Bottom row: New Order and Send to Kitchen
+            Row(
+              children: [
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => widget.onNewOrder(),
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: (cartItems.isNotEmpty &&
-                              !widget.isLoadingSendToKitchen)
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xFF059669).withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : [],
-                    ),
-                    child: Center(
-                      child: widget.isLoadingSendToKitchen
-                          ? SizedBox(
-                              width: widget.isCompact ? 16 : 20,
-                              height: widget.isCompact ? 16 : 20,
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.send,
-                                  color: Colors.white,
-                                  size: widget.isCompact ? 16 : 18,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Send to Kitchen',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      widget.isCompact
-                                          ? FontSize.s13
-                                          : FontSize.s14,
-                                      0.21,
-                                      Colors.white),
-                                ),
-                              ],
-                            ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(
+                            color: const Color(0xFF64748B),
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'New Order',
+                            style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                widget.isCompact ? FontSize.s13 : FontSize.s14,
+                                0.21,
+                                const Color(0xFF64748B)),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap:
+                          (cartItems.isEmpty || widget.isLoadingSendToKitchen)
+                              ? null
+                              : () => widget.onSendToKitchen(),
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: (cartItems.isEmpty ||
+                                  widget.isLoadingSendToKitchen)
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF059669),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: (cartItems.isNotEmpty &&
+                                  !widget.isLoadingSendToKitchen)
+                              ? [
+                                  BoxShadow(
+                                    color: const Color(0xFF059669)
+                                        .withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : [],
+                        ),
+                        child: Center(
+                          child: widget.isLoadingSendToKitchen
+                              ? SizedBox(
+                                  width: widget.isCompact ? 16 : 20,
+                                  height: widget.isCompact ? 16 : 20,
+                                  child: const CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.send,
+                                      color: Colors.white,
+                                      size: widget.isCompact ? 16 : 18,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Send to Kitchen',
+                                      style: buildCustomStyle(
+                                          FontWeightManager.semiBold,
+                                          widget.isCompact
+                                              ? FontSize.s13
+                                              : FontSize.s14,
+                                          0.21,
+                                          Colors.white),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -5273,8 +6020,17 @@ class _OrderPanelState extends State<_OrderPanel> {
     final totalPrice = double.tryParse(cartItem['total_price'].toString()) ??
         (quantity * unitPrice);
 
-    final status = cartItem['status']?.toString().toLowerCase();
-    final isRemovable = status != 'ready' && status != 'served';
+    final status = cartItem['status']?.toString();
+    final statusUpper = (status ?? '').toUpperCase();
+    final hasStarted = statusUpper == 'START' ||
+        statusUpper == 'PREPARING' ||
+        statusUpper == 'COOKING' ||
+        statusUpper == 'IN_PROGRESS' ||
+        statusUpper == 'READY' ||
+        statusUpper == 'SERVED' ||
+        statusUpper == 'COMPLETED';
+    final isRemovable = !hasStarted;
+    final statusText = _statusTextForDisplay(status);
 
     return Container(
       padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
@@ -5306,20 +6062,46 @@ class _OrderPanelState extends State<_OrderPanel> {
                 ),
               ),
               const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF059669).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '₹${totalPrice.toStringAsFixed(0)}',
-                  style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      widget.isCompact ? FontSize.s12 : FontSize.s14,
-                      0.21,
-                      const Color(0xFF059669)),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF059669).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '₹${totalPrice.toStringAsFixed(0)}',
+                      style: buildCustomStyle(
+                          FontWeightManager.bold,
+                          widget.isCompact ? FontSize.s12 : FontSize.s14,
+                          0.21,
+                          const Color(0xFF059669)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _statusColor(status).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: _statusColor(status).withOpacity(0.4)),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        widget.isCompact ? FontSize.s10 : FontSize.s11,
+                        0.21,
+                        _statusColor(status),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -5489,447 +6271,102 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 }
 
-// Custom Coupon Modal for Restaurant Page that doesn't depend on LocalProductProvider
-class RestaurantCouponModal extends StatefulWidget {
-  final String initialCouponCode;
-  final bool isCouponApplied;
+// Wrapper class to make CouponModal work with restaurant page's discount system
+class _RestaurantCouponModalWrapper extends StatefulWidget {
   final double orderSubTotal;
-  final double currentFlatDiscount;
-  final double currentPercentageDiscount;
-  final Function(String, bool,
-      {double? flatDiscount, double? percentageDiscount}) onCouponAction;
+  final String initialCouponCode;
+  final double initialFlatDiscount;
+  final double initialPercentageDiscount;
+  final bool isCouponApplied;
+  final Function(String, bool, {double? flatDiscount, double? percentageDiscount}) onCouponAction;
 
-  const RestaurantCouponModal({
-    Key? key,
-    required this.initialCouponCode,
-    required this.isCouponApplied,
+  const _RestaurantCouponModalWrapper({
     required this.orderSubTotal,
-    required this.currentFlatDiscount,
-    required this.currentPercentageDiscount,
+    required this.initialCouponCode,
+    required this.initialFlatDiscount,
+    required this.initialPercentageDiscount,
+    required this.isCouponApplied,
     required this.onCouponAction,
-  }) : super(key: key);
+  });
 
   @override
-  State<RestaurantCouponModal> createState() => _RestaurantCouponModalState();
+  State<_RestaurantCouponModalWrapper> createState() => _RestaurantCouponModalWrapperState();
 }
 
-class _RestaurantCouponModalState extends State<RestaurantCouponModal> {
-  late TextEditingController couponController;
-  late TextEditingController flatDiscountController;
-  late TextEditingController percentageDiscountController;
-  late bool isCouponApplied;
+class _RestaurantCouponModalWrapperState extends State<_RestaurantCouponModalWrapper> {
+  late MockLocalProductProvider _mockProvider;
 
   @override
   void initState() {
     super.initState();
-    couponController = TextEditingController(text: widget.initialCouponCode);
-    flatDiscountController = TextEditingController(
-        text: widget.currentFlatDiscount == 0.0
-            ? ''
-            : widget.currentFlatDiscount.toString());
-    percentageDiscountController = TextEditingController(
-        text: widget.currentPercentageDiscount == 0.0
-            ? ''
-            : widget.currentPercentageDiscount.toString());
-    isCouponApplied = widget.isCouponApplied;
-
-    // Add listeners for real-time calculation
-    flatDiscountController.addListener(() => setState(() {}));
-    percentageDiscountController.addListener(() => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    couponController.dispose();
-    flatDiscountController.dispose();
-    percentageDiscountController.dispose();
-    super.dispose();
+    _mockProvider = MockLocalProductProvider(
+      orderSubTotal: widget.orderSubTotal,
+      initialFlatDiscount: widget.initialFlatDiscount,
+      initialPercentageDiscount: widget.initialPercentageDiscount,
+      initialCouponCode: widget.initialCouponCode,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentFlatDiscount =
-        double.tryParse(flatDiscountController.text) ?? 0.0;
-    final currentPercentageDiscount =
-        double.tryParse(percentageDiscountController.text) ?? 0.0;
-
-    // Calculate the new total after applying current modal discounts
-    final percentageDiscountValue =
-        widget.orderSubTotal * (currentPercentageDiscount / 100);
-    final totalDiscount = currentFlatDiscount + percentageDiscountValue;
-    final newTotal = widget.orderSubTotal - totalDiscount;
-
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: BuildBoxShadowContainer(
-        circleRadius: 12,
-        color: Colors.white,
-        width: 450,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Discount & Coupon',
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s16,
-                    0.21,
-                    ColorManager.kPrimaryColor,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Discount Fields
-            Row(
-              children: [
-                // Flat Discount Field
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Flat Discount',
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s12,
-                          0.21,
-                          ColorManager.textColor,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      BuildBoxShadowContainer(
-                        circleRadius: 7,
-                        alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.only(left: 15),
-                        height: 50,
-                        child: TextField(
-                          controller: flatDiscountController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            hintText: '0.00',
-                            hintStyle: buildCustomStyle(
-                              FontWeight.w500,
-                              12,
-                              0.27,
-                              Colors.grey.withOpacity(.5),
-                            ),
-                            border: InputBorder.none,
-                          ),
-                          style: buildCustomStyle(
-                            FontWeight.w500,
-                            12,
-                            0.27,
-                            Colors.black.withOpacity(.5),
-                          ),
-                          onTap: () {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (flatDiscountController.text.isNotEmpty) {
-                                flatDiscountController.selection =
-                                    TextSelection(
-                                  baseOffset: 0,
-                                  extentOffset:
-                                      flatDiscountController.text.length,
-                                );
-                              }
-                            });
-                            Provider.of<KeyboardProvider>(context,
-                                    listen: false)
-                                .show(
-                              'number',
-                              flatDiscountController,
-                              replaceOnFirstInput: true,
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 15),
-                // Percentage Discount Field
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Percentage Discount (%)',
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s12,
-                          0.21,
-                          ColorManager.textColor,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      BuildBoxShadowContainer(
-                        circleRadius: 7,
-                        alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.only(left: 15),
-                        height: 50,
-                        child: TextField(
-                          controller: percentageDiscountController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            hintText: '0',
-                            hintStyle: buildCustomStyle(
-                              FontWeight.w500,
-                              12,
-                              0.27,
-                              Colors.grey.withOpacity(.5),
-                            ),
-                            border: InputBorder.none,
-                          ),
-                          style: buildCustomStyle(
-                            FontWeight.w500,
-                            12,
-                            0.27,
-                            Colors.black.withOpacity(.5),
-                          ),
-                          onTap: () {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (percentageDiscountController
-                                  .text.isNotEmpty) {
-                                percentageDiscountController.selection =
-                                    TextSelection(
-                                  baseOffset: 0,
-                                  extentOffset:
-                                      percentageDiscountController.text.length,
-                                );
-                              }
-                            });
-                            Provider.of<KeyboardProvider>(context,
-                                    listen: false)
-                                .show(
-                              'number',
-                              percentageDiscountController,
-                              replaceOnFirstInput: true,
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Coupon Code Field
-            Text(
-              'Coupon Code (Optional)',
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s12,
-                0.21,
-                ColorManager.textColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            BuildBoxShadowContainer(
-              circleRadius: 7,
-              alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.only(left: 15),
-              height: 50,
-              child: TextField(
-                controller: couponController,
-                enabled: (!isCouponApplied || couponController.text.isEmpty),
-                decoration: InputDecoration(
-                  hintText: 'Enter Coupon Code',
-                  hintStyle: buildCustomStyle(
-                    FontWeight.w500,
-                    12,
-                    0.27,
-                    Colors.grey.withOpacity(.5),
-                  ),
-                  border: InputBorder.none,
-                ),
-                style: buildCustomStyle(
-                  FontWeight.w500,
-                  12,
-                  0.27,
-                  Colors.black.withOpacity(.5),
-                ),
-                onTap: () {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (couponController.text.isNotEmpty) {
-                      couponController.selection = TextSelection(
-                        baseOffset: 0,
-                        extentOffset: couponController.text.length,
-                      );
-                    }
-                  });
-                  Provider.of<KeyboardProvider>(context, listen: false).show(
-                    'text',
-                    couponController,
-                    replaceOnFirstInput: true,
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Updated Total Display
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: ColorManager.kButtonGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Net Total:',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s14,
-                          0.21,
-                          ColorManager.textColor,
-                        ),
-                      ),
-                      Text(
-                        'INR ${AmountHelper.formatAmount(widget.orderSubTotal)}',
-                        style: buildCustomStyle(
-                          FontWeightManager.bold,
-                          FontSize.s15,
-                          0.21,
-                          ColorManager.kPrimaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Discount Amount:',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s14,
-                          0.21,
-                          ColorManager.textColorRed,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Text(
-                            'INR ${AmountHelper.formatAmount(totalDiscount)}',
-                            style: buildCustomStyle(
-                              FontWeightManager.bold,
-                              FontSize.s15,
-                              0.21,
-                              ColorManager.textColorRed,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '(${(widget.orderSubTotal > 0 ? ((totalDiscount / widget.orderSubTotal) * 100) : 0.0).toStringAsFixed(1)}%)',
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s12,
-                              0.21,
-                              ColorManager.textColorRed,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total after Discount:',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s14,
-                          0.21,
-                          ColorManager.textColor,
-                        ),
-                      ),
-                      Text(
-                        'INR ${AmountHelper.formatAmount(newTotal)}',
-                        style: buildCustomStyle(
-                          FontWeightManager.bold,
-                          FontSize.s15,
-                          0.21,
-                          ColorManager.kButtonGreen,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: CustomRoundButton(
-                    title: "Clear All",
-                    fct: () {
-                      setState(() {
-                        flatDiscountController.clear();
-                        percentageDiscountController.clear();
-                        couponController.clear();
-                      });
-                    },
-                    fontSize: FontSize.s14,
-                    height: 45,
-                    width: double.infinity,
-                    boxColor: Colors.grey.shade600,
-                    borderColor: Colors.grey.shade600,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 2,
-                  child: CustomRoundButton(
-                    title: "Apply Discount",
-                    fct: () {
-                      double flatDiscount =
-                          double.tryParse(flatDiscountController.text) ?? 0.0;
-                      double percentageDiscount =
-                          double.tryParse(percentageDiscountController.text) ??
-                              0.0;
-
-                      widget.onCouponAction(
-                        couponController.text,
-                        flatDiscount > 0 ||
-                            percentageDiscount > 0 ||
-                            couponController.text.isNotEmpty,
-                        flatDiscount: flatDiscount,
-                        percentageDiscount: percentageDiscount,
-                      );
-                      Navigator.of(context).pop();
-                    },
-                    fontSize: FontSize.s14,
-                    height: 45,
-                    width: double.infinity,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+    return ChangeNotifierProvider<LocalProductProvider>.value(
+      value: _mockProvider,
+      child: CouponModal(
+        initialCouponCode: widget.initialCouponCode,
+        isCouponApplied: widget.isCouponApplied,
+        onCouponAction: widget.onCouponAction,
       ),
     );
   }
 }
+
+// Mock LocalProductProvider that provides the interface needed by CouponModal
+class MockLocalProductProvider extends LocalProductProvider {
+  final double _orderSubTotal;
+  double _flatDiscount;
+  double _percentageDiscount;
+  String _couponCode;
+
+  MockLocalProductProvider({
+    required double orderSubTotal,
+    required double initialFlatDiscount,
+    required double initialPercentageDiscount,
+    required String initialCouponCode,
+  }) : _orderSubTotal = orderSubTotal,
+       _flatDiscount = initialFlatDiscount,
+       _percentageDiscount = initialPercentageDiscount,
+       _couponCode = initialCouponCode;
+
+  @override
+  Map<String, double> getCurrentDiscount() {
+    return {
+      'flatDiscount': _flatDiscount,
+      'percentageDiscount': _percentageDiscount,
+    };
+  }
+
+  @override
+  PriceSummary? get priceSummary {
+    final discount = (_flatDiscount + (_orderSubTotal * _percentageDiscount / 100));
+    return PriceSummary(
+      originalSubTotal: _orderSubTotal,
+      subTotal: _orderSubTotal,
+      discount: discount,
+      totalTax: 0.0,
+      netPayable: _orderSubTotal - discount,
+      netTotal: _orderSubTotal - discount,
+    );
+  }
+
+  @override
+  void applyDiscount({
+    required double flatDiscount,
+    required double percentageDiscount,
+  }) {
+    _flatDiscount = flatDiscount;
+    _percentageDiscount = percentageDiscount;
+    notifyListeners();
+  }
+}
+
+

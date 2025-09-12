@@ -453,7 +453,6 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                                   TableCellVerticalAlignment.middle,
                               children: [
                                 ...categoryProvider.searchCategory!
-                                    .skip(1)
                                     .toList()
                                     .asMap()
                                     .entries

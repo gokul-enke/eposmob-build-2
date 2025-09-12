@@ -9,6 +9,7 @@ class AppSettings {
   final bool askDeliveryDate;
   final bool priceRoundOff;
   final bool discountAndCoupon;
+  final bool autoAssignDefaultCustomer;
   final String currency;
 
   AppSettings({
@@ -20,6 +21,7 @@ class AppSettings {
     required this.askDeliveryDate,
     required this.priceRoundOff,
     required this.discountAndCoupon,
+    required this.autoAssignDefaultCustomer,
     required this.currency,
   });
 
@@ -75,6 +77,8 @@ class AppSettings {
       askDeliveryDate: settingsMap['ASK_DELIVERY_DATE']?['status'] ?? false,
       priceRoundOff: settingsMap['PRICE_ROUND_OFF']?['status'] ?? false,
       discountAndCoupon: settingsMap['DISCOUNT_AND_COUPON']?['status'] ?? false,
+      autoAssignDefaultCustomer:
+          settingsMap['AUTO_ASSIGN_DEFAULT_CUSTOMER']?['status'] ?? false,
       currency: settingsMap['CURRENCY']?['value'] ?? "",
     );
   }
@@ -129,6 +133,12 @@ class AppSettings {
           "code": "DISCOUNT_AND_COUPON",
           "value": "",
           "status": discountAndCoupon.toString(),
+        },
+        {
+          "name": "Auto Assign Default Customer",
+          "code": "AUTO_ASSIGN_DEFAULT_CUSTOMER",
+          "value": "",
+          "status": autoAssignDefaultCustomer.toString(),
         },
         {
           "name": "Currency",

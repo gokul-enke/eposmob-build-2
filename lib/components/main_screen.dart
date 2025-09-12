@@ -6,7 +6,6 @@ import 'package:pos_machine/widgets/side_menu_mobile.dart';
 
 import '../controllers/sidebar_controller.dart';
 import '../resources/color_manager.dart';
-import '../widgets/category_list.dart';
 
 import '../widgets/side_menu.dart';
 
@@ -39,6 +38,27 @@ class _MainScreenState extends State<MainScreen> {
           ? AppBar(
               elevation: 0,
               backgroundColor: Colors.white,
+              centerTitle: true,
+              title: RichText(
+                text: const TextSpan(
+                  text: 'Cloud',
+                  style: TextStyle(
+                    color: ColorManager.textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                  children: <TextSpan>[
+                    TextSpan(
+                      text: 'POS',
+                      style: TextStyle(
+                        color: ColorManager.kPrimaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               leading: Builder(builder: (context) {
                 return IconButton(
                   color: ColorManager.kPrimaryColor,
@@ -52,7 +72,7 @@ class _MainScreenState extends State<MainScreen> {
           : null,
       body: SafeArea(
         child: ResponsiveWidget(
-          mobile: const CategoryList(),
+          mobile: content,
           desktop: CollapsibleSidebar(
             sidebarContent: const SideMenu(),
             child: content,
