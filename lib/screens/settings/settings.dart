@@ -57,16 +57,32 @@ class SettingsScreen extends StatelessWidget {
                         crossAxisSpacing: 14,
                         childAspectRatio: 1.08,
                       ),
-                      itemCount: 1,
+                      itemCount: 2,
                       itemBuilder: (context, index) {
-                        return _SettingsCard(
-                          title: 'WhatsApp Settings',
-                          iconPath: ImageAssets.whatsappIcon,
-                          onTap: () {
-                            Get.find<SideBarController>().index.value =
-                                63; // Navigate to WhatsApp Settings
-                          },
-                        );
+                        switch (index) {
+                          case 0:
+                            return _SettingsCard(
+                              title: 'WhatsApp Settings',
+                              iconPath: ImageAssets.whatsappIcon,
+                              onTap: () {
+                                Get.find<SideBarController>().index.value =
+                                    63; // Navigate to WhatsApp Settings
+                              },
+                            );
+                          case 1:
+                            return _SettingsCard(
+                              title: 'Company Info',
+                              iconPath: ImageAssets
+                                  .reportIcon, // Using existing report icon
+                              onTap: () {
+                                Get.find<SideBarController>().index.value =
+                                    64; // Navigate to Company Info screen
+                              },
+                            );
+                          default:
+                            return const SizedBox
+                                .shrink(); // Return empty widget for invalid indices
+                        }
                       },
                     ),
                   ),
