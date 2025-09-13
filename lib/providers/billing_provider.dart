@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import '../models/customer_list.dart';
@@ -830,26 +831,24 @@ class BillingProvider extends ChangeNotifier {
       });
     }
     
-    if (_isCardSelected) {
+    // Include CARD and UPI only when amounts are > 0 to match billing_page.dart
+    final double cardAmount = double.tryParse(cardAmountController.text) ?? 0;
+    if (_isCardSelected && cardAmount > 0) {
       paidMethods.add({
         "method": "CARD",
-        "amount": double.tryParse(cardAmountController.text) ?? 0,
+        "amount": cardAmount,
       });
     }
     
-    if (_isUpiSelected) {
+    final double upiAmount = double.tryParse(upiAmountController.text) ?? 0;
+    if (_isUpiSelected && upiAmount > 0) {
       paidMethods.add({
         "method": "UPI",
-        "amount": double.tryParse(upiAmountController.text) ?? 0,
+        "amount": upiAmount,
       });
     }
     
-    if (_isDebitSelected) {
-      paidMethods.add({
-        "method": "DEBIT",
-        "amount": double.tryParse(debitAmountController.text) ?? 0,
-      });
-    }
+    // Note: DEBIT (to customer credit) is excluded from paid methods list
     
     return paidMethods;
   }
@@ -897,22 +896,11 @@ class BillingProvider extends ChangeNotifier {
   }
   
   void calculateBalance() {
-    _totalPaidAmount = 0.0;
+    // Use the new getTotalPaidAmount() method that excludes debit/customer credit
+    _totalPaidAmount = getTotalPaidAmount();
     
-    if (_isCashSelected) {
-      _totalPaidAmount += double.tryParse(cashAmountController.text) ?? 0;
-    }
-    if (_isCardSelected) {
-      _totalPaidAmount += double.tryParse(cardAmountController.text) ?? 0;
-    }
-    if (_isUpiSelected) {
-      _totalPaidAmount += double.tryParse(upiAmountController.text) ?? 0;
-    }
-    if (_isDebitSelected) {
-      _totalPaidAmount += double.tryParse(debitAmountController.text) ?? 0;
-    }
-    
-    _balanceAmount = _totalPaidAmount - _totalOrderAmount;
+    // Use the complex balance calculation logic
+    _balanceAmount = calculateBalanceAmount(_totalOrderAmount);
     _hasExcessPayment = _balanceAmount > 0;
     
     paidAmountController.text = _totalPaidAmount.toString();
@@ -1125,12 +1113,50 @@ class BillingProvider extends ChangeNotifier {
   
   // Create order data for API
   Map<String, dynamic> createOrderData() {
+    // Build payment information aligned with billing_page.dart
+    final List<String> selectedMethods = getSelectedPaymentMethodsExcludingEmpty();
+    String paymentMethodValue = "";
+    String paidAmountValue = "0";
+
+    if (selectedMethods.length > 1) {
+      // Multi-payment JSON payload
+      final multiPaymentData = {
+        "methods": selectedMethods,
+        "amounts": {
+          "CASH": cashAmountController.text,
+          "CARD": cardAmountController.text,
+          "UPI": upiAmountController.text,
+          "DEBIT": debitAmountController.text,
+        },
+        "isMultiPayment": true,
+      };
+      paymentMethodValue = json.encode(multiPaymentData);
+      paidAmountValue = getTotalPaidAmount().toString();
+    } else if (selectedMethods.isNotEmpty) {
+      // Single payment method
+      final method = selectedMethods.first;
+      paymentMethodValue = method;
+      switch (method) {
+        case 'CASH':
+          paidAmountValue = cashAmountController.text;
+          break;
+        case 'CARD':
+          paidAmountValue = cardAmountController.text;
+          break;
+        case 'UPI':
+          paidAmountValue = upiAmountController.text;
+          break;
+        default:
+          paidAmountValue = getTotalPaidAmount().toString();
+      }
+    }
+
     return {
       'customerId': _selectedCustomerID,
       'customerName': _selectedCustomer?.name,
       'customerPhone': _selectedCustomerPhone ?? _mobileNumberText,
-      'paymentMethod': getSelectedPaymentMethods().join(','),
-      'paidAmount': _totalPaidAmount.toString(),
+      'paymentMethod': paymentMethodValue,
+      'paidAmount': paidAmountValue,
       'balanceAmount': _balanceAmount.toString(),
       'deliveryMethod': _deliveryMethod,
       'deliveryMethodId': _deliveryMethodId,
@@ -1140,6 +1166,7 @@ class BillingProvider extends ChangeNotifier {
       'deliveryTime': _deliveryTime,
       'transactionId': transactionNumberController.text,
       'couponId': coupenCodeTextController.text.isNotEmpty ? coupenCodeTextController.text : null,
+      'toCustomerCredit': _toCustomerCreditEnabled,
       'cartItems': _cartProductItems,
       'taxNames': _taxNames,
     };
@@ -1160,17 +1187,67 @@ class BillingProvider extends ChangeNotifier {
       
       // Restore payment methods
       final paymentMethod = order['paymentMethod'] as String?;
-      if (paymentMethod != null) {
-        if (paymentMethod.contains('multi:')) {
-          // Handle multi-payment
-          // TODO: Parse multi-payment data when implementing full multi-payment support
-        } else {
-          // Single payment method
-          clearAllPaymentMethods();
-          setPaymentMethod(paymentMethod, true);
-          paidAmountController.text = order['paidAmount']?.toString() ?? '0';
+      if (paymentMethod != null && paymentMethod.isNotEmpty) {
+        clearAllPaymentMethods();
+        final pm = paymentMethod.trim();
+        bool parsedMulti = false;
+        if (pm.startsWith('{')) {
+          try {
+            final Map<String, dynamic> multi = json.decode(pm);
+            final List<String> methods = List<String>.from(multi['methods'] ?? []);
+            final Map<String, dynamic> amounts = Map<String, dynamic>.from(multi['amounts'] ?? {});
+
+            _isCashSelected = methods.contains('CASH');
+            _isCardSelected = methods.contains('CARD');
+            _isUpiSelected = methods.contains('UPI');
+            _isDebitSelected = methods.contains('DEBIT');
+
+            if (_isCashSelected) {
+              cashAmountController.text = (amounts['CASH'] ?? '0').toString();
+            }
+            if (_isCardSelected) {
+              cardAmountController.text = (amounts['CARD'] ?? '0').toString();
+            }
+            if (_isUpiSelected) {
+              upiAmountController.text = (amounts['UPI'] ?? '0').toString();
+            }
+            if (_isDebitSelected) {
+              debitAmountController.text = (amounts['DEBIT'] ?? '0').toString();
+            }
+
+            parsedMulti = true;
+          } catch (e) {
+            debugPrint("Error parsing multi-payment JSON on rehydration: $e");
+          }
         }
+
+        if (!parsedMulti) {
+          // Single payment method
+          setPaymentMethod(pm, true);
+          final paidText = order['paidAmount']?.toString() ?? '0';
+          switch (pm.toUpperCase()) {
+            case 'CASH':
+              cashAmountController.text = paidText;
+              break;
+            case 'CARD':
+              cardAmountController.text = paidText;
+              break;
+            case 'UPI':
+              upiAmountController.text = paidText;
+              break;
+            case 'DEBIT':
+              debitAmountController.text = paidText;
+              break;
+          }
+        }
+
+        // Restore paid amount text (display field)
+        paidAmountController.text = order['paidAmount']?.toString() ?? '0';
       }
+
+      // Restore balance and to-customer-credit flag
+      _balanceAmount = double.tryParse(order['balanceAmount']?.toString() ?? '0') ?? 0.0;
+      _toCustomerCreditEnabled = (order['toCustomerCredit'] == true);
       
       // Restore delivery information
       _deliveryMethod = order['deliveryMethod'] ?? 'Store Takeaway';
@@ -1186,6 +1263,12 @@ class BillingProvider extends ChangeNotifier {
       // Restore other fields
       transactionNumberController.text = order['transactionId'] ?? '';
       coupenCodeTextController.text = order['couponId'] ?? '';
+      
+      // Recalculate balance to reflect any restored amounts (mirrors billing_page.dart _updateBalanceAmount)
+      // Only recalc if total order amount is already known; otherwise keep restored balance
+      if (_totalOrderAmount > 0) {
+        calculateBalance();
+      }
       
       setCurrentEditingOrder(order);
     } finally {
@@ -1604,41 +1687,145 @@ class BillingProvider extends ChangeNotifier {
     notifyListeners();
   }
   
-  // MISSED LOGIC: Balance calculation methods
-  double calculateBalanceAmount(double totalOrderAmount) {
-    double totalPaid = 0.0;
-    
+  // MISSED LOGIC: Balance calculation methods - Updated to match billing_page.dart logic
+  double calculateBalanceAmount(double cartTotal, {String currency = 'INR'}) {
+    // For balance calculation, only include actual cash payments (not debit/store credit)
+    double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
+    double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
+    double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
+    double totalCollected = cashAmount + cardAmount + upiAmount;
+
+    double balance = 0.0;
+
+    if (_toCustomerCreditEnabled) {
+      debugPrint(
+          '🔛 BILLING PROVIDER: Toggle is ON - Calculating with customer credit consideration');
+
+      double customerPrevBalance = _selectedCustomer?.balance ?? 0.0;
+
+      if (customerPrevBalance < 0) {
+        // Customer has debt - use transaction excess logic for consistency with auto-fill
+        debugPrint('💳 Customer has debt - using transaction excess logic');
+        final transactionExcess = totalCollected - cartTotal;
+        debugPrint(
+            '💰 Transaction excess: $currency${transactionExcess.toStringAsFixed(2)}');
+
+        if (transactionExcess > 0) {
+          // Get the actual customer credit amount being allocated
+          double actualCustomerCredit =
+              double.tryParse(debitAmountController.text) ?? 0.0;
+
+          // Clamp customer credit to available excess
+          if (actualCustomerCredit > transactionExcess) {
+            actualCustomerCredit = transactionExcess;
+            debugPrint(
+                '  - Clamped customer credit to transaction excess: $currency${actualCustomerCredit.toStringAsFixed(2)}');
+          }
+
+          // Cash balance = transaction excess - customer credit
+          balance = transactionExcess - actualCustomerCredit;
+          debugPrint(
+              '  - Balance = Transaction Excess ($currency${transactionExcess.toStringAsFixed(2)}) - Customer Credit ($currency${actualCustomerCredit.toStringAsFixed(2)}) = $currency${balance.toStringAsFixed(2)}');
+        } else {
+          balance = 0.0;
+          debugPrint('  - No transaction excess, balance = 0');
+        }
+      } else {
+        // Customer has positive/zero balance - use Net Due logic
+        debugPrint('💵 Customer has credit/zero balance - using Net Due logic');
+        // Net Due = Purchase Total - Customer Previous Balance
+        double netDue = cartTotal - customerPrevBalance;
+        debugPrint('💰 Net Due calculation:');
+        debugPrint(
+            '  - Purchase Total: $currency${cartTotal.toStringAsFixed(2)}');
+        debugPrint(
+            '  - Customer Prev Balance: $currency${customerPrevBalance.toStringAsFixed(2)}');
+        debugPrint('  - Net Due: $currency${netDue.toStringAsFixed(2)}');
+
+        // Available balance = Total Collected - Net Due
+        double availableBalance = totalCollected - netDue;
+        debugPrint(
+            '  - Total Collected: $currency${totalCollected.toStringAsFixed(2)}');
+        debugPrint(
+            '  - Available Balance: $currency${availableBalance.toStringAsFixed(2)}');
+
+        if (availableBalance > 0) {
+          // Get the actual customer credit amount being allocated
+          double actualCustomerCredit =
+              double.tryParse(debitAmountController.text) ?? 0.0;
+
+          // Clamp customer credit to available balance
+          if (actualCustomerCredit > availableBalance) {
+            actualCustomerCredit = availableBalance;
+            debugPrint(
+                '  - Clamped customer credit to available balance: $currency${actualCustomerCredit.toStringAsFixed(2)}');
+          }
+
+          // Cash balance = available balance - customer credit
+          balance = availableBalance - actualCustomerCredit;
+          debugPrint(
+              '  - Balance = Available Balance ($currency${availableBalance.toStringAsFixed(2)}) - Customer Credit ($currency${actualCustomerCredit.toStringAsFixed(2)}) = $currency${balance.toStringAsFixed(2)}');
+        } else {
+          balance = 0.0;
+          debugPrint('  - No available balance, balance = 0');
+        }
+      }
+    } else {
+      debugPrint('🔴 BILLING PROVIDER: Toggle is OFF - Using simple calculation');
+      // Toggle OFF: Simple calculation without previous balance
+      balance = totalCollected - cartTotal;
+      debugPrint(
+          '  - Balance = Total Collected ($currency${totalCollected.toStringAsFixed(2)}) - Cart Total ($currency${cartTotal.toStringAsFixed(2)}) = $currency${balance.toStringAsFixed(2)}');
+    }
+
+    // Clamp balance to never show negative values in UI
+    // Negative balance means insufficient payment, but cash drawer can't give negative money
+    if (balance < 0) {
+      debugPrint(
+          '🚫 BILLING PROVIDER: Clamping negative balance ($currency${balance.toStringAsFixed(2)}) to 0 for UI display');
+      balance = 0.0;
+    }
+
+    return balance;
+  }
+
+  // MISSED LOGIC: Get total paid amount excluding debit/customer credit
+  double getTotalPaidAmount() {
+    double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
+    double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
+    double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
+    // Note: We don't include debit/toCustomerCredit in total paid amount
+    // as it represents money going to customer credit, not money collected
+    return cashAmount + cardAmount + upiAmount;
+  }
+
+  // MISSED LOGIC: Get selected payment methods excluding debit when no amount
+  List<String> getSelectedPaymentMethodsExcludingEmpty() {
+    List<String> methods = [];
     if (_isCashSelected) {
-      totalPaid += double.tryParse(cashAmountController.text) ?? 0;
+      methods.add("CASH");
     }
-    if (_isCardSelected) {
-      totalPaid += double.tryParse(cardAmountController.text) ?? 0;
+    if (_isCardSelected &&
+        (double.tryParse(cardAmountController.text) ?? 0) > 0) {
+      methods.add("CARD");
     }
-    if (_isUpiSelected) {
-      totalPaid += double.tryParse(upiAmountController.text) ?? 0;
+    if (_isUpiSelected &&
+        (double.tryParse(upiAmountController.text) ?? 0) > 0) {
+      methods.add("UPI");
     }
-    if (_isDebitSelected) {
-      totalPaid += double.tryParse(debitAmountController.text) ?? 0;
-    }
-    
-    return totalPaid - totalOrderAmount;
+    // Note: Debit is handled separately as customer credit, not a payment method
+    return methods;
   }
   
   // MISSED LOGIC: Payment label generation
   String getPaymentLabel() {
-    List<String> activeMethods = [];
-    if (_isCashSelected) {
-      activeMethods.add("Cash");
-    }
-    if (_isCardSelected) {
-      activeMethods.add("Card");
-    }
-    if (_isUpiSelected) {
-      activeMethods.add("UPI");
-    }
-    if (_isDebitSelected) {
-      activeMethods.add("Debit");
-    }
+    // Build label using methods that mirror billing_page.dart semantics
+    final methods = getSelectedPaymentMethodsExcludingEmpty();
+    final List<String> activeMethods = [];
+    if (methods.contains("CASH")) activeMethods.add("Cash");
+    if (methods.contains("CARD")) activeMethods.add("Card");
+    if (methods.contains("UPI")) activeMethods.add("UPI");
+    // DEBIT is not shown in label for collected payments
     
     if (activeMethods.isEmpty) {
       return "Select Payment Method";
@@ -1689,10 +1876,50 @@ class BillingProvider extends ChangeNotifier {
     resetAutocompleteProductKey();
   }
   
-  // MISSED LOGIC: Update balance amount helper
-  void updateBalanceAmount(double totalOrderAmount) {
-    _balanceAmount = calculateBalanceAmount(totalOrderAmount);
+  // MISSED LOGIC: Update balance amount helper - matches billing_page.dart _updateBalanceAmount()
+  void updateBalanceAmount(double cartTotal, {String currency = 'INR'}) {
+    double balance = calculateBalanceAmount(cartTotal, currency: currency);
+    _balanceAmount = balance;
     notifyListeners();
+  }
+  
+  // MISSED LOGIC: Reset autocomplete helper
+  void resetAutocomplete({bool shouldFetchCustomers = true}) {
+    // Reset autocomplete keys to force widget rebuild
+    resetAutocompletePhoneKey();
+    resetAutocompleteProductKey();
+    
+    // Clear selected product
+    clearSelectedProduct();
+    
+    // Clear barcode controller
+    barcodeController.clear();
+    
+    // Reset focus to barcode field if barcode sales enabled
+    if (_barcodeSalesEnabled) {
+      barcodeNode.requestFocus();
+    }
+    
+    notifyListeners();
+  }
+  
+  // MISSED LOGIC: Get payment icon helper
+  IconData getPaymentIcon() {
+    List<String> methods = getSelectedPaymentMethods();
+    if (methods.isEmpty) {
+      return Icons.payment;
+    } else if (methods.length > 1) {
+      return Icons.account_balance_wallet;
+    } else if (methods.contains("CASH")) {
+      return Icons.money;
+    } else if (methods.contains("CARD")) {
+      return Icons.credit_card;
+    } else if (methods.contains("UPI")) {
+      return Icons.phone_android;
+    } else if (methods.contains("DEBIT")) {
+      return Icons.account_balance;
+    }
+    return Icons.payment;
   }
   
   // Complete reset method
@@ -1751,14 +1978,13 @@ class BillingProvider extends ChangeNotifier {
     
     // Cancel timers
     cancelDebounce();
-    cancelDebounceTimer();
     
     notifyListeners();
   }
   
   @override
   void dispose() {
-    // Dispose controllers
+    // Dispose all controllers
     mobileNumberTextController.dispose();
     coupenCodeTextController.dispose();
     transactionNumberController.dispose();
@@ -1774,10 +2000,7 @@ class BillingProvider extends ChangeNotifier {
     selectedProductNameController.dispose();
     commentController.dispose();
     carNumberController.dispose();
-    
-    // Dispose additional controllers
     _transactionNumberController.dispose();
-    _customerScrollController.dispose();
     
     // Dispose focus nodes
     paidAmountFocusNode.dispose();
@@ -1790,11 +2013,12 @@ class BillingProvider extends ChangeNotifier {
     focusNode.dispose();
     barcodeNode.dispose();
     customerTextFieldFocus.dispose();
-    
-    // Dispose additional focus nodes
     _customerTextFieldFocus.dispose();
     _quantityFocusNode.dispose();
     _unitPriceFocusNode.dispose();
+    
+    // Dispose scroll controllers
+    _customerScrollController.dispose();
     
     // Cancel subscriptions
     _internetSubscription?.cancel();
