@@ -468,8 +468,10 @@ class _SideMenuState extends State<SideMenu> {
           if (_hasRole('sales_executive'))
             Obx(
               () => DrawerListTile(
-                iconPath: ImageAssets.consultingIcon,
+                iconPath: ImageAssets.settingsIcon,
                 title: 'Settings',
+                iconSize: 18.0,
+                horizontalGap: 12.0,
                 onTap: () {
                   sideBarController.index.value = 62;
                 },
@@ -603,6 +605,10 @@ class DrawerListTile extends StatelessWidget {
   final int? items;
   final bool selected;
   final VoidCallback onTap;
+  // Optional: allow custom icon size per tile
+  final double? iconSize;
+  // Optional: allow custom horizontal gap between icon and title per tile
+  final double? horizontalGap;
   const DrawerListTile({
     super.key,
     required this.iconPath,
@@ -610,10 +616,15 @@ class DrawerListTile extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.items,
+    this.iconSize,
+    this.horizontalGap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final double resolvedIconSize = iconSize ?? 18.0;
+    final double leadingBox = resolvedIconSize + 4.0; // small padding around icon
+    final double gap = horizontalGap ?? 12.0;
     return selected
         ? Stack(
             children: [
@@ -636,13 +647,23 @@ class DrawerListTile extends StatelessWidget {
                 contentPadding: ResponsiveWidget.isTablet(context)
                     ? const EdgeInsets.only(left: 15, right: 10)
                     : const EdgeInsets.only(left: 45, right: 15),
-                horizontalTitleGap: 0.0,
+                horizontalTitleGap: gap,
                 visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
                 minVerticalPadding: 0,
                 onTap: onTap,
-                leading: WebsafeSvg.asset(
-                  iconPath,
-                  colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                minLeadingWidth: leadingBox,
+                leading: SizedBox(
+                  width: leadingBox,
+                  height: leadingBox,
+                  child: Center(
+                    child: WebsafeSvg.asset(
+                      iconPath,
+                      width: resolvedIconSize,
+                      height: resolvedIconSize,
+                      colorFilter:
+                          const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                    ),
+                  ),
                 ),
                 trailing: items != null
                     ? buildNotification(
@@ -680,15 +701,24 @@ class DrawerListTile extends StatelessWidget {
             contentPadding: ResponsiveWidget.isTablet(context)
                 ? const EdgeInsets.only(left: 15, right: 10)
                 : const EdgeInsets.only(left: 45, right: 15),
-            horizontalTitleGap: 0.0,
+            horizontalTitleGap: gap,
             visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
             minVerticalPadding: 0,
             onTap: onTap,
-            leading: WebsafeSvg.asset(
-              iconPath,
-              colorFilter: ColorFilter.mode(
-                ColorManager.kPrimaryColor,
-                BlendMode.srcIn,
+            minLeadingWidth: leadingBox,
+            leading: SizedBox(
+              width: leadingBox,
+              height: leadingBox,
+              child: Center(
+                child: WebsafeSvg.asset(
+                  iconPath,
+                  width: resolvedIconSize,
+                  height: resolvedIconSize,
+                  colorFilter: ColorFilter.mode(
+                    ColorManager.kPrimaryColor,
+                    BlendMode.srcIn,
+                  ),
+                ),
               ),
             ),
             trailing: items != null
