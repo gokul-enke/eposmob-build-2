@@ -20,8 +20,10 @@ import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
 
 import '../../models/list_stock.dart';
+import '../../models/category_list.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/stock_provider.dart';
+import '../../providers/category_providers.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -45,7 +47,6 @@ class _AddStockScreenState extends State<AddStockScreen> {
   ListStockModelData? selectedStock;
   bool initLoading = false;
   bool isInitialized = false;
-  List<String> categories = ["All Categories"]; // Default category option
   List<String> stores = ["All Stores"]; // Default store option
 
   @override
@@ -72,12 +73,17 @@ class _AddStockScreenState extends State<AddStockScreen> {
         return;
       }
 
+      // Load categories first
+      CategoryProvider categoryProvider =
+          Provider.of<CategoryProvider>(context, listen: false);
+      await categoryProvider.searchAllCategory(page: 1);
+
       // Load all stocks for local pagination
       await Provider.of<StockProvider>(context, listen: false)
           .loadAllStocks(accessToken);
 
-      // Extract unique categories and stores from stocks
-      _extractCategoriesAndStores();
+      // Extract unique stores from stocks
+      _extractStores();
 
       setState(() {
         isInitialized = true;
@@ -94,18 +100,11 @@ class _AddStockScreenState extends State<AddStockScreen> {
     }
   }
 
-  void _extractCategoriesAndStores() {
+  void _extractStores() {
     final provider = Provider.of<StockProvider>(context, listen: false);
     final allStocks = provider.allStocks;
 
     if (allStocks != null && allStocks.isNotEmpty) {
-      // Extract unique categories
-      final uniqueCategories = allStocks
-          .map((stock) => stock.categoryName ?? "")
-          .where((category) => category.isNotEmpty)
-          .toSet()
-          .toList();
-
       // Extract unique stores
       final uniqueStores = allStocks
           .map((stock) => stock.storeName ?? "")
@@ -113,12 +112,10 @@ class _AddStockScreenState extends State<AddStockScreen> {
           .toSet()
           .toList();
 
-      // Sort categories and stores alphabetically
-      uniqueCategories.sort();
+      // Sort stores alphabetically
       uniqueStores.sort();
 
       setState(() {
-        categories = ["All Categories", ...uniqueCategories];
         stores = ["All Stores", ...uniqueStores];
       });
     }
@@ -783,29 +780,51 @@ class _AddStockScreenState extends State<AddStockScreen> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            BuildDropDownWithSearch<String>(
-                              title: null,
-                              showName: false,
-                              hintText: 'Please Select',
-                              value: categoryController.text == "All Categories"
-                                  ? null
-                                  : categoryController.text,
-                              items: categories
-                                  .where((category) =>
-                                      category != "All Categories")
-                                  .toList(),
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  categoryController.text =
-                                      newValue ?? "All Categories";
-                                });
-                                searchStocks();
+                            Consumer<CategoryProvider>(
+                              builder: (context, categoryProvider, child) {
+                                List<Category>? categoryList =
+                                    categoryProvider.category;
+                                Category? selectedCategory;
+                                
+                                // Find selected category if categoryController has a value other than "All Categories"
+                                if (categoryController.text != "All Categories" &&
+                                    categoryController.text.isNotEmpty &&
+                                    categoryList != null) {
+                                  try {
+                                    selectedCategory = categoryList.firstWhere(
+                                      (cat) => cat.categoryName == categoryController.text,
+                                      orElse: () => categoryList.first,
+                                    );
+                                  } catch (e) {
+                                    selectedCategory = null;
+                                  }
+                                }
+
+                                return BuildDropDownWithSearch<Category>(
+                                  title: null,
+                                  showName: false,
+                                  hintText: 'Please Select',
+                                  value: selectedCategory,
+                                  items: categoryList != null &&
+                                          categoryList.isNotEmpty
+                                      ? categoryList
+                                          .where((category) =>
+                                              category.categoryName != "ALL")
+                                          .toList()
+                                      : [],
+                                  onChanged: (Category? selected) {
+                                    setState(() {
+                                      categoryController.text = selected?.categoryName ?? "All Categories";
+                                    });
+                                    searchStocks();
+                                  },
+                                  displayText: (category) => category.categoryName ?? '',
+                                  searchController: categorySearchController,
+                                  height: 45,
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 0, vertical: 0),
+                                );
                               },
-                              displayText: (category) => category,
-                              searchController: categorySearchController,
-                              height: 45,
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 0, vertical: 0),
                             ),
                           ],
                         ),
