@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
@@ -337,14 +338,49 @@ class BillingPageState extends State<BillingPage>
   }
 
   // Function to initialize the connectivity listener
-  void _initConnectivityListener() {
-    // TODO: Fix internet connectivity checker implementation
-    // The internet_connection_checker_plus package API needs to be properly configured
-    // For now, assume internet is available to prevent compilation errors
-    _hasInternet = true;
-    
-    // Placeholder for future connectivity monitoring
-    // _internetSubscription = ...
+  void _initConnectivityListener() async {
+    try {
+      // Check initial connectivity status
+      final hasConnection = await InternetConnection().hasInternetAccess;
+      if (mounted) {
+        setState(() {
+          _hasInternet = hasConnection;
+        });
+      }
+
+      // Listen for connectivity changes
+      _internetSubscription = InternetConnection()
+          .onStatusChange
+          .listen((InternetStatus status) {
+        final isConnected = status == InternetStatus.connected;
+        if (mounted) {
+          setState(() {
+            _hasInternet = isConnected;
+          });
+          
+          // Optional: Show feedback when connectivity changes
+          if (!isConnected) {
+            showScaffoldError(
+              context: context,
+              message: 'No internet connection',
+            );
+          } else {
+            showScaffold(
+              context: context,
+              message: 'Internet connection restored',
+            );
+          }
+        }
+      });
+    } catch (e) {
+      debugPrint('Error initializing connectivity listener: $e');
+      // Fallback to assuming connection is available
+      if (mounted) {
+        setState(() {
+          _hasInternet = true;
+        });
+      }
+    }
   }
 
   // Rehydrate all UI state from the provider's current order
@@ -1305,6 +1341,9 @@ class BillingPageState extends State<BillingPage>
               showTooltip: true,
               showText: false,
             ),
+            // Connectivity indicator
+            const SizedBox(width: 0),
+            _buildConnectivityIndicator(),
             // Show toggle button next to order number when sidebar is hidden
             if (!_isSidebarVisible) ...[
               const SizedBox(width: 12),
@@ -1327,6 +1366,39 @@ class BillingPageState extends State<BillingPage>
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildConnectivityIndicator() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _hasInternet ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _hasInternet ? Colors.green : Colors.red,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            _hasInternet ? Icons.wifi : Icons.wifi_off,
+            size: 16,
+            color: _hasInternet ? Colors.green : Colors.red,
+          ),
+          // const SizedBox(width: 4),
+          // Text(
+          //   _hasInternet ? 'Online' : 'Offline',
+          //   style: TextStyle(
+          //     fontSize: 12,
+          //     fontWeight: FontWeight.w500,
+          //     color: _hasInternet ? Colors.green : Colors.red,
+          //   ),
+          // ),
+        ],
+      ),
     );
   }
 
