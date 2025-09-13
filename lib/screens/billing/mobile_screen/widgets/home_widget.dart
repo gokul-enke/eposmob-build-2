@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
+
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list_mobile.dart';
@@ -8,16 +8,15 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/widgets/product_autocomplete_list.dart';
+import 'package:pos_machine/providers/billing_provider.dart';
+
 import 'package:websafe_svg/websafe_svg.dart';
 
 class HomeWidget extends StatefulWidget {
-  final List<Map<String, dynamic>> cartItems;
   final String? selectedOrderId;
 
   const HomeWidget({
     super.key,
-    required this.cartItems,
     this.selectedOrderId,
   });
 
@@ -26,43 +25,26 @@ class HomeWidget extends StatefulWidget {
 }
 
 class _HomeWidgetState extends State<HomeWidget> {
-  final TextEditingController barcodeController = TextEditingController();
-  final TextEditingController quantityController = TextEditingController();
-  final TextEditingController unitPriceController = TextEditingController();
-  final TextEditingController selectedProductIdController =
-      TextEditingController();
-  final TextEditingController selectedProductNameController =
-      TextEditingController();
-  final FocusNode _quantityFocusNode = FocusNode();
-  final FocusNode _unitPriceFocusNode = FocusNode();
-  final FocusNode _barcodeNode = FocusNode();
-  bool _isProcessingBarcode = false;
-  bool isLoadingAddItem = false;
-  GlobalKey _autocompleteProductKey = GlobalKey();
+  // We'll use the BillingProvider controllers and focus nodes instead of local ones
 
   @override
   void initState() {
     super.initState();
-    _quantityFocusNode.addListener(() {
-      if (_quantityFocusNode.hasFocus) {
-        quantityController.selection = TextSelection(
-          baseOffset: 0,
-          extentOffset: quantityController.text.length,
-        );
-      }
-    });
-
-    _unitPriceFocusNode.addListener(() {
-      if (_unitPriceFocusNode.hasFocus) {
-        unitPriceController.selection = TextSelection(
-          baseOffset: 0,
-          extentOffset: unitPriceController.text.length,
-        );
-      }
-    });
-
-    // Load order if provided
+    
+    // Setup focus listeners through billing provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+      
+      // Setup focus change handlers
+      billingProvider.quantityFocusNode.addListener(() {
+        billingProvider.handleQuantityFocusChange();
+      });
+      
+      billingProvider.unitPriceFocusNode.addListener(() {
+        billingProvider.handleUnitPriceFocusChange();
+      });
+      
+      // Load order if provided
       _loadOrderIfNeeded();
     });
   }
@@ -97,108 +79,101 @@ class _HomeWidgetState extends State<HomeWidget> {
 
   @override
   void dispose() {
-    barcodeController.dispose();
-    quantityController.dispose();
-    unitPriceController.dispose();
-    selectedProductIdController.dispose();
-    selectedProductNameController.dispose();
-    _quantityFocusNode.dispose();
-    _unitPriceFocusNode.dispose();
-    _barcodeNode.dispose();
+    // Controllers and focus nodes are managed by BillingProvider
     super.dispose();
   }
 
   Future<void> processBarcode(String barcode) async {
-    if (_isProcessingBarcode || barcode.isEmpty) return;
+    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    
+    // Use billing provider's barcode processing with debounce
+    billingProvider.processBarcodeWithDebounce(barcode, () async {
+      String query = barcode;
+      List<GetProduct> filteredProducts = [];
+      
+      try {
+        String? prefix;
+        String? productCode;
+        String? lastFive;
 
-    setState(() {
-      _isProcessingBarcode = true;
-    });
-    String query = barcode;
-
-    List<GetProduct> filteredProducts = [];
-    try {
-      String? prefix;
-      String? productCode;
-      String? lastFive;
-
-      if (query.length > 2) {
-        prefix = query.substring(0, 3);
-      }
-
-      if (prefix != '000' || query.length != 14) {
-        filteredProducts =
-            Provider.of<LocalProductProvider>(context, listen: false)
-                .filterProductByBarcode(barCode: query);
-      } else {
-        productCode = query.substring(3, 9);
-        lastFive = query.substring(9, 14);
-        filteredProducts =
-            Provider.of<LocalProductProvider>(context, listen: false)
-                .filterProductByBarcode(barCode: productCode);
-      }
-
-      if (filteredProducts.isNotEmpty) {
-        GetProduct product = filteredProducts.first;
-
-        num? quantity;
-        if ((product.unit == 'KGS' || product.unit == 'KG') &&
-            prefix == '000' &&
-            query.length == 14) {
-          String weightKg = lastFive!.substring(0, 2);
-          String weightGrams = lastFive.substring(2, 5);
-          quantity =
-              double.parse(weightKg) + (double.parse(weightGrams) / 1000);
-        } else if ((product.unit == 'PCS' || product.unit == 'PC') &&
-            prefix == '000' &&
-            query.length == 14) {
-          quantity = int.parse(lastFive!);
+        if (query.length > 2) {
+          prefix = query.substring(0, 3);
         }
 
-        await ProductCartHelper.handleProductSelection(
-          context: context,
-          product: product,
-          quantity: quantity,
-          addToCartDirectly: true,
-        );
+        if (prefix != '000' || query.length != 14) {
+          filteredProducts =
+              Provider.of<LocalProductProvider>(context, listen: false)
+                  .filterProductByBarcode(barCode: query);
+        } else {
+          productCode = query.substring(3, 9);
+          lastFive = query.substring(9, 14);
+          filteredProducts =
+              Provider.of<LocalProductProvider>(context, listen: false)
+                  .filterProductByBarcode(barCode: productCode);
+        }
 
-        setState(() {
-          _autocompleteProductKey = GlobalKey();
-          quantityController.clear();
-          barcodeController.clear();
-          selectedProductIdController.clear();
-          unitPriceController.clear();
-        });
-        _focusTextField();
-      } else {
-        // Handle barcode not found case
-      }
-    } catch (e) {
-      debugPrint("Error processing barcode: $e");
-    } finally {
-      Future.delayed(const Duration(milliseconds: 500), () {
+        if (filteredProducts.isNotEmpty) {
+          GetProduct product = filteredProducts.first;
+
+          num? quantity;
+          if ((product.unit == 'KGS' || product.unit == 'KG') &&
+              prefix == '000' &&
+              query.length == 14) {
+            String weightKg = lastFive!.substring(0, 2);
+            String weightGrams = lastFive.substring(2, 5);
+            quantity =
+                double.parse(weightKg) + (double.parse(weightGrams) / 1000);
+          } else if ((product.unit == 'PCS' || product.unit == 'PC') &&
+              prefix == '000' &&
+              query.length == 14) {
+            quantity = int.parse(lastFive!);
+          }
+
+          await ProductCartHelper.handleProductSelection(
+            context: context,
+            product: product,
+            quantity: quantity,
+            addToCartDirectly: true,
+            customerId: billingProvider.selectedCustomerID,
+            customerName: billingProvider.selectedCustomer?.name,
+          );
+
+          // Clear fields using billing provider
+          billingProvider.clearProductFieldsAndReset();
+          _focusTextField();
+        } else {
+          // Handle barcode not found case
+          showScaffoldError(
+            context: context,
+            message: "Product not found for barcode: $barcode",
+          );
+        }
+      } catch (e) {
+        debugPrint("Error processing barcode: $e");
         if (mounted) {
-          setState(() {
-            _isProcessingBarcode = false;
-          });
+          showScaffoldError(
+            context: context,
+            message: "Invalid barcode format",
+          );
         }
-      });
-    }
+      }
+    });
   }
 
   void _focusTextField() {
-    selectedProductNameController.clear();
+    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    billingProvider.selectedProductNameController.clear();
     Provider.of<LocalProductProvider>(context, listen: false)
         .resetSelectedProduct();
   }
 
   Future<void> _addItem() async {
-    setState(() {
-      isLoadingAddItem = true;
-    });
+    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+    
+    billingProvider.setLoadingAddItem(true);
+    
     try {
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
       final selectedProduct = localProductProvider.selectedProduct;
 
       if (selectedProduct != null) {
@@ -206,18 +181,18 @@ class _HomeWidgetState extends State<HomeWidget> {
 
         localProductProvider.addToCart(
           product: selectedProduct,
-          quantity: num.tryParse(quantityController.text),
-          price: double.tryParse(unitPriceController.text),
+          quantity: num.tryParse(billingProvider.quantityController.text),
+          price: double.tryParse(billingProvider.unitPriceController.text),
         );
 
-        setState(() {
-          _autocompleteProductKey = GlobalKey();
-          quantityController.clear();
-          barcodeController.clear();
-          selectedProductIdController.clear();
-          unitPriceController.clear();
-        });
+        // Clear fields using billing provider
+        billingProvider.clearProductFieldsAndReset();
         _focusTextField();
+        
+        showScaffold(
+          context: context,
+          message: "Item added to cart",
+        );
       } else {
         showScaffoldError(
           context: context,
@@ -231,17 +206,15 @@ class _HomeWidgetState extends State<HomeWidget> {
         message: "Error adding item to cart",
       );
     } finally {
-      setState(() {
-        isLoadingAddItem = false;
-      });
+      billingProvider.setLoadingAddItem(false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<LocalProductProvider>(
-      builder: (context, provider, child) {
-        final isEditingOrder = provider.currentOrder != null;
+    return Consumer2<BillingProvider, LocalProductProvider>(
+      builder: (context, billingProvider, localProvider, child) {
+        final isEditingOrder = localProvider.currentOrder != null;
 
         return Column(
           children: [
@@ -251,7 +224,7 @@ class _HomeWidgetState extends State<HomeWidget> {
               child: Container(
                 color: Colors.white,
                 padding: const EdgeInsets.all(16),
-                child: _buildProductEntrySection(),
+                child: _buildProductEntrySection(billingProvider),
               ),
             ),
 
@@ -270,11 +243,11 @@ class _HomeWidgetState extends State<HomeWidget> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _buildCartItemsSection(provider),
+                            _buildCartItemsSection(localProvider),
                             // Empty space if needed
-                            if (provider.cartItems.length < 4)
+                            if (localProvider.cartItems.length < 4)
                               SizedBox(
-                                  height: (4 - provider.cartItems.length) * 80),
+                                  height: (4 - localProvider.cartItems.length) * 80),
                           ],
                         ),
                       ),
@@ -291,7 +264,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 color: Colors.white,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: _buildActionButtons(provider, isEditingOrder),
+                child: _buildActionButtons(billingProvider, localProvider, isEditingOrder),
               ),
             ),
           ],
@@ -300,15 +273,15 @@ class _HomeWidgetState extends State<HomeWidget> {
     );
   }
 
-  Widget _buildProductEntrySection() {
+  Widget _buildProductEntrySection(BillingProvider billingProvider) {
     return Column(
       children: [
         Row(
           children: [
             Expanded(
               child: TextField(
-                controller: barcodeController,
-                focusNode: _barcodeNode,
+                controller: billingProvider.barcodeController,
+                focusNode: billingProvider.barcodeNode,
                 decoration: InputDecoration(
                   labelText: 'Barcode',
                   border: OutlineInputBorder(
@@ -328,7 +301,7 @@ class _HomeWidgetState extends State<HomeWidget> {
             const SizedBox(width: 10),
             Expanded(
               child: MobileProductAutocomplete(
-                autocompleteProductKey: _autocompleteProductKey,
+                autocompleteProductKey: billingProvider.autocompleteProductKey,
                 size: MediaQuery.of(context).size,
                 onSelected: (GetProduct selectedProduct, Stock? selectedStock) {
                   double defaultPrice = 0.0;
@@ -341,15 +314,13 @@ class _HomeWidgetState extends State<HomeWidget> {
                             0.0;
                   }
 
-                  setState(() {
-                    selectedProductIdController.text =
-                        selectedProduct.productId.toString();
-                    unitPriceController.text = defaultPrice.toString();
-                    quantityController.text = '1';
-                    selectedProductNameController.text =
-                        selectedProduct.productName ?? '';
-                    barcodeController.text = selectedProduct.barcode ?? '';
-                  });
+                  billingProvider.selectedProductIdController.text =
+                      selectedProduct.productId.toString();
+                  billingProvider.unitPriceController.text = defaultPrice.toString();
+                  billingProvider.quantityController.text = '1';
+                  billingProvider.selectedProductNameController.text =
+                      selectedProduct.productName ?? '';
+                  billingProvider.barcodeController.text = selectedProduct.barcode ?? '';
                 },
                 productList:
                     Provider.of<LocalProductProvider>(context, listen: false)
@@ -363,14 +334,7 @@ class _HomeWidgetState extends State<HomeWidget> {
               circleRadius: 5,
               child: InkWell(
                 onTap: () {
-                  setState(() {
-                    _autocompleteProductKey = GlobalKey();
-                    quantityController.clear();
-                    barcodeController.clear();
-                    selectedProductIdController.clear();
-                    unitPriceController.clear();
-                    selectedProductNameController.clear();
-                  });
+                  billingProvider.clearProductFieldsAndReset();
                   Provider.of<LocalProductProvider>(context, listen: false)
                       .resetSelectedProduct();
                   _focusTextField();
@@ -396,8 +360,8 @@ class _HomeWidgetState extends State<HomeWidget> {
           children: [
             Expanded(
               child: TextField(
-                controller: quantityController,
-                focusNode: _quantityFocusNode,
+                controller: billingProvider.quantityController,
+                focusNode: billingProvider.quantityFocusNode,
                 decoration: InputDecoration(
                   labelText: 'Quantity',
                   border: OutlineInputBorder(
@@ -412,8 +376,8 @@ class _HomeWidgetState extends State<HomeWidget> {
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
-                controller: unitPriceController,
-                focusNode: _unitPriceFocusNode,
+                controller: billingProvider.unitPriceController,
+                focusNode: billingProvider.unitPriceFocusNode,
                 decoration: InputDecoration(
                   labelText: 'Price',
                   prefixText: '₹ ',
@@ -428,7 +392,7 @@ class _HomeWidgetState extends State<HomeWidget> {
             ),
             const SizedBox(width: 10),
             ElevatedButton.icon(
-              onPressed: isLoadingAddItem ? null : _addItem,
+              onPressed: billingProvider.isLoadingAddItem ? null : _addItem,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue[700],
                 padding:
@@ -437,7 +401,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              icon: isLoadingAddItem
+              icon: billingProvider.isLoadingAddItem
                   ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -504,7 +468,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '₹${(item.price! * item.quantity).toStringAsFixed(2)}',
+                          '₹${((item.price ?? 0) * item.quantity).toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14, // Slightly smaller font
@@ -557,7 +521,7 @@ class _HomeWidgetState extends State<HomeWidget> {
     );
   }
 
-  void _saveOrder(LocalProductProvider provider, bool isEditingOrder) async {
+  void _saveOrder(BillingProvider billingProvider, LocalProductProvider provider, bool isEditingOrder) async {
     if (provider.cartItems.isEmpty) {
       showScaffoldError(
         context: context,
@@ -568,7 +532,7 @@ class _HomeWidgetState extends State<HomeWidget> {
 
     // Validate that all items have valid pricing
     bool hasInvalidPricing =
-        provider.cartItems.any((item) => item.price == null || item.price! < 0);
+        provider.cartItems.any((item) => item.price == null || (item.price ?? 0) < 0);
 
     if (hasInvalidPricing) {
       showScaffoldError(
@@ -613,14 +577,8 @@ class _HomeWidgetState extends State<HomeWidget> {
       provider.clearCart();
       provider.clearCurrentOrder();
 
-      // Clear form fields
-      setState(() {
-        quantityController.clear();
-        barcodeController.clear();
-        selectedProductIdController.clear();
-        unitPriceController.clear();
-        selectedProductNameController.clear();
-      });
+      // Clear form fields using billing provider
+      billingProvider.clearProductFieldsAndReset();
 
       _focusTextField();
     } catch (e) {
@@ -633,21 +591,16 @@ class _HomeWidgetState extends State<HomeWidget> {
   }
 
   Widget _buildActionButtons(
-      LocalProductProvider provider, bool isEditingOrder) {
+      BillingProvider billingProvider, LocalProductProvider provider, bool isEditingOrder) {
     return Row(
       children: [
         Expanded(
           child: OutlinedButton(
             onPressed: () {
+              billingProvider.clearCart();
               provider.clearCart();
               provider.clearCurrentOrder();
-              setState(() {
-                quantityController.clear();
-                barcodeController.clear();
-                selectedProductIdController.clear();
-                unitPriceController.clear();
-                selectedProductNameController.clear();
-              });
+              billingProvider.clearProductFieldsAndReset();
               showScaffold(
                 context: context,
                 message: 'Cart cleared successfully',
@@ -669,7 +622,7 @@ class _HomeWidgetState extends State<HomeWidget> {
         const SizedBox(width: 12),
         Expanded(
           child: OutlinedButton(
-            onPressed: () => _saveOrder(provider, isEditingOrder),
+            onPressed: () => _saveOrder(billingProvider, provider, isEditingOrder),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               side: const BorderSide(color: Colors.orange),

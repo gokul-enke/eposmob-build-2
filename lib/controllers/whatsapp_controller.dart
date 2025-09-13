@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:whatsapp_bot_flutter/whatsapp_bot_flutter.dart';
@@ -10,21 +11,24 @@ class WhatsappController extends GetxController {
   final RxInt progress = 0.obs; // heuristic progress
   final RxString error = ''.obs;
   final RxBool isConnecting = false.obs;
+  final RxString lastConnected = ''.obs;
+  final RxBool chromiumDownloaded = false.obs;
 
   WhatsappClient? _client;
   Timer? _connectionTimeout;
-  
+
   // Session persistence keys
   static const String _sessionKey = 'whatsapp_session_active';
   static const String _lastConnectedKey = 'whatsapp_last_connected';
+  static const String _chromiumDownloadedKey = 'chromium_downloaded';
 
   Future<void> connect() async {
     if (isConnecting.value) {
-      print('🔗 WhatsApp: Connection already in progress...');
+      debugPrint('🔗 WhatsApp: Connection already in progress...');
       return;
     }
 
-    print('🔗 WhatsApp: Starting connection...');
+    debugPrint('🔗 WhatsApp: Starting connection...');
     isConnecting.value = true;
     error.value = '';
     progress.value = 5;
@@ -41,45 +45,46 @@ class WhatsappController extends GetxController {
     });
 
     try {
-      print('🔗 WhatsApp: Initializing WhatsApp client...');
+      debugPrint('🔗 WhatsApp: Initializing WhatsApp client...');
       progress.value = 10;
-      
+
       // Add a small delay to show initial progress
       await Future.delayed(const Duration(milliseconds: 500));
       progress.value = 15;
 
-      print('🔗 WhatsApp: Calling WhatsappBotFlutter.connect...');
+      debugPrint('🔗 WhatsApp: Calling WhatsappBotFlutter.connect...');
       _client = await WhatsappBotFlutter.connect(
         onConnectionEvent: (ConnectionEvent event) {
-          print('🔗 WhatsApp: Connection event: $event');
+          debugPrint('🔗 WhatsApp: Connection event: $event');
           _handleConnectionEvent(event);
         },
         onQrCode: (String qr, Uint8List? imageBytes) {
-          print('🔗 WhatsApp: QR Code received! Length: ${qr.length}');
-          print('🔗 WhatsApp: QR Code data: ${qr.substring(0, 50)}...');
-          
+          debugPrint('🔗 WhatsApp: QR Code received! Length: ${qr.length}');
+          debugPrint('🔗 WhatsApp: QR Code data: ${qr.substring(0, 50)}...');
+
           // Clear any previous errors
           error.value = '';
-          
+
           // Set the QR code for display
           qrCode.value = qr;
           progress.value = 40;
-          
-          print('🔗 WhatsApp: QR Code set in observable, UI should update');
+
+          debugPrint(
+              '🔗 WhatsApp: QR Code set in observable, UI should update');
         },
       );
-      
-      print('🔗 WhatsApp: Connect method completed, client: $_client');
-      
+
+      debugPrint('🔗 WhatsApp: Connect method completed, client: $_client');
+
       if (_client != null) {
         progress.value = 60;
-        print('🔗 WhatsApp: Client created successfully, waiting for QR or connection...');
+        debugPrint(
+            '🔗 WhatsApp: Client created successfully, waiting for QR or connection...');
       } else {
         throw Exception('Failed to create WhatsApp client');
       }
-      
     } catch (e) {
-      print('🔗 WhatsApp: Error during connection: $e');
+      debugPrint('🔗 WhatsApp: Error during connection: $e');
       error.value = 'Connection failed: ${e.toString()}';
       connected.value = false;
       progress.value = 0;
@@ -92,7 +97,7 @@ class WhatsappController extends GetxController {
     switch (event) {
       case ConnectionEvent.connected:
       case ConnectionEvent.authenticated:
-        print('🔗 WhatsApp: Connected/Authenticated!');
+        debugPrint('🔗 WhatsApp: Connected/Authenticated!');
         connected.value = true;
         progress.value = 100;
         qrCode.value = '';
@@ -101,46 +106,47 @@ class WhatsappController extends GetxController {
         _saveConnectionState(true);
         break;
       case ConnectionEvent.logout:
-        print('🔗 WhatsApp: Logged out');
+        debugPrint('🔗 WhatsApp: Logged out');
         connected.value = false;
         progress.value = 0;
         isConnecting.value = false;
         _saveConnectionState(false);
         break;
       default:
-        print('🔗 WhatsApp: Intermediate state: $event');
-        // Handle specific events for better user feedback
+        debugPrint('🔗 WhatsApp: Intermediate state: $event');
         if (event.toString().contains('downloadingChrome')) {
           progress.value = 25;
           error.value = 'Downloading Chromium... This may take a few minutes.';
         } else if (event.toString().contains('initializing')) {
           progress.value = 15;
           error.value = 'Initializing WhatsApp client...';
-        } else {
-          progress.value = 50;
+        } else if (event.toString().contains('ready')) {
+          // Chromium successfully downloaded
+          _saveChromiumDownloaded(true);
+          chromiumDownloaded.value = true;
         }
     }
   }
 
   Future<void> sendTestMessage(String phone, String message) async {
-    print('📱 WhatsApp: Sending message to $phone');
+    debugPrint('📱 WhatsApp: Sending message to $phone');
     try {
       if (_client == null) {
-        print('📱 WhatsApp: Client is null!');
+        debugPrint('📱 WhatsApp: Client is null!');
         error.value = 'Client not connected';
         return;
       }
-      print('📱 WhatsApp: Calling sendTextMessage...');
+      debugPrint('📱 WhatsApp: Calling sendTextMessage...');
       await _client!.chat.sendTextMessage(phone: phone, message: message);
-      print('📱 WhatsApp: Message sent successfully');
+      debugPrint('📱 WhatsApp: Message sent successfully');
     } catch (e) {
-      print('📱 WhatsApp: Error sending message: $e');
+      debugPrint('📱 WhatsApp: Error sending message: $e');
       error.value = e.toString();
     }
   }
 
   void reset() {
-    print('🔄 WhatsApp: Resetting controller state');
+    debugPrint('🔄 WhatsApp: Resetting controller state');
     _connectionTimeout?.cancel();
     qrCode.value = '';
     progress.value = 0;
@@ -149,16 +155,17 @@ class WhatsappController extends GetxController {
     isConnecting.value = false;
     _client = null;
     _saveConnectionState(false);
+    _saveChromiumDownloaded(false);
   }
 
   /// Clear Chromium cache and try reconnection
   Future<void> clearCacheAndReconnect() async {
-    print('🔄 WhatsApp: Clearing cache and reconnecting...');
+    debugPrint('🔄 WhatsApp: Clearing cache and reconnecting...');
     reset();
-    
+
     // Add delay to ensure cleanup
     await Future.delayed(const Duration(seconds: 2));
-    
+
     // Try connection again
     await connect();
   }
@@ -169,11 +176,24 @@ class WhatsappController extends GetxController {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_sessionKey, isConnected);
       if (isConnected) {
-        await prefs.setInt(_lastConnectedKey, DateTime.now().millisecondsSinceEpoch);
+        final now = DateTime.now();
+        await prefs.setInt(_lastConnectedKey, now.millisecondsSinceEpoch);
+        lastConnected.value = '${now.day}/${now.month}/${now.year} ${now.hour}:${now.minute}';
       }
-      print('💾 WhatsApp: Session state saved: $isConnected');
+      debugPrint('💾 WhatsApp: Session state saved: $isConnected');
     } catch (e) {
-      print('💾 WhatsApp: Failed to save session state: $e');
+      debugPrint('💾 WhatsApp: Failed to save session state: $e');
+    }
+  }
+
+  /// Save Chromium download status to SharedPreferences
+  Future<void> _saveChromiumDownloaded(bool isDownloaded) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_chromiumDownloadedKey, isDownloaded);
+      debugPrint('💾 WhatsApp: Chromium download status saved: $isDownloaded');
+    } catch (e) {
+      debugPrint('💾 WhatsApp: Failed to save Chromium download status: $e');
     }
   }
 
@@ -182,25 +202,28 @@ class WhatsappController extends GetxController {
     try {
       final prefs = await SharedPreferences.getInstance();
       final wasConnected = prefs.getBool(_sessionKey) ?? false;
-      final lastConnected = prefs.getInt(_lastConnectedKey) ?? 0;
-      
-      if (wasConnected && lastConnected > 0) {
-        final lastConnectedTime = DateTime.fromMillisecondsSinceEpoch(lastConnected);
-        final timeDiff = DateTime.now().difference(lastConnectedTime);
-        
-        // If last connection was within 24 hours, try to restore
-        if (timeDiff.inHours < 24) {
-          print('💾 WhatsApp: Found recent session, attempting to restore...');
-          await connect();
-        } else {
-          print('💾 WhatsApp: Session expired (${timeDiff.inHours} hours old)');
-          await _saveConnectionState(false);
-        }
+      chromiumDownloaded.value = prefs.getBool(_chromiumDownloadedKey) ?? false;
+
+      if (wasConnected) {
+        debugPrint(
+            '💾 WhatsApp: Found saved session, attempting to restore...');
+        await connect();
       } else {
-        print('💾 WhatsApp: No saved session found');
+        debugPrint('💾 WhatsApp: No saved session found');
       }
     } catch (e) {
-      print('💾 WhatsApp: Failed to check saved session: $e');
+      debugPrint('💾 WhatsApp: Failed to check saved session: $e');
+    }
+  }
+
+  Future<void> disconnect() async {
+    debugPrint('🔌 WhatsApp: Disconnecting...');
+    try {
+      await _client?.logout();
+      reset();
+    } catch (e) {
+      debugPrint('🔌 WhatsApp: Error during disconnect: $e');
+      error.value = 'Disconnect failed: ${e.toString()}';
     }
   }
 
@@ -208,7 +231,12 @@ class WhatsappController extends GetxController {
   void onInit() {
     super.onInit();
     // Check for saved session on controller initialization
-    checkSavedSession();
+    checkSavedSession().then((_) {
+      if (!connected.value) {
+        // Auto-show QR if no saved session
+        connect();
+      }
+    });
   }
 
   @override

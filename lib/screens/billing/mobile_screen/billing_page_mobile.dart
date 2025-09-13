@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/screens/billing/mobile_screen/widgets/billing_widget.dart';
 import 'package:pos_machine/screens/billing/mobile_screen/widgets/home_widget.dart';
 import 'package:pos_machine/screens/billing/mobile_screen/widgets/order_list_widget.dart';
@@ -14,12 +15,75 @@ class BillingPageMobile extends StatefulWidget {
 
 class _BillingPageMobileState extends State<BillingPageMobile> {
   int _currentIndex = 0;
-  final List<Map<String, dynamic>> _cartItems = [
-    {'name': 'Product 1', 'price': 100.0, 'quantity': 2, 'total': 200.0},
-    {'name': 'Product 2', 'price': 50.0, 'quantity': 3, 'total': 150.0},
-    // ... other products
-  ];
   String? _selectedOrderId;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize the billing provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+      
+      // Initialize connectivity listener with UI feedback
+      billingProvider.initConnectivityListener(
+        onConnectivityChanged: (message) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                duration: const Duration(seconds: 2),
+                backgroundColor: message.contains('No internet') ? Colors.red : Colors.green,
+              ),
+            );
+          }
+        },
+      );
+      
+      // Initialize delivery method
+      billingProvider.initializeDeliveryMethod();
+      
+      // Register keyboard shortcuts
+      billingProvider.registerDefaultKeyboardShortcuts(
+        onClearCart: () => _clearCart(),
+        onSaveOrder: () => _saveOrder(),
+        onCreateOrderAndPrint: () => _createOrderAndPrint(),
+        onConfirmOrder: () => _confirmOrder(),
+      );
+    });
+  }
+
+  void _clearCart() {
+    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final localProvider = Provider.of<LocalProductProvider>(context, listen: false);
+    
+    billingProvider.clearCart();
+    localProvider.clearCart();
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Cart cleared successfully')),
+    );
+  }
+
+  void _saveOrder() {
+    // Implement save order logic
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Order saved successfully')),
+    );
+  }
+
+  void _createOrderAndPrint() {
+    // Implement create and print logic
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Order created and sent to print')),
+    );
+  }
+
+  void _confirmOrder() {
+    // Implement confirm order logic
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Order confirmed successfully')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,28 +150,33 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
   }
 
   Widget _buildCurrentScreen() {
-    switch (_currentIndex) {
-      case 0:
-        return HomeWidget(
-          cartItems: _cartItems,
-          selectedOrderId: _selectedOrderId,
-          );
-      case 1:
-        return BillingWidget(cartItems: _cartItems);
-      case 2:
-        return ViewOrders(
-          onOrderSelected: (orderId) {
-            setState(() {
-              _selectedOrderId = orderId;
-              _currentIndex = 0; // Switch to billing tab
-            });
-            final provider = Provider.of<LocalProductProvider>(context, listen: false);
-            provider.loadOrderForEditing(orderId);
-          },
-        );
-      default:
-        return Container();
-    }
+    return Consumer2<BillingProvider, LocalProductProvider>(
+      builder: (context, billingProvider, localProvider, child) {
+        switch (_currentIndex) {
+          case 0:
+            return HomeWidget(
+              selectedOrderId: _selectedOrderId,
+            );
+          case 1:
+            return const BillingWidget();
+          case 2:
+            return ViewOrders(
+              onOrderSelected: (orderId) {
+                setState(() {
+                  _selectedOrderId = orderId;
+                  _currentIndex = 0; // Switch to home tab
+                });
+                localProvider.loadOrderForEditing(orderId);
+                
+                // Update billing provider state
+                billingProvider.setLastRehydratedOrderId(orderId);
+              },
+            );
+          default:
+            return Container();
+        }
+      },
+    );
   }
 
   // Widget _getAppBarTitle() {

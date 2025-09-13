@@ -70,127 +70,129 @@ class WhatsappSettingsScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Connection',
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s16,
-                                        0.24,
-                                        ColorManager.textColor,
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Connection',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s16,
+                                          0.24,
+                                          ColorManager.textColor,
+                                        ),
                                       ),
-                                    ),
-                                    Obx(() => Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color: ctrl.connected.value
-                                                ? const Color(0xFF25D366).withOpacity(0.12)
-                                                : Colors.orange.withOpacity(0.12),
-                                            borderRadius: BorderRadius.circular(999),
-                                            border: Border.all(
-                                              color: ctrl.connected.value ? const Color(0xFF25D366) : Colors.orange,
-                                              width: 0.8,
+                                      Obx(() => Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: ctrl.connected.value
+                                                  ? const Color(0xFF25D366).withOpacity(0.12)
+                                                  : Colors.orange.withOpacity(0.12),
+                                              borderRadius: BorderRadius.circular(999),
+                                              border: Border.all(
+                                                color: ctrl.connected.value ? const Color(0xFF25D366) : Colors.orange,
+                                                width: 0.8,
+                                              ),
                                             ),
-                                          ),
-                                          child: Text(
-                                            ctrl.connected.value ? 'Connected' : 'Not Connected',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.18,
-                                              ctrl.connected.value ? const Color(0xFF128C7E) : Colors.orange,
+                                            child: Text(
+                                              ctrl.connected.value ? 'Connected' : 'Not Connected',
+                                              style: buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.18,
+                                                ctrl.connected.value ? const Color(0xFF128C7E) : Colors.orange,
+                                              ),
                                             ),
-                                          ),
-                                        )),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Scan the QR code from WhatsApp on your phone (Linked Devices) to connect. First desktop launch may take time to download Chromium.',
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s12,
-                                    0.18,
-                                    ColorManager.textColor,
+                                          )),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(height: 14),
-                                Obx(() {
-                                  final qr = ctrl.qrCode.value;
-                                  final isConnecting = ctrl.isConnecting.value;
-                                  final connected = ctrl.connected.value;
-                                  
-                                  return AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 250),
-                                    child: qr.isNotEmpty
-                                        ? Center(
-                                            child: Container(
-                                              padding: const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                borderRadius: BorderRadius.circular(12),
-                                                color: Colors.white,
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.grey.withOpacity(0.2),
-                                                    blurRadius: 8,
-                                                    offset: const Offset(0, 2),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: SizedBox(
-                                                height: 140,
-                                                width: 140,
-                                                child: PrettyQrView.data(
-                                                  data: qr,
-                                                  decoration: const PrettyQrDecoration(
-                                                    shape: PrettyQrSmoothSymbol(
-                                                      color: Color(0xFF25D366),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Scan the QR code from WhatsApp on your phone (Linked Devices) to connect. First desktop launch may take time to download Chromium.',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      FontSize.s12,
+                                      0.18,
+                                      ColorManager.textColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Obx(() {
+                                    final qr = ctrl.qrCode.value;
+                                    final isConnecting = ctrl.isConnecting.value;
+                                    final connected = ctrl.connected.value;
+                                    
+                                    return AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 250),
+                                      child: qr.isNotEmpty || isConnecting
+                                          ? Center(
+                                              child: Container(
+                                                padding: const EdgeInsets.all(8),
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  color: Colors.white,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.grey.withOpacity(0.2),
+                                                      blurRadius: 8,
+                                                      offset: const Offset(0, 2),
                                                     ),
-                                                  ),
-                                                  errorCorrectLevel: QrErrorCorrectLevel.M,
+                                                  ],
+                                                ),
+                                                child: SizedBox(
+                                                  height: 140,
+                                                  width: 140,
+                                                  child: qr.isNotEmpty
+                                                      ? PrettyQrView.data(
+                                                          data: qr,
+                                                          decoration: const PrettyQrDecoration(
+                                                            shape: PrettyQrSmoothSymbol(
+                                                              color: Color(0xFF25D366),
+                                                            ),
+                                                          ),
+                                                          errorCorrectLevel: QrErrorCorrectLevel.M,
+                                                        )
+                                                      : Column(
+                                                          mainAxisAlignment: MainAxisAlignment.center,
+                                                          children: [
+                                                            const CircularProgressIndicator(
+                                                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF25D366)),
+                                                            ),
+                                                            const SizedBox(height: 12),
+                                                            Text(
+                                                              connected 
+                                                                  ? 'Connected!'
+                                                                  : ctrl.progress.value < 20
+                                                                      ? 'Initializing...'
+                                                                      : 'Generating QR...',
+                                                              style: buildCustomStyle(
+                                                                FontWeightManager.medium,
+                                                                FontSize.s12,
+                                                                0.18,
+                                                                const Color(0xFF25D366),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
                                                 ),
                                               ),
-                                            ),
-                                          )
-                                        : Center(
-                                            child: Container(
-                                              height: 160,
-                                              width: 160,
-                                              alignment: Alignment.center,
-                                              decoration: BoxDecoration(
-                                                borderRadius: BorderRadius.circular(12),
-                                                color: Colors.grey.shade100,
-                                                border: Border.all(
-                                                  color: isConnecting 
-                                                      ? const Color(0xFF25D366).withOpacity(0.3)
-                                                      : Colors.grey.shade300,
-                                                  width: 2,
+                                            )
+                                          : Center(
+                                              child: Container(
+                                                height: 160,
+                                                width: 160,
+                                                alignment: Alignment.center,
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  color: Colors.grey.shade100,
+                                                  border: Border.all(
+                                                    color: Colors.grey.shade300,
+                                                    width: 2,
+                                                  ),
                                                 ),
-                                              ),
-                                              child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  if (isConnecting) ...[
-                                                    const CircularProgressIndicator(
-                                                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF25D366)),
-                                                    ),
-                                                    const SizedBox(height: 12),
-                                                    Text(
-                                                      connected 
-                                                          ? 'Connected!'
-                                                          : ctrl.progress.value < 20
-                                                              ? 'Initializing...'
-                                                              : 'Generating QR...',
-                                                      style: buildCustomStyle(
-                                                        FontWeightManager.medium,
-                                                        FontSize.s12,
-                                                        0.18,
-                                                        const Color(0xFF25D366),
-                                                      ),
-                                                    ),
-                                                  ] else ...[
+                                                child: Column(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
                                                     Icon(
                                                       Icons.qr_code_2,
                                                       size: 48,
@@ -198,131 +200,134 @@ class WhatsappSettingsScreen extends StatelessWidget {
                                                     ),
                                                     const SizedBox(height: 8),
                                                     Text(
-                                                      connected 
-                                                          ? 'Connected!'
-                                                          : 'QR will appear here',
+                                                      'QR will appear here',
                                                       style: buildCustomStyle(
                                                         FontWeightManager.medium,
                                                         FontSize.s12,
                                                         0.18,
-                                                        connected ? const Color(0xFF25D366) : Colors.grey,
+                                                        Colors.grey,
                                                       ),
                                                     ),
                                                   ],
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                  );
-                                }),
-                                const SizedBox(height: 12),
-                                Obx(() => Row(
-                                      children: [
-                                        Expanded(
-                                          child: LinearProgressIndicator(
-                                            value: ctrl.progress.value == 0 ? null : ctrl.progress.value / 100.0,
-                                            minHeight: 6,
-                                            backgroundColor: Colors.grey.shade200,
-                                            color: const Color(0xFF25D366),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Text('${ctrl.progress.value}%'),
-                                      ],
-                                    )),
-                                const SizedBox(height: 12),
-                                Obx(() => Wrap(
-                                      spacing: 10,
-                                      runSpacing: 8,
-                                      children: [
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(0xFF25D366),
-                                            foregroundColor: Colors.white,
-                                          ),
-                                          onPressed: ctrl.isConnecting.value || ctrl.connected.value
-                                              ? null
-                                              : () {
-                                                  ctrl.connect();
-                                                },
-                                          child: ctrl.isConnecting.value
-                                              ? const SizedBox(
-                                                  width: 16,
-                                                  height: 16,
-                                                  child: CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                                  ),
-                                                )
-                                              : const Text('Connect'),
-                                        ),
-                                        OutlinedButton(
-                                          onPressed: () {
-                                            ctrl.reset();
-                                          },
-                                          child: const Text('Reset'),
-                                        ),
-                                        if (ctrl.error.value.contains('Failed to unzip') || 
-                                            ctrl.error.value.contains('chrome binaries'))
-                                          ElevatedButton(
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.orange,
-                                              foregroundColor: Colors.white,
-                                            ),
-                                            onPressed: ctrl.isConnecting.value
-                                                ? null
-                                                : () {
-                                                    ctrl.clearCacheAndReconnect();
-                                                  },
-                                            child: const Text('Clear Cache & Retry'),
-                                          ),
-                                      ],
-                                    )),
-                                const SizedBox(height: 8),
-                                Obx(() => ctrl.error.value.isEmpty
-                                    ? const SizedBox.shrink()
-                                    : Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: Colors.red.shade50,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.red.shade200),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              ctrl.error.value,
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.18,
-                                                Colors.red.shade700,
-                                              ),
-                                            ),
-                                            if (ctrl.error.value.contains('Failed to unzip') || 
-                                                ctrl.error.value.contains('chrome binaries')) ...[
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                'Troubleshooting:\n• Try "Clear Cache & Retry" button\n• Run app as Administrator\n• Temporarily disable antivirus\n• Check available disk space',
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.regular,
-                                                  FontSize.s11,
-                                                  0.16,
-                                                  Colors.red.shade600,
                                                 ),
                                               ),
-                                            ],
-                                          ],
-                                        ),
+                                            ),
+                                    );
+                                  }),
+                                  const SizedBox(height: 12),
+                                  Obx(() => Row(
+                                        children: [
+                                          Expanded(
+                                            child: LinearProgressIndicator(
+                                              value: ctrl.progress.value == 0 ? null : ctrl.progress.value / 100.0,
+                                              minHeight: 6,
+                                              backgroundColor: Colors.grey.shade200,
+                                              color: const Color(0xFF25D366),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Text('${ctrl.progress.value}%'),
+                                        ],
                                       )),
+                                  const SizedBox(height: 12),
+                                  Obx(() => Wrap(
+                                        spacing: 10,
+                                        runSpacing: 8,
+                                        children: [
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(0xFF25D366),
+                                              foregroundColor: Colors.white,
+                                            ),
+                                            onPressed: ctrl.isConnecting.value || ctrl.connected.value
+                                                ? null
+                                                : () {
+                                                    ctrl.connect();
+                                                  },
+                                            child: ctrl.isConnecting.value
+                                                ? const SizedBox(
+                                                    width: 16,
+                                                    height: 16,
+                                                    child: CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                    ),
+                                                  )
+                                                : const Text('Connect'),
+                                          ),
+                                          OutlinedButton(
+                                            onPressed: ctrl.connected.value
+                                                ? () => ctrl.disconnect()
+                                                : null,
+                                            child: const Text('Disconnect'),
+                                          ),
+                                          OutlinedButton(
+                                            onPressed: () {
+                                              ctrl.reset();
+                                            },
+                                            child: const Text('Reset'),
+                                          ),
+                                          if (ctrl.error.value.contains('Failed to unzip') || 
+                                              ctrl.error.value.contains('chrome binaries'))
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.orange,
+                                                foregroundColor: Colors.white,
+                                              ),
+                                              onPressed: ctrl.isConnecting.value
+                                                  ? null
+                                                  : () {
+                                                      ctrl.clearCacheAndReconnect();
+                                                    },
+                                              child: const Text('Clear Cache & Retry'),
+                                            ),
+                                        ],
+                                      )),
+                                  const SizedBox(height: 8),
+                                  Obx(() => ctrl.error.value.isEmpty
+                                      ? const SizedBox.shrink()
+                                      : Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade50,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.red.shade200),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                ctrl.error.value,
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.medium,
+                                                  FontSize.s12,
+                                                  0.18,
+                                                  Colors.red.shade700,
+                                                ),
+                                              ),
+                                              if (ctrl.error.value.contains('Failed to unzip') || 
+                                                  ctrl.error.value.contains('chrome binaries')) ...[
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  'Troubleshooting:\n• Try "Clear Cache & Retry" button\n• Run app as Administrator\n• Temporarily disable antivirus\n• Check available disk space',
+                                                  style: buildCustomStyle(
+                                                    FontWeightManager.regular,
+                                                    FontSize.s11,
+                                                    0.16,
+                                                    Colors.red.shade600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        )),
                                 ],
                               ),
                             ),
                           ),
                         ),
 
-                        // Send Test Message Card
+                        // Connection History Card
                         BuildBoxShadowContainer(
                           circleRadius: 12,
                           offsetValue: const Offset(1, 1),
@@ -332,7 +337,7 @@ class WhatsappSettingsScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Send Test Message',
+                                  'Connection History',
                                   style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s16,
@@ -341,7 +346,33 @@ class WhatsappSettingsScreen extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 12),
-                                _PhoneAndMessageForm(ctrl: ctrl),
+                                Obx(() {
+                                  final lastConnected = ctrl.lastConnected.value;
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Status: ${ctrl.connected.value ? 'Active' : 'Inactive'}',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          FontSize.s12,
+                                          0.18,
+                                          ColorManager.textColor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Last Connected: ${lastConnected.isEmpty ? 'Never' : lastConnected}',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          FontSize.s12,
+                                          0.18,
+                                          ColorManager.textColor,
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }),
                               ],
                             ),
                           ),

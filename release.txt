@@ -19,7 +19,7 @@ salesexecutive@souqpoint.in
 
 # epos eposenke
 EPOSENKE_KxUdXaoVWvIHzAZAdkva5lX4vqEw2KuF
-salesexecutive@eposenke.in
+salesexecutive1@eposenke.in
 123456
 
 # yougoit
