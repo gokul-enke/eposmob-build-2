@@ -74,6 +74,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
         initLoading = true;
       });
 
+      // Load categories from CategoryProvider with caching (same as sidebar and stock)
+      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+      if (!categoryProvider.isCategoriesLoaded) {
+        debugPrint("📥 Loading categories from API...");
+        await categoryProvider.listAllCategory();
+        debugPrint("✅ Categories loaded and cached");
+      } else {
+        debugPrint("📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
+      }
+
       LocalProductProvider localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
 

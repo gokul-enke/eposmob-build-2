@@ -402,12 +402,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     try {
       final categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
-      // Load categories the same way as Add Category screen
-      await categoryProvider.searchAllCategory(page: 1);
-      final total = categoryProvider.searchCategory?.length ??
-          categoryProvider.category?.length ??
-          0;
-      debugPrint('📥 Categories loaded (searchCategory preferred): $total');
+      // Load categories with caching (same as sidebar and stock)
+      if (!categoryProvider.isCategoriesLoaded) {
+        debugPrint("📥 Loading categories from API...");
+        await categoryProvider.listAllCategory();
+        debugPrint("✅ Categories loaded and cached");
+      } else {
+        debugPrint("📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
+      }
     } catch (e) {
       debugPrint('Error loading categories: $e');
     }
