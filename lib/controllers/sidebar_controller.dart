@@ -44,6 +44,7 @@ import 'package:pos_machine/screens/sales_return/sales_return.dart';
 import 'package:pos_machine/screens/sales_return/sales_return_list.dart';
 import 'package:pos_machine/screens/settings/settings.dart';
 import 'package:pos_machine/screens/settings/whatsapp_settings.dart';
+import 'package:pos_machine/screens/settings/company_info.dart';
 import 'package:pos_machine/screens/support/support.dart';
 import 'package:pos_machine/screens/transactions/invoice_list.dart';
 import 'package:pos_machine/screens/transactions/receipt_list.dart';
@@ -138,5 +139,6 @@ class SideBarController extends GetxController {
     AccountDetailsScreen(), // 61 Account Details Screen
     SettingsScreen(), // 62 Settings Home
     WhatsappSettingsScreen(), // 63 WhatsApp Settings
+    CompanyInfoScreen(), // 64 Company Info
   ];
 }
