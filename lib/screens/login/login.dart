@@ -1042,14 +1042,23 @@ class _SignInScreenState extends State<SignInScreen> {
                                             // Don't block login if document config fails
                                           }
 
-                                          // Load categories during login (align with Category page)
+                                          // Load categories during login with caching optimization
                                           try {
                                             _updateLoadingState(true, "Loading categories...");
                                             final categoryProvider = Provider
                                                 .of<CategoryProvider>(
                                                 context,
                                                 listen: false);
-                                            await categoryProvider.searchAllCategory(page: 1);
+                                            
+                                            // Use cached approach for better performance
+                                            if (!categoryProvider.isCategoriesLoaded) {
+                                              debugPrint("📥 Loading categories from API during login");
+                                              await categoryProvider.listAllCategory();
+                                              categoryProvider.isCategoriesLoaded = true;
+                                            } else {
+                                              debugPrint("📋 Using cached categories during login");
+                                            }
+                                            
                                             debugPrint(
                                                 "Categories loaded successfully during login");
                                           } catch (e) {

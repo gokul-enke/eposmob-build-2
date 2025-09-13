@@ -182,6 +182,12 @@ class CategoryProvider extends ChangeNotifier {
 
   // Add a getter to check if categories are loaded
   bool get isCategoriesLoaded => _isCategoriesLoaded;
+  
+  // Add a setter to update the categories loaded flag
+  set isCategoriesLoaded(bool value) {
+    _isCategoriesLoaded = value;
+    notifyListeners();
+  }
 
   /// Resets the category filter without making an API call
   /// This method restores the original unfiltered category list

@@ -15,7 +15,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2.12.0
         with:
-          flutter-version: 3.27.1
+          flutter-version: 3.35.3
           channel: stable
 
       - name: Install project dependencies
