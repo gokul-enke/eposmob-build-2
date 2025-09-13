@@ -886,7 +886,11 @@ class KioskOrderPageState extends State<KioskOrderPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            WebsafeSvg.asset(ImageAssets.printIcon, color: Colors.white),
+            WebsafeSvg.asset(
+              ImageAssets.printIcon,
+              colorFilter:
+                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+            ),
             Text(
               'Print',
               style: buildCustomStyle(
@@ -912,7 +916,10 @@ class KioskOrderPageState extends State<KioskOrderPage> {
           cartItems: cartProductItems!,
           formattedTotal: formattedTotal,
           discountAmount: Provider.of<CartProvider>(context, listen: false)
-              .priceSummary?.discount?.toString() ?? "0.00",
+                  .priceSummary
+                  ?.discount
+                  ?.toString() ??
+              "0.00",
           orderDate: DateTime.now().toString(),
           orderNumber: "#000000",
         ),

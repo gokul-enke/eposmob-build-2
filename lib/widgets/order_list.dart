@@ -989,7 +989,7 @@ class _OrderListState extends State<OrderList> {
                                 children: [
                                   WebsafeSvg.asset(
                                     ImageAssets.cashIcon,
-                                    color: Colors.black,
+                                    colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
                                     fit: BoxFit.none,
                                   ),
                                   Text(
@@ -1024,7 +1024,7 @@ class _OrderListState extends State<OrderList> {
                                 children: [
                                   WebsafeSvg.asset(
                                     ImageAssets.creditCardIcon,
-                                    color: Colors.black,
+                                    colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
                                     fit: BoxFit.none,
                                   ),
                                   Text(
@@ -1059,7 +1059,7 @@ class _OrderListState extends State<OrderList> {
                                 children: [
                                   WebsafeSvg.asset(
                                     ImageAssets.creditCardIcon,
-                                    color: Colors.black,
+                                    colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
                                     fit: BoxFit.none,
                                   ),
                                   Text(
@@ -1266,7 +1266,7 @@ class _OrderListState extends State<OrderList> {
                                       children: [
                                         WebsafeSvg.asset(
                                           ImageAssets.printIcon,
-                                          color: Colors.white,
+                                          colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
                                           fit: BoxFit.none,
                                         ),
                                         Text(

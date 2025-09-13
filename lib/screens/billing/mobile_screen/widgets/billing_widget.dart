@@ -1151,7 +1151,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   icon,
                   width: 18,
                   height: 18,
-                  color: isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                  colorFilter: ColorFilter.mode(
+                      isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                      BlendMode.srcIn),
                   fit: BoxFit.none,
                 ),
                 const SizedBox(height: 4),

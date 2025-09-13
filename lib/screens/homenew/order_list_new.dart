@@ -872,7 +872,7 @@ class _OrderListNewState extends State<OrderListNew> {
                       children: [
                         WebsafeSvg.asset(
                           ImageAssets.cashIcon,
-                          color: Colors.black,
+                          colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
                           fit: BoxFit.none,
                         ),
                         Text(
@@ -903,7 +903,7 @@ class _OrderListNewState extends State<OrderListNew> {
                       children: [
                         WebsafeSvg.asset(
                           ImageAssets.creditCardIcon,
-                          color: Colors.black,
+                          colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
                           fit: BoxFit.none,
                         ),
                         Text(
@@ -934,7 +934,7 @@ class _OrderListNewState extends State<OrderListNew> {
                       children: [
                         WebsafeSvg.asset(
                           ImageAssets.creditCardIcon,
-                          color: Colors.black,
+                          colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
                           fit: BoxFit.none,
                         ),
                         Text(
@@ -1166,7 +1166,7 @@ class _OrderListNewState extends State<OrderListNew> {
                       children: [
                         WebsafeSvg.asset(
                           ImageAssets.printIcon,
-                          color: Colors.white,
+                          colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
                           fit: BoxFit.none,
                         ),
                         Text(

@@ -696,7 +696,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       itemCount: lowStockItems.length,
       itemBuilder: (context, index) {
         final item = lowStockItems[index];
-        final isCustomical = item["status"] == "Critical";
+        final isCritical = item["status"] == "Critical";
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 6.0),
           child: Row(
@@ -705,7 +705,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: isCustomical ? Colors.red : Colors.orange,
+                  color: isCritical ? Colors.red : Colors.orange,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -738,7 +738,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isCustomical
+                  color: isCritical
                       ? Colors.red.withOpacity(0.1)
                       : Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -749,7 +749,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     FontWeightManager.medium,
                     FontSize.s10,
                     0.10,
-                    isCustomical ? Colors.red : Colors.orange,
+                    isCritical ? Colors.red : Colors.orange,
                   ),
                 ),
               ),
@@ -948,17 +948,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 reservedSize: 30,
                 getTitlesWidget: (double value, TitleMeta meta) {
                   if (value.toInt() >= 0 && value.toInt() < chartData.length) {
-                    return SideTitleWidget(
-                      axisSide: meta.axisSide,
-                      space: 4,
-                      child: Text(
-                        DateFormat('dd/MM')
-                            .format(chartData[value.toInt()].date),
-                        style: const TextStyle(
-                          color: ColorManager.textColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10,
-                        ),
+                    return Text(
+                      DateFormat('dd/MM')
+                          .format(chartData[value.toInt()].date),
+                      style: TextStyle(
+                        color: ColorManager.textColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
                       ),
                     );
                   }
@@ -972,7 +968,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 getTitlesWidget: (double value, TitleMeta meta) {
                   return Text(
                     value.toInt().toString(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: ColorManager.textColor,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,

@@ -84,7 +84,10 @@ class RoundButtonWithIcon extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            WebsafeSvg.asset(iconPath, color: Colors.white),
+            WebsafeSvg.asset(
+              iconPath,
+              colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+            ),
             const SizedBox(
               width: 15,
             ),

@@ -174,10 +174,13 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
                                           minLeadingWidth: 30,
                                           leading: WebsafeSvg.asset(
                                             ImageAssets.userProfile,
-                                            color: tab == 0
-                                                ? Colors.white
-                                                : ColorManager
-                                                    .kListTiletextColor,
+                                            colorFilter: ColorFilter.mode(
+                                              tab == 0
+                                                  ? Colors.white
+                                                  : ColorManager
+                                                      .kListTiletextColor,
+                                              BlendMode.srcIn,
+                                            ),
                                             fit: BoxFit.none,
                                           ),
                                           title: Text(
@@ -223,10 +226,13 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
                                           minLeadingWidth: 30,
                                           leading: WebsafeSvg.asset(
                                               ImageAssets.lock,
-                                              color: tab == 1
-                                                  ? Colors.white
-                                                  : ColorManager
-                                                      .kListTiletextColor),
+                                              colorFilter: ColorFilter.mode(
+                                                tab == 1
+                                                    ? Colors.white
+                                                    : ColorManager
+                                                        .kListTiletextColor,
+                                                BlendMode.srcIn,
+                                              )),
                                           title: Text(
                                             "Edit Profile",
                                             style: tab == 1
@@ -270,10 +276,13 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
                                           minLeadingWidth: 30,
                                           leading: WebsafeSvg.asset(
                                               ImageAssets.lock,
-                                              color: tab == 2
-                                                  ? Colors.white
-                                                  : ColorManager
-                                                      .kListTiletextColor),
+                                              colorFilter: ColorFilter.mode(
+                                                tab == 2
+                                                    ? Colors.white
+                                                    : ColorManager
+                                                        .kListTiletextColor,
+                                                BlendMode.srcIn,
+                                              )),
                                           title: Text(
                                             "Change Password",
                                             style: tab == 2
@@ -363,7 +372,10 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
                                             minLeadingWidth: 30,
                                             leading: WebsafeSvg.asset(
                                               ImageAssets.deleteIcon,
-                                              color: Colors.black,
+                                              colorFilter: const ColorFilter.mode(
+                                                Colors.black,
+                                                BlendMode.srcIn,
+                                              ),
                                               fit: BoxFit.none,
                                             ),
                                             title: Text(
@@ -396,7 +408,10 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
                                           minLeadingWidth: 30,
                                           leading: WebsafeSvg.asset(
                                             ImageAssets.deleteIcon,
-                                            color: ColorManager.kRed,
+                                            colorFilter: const ColorFilter.mode(
+                                              ColorManager.kRed,
+                                              BlendMode.srcIn,
+                                            ),
                                             fit: BoxFit.none,
                                           ),
                                           title: Text(

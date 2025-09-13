@@ -158,7 +158,10 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
               children: [
                 WebsafeSvg.asset(
                   iconPath,
-                  color: isSelected ? Colors.white : ColorManager.kGreyColor,
+                  colorFilter: ColorFilter.mode(
+                    isSelected ? Colors.white : ColorManager.kGreyColor,
+                    BlendMode.srcIn,
+                  ),
                   width: 22,
                 ),
                 const SizedBox(width: 12),

@@ -42,5 +42,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Chromium/Chrome user data directories (WhatsApp bot)
+.local-chrome/
+.local-chromium/
+
 Todo.md
 .idx
