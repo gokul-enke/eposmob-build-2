@@ -8,6 +8,7 @@ import '../providers/purchase_provider.dart';
 import '../providers/stock_provider.dart';
 import '../providers/auth_model.dart';
 import '../providers/supplier_provider.dart';
+import 'general_settings_provider.dart';
 
 /// Comprehensive sync provider that handles synchronization of all data
 /// across the application. Follows the Provider Pattern preference for
@@ -47,6 +48,17 @@ class SyncProvider extends ChangeNotifier {
 
       debugPrint("🔄 Starting comprehensive data sync...");
       debugPrint("Access Token: ${accessToken.substring(0, 20)}...");
+
+      // Pre-Step: Refresh general settings (e.g., stock_enabled)
+      _updateProgress(0.05, "Refreshing general settings...");
+      try {
+        await Provider.of<GeneralSettingsProvider>(context, listen: false)
+            .fetchGeneralSettings();
+        debugPrint("✅ General settings refreshed");
+      } catch (e) {
+        debugPrint("⚠️ Failed to refresh general settings during sync: $e");
+        // Continue sync even if general settings refresh fails
+      }
 
       // Step 1: Sync Products (20%)
       _updateProgress(0.1, "Syncing products...");

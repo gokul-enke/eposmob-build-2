@@ -586,6 +586,7 @@ import '../../providers/purchase_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'package:pos_machine/providers/general_settings_provider.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({
@@ -975,6 +976,12 @@ class _SignInScreenState extends State<SignInScreen> {
                                               Provider.of<PurchaseProvider>(
                                                   context,
                                                   listen: false);
+                                          // Load general settings after login
+                                          _updateLoadingState(true, "Loading general settings...");
+                                          await Provider.of<GeneralSettingsProvider>(
+                                                  context,
+                                                  listen: false)
+                                              .fetchGeneralSettings();
                                           
                                           // Show loading indicator for data fetching
                                           _updateLoadingState(true, "Loading invoice data...");

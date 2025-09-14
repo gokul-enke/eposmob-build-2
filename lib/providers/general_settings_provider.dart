@@ -36,7 +36,19 @@ class GeneralSettingsProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
-        _generalSettings = GeneralSettings.fromJson(data);
+        // Debug the raw response and the parsed structure
+        debugPrint(' GeneralSettings API raw: ${response.body}');
+        // Handle both wrapped and unwrapped formats
+        final Map<String, dynamic> payload =
+            (data.containsKey('data') && data['data'] is Map<String, dynamic>)
+                ? (data['data'] as Map<String, dynamic>)
+                : data;
+        if (!payload.containsKey('stock_enabled')) {
+          debugPrint(' GeneralSettings payload missing stock_enabled key');
+        }
+        _generalSettings = GeneralSettings.fromJson(payload);
+        debugPrint(
+            ' Parsed GeneralSettings: stock_enabled=${_generalSettings?.stockEnabled}');
       } else {
         throw Exception('Failed to load general settings');
       }
