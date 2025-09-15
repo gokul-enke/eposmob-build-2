@@ -1371,10 +1371,10 @@ class BillingPageState extends State<BillingPage>
 
   Widget _buildConnectivityIndicator() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       decoration: BoxDecoration(
         color: _hasInternet ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: _hasInternet ? Colors.green : Colors.red,
           width: 1,

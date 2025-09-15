@@ -507,7 +507,7 @@ class StockProvider extends ChangeNotifier {
     final Map<String, dynamic> apiBodyData = {
       'product_id': int.parse(productId),
       'category_id': int.parse(categoryId),
-      'quantity': int.parse(quantity),
+      'quantity': double.parse(quantity),
       'retail_price': double.parse(retailPrice),
       'purchase_rate': double.parse(purchaseRate),
       'mrp': mrp.isNotEmpty ? double.parse(mrp) : double.parse(retailPrice),

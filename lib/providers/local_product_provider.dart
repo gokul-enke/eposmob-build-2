@@ -805,6 +805,29 @@ class LocalProductProvider extends ChangeNotifier {
 
   /// Adds a product to the local products list.
   void addProduct(GetProduct product) {
+    debugPrint("🔍 ADDING PRODUCT TO LOCAL STORAGE:");
+    debugPrint("  - Product ID: ${product.productId}");
+    debugPrint("  - Product Name: ${product.productName}");
+    debugPrint("  - Product Purchase Price: ${product.purchasePrice}");
+    debugPrint("  - Product MRP: ${product.mrp}");
+    debugPrint("  - Product Sale Price: ${product.price?.price}");
+    debugPrint("  - Product Stock Count: ${product.stock?.length ?? 0}");
+    
+    if (product.stock != null && product.stock!.isNotEmpty) {
+      debugPrint("  - Stock Details:");
+      for (int i = 0; i < product.stock!.length; i++) {
+        final stock = product.stock![i];
+        debugPrint("    Stock $i:");
+        debugPrint("      - Stock ID: ${stock.id}");
+        debugPrint("      - Stock Purchase Price: ${stock.purchasePrice}");
+        debugPrint("      - Stock Sale Price: ${stock.price}");
+        debugPrint("      - Stock MRP: ${stock.mrp}");
+        debugPrint("      - Stock Quantity: ${stock.quantity}");
+      }
+    } else {
+      debugPrint("  - No stock information available");
+    }
+
     // Check if the product already exists in the list
     int index = _products.indexWhere((p) => p.productId == product.productId);
     if (index == -1) {
@@ -812,14 +835,16 @@ class LocalProductProvider extends ChangeNotifier {
       _products.insert(0, product);
       _saveProductsToHive();
       notifyListeners(); // Notify listeners about the change
-      debugPrint("Product added: $product");
+      debugPrint("✅ Product added to local storage successfully");
     } else {
       // Optionally, you can update the existing product if needed
       _products[index] = product; // Update the existing product
       _saveProductsToHive();
       notifyListeners(); // Notify listeners about the change
-      debugPrint("Product updated: $product");
+      debugPrint("✅ Product updated in local storage successfully");
     }
+    
+    debugPrint("📊 Total products in local storage: ${_products.length}");
   }
 
   /// Updates the filtered products with a new [filtered] list.

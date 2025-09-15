@@ -70,7 +70,7 @@ class StockItem {
     this.quantity = '1',
     this.salePrice = '0',
     this.mrp = '0',
-    this.wholesale = '0',
+    this.wholesale = '',
     this.purchaseRate = '0',
     this.unit = '',
     this.rack = '',
@@ -743,8 +743,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'retailPrice': item.salePrice,
         'purchaseRate': item.purchaseRate,
         'mrp': item.mrp.isNotEmpty ? item.mrp : item.salePrice,
-        'wholesalePrice':
-            item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
+        // Do not fallback wholesale to retail; save as empty string if not provided
+        'wholesalePrice': item.wholesale.isNotEmpty ? item.wholesale : '',
         'unit': item.selectedUnit, // Changed to send unit ID instead of unit name
         'supplierId': selectedSupplier!.id,
         'storeId': selectedStore!.id,
@@ -2658,7 +2658,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     });
   }
 
-  void _performBarcodeAutoFill(int index, String barcode) {
+  Future<void> _performBarcodeAutoFill(int index, String barcode) async {
     // Check if index is valid
     if (index >= stockItems.length) {
       debugPrint('⚠️ Invalid index for barcode auto-fill: $index');
@@ -2750,28 +2750,40 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           }
         }
 
-        // Auto-fill purchase rate from first available stock
-        if (localProduct.stock != null && localProduct.stock!.isNotEmpty) {
-          stockItems[index].purchaseRate =
-              localProduct.stock!.first.purchasePrice ?? '0';
-          debugPrint('   - Purchase Rate: ${stockItems[index].purchaseRate}');
+        // Auto-fill purchase rate: use only product-level purchasePrice; do not fall back to stock entries
+        final String? computedPurchasePrice = localProduct.purchasePrice;
+        if (computedPurchasePrice != null && computedPurchasePrice.toString().isNotEmpty) {
+          stockItems[index].purchaseRate = computedPurchasePrice.toString();
+          debugPrint('   - Purchase Rate (from product): ${stockItems[index].purchaseRate}');
+        } else {
+          debugPrint('   - Purchase Rate: not available on product, leaving empty');
         }
 
-        // Auto-fill wholesale price (use MRP as default if no wholesale price)
-        stockItems[index].wholesale = localProduct.mrp?.toString() ??
-            localProduct.price?.price?.toString() ??
-            '0';
-        debugPrint('   - Wholesale Price: ${stockItems[index].wholesale}');
+        // Do not set wholesale price by default; only set if you have a meaningful value in your model
+        // Currently no explicit wholesale field in GetProduct; leave as-is to avoid defaults
+        if (stockItems[index].wholesale.isNotEmpty) {
+          debugPrint('   - Wholesale Price (pre-existing): ${stockItems[index].wholesale}');
+        } else {
+          debugPrint('   - Wholesale Price: not available, leaving empty');
+        }
 
-        // Auto-fill Minimum Units for Wholesale with default value
-        stockItems[index].batchNumber =
-            '1'; // Default minimum units for wholesale
-        debugPrint('   - Batch Number: ${stockItems[index].batchNumber}');
+        // Do not set minimum units for wholesale by default; leave as-is
+        if (stockItems[index].batchNumber.isNotEmpty) {
+          debugPrint('   - Batch Number (pre-existing): ${stockItems[index].batchNumber}');
+        } else {
+          debugPrint('   - Batch Number: not available, leaving empty');
+        }
 
-        // Update controllers with new values
-        _getPurchaseRateController(index).text = stockItems[index].purchaseRate;
-        _getWholesaleController(index).text = stockItems[index].wholesale;
-        _getBatchNumberController(index).text = stockItems[index].batchNumber;
+        // Update controllers with new values only when non-empty
+        if (stockItems[index].purchaseRate.isNotEmpty) {
+          _getPurchaseRateController(index).text = stockItems[index].purchaseRate;
+        }
+        if (stockItems[index].wholesale.isNotEmpty) {
+          _getWholesaleController(index).text = stockItems[index].wholesale;
+        }
+        if (stockItems[index].batchNumber.isNotEmpty) {
+          _getBatchNumberController(index).text = stockItems[index].batchNumber;
+        }
       });
 
       // Trigger tax calculation for both retail and wholesale prices after auto-fill
@@ -2803,10 +2815,58 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     } else {
       debugPrint('❌ NO PRODUCT FOUND FOR BARCODE: $barcode');
       // Show the AddProductWithBarcodeModal if no product is found
-      showDialog(
+      final created = await showDialog(
         context: context,
         builder: (context) => AddProductWithBarcodeModal(barcode: barcode),
       );
+
+      // If user created a product, attempt to autofill again using the returned product data
+      if (created != null) {
+        try {
+          GetProduct createdProduct;
+          String? initialQuantityStr;
+
+          if (created is GetProduct) {
+            createdProduct = created;
+          } else if (created is Map<String, dynamic>) {
+            // New return shape from modal: { 'product': GetProduct|Map, 'initialQuantity': String }
+            if (created.containsKey('product')) {
+              final dynamic productPayload = created['product'];
+              initialQuantityStr = created['initialQuantity']?.toString();
+              if (productPayload is GetProduct) {
+                createdProduct = productPayload;
+              } else if (productPayload is Map<String, dynamic>) {
+                createdProduct = GetProduct.fromJson(productPayload);
+              } else {
+                createdProduct = GetProduct();
+              }
+            } else {
+              // Backward compatibility: modal may have returned raw JSON product
+              createdProduct = GetProduct.fromJson(created);
+            }
+          } else {
+            // Unknown type; fallback to re-running with the same barcode
+            createdProduct = GetProduct();
+          }
+
+          // If quantity was provided by the modal, set it before re-running autofill
+          if (initialQuantityStr != null && initialQuantityStr.isNotEmpty) {
+            setState(() {
+              stockItems[index].quantity = initialQuantityStr!;
+            });
+            // Update controller immediately so post-autofill focus selects the correct text
+            _getQuantityController(index).text = initialQuantityStr!;
+          }
+
+          final String newBarcode = createdProduct.barcode ?? barcode;
+          debugPrint('🔄 PRODUCT CREATED FROM MODAL. RETRYING AUTO-FILL WITH BARCODE: $newBarcode');
+          // Re-run the autofill with the new/confirmed barcode
+          await _performBarcodeAutoFill(index, newBarcode);
+        } catch (e) {
+          debugPrint('⚠️ Could not parse returned product. Retrying with original barcode. Error: $e');
+          await _performBarcodeAutoFill(index, barcode);
+        }
+      }
     }
   }
 
@@ -3097,6 +3157,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
         List<GetProduct> allProducts = localProductProvider.products;
+        // Filter products by the selected category for this row, if any
+        final selectedCategoryId = stockItems[index].categoryData?.categoryId;
+        if (selectedCategoryId != null) {
+          allProducts = allProducts
+              .where((p) => p.categoryId == selectedCategoryId)
+              .toList();
+        }
         List<GetProduct> uniqueProducts = [];
         Map<int, GetProduct> productMap = {};
 
@@ -3137,7 +3204,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   '   - Product: ${product.productName} (ID: ${product.productId})');
               // Print all available product details as pretty JSON for debugging
               try {
-                final encoder = const JsonEncoder.withIndent('  ');
+                const encoder = JsonEncoder.withIndent('  ');
                 final productJson = product.toJson();
                 final pretty = encoder.convert(productJson);
                 debugPrint('📦 Selected product full details (pretty JSON):');
@@ -3266,34 +3333,26 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   }
                 }
 
-                // Auto-fill purchase rate from first available stock
-                if (product.stock != null && product.stock!.isNotEmpty) {
-                  stockItems[index].purchaseRate =
-                      product.stock!.first.purchasePrice ?? '0';
-                  debugPrint(
-                      '   - Purchase Rate: ${stockItems[index].purchaseRate}');
+                // Auto-fill purchase rate: use only product-level purchasePrice; do not fall back to stock entries
+                if (product.purchasePrice != null && product.purchasePrice!.toString().isNotEmpty) {
+                  stockItems[index].purchaseRate = product.purchasePrice!.toString();
+                  debugPrint('   - Purchase Rate (from product): ${stockItems[index].purchaseRate}');
+                } else {
+                  debugPrint('   - Purchase Rate: not available on product, leaving empty');
                 }
 
-                // Auto-fill wholesale price (use MRP as default if no wholesale price)
-                stockItems[index].wholesale = product.mrp?.toString() ??
-                    product.price?.price?.toString() ??
-                    '0';
-                debugPrint(
-                    '   - Wholesale Price: ${stockItems[index].wholesale}');
+                // Auto-fill wholesale price: leave empty as no wholesale price field exists on product
+                stockItems[index].wholesale = '';
+                debugPrint('   - Wholesale Price: not available on product, leaving empty');
 
-                // Auto-fill Minimum Units for Wholesale with default value
-                stockItems[index].batchNumber =
-                    '1'; // Default minimum units for wholesale
-                debugPrint(
-                    '   - Batch Number: ${stockItems[index].batchNumber}');
+                // Auto-fill Minimum Units for Wholesale: leave empty as no wholesale min unit field exists on product
+                stockItems[index].batchNumber = '';
+                debugPrint('   - Batch Number: not available on product, leaving empty');
 
                 // Update controllers with new values
-                _getPurchaseRateController(index).text =
-                    stockItems[index].purchaseRate;
-                _getWholesaleController(index).text =
-                    stockItems[index].wholesale;
-                _getBatchNumberController(index).text =
-                    stockItems[index].batchNumber;
+                _getPurchaseRateController(index).text = stockItems[index].purchaseRate;
+                _getWholesaleController(index).text = stockItems[index].wholesale;
+                _getBatchNumberController(index).text = stockItems[index].batchNumber;
               });
 
               // Trigger tax calculation for both retail and wholesale prices after product selection

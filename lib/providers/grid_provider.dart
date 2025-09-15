@@ -546,6 +546,7 @@ class GridSelectionProvider extends ChangeNotifier {
     required String unit,
     required String barcode,
     required String accessToken,
+    required String purchasePrice,
   }) async {
     final Map<String, dynamic> apiBodyData = {
       'name': productName,
@@ -555,6 +556,7 @@ class GridSelectionProvider extends ChangeNotifier {
       'barcode': barcode,
       'quantity': quantity,
       'unit': unit,
+      'purchase_rate': double.parse(purchasePrice),
     };
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");
@@ -599,6 +601,7 @@ class GridSelectionProvider extends ChangeNotifier {
     required String unit,
     required String barcode,
     required String accessToken,
+    required String purchasePrice,
   }) async {
     final Map<String, dynamic> apiBodyData = {
       'name': productName,
@@ -607,6 +610,7 @@ class GridSelectionProvider extends ChangeNotifier {
       'mrp': mrp,
       'barcode': barcode,
       'unit': unit,
+      'purchase_rate': double.parse(purchasePrice),
     };
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");
