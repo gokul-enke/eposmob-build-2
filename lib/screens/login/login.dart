@@ -1031,11 +1031,17 @@ class _SignInScreenState extends State<SignInScreen> {
                                           );
 
                                           _updateLoadingState(true, "Loading products...");
+                                          debugPrint("🔄 [Login] Starting product fetch via LocalProductProvider.fetchProductsFromAPI()");
                                           await Provider.of<
                                               LocalProductProvider>(
                                               context,
                                               listen: false)
                                               .fetchProductsFromAPI();
+                                          final lpp = Provider.of<LocalProductProvider>(context, listen: false);
+                                          debugPrint("📊 [Login] Product fetch complete. provider.products=${lpp.products.length}, filtered=${lpp.filteredProducts.length}");
+                                          if (lpp.products.isEmpty) {
+                                            debugPrint("⚠️ [Login] No products loaded. Check API/Hive logs above for errors.");
+                                          }
 
                                           // Load document configurations during login
                                           try {

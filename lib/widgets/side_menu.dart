@@ -371,37 +371,36 @@ class _SideMenuState extends State<SideMenu> {
           if (_hasRole('sales_executive'))
             Obx(
               () => DrawerListTileExpandableColumn(
-                onTapTitle1: () {
-                  sideBarController.index.value = 21;
-                },
-                onTapTitle2: () {
-                  sideBarController.index.value = 47;
-                },
-                onTapTitle3: () {
-                  sideBarController.index.value = 59; // Company Accounts
-                },
-                listTitle1: "Invoice",
-                listTitle2: "Receipts",
-                listTitle3: "Company Accounts",
-                iconPath: ImageAssets.transactionIcon,
-                title: 'Accounts',
-                onTap: () {
-                  sideBarController.index.value = 21;
-                  // debugPrint(" 'Category',${sideBarController.index.value}");
-                },
-                selected: sideBarController.index.value == 21 ||
-                    sideBarController.index.value == 22 ||
-                    sideBarController.index.value == 30 ||
-                    sideBarController.index.value == 31 ||
-                    sideBarController.index.value == 32 ||
-                    sideBarController.index.value == 24 ||
-                    sideBarController.index.value == 25 ||
-                    sideBarController.index.value == 48 ||
-                    sideBarController.index.value == 47 ||
-                    sideBarController.index.value == 59 ||
-                    sideBarController.index.value == 60 ||
-                    sideBarController.index.value == 61
-              ),
+                  onTapTitle1: () {
+                    sideBarController.index.value = 21;
+                  },
+                  onTapTitle2: () {
+                    sideBarController.index.value = 47;
+                  },
+                  onTapTitle3: () {
+                    sideBarController.index.value = 59; // Company Accounts
+                  },
+                  listTitle1: "Invoice",
+                  listTitle2: "Receipts",
+                  listTitle3: "Company Accounts",
+                  iconPath: ImageAssets.transactionIcon,
+                  title: 'Accounts',
+                  onTap: () {
+                    sideBarController.index.value = 21;
+                    // debugPrint(" 'Category',${sideBarController.index.value}");
+                  },
+                  selected: sideBarController.index.value == 21 ||
+                      sideBarController.index.value == 22 ||
+                      sideBarController.index.value == 30 ||
+                      sideBarController.index.value == 31 ||
+                      sideBarController.index.value == 32 ||
+                      sideBarController.index.value == 24 ||
+                      sideBarController.index.value == 25 ||
+                      sideBarController.index.value == 48 ||
+                      sideBarController.index.value == 47 ||
+                      sideBarController.index.value == 59 ||
+                      sideBarController.index.value == 60 ||
+                      sideBarController.index.value == 61),
             ),
           if (_hasRole('sales_executive'))
             Obx(
@@ -623,7 +622,8 @@ class DrawerListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double resolvedIconSize = iconSize ?? 18.0;
-    final double leadingBox = resolvedIconSize + 4.0; // small padding around icon
+    final double leadingBox =
+        resolvedIconSize + 4.0; // small padding around icon
     final double gap = horizontalGap ?? 12.0;
     return selected
         ? Stack(
@@ -714,7 +714,7 @@ class DrawerListTile extends StatelessWidget {
                   iconPath,
                   width: resolvedIconSize,
                   height: resolvedIconSize,
-                  colorFilter: ColorFilter.mode(
+                  colorFilter: const ColorFilter.mode(
                     ColorManager.kPrimaryColor,
                     BlendMode.srcIn,
                   ),

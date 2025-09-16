@@ -344,12 +344,19 @@ class LocalProductProvider extends ChangeNotifier {
 
   // Load products from Hive
   void _loadProductsFromHive() {
-    _products = _productsBox.values.map((hiveProduct) {
-      final jsonData = json.decode(hiveProduct.serializedData.value);
-      return GetProduct.fromJson(jsonData);
-    }).toList();
-    _filteredProducts = List.from(_products);
-    notifyListeners();
+    try {
+      final boxLen = _productsBox.length;
+      debugPrint("📦 [Hive] Loading products from box 'products' (len=$boxLen)...");
+      _products = _productsBox.values.map((hiveProduct) {
+        final jsonData = json.decode(hiveProduct.serializedData.value);
+        return GetProduct.fromJson(jsonData);
+      }).toList();
+      _filteredProducts = List.from(_products);
+      debugPrint("✅ [Hive] Loaded products into provider: total=${_products.length}, filtered=${_filteredProducts.length}");
+      notifyListeners();
+    } catch (e) {
+      debugPrint("❌ [Hive] Error loading products from box: $e");
+    }
   }
 
   // Load cart items from Hive
@@ -437,17 +444,28 @@ class LocalProductProvider extends ChangeNotifier {
 
   // Save products to Hive
   void _saveProductsToHive() {
+    final sw = Stopwatch()..start();
+    final beforeLen = _productsBox.length;
+    debugPrint("📝 [Hive] Saving products to box 'products' (beforeLen=$beforeLen)...");
     _productsBox.clear();
+    int saved = 0;
     for (var product in _products) {
-      final hiveProduct = HiveProduct(
-        productId: product.productId,
-        categoryId: product.categoryId,
-        productName: product.productName,
-        barcode: product.barcode,
-        serializedData: HiveStringValue(json.encode(product.toJson())),
-      );
-      _productsBox.add(hiveProduct);
+      try {
+        final hiveProduct = HiveProduct(
+          productId: product.productId,
+          categoryId: product.categoryId,
+          productName: product.productName,
+          barcode: product.barcode,
+          serializedData: HiveStringValue(json.encode(product.toJson())),
+        );
+        _productsBox.add(hiveProduct);
+        saved++;
+      } catch (e) {
+        debugPrint("❌ [Hive] Failed to serialize/save productId=${product.productId}: $e");
+      }
     }
+    sw.stop();
+    debugPrint("✅ [Hive] Saved $saved/${_products.length} products (afterLen=${_productsBox.length}) in ${sw.elapsedMilliseconds}ms");
   }
 
   // Save cart items to Hive
@@ -604,6 +622,17 @@ class LocalProductProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final swTotal = Stopwatch()..start();
+      debugPrint("🌐 [API] Starting full product fetch...");
+      // Get API key from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException(
+            "API key not found. Please restart the app.");
+      }
+
       while (true) {
         final queryParams = <String, String>{
           // if (filterName != null) 'name': filterName,
@@ -616,24 +645,25 @@ class LocalProductProvider extends ChangeNotifier {
         final url = Uri.parse(APPUrl.getProductUrl)
             .replace(queryParameters: queryParams);
 
-        // Get API key from SharedPreferences
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        String? apiKey = prefs.getString('api_key');
-
-        if (apiKey == null || apiKey.isEmpty) {
-          throw const HttpException(
-              "API key not found. Please restart the app.");
-        }
-
+        debugPrint("➡️ [API] GET $url | headers={Content-Type: application/json, X-Tenant: ${apiKey.substring(0, apiKey.length > 6 ? 6 : apiKey.length)}***}");
+        final swPage = Stopwatch()..start();
         final response = await http.get(url, headers: {
           'Content-Type': 'application/json',
           'X-Tenant': apiKey,
         });
+        swPage.stop();
         debugPrint(
-            'Fetching products - Page $currentPage, Status Code: ${response.statusCode}');
+            '📥 [API] Page $currentPage received in ${swPage.elapsedMilliseconds}ms | Status: ${response.statusCode} | BodyLen: ${response.body.length}');
 
         if (response.statusCode == 200) {
-          final jsonData = json.decode(response.body);
+          dynamic jsonData;
+          try {
+            jsonData = json.decode(response.body);
+          } catch (e) {
+            debugPrint('❌ [API] JSON decode failed for page $currentPage: $e');
+            debugPrint('🧾 [API] Response snippet: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
+            break;
+          }
           GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
 
           if (getProductModel.product == null ||
@@ -647,8 +677,10 @@ class LocalProductProvider extends ChangeNotifier {
               'Fetched ${getProductModel.product!.length} products on page $currentPage. Total products fetched so far: ${allProducts.length}');
           currentPage++;
         } else {
-          debugPrint('API Error: Status code ${response.statusCode}');
-          debugPrint('Failed URL: $url');
+          debugPrint('❌ [API] Error fetching products: Status ${response.statusCode}');
+          debugPrint('🔗 Failed URL: $url');
+          final snippet = response.body.substring(0, response.body.length > 500 ? 500 : response.body.length);
+          debugPrint('🧾 Error body (first 500 chars): $snippet');
           // Optionally handle non-200 status codes, e.g., throw an exception
           break; // Exit loop on error
         }
@@ -659,14 +691,20 @@ class LocalProductProvider extends ChangeNotifier {
           _products); // Initialize filtered list with all loaded products
       _updatePagination(); // Update pagination info based on loaded products
       _saveProductsToHive();
+      swTotal.stop();
       debugPrint(
-          'All products loaded successfully. Total: ${_products.length}');
+          '✅ [API] All products loaded successfully. Total: ${_products.length} | Duration: ${swTotal.elapsedMilliseconds}ms');
+      try {
+        final hiveLen = _productsBox.length;
+        debugPrint("📦 [Hive] Box 'products' now has $hiveLen entries");
+      } catch (_) {}
     } catch (e) {
-      debugPrint("Error fetching all products from API: $e");
+      debugPrint("❌ [API] Error fetching all products from API: $e");
       // Handle error appropriately, maybe clear products or show an error message
     } finally {
       isLoading = false;
       notifyListeners();
+      debugPrint("ℹ️ [Provider] Product fetch complete. provider.products=${_products.length}, filtered=${_filteredProducts.length}");
     }
   }
 
