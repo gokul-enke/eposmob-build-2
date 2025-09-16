@@ -48,13 +48,14 @@ import 'helpers/keyboard_dispatcher.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Hive in a dedicated Documents/epos/hive_data folder
-  // This keeps data per-user and avoids writing into installation directories
-  final docsDir = await getApplicationDocumentsDirectory();
-  final hiveBaseDir = Directory('${docsDir.path}/epos/hive_data');
+  // Initialize Hive in a dedicated ApplicationSupport/epos/hive_data folder
+  // Safer than Documents (less likely to be deleted by user)
+  final supportDir = await getApplicationSupportDirectory();
+  final hiveBaseDir = Directory('${supportDir.path}/epos/hive_data');
   if (!await hiveBaseDir.exists()) {
     await hiveBaseDir.create(recursive: true);
   }
+
   Hive.init(hiveBaseDir.path);
   debugPrint('📁 Hive directory: ${hiveBaseDir.path}');
 
