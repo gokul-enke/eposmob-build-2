@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/virtual_keyboard_widget.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -47,8 +48,15 @@ import 'helpers/keyboard_dispatcher.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Hive
-  await Hive.initFlutter();
+  // Initialize Hive in a dedicated Documents/epos/hive_data folder
+  // This keeps data per-user and avoids writing into installation directories
+  final docsDir = await getApplicationDocumentsDirectory();
+  final hiveBaseDir = Directory('${docsDir.path}/epos/hive_data');
+  if (!await hiveBaseDir.exists()) {
+    await hiveBaseDir.create(recursive: true);
+  }
+  Hive.init(hiveBaseDir.path);
+  debugPrint('📁 Hive directory: ${hiveBaseDir.path}');
 
   // Register adapters
   Hive.registerAdapter(HiveStringValueAdapter());
