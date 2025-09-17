@@ -52,273 +52,264 @@ class ProductEntryHeader extends StatelessWidget {
       if (appSettingsProvider.appSettings == null) {
         return const SizedBox.shrink();
       }
-      return SizedBox(
-        height: size.height * 0.10,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Flexible(
-              child: Row(
-                children: [
-                  appSettingsProvider.appSettings!.barcodeSales
-                      ? Expanded(
-                          flex: 2,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                            child: buildColumnWidgetForTextFields(
-                              autofocus: appSettingsProvider.appSettings!.barcodeSales,
-                              controller: barcodeController,
-                              focusNode: billingProvider.barcodeNode,
-                              readOnly: billingProvider.selectedProductNameController.text.isNotEmpty,
-                              onchanged: (query) {
-                                if (query != null && query.isNotEmpty) {
-                                  billingProvider.processBarcodeWithDebounce(query, () {
-                                    onProcessBarcode(query);
-                                  });
-                                }
-                              },
-                              size: size,
-                              hintText: 'Barcode',
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                  appSettingsProvider.appSettings!.barcodeSales &&
-                          billingProvider.selectedProductNameController.text.isNotEmpty
-                      ? Expanded(
-                          flex: 2,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                            child: buildColumnWidgetForTextFields(
-                              readOnly: true,
-                              controller: billingProvider.selectedProductNameController,
-                              onchanged: (query) {},
-                              size: size,
-                              hintText: 'Product Name',
-                            ),
-                          ),
-                        )
-                      : Expanded(
-                          flex: 4,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ProductAutocomplete(
-                                autocompleteProductKey: autocompleteProductKey,
-                                autofocus: !appSettingsProvider.appSettings!.barcodeSales,
-                                size: size,
-                                onSelected: (GetProduct selectedProduct, Stock? selectedStock) async {
-                                  double defaultPrice = 0.0;
-                                  if (selectedStock != null) {
-                                    defaultPrice = double.tryParse(selectedStock.price ?? "0") ?? 0.0;
-                                  } else {
-                                    defaultPrice =
-                                        double.tryParse(selectedProduct.price?.price ?? "0") ?? 0.0;
-                                  }
-
-                                  selectedProductIdController.text = selectedProduct.productId.toString();
-                                  unitPriceController.text = defaultPrice.toString();
-                                  quantityController.text = '1';
-                                  billingProvider.selectedProductNameController.text =
-                                      selectedProduct.productName ?? '';
-                                  barcodeController.text = selectedProduct.barcode ?? '';
-                                },
-                                productList: productProvider.productList!,
-                              ),
-                            ],
-                          ),
-                        ),
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: buildColumnWidgetForTextFields(
-                        controller: quantityController,
-                        onchanged: (query) {},
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Row 1: Product selection (barcode and product field)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (appSettingsProvider.appSettings!.barcodeSales)
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: buildColumnWidgetForTextFields(
+                      autofocus: appSettingsProvider.appSettings!.barcodeSales,
+                      controller: barcodeController,
+                      focusNode: billingProvider.barcodeNode,
+                      readOnly: billingProvider.selectedProductNameController.text.isNotEmpty,
+                      onchanged: (query) {
+                        if (query != null && query.isNotEmpty) {
+                          billingProvider.processBarcodeWithDebounce(query, () {
+                            onProcessBarcode(query);
+                          });
+                        }
+                      },
+                      size: size,
+                      hintText: 'Barcode',
+                    ),
+                  ),
+                ),
+              if (appSettingsProvider.appSettings!.barcodeSales &&
+                  billingProvider.selectedProductNameController.text.isNotEmpty)
+                Expanded(
+                  flex: 3,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: buildColumnWidgetForTextFields(
+                      readOnly: true,
+                      controller: billingProvider.selectedProductNameController,
+                      onchanged: (query) {},
+                      size: size,
+                      hintText: 'Product Name',
+                    ),
+                  ),
+                )
+              else
+                Expanded(
+                  flex: 5,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ProductAutocomplete(
+                        autocompleteProductKey: autocompleteProductKey,
+                        autofocus: !appSettingsProvider.appSettings!.barcodeSales,
                         size: size,
-                        hintText: 'Quantity',
-                        focusNode: billingProvider.quantityFocusNode,
-                        keyboardType: TextInputType.number,
-                        onTap: () {
-                          Provider.of<KeyboardProvider>(context, listen: false).show(
-                            'number',
-                            quantityController,
-                            replaceOnFirstInput: true,
-                          );
+                        onSelected: (GetProduct selectedProduct, Stock? selectedStock) async {
+                          double defaultPrice = 0.0;
+                          if (selectedStock != null) {
+                            defaultPrice = double.tryParse(selectedStock.price ?? "0") ?? 0.0;
+                          } else {
+                            defaultPrice = double.tryParse(selectedProduct.price?.price ?? "0") ?? 0.0;
+                          }
+
+                          selectedProductIdController.text = selectedProduct.productId.toString();
+                          unitPriceController.text = defaultPrice.toString();
+                          quantityController.text = '1';
+                          billingProvider.selectedProductNameController.text =
+                              selectedProduct.productName ?? '';
+                          barcodeController.text = selectedProduct.barcode ?? '';
                         },
+                        productList: productProvider.productList!,
                       ),
-                    ),
+                    ],
                   ),
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: buildColumnWidgetForTextFields(
-                        controller: unitPriceController,
-                        onchanged: (query) {},
-                        size: size,
-                        focusNode: billingProvider.unitPriceFocusNode,
-                        hintText: 'Unit Price',
-                        keyboardType: TextInputType.number,
-                        onTap: () {
-                          Provider.of<KeyboardProvider>(context, listen: false).show(
-                            'number',
-                            unitPriceController,
-                            replaceOnFirstInput: true,
-                          );
-                        },
-                      ),
-                    ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Row 2: Quantity, unit price, actions
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: buildColumnWidgetForTextFields(
+                    controller: quantityController,
+                    onchanged: (query) {},
+                    size: size,
+                    hintText: 'Quantity',
+                    focusNode: billingProvider.quantityFocusNode,
+                    keyboardType: TextInputType.number,
+                    onTap: () {
+                      Provider.of<KeyboardProvider>(context, listen: false).show(
+                        'number',
+                        quantityController,
+                        replaceOnFirstInput: true,
+                      );
+                    },
                   ),
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: Center(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CustomRoundButton(
-                              title: "Add Item",
-                              boxColor: ColorManager.kButtonGreen,
-                              borderColor: ColorManager.kButtonGreen,
-                              isLoading: billingProvider.isLoadingAddItem,
-                              fct: () async {
-                                billingProvider.setLoadingAddItem(true);
-                                try {
-                                  final localProductProvider =
-                                      Provider.of<LocalProductProvider>(context, listen: false);
-                                  final generalSettingsProvider =
-                                      Provider.of<GeneralSettingsProvider>(context, listen: false);
-
-                                  final selectedProduct = localProductProvider.selectedProduct;
-
-                                  if (selectedProduct != null) {
-                                    bool stockEnabled =
-                                        generalSettingsProvider.generalSettings?.stockEnabled ?? false;
-
-                                    localProductProvider.setStockEnabled(stockEnabled);
-
-                                    if (!stockEnabled) {
-                                      localProductProvider.addToCart(
-                                        product: selectedProduct,
-                                        quantity: num.tryParse(quantityController.text),
-                                        price: double.tryParse(unitPriceController.text),
-                                      );
-                                      showScaffold(context: context, message: 'Added To Cart');
-                                      onClearProductFields();
-                                      focusTextField();
-                                      return;
-                                    }
-
-                                    Stock? selectedStock = localProductProvider.selectedStock;
-
-                                    if (selectedStock != null) {
-                                      double customPrice = double.tryParse(unitPriceController.text) ?? 0;
-                                      double stockPrice = double.tryParse(selectedStock.price ?? "0") ?? 0;
-                                      double stockMrp = double.tryParse(selectedStock.mrp ?? "0") ?? 0;
-                                      double finalPrice = customPrice > 0 ? customPrice : stockPrice;
-
-                                      double? finalMrp;
-                                      final bool itemExistsInCart = localProductProvider.cartItems.any((item) =>
-                                          item.product.productId == selectedProduct.productId &&
-                                          (item.selectedStock?.id == selectedStock.id));
-                                      if (itemExistsInCart) {
-                                        finalMrp = null;
-                                      } else {
-                                        finalMrp = stockMrp;
-                                      }
-
-                                      localProductProvider.addToCart(
-                                        product: selectedProduct,
-                                        quantity: num.tryParse(quantityController.text),
-                                        price: finalPrice,
-                                        mrp: finalMrp,
-                                        selectedStock: selectedStock,
-                                      );
-                                      showScaffold(context: context, message: 'Added To Cart');
-                                    } else {
-                                      localProductProvider.addToCart(
-                                        product: selectedProduct,
-                                        quantity: num.tryParse(quantityController.text),
-                                        price: double.tryParse(unitPriceController.text),
-                                      );
-                                      showScaffold(context: context, message: 'Added To Cart');
-                                    }
-
-                                    onClearProductFields();
-                                    focusTextField();
-                                  } else {
-                                    showScaffoldError(
-                                      context: context,
-                                      message: "No product selected!",
-                                    );
-                                  }
-                                } catch (_) {
-                                  showScaffoldError(
-                                    context: context,
-                                    message: "Failed to add item. Please try again.",
-                                  );
-                                } finally {
-                                  billingProvider.setLoadingAddItem(false);
-                                }
-                              },
-                              fontSize: FontSize.s14,
-                              height: size.height * .07,
-                              width: size.width / 3,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 1,
-                    child: Column(
-                      children: [
-                        BuildBoxShadowContainer(
-                          height: size.height * .07,
-                          width: 50,
-                          circleRadius: 5,
-                          child: InkWell(
-                            onTap: () {
-                              onClearProductFields();
-                              Provider.of<LocalProductProvider>(context, listen: false)
-                                  .resetSelectedProduct();
-                              focusTextField();
-                              showScaffold(
-                                context: context,
-                                message: 'Product Details Cleared Successfully',
-                              );
-                            },
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Center(
-                                    child: WebsafeSvg.asset(
-                                      ImageAssets.oderlistCloseIcon,
-                                      width: 27,
-                                      colorFilter:
-                                          const ColorFilter.mode(ColorManager.kButtonRed, BlendMode.srcIn),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
-        ),
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: buildColumnWidgetForTextFields(
+                    controller: unitPriceController,
+                    onchanged: (query) {},
+                    size: size,
+                    focusNode: billingProvider.unitPriceFocusNode,
+                    hintText: 'Unit Price',
+                    keyboardType: TextInputType.number,
+                    onTap: () {
+                      Provider.of<KeyboardProvider>(context, listen: false).show(
+                        'number',
+                        unitPriceController,
+                        replaceOnFirstInput: true,
+                      );
+                    },
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 3,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: CustomRoundButton(
+                    title: "Add Item",
+                    boxColor: ColorManager.kButtonGreen,
+                    borderColor: ColorManager.kButtonGreen,
+                    isLoading: billingProvider.isLoadingAddItem,
+                    fct: () async {
+                      billingProvider.setLoadingAddItem(true);
+                      try {
+                        final localProductProvider =
+                            Provider.of<LocalProductProvider>(context, listen: false);
+                        final generalSettingsProvider =
+                            Provider.of<GeneralSettingsProvider>(context, listen: false);
+
+                        final selectedProduct = localProductProvider.selectedProduct;
+
+                        if (selectedProduct != null) {
+                          bool stockEnabled =
+                              generalSettingsProvider.generalSettings?.stockEnabled ?? false;
+
+                          localProductProvider.setStockEnabled(stockEnabled);
+
+                          if (!stockEnabled) {
+                            localProductProvider.addToCart(
+                              product: selectedProduct,
+                              quantity: num.tryParse(quantityController.text),
+                              price: double.tryParse(unitPriceController.text),
+                            );
+                            showScaffold(context: context, message: 'Added To Cart');
+                            onClearProductFields();
+                            focusTextField();
+                            return;
+                          }
+
+                          Stock? selectedStock = localProductProvider.selectedStock;
+
+                          if (selectedStock != null) {
+                            double customPrice = double.tryParse(unitPriceController.text) ?? 0;
+                            double stockPrice = double.tryParse(selectedStock.price ?? "0") ?? 0;
+                            double stockMrp = double.tryParse(selectedStock.mrp ?? "0") ?? 0;
+                            double finalPrice = customPrice > 0 ? customPrice : stockPrice;
+
+                            double? finalMrp;
+                            final bool itemExistsInCart = localProductProvider.cartItems.any((item) =>
+                                item.product.productId == selectedProduct.productId &&
+                                (item.selectedStock?.id == selectedStock.id));
+                            if (itemExistsInCart) {
+                              finalMrp = null;
+                            } else {
+                              finalMrp = stockMrp;
+                            }
+
+                            localProductProvider.addToCart(
+                              product: selectedProduct,
+                              quantity: num.tryParse(quantityController.text),
+                              price: finalPrice,
+                              mrp: finalMrp,
+                              selectedStock: selectedStock,
+                            );
+                            showScaffold(context: context, message: 'Added To Cart');
+                          } else {
+                            localProductProvider.addToCart(
+                              product: selectedProduct,
+                              quantity: num.tryParse(quantityController.text),
+                              price: double.tryParse(unitPriceController.text),
+                            );
+                            showScaffold(context: context, message: 'Added To Cart');
+                          }
+
+                          onClearProductFields();
+                          focusTextField();
+                        } else {
+                          showScaffoldError(
+                            context: context,
+                            message: "No product selected!",
+                          );
+                        }
+                      } catch (_) {
+                        showScaffoldError(
+                          context: context,
+                          message: "Failed to add item. Please try again.",
+                        );
+                      } finally {
+                        billingProvider.setLoadingAddItem(false);
+                      }
+                    },
+                    fontSize: FontSize.s14,
+                    height: 48,
+                    width: double.infinity,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 56,
+                child: BuildBoxShadowContainer(
+                  height: 48,
+                  width: 50,
+                  circleRadius: 5,
+                  child: InkWell(
+                    onTap: () {
+                      onClearProductFields();
+                      Provider.of<LocalProductProvider>(context, listen: false)
+                          .resetSelectedProduct();
+                      focusTextField();
+                      showScaffold(
+                        context: context,
+                        message: 'Product Details Cleared Successfully',
+                      );
+                    },
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Center(
+                            child: WebsafeSvg.asset(
+                              ImageAssets.oderlistCloseIcon,
+                              width: 24,
+                              colorFilter:
+                                  const ColorFilter.mode(ColorManager.kButtonRed, BlendMode.srcIn),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       );
     });
   }
