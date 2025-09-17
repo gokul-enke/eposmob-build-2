@@ -232,7 +232,7 @@ class _BuildDropDownWithSearchState<T>
               child: CompositedTransformFollower(
                 link: _layerLink,
                 showWhenUnlinked: false,
-                offset: const Offset(1, 1),
+                offset: Offset(0, _calculateDropdownOffset()),
                 child: Material(
                   key: _dropdownKey,
                   type: MaterialType.card,
@@ -389,6 +389,13 @@ class _BuildDropDownWithSearchState<T>
   double _getDropdownWidth() {
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     return renderBox?.size.width ?? 200;
+  }
+
+  double _calculateDropdownOffset() {
+    // Calculate the height of the search bar container
+    final double searchBarHeight = widget.height ?? MediaQuery.of(context).size.height * .07;
+    // Add a small gap between search bar and dropdown
+    return searchBarHeight + 4;
   }
 
   void _scrollToSelectedItem() {

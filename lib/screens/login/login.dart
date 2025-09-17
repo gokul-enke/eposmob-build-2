@@ -1088,13 +1088,17 @@ class _SignInScreenState extends State<SignInScreen> {
                                                 context,
                                                 listen: false);
                                             
-                                            // Use cached approach for better performance
-                                            if (!categoryProvider.isCategoriesLoaded) {
-                                              debugPrint("📥 Loading categories from API during login");
-                                              await categoryProvider.listAllCategory();
-                                              categoryProvider.isCategoriesLoaded = true;
+                                            // Always load categories during login to ensure they're available
+                                            debugPrint("📥 Loading categories from API during login");
+                                            await categoryProvider.listAllCategory();
+                                            
+                                            // Verify categories were loaded successfully
+                                            if (categoryProvider.categoryList != null && 
+                                                categoryProvider.categoryList!.isNotEmpty) {
+                                              debugPrint("✅ Categories loaded successfully: ${categoryProvider.categoryList!.length} categories");
+                                              debugPrint("✅ First few categories: ${categoryProvider.categoryList!.take(3).map((c) => c.categoryName).toList()}");
                                             } else {
-                                              debugPrint("📋 Using cached categories during login");
+                                              debugPrint("⚠️ Categories list is empty after API call");
                                             }
                                             
                                             debugPrint(

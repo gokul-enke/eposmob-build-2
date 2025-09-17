@@ -43,22 +43,37 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
           initLoading = true;
         });
       }
-      // String? accessToken =
-      //     Provider.of<AuthModel>(context, listen: false).token;
 
       CategoryProvider categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
-      if (mounted) {
-        setState(() {
-          categoryList = categoryProvider.category;
-        });
+      
+      // Check if categories are already loaded from login
+      if (categoryProvider.isCategoriesLoaded && categoryProvider.hasValidCategories) {
+        debugPrint("✅ [AddCategory] Using already loaded categories: ${categoryProvider.categoryList?.length} categories");
+        // Use the already loaded categories for search display
+        if (mounted) {
+          setState(() {
+            categoryList = categoryProvider.category;
+          });
+        }
+        // Set the search categories to the loaded categories
+        categoryProvider.searchCategoryList = categoryProvider.categoryList;
+        categoryProvider.currentPage = 1;
+        categoryProvider.totalPages = 1;
+        categoryProvider.notifyListeners();
+      } else {
+        debugPrint("📥 [AddCategory] Loading categories from API - not loaded or empty");
+        if (mounted) {
+          setState(() {
+            categoryList = categoryProvider.category;
+          });
+        }
+        await categoryProvider.searchAllCategory(
+          page: 1,
+        );
       }
-      await categoryProvider.searchAllCategory(
-        // accessToken: accessToken ?? "",
-        page: 1,
-      );
     } catch (error) {
-      // debugPrint(error.toString());
+      debugPrint("Error in loadInitData: $error");
     } finally {
       if (mounted) {
         setState(() {
@@ -78,6 +93,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
       CategoryProvider categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
 
+      // Always make API call for search/filter operations
       await categoryProvider.searchAllCategory(
         filterName:
             _searchController.text.isNotEmpty ? _searchController.text : null,
@@ -85,7 +101,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
         page: page,
       );
     } catch (error) {
-      debugPrint(error.toString());
+      debugPrint("Error in searchCategory: $error");
     } finally {
       if (mounted) {
         setState(() {
@@ -105,9 +121,22 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     _searchController.clear();
     CategoryProvider categoryProvider =
         Provider.of<CategoryProvider>(context, listen: false);
-    await categoryProvider.searchAllCategory(
-      page: 1,
-    );
+    
+    // Use already loaded categories if available, otherwise make API call
+    if (categoryProvider.isCategoriesLoaded && categoryProvider.hasValidCategories) {
+      debugPrint("✅ [AddCategory] Reset using cached categories");
+      // Reset to show all loaded categories
+      categoryProvider.searchCategoryList = categoryProvider.categoryList;
+      categoryProvider.currentPage = 1;
+      categoryProvider.totalPages = 1;
+      categoryProvider.notifyListeners();
+    } else {
+      debugPrint("📥 [AddCategory] Reset with API call - categories not cached");
+      await categoryProvider.searchAllCategory(
+        page: 1,
+      );
+    }
+    
     if (mounted) {
       setState(() {
         selectedCategoryId = null;

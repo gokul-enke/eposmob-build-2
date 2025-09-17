@@ -70,12 +70,13 @@ class _SideBarProductListState extends State<SideBarProductList> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Only load categories if not already loaded
+      // Ensure categories are loaded for the sidebar
       final categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
-      if (!categoryProvider.isCategoriesLoaded) {
-        categoryProvider.listAllCategory();
-      }
+      
+      debugPrint("📥 [SidebarProductList] Ensuring categories are loaded...");
+      categoryProvider.ensureCategoriesLoaded();
+      
       Provider.of<LocalProductProvider>(context, listen: false)
           .refreshProducts();
     });
@@ -155,8 +156,14 @@ class _SideBarProductListState extends State<SideBarProductList> {
                   margin: const EdgeInsets.symmetric(
                       horizontal: 8), // Minimal margin
                   onchanged: (query) {
-                    Provider.of<CategoryProvider>(context, listen: false)
-                        .listAllCategory(filterName: query);
+                    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+                    if (query!.isEmpty) {
+                      // Reset to show all categories without API call
+                      categoryProvider.resetCategoryFilter();
+                    } else {
+                      // Make API call for filtering
+                      categoryProvider.listAllCategory(filterName: query);
+                    }
                     setState(() {}); // Update to show/hide clear button
                   },
                 ),
@@ -190,9 +197,14 @@ class _SideBarProductListState extends State<SideBarProductList> {
           margin: const EdgeInsets.symmetric(vertical: 8),
           child: Consumer<CategoryProvider>(
             builder: (context, categoryProvider, child) {
-              // Prefer the same list used by Category page; fallback to category
+              // Use the main category list loaded during login, fallback to searchCategory
               final rawCategories =
-                  categoryProvider.searchCategory ?? categoryProvider.category ?? [];
+                  categoryProvider.category ?? categoryProvider.searchCategory ?? [];
+              
+              debugPrint("🏷️ [Sidebar] Categories available: ${rawCategories.length}");
+              debugPrint("🏷️ [Sidebar] categoryProvider.category: ${categoryProvider.category?.length}");
+              debugPrint("🏷️ [Sidebar] categoryProvider.searchCategory: ${categoryProvider.searchCategory?.length}");
+              
               // Inject a local 'ALL' entry only for this sidebar view
               final allCategory = Category(
                 categoryId: 0,
