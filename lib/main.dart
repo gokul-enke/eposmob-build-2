@@ -89,25 +89,31 @@ void main() async {
 Future<void> _initializeHiveBoxes() async {
   const maxRetries = 3;
   const retryDelay = Duration(seconds: 2);
-  
-  final boxNames = ['products', 'cart_items', 'saved_orders', 'confirmed_orders'];
-  
+
+  final boxNames = [
+    'products',
+    'cart_items',
+    'saved_orders',
+    'confirmed_orders'
+  ];
+
   for (String boxName in boxNames) {
     int attempts = 0;
     bool success = false;
-    
+
     while (attempts < maxRetries && !success) {
       try {
         attempts++;
-        debugPrint('🔄 Attempting to open $boxName box (attempt $attempts/$maxRetries)');
-        
+        debugPrint(
+            '🔄 Attempting to open $boxName box (attempt $attempts/$maxRetries)');
+
         // Check if box is already open
         if (Hive.isBoxOpen(boxName)) {
           debugPrint('✅ Box $boxName is already open');
           success = true;
           continue;
         }
-        
+
         // Try to open the box based on its type
         switch (boxName) {
           case 'products':
@@ -121,17 +127,17 @@ Future<void> _initializeHiveBoxes() async {
             await Hive.openBox<HiveSavedOrder>(boxName);
             break;
         }
-        
+
         debugPrint('✅ Successfully opened $boxName box');
         success = true;
-        
       } catch (e) {
         debugPrint('❌ Failed to open $boxName box (attempt $attempts): $e');
-        
+
         if (attempts >= maxRetries) {
-          debugPrint('🚨 Max retries reached for $boxName box. Attempting cleanup...');
+          debugPrint(
+              '🚨 Max retries reached for $boxName box. Attempting cleanup...');
           await _cleanupLockFiles(boxName);
-          
+
           // Final attempt after cleanup
           try {
             switch (boxName) {
@@ -149,7 +155,8 @@ Future<void> _initializeHiveBoxes() async {
             debugPrint('✅ Successfully opened $boxName box after cleanup');
             success = true;
           } catch (finalError) {
-            debugPrint('💥 Critical error: Cannot open $boxName box even after cleanup: $finalError');
+            debugPrint(
+                '💥 Critical error: Cannot open $boxName box even after cleanup: $finalError');
             // Continue with other boxes instead of crashing the app
           }
         } else {
@@ -166,7 +173,7 @@ Future<void> _cleanupLockFiles(String boxName) async {
     final supportDir = await getApplicationSupportDirectory();
     final hiveBaseDir = Directory('${supportDir.path}/epos/hive_data');
     final lockFile = File('${hiveBaseDir.path}/$boxName.lock');
-    
+
     if (await lockFile.exists()) {
       debugPrint('🧹 Attempting to remove stale lock file: ${lockFile.path}');
       await lockFile.delete();

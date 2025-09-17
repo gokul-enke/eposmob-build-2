@@ -4,9 +4,11 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/screens/billing/widgets/product_entry_header.dart';
 import 'package:pos_machine/screens/billing/widgets/cart/cart_items_table.dart';
 import 'package:pos_machine/widgets/sidebar_product_list.dart';
+import 'package:pos_machine/widgets/sync_button.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 
@@ -50,24 +52,70 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                // App Bar
+                // App Bar (Order info + controls)
                 Row(
                   children: [
-                    Icon(
-                      Icons.home,
-                      color: ColorManager.kPrimaryColor,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Add Products',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
+                    // Left: Order label + number (like desktop)
+                    Consumer<LocalProductProvider>(
+                      builder: (context, localProductProvider, _) {
+                        final isEditingOrder = localProductProvider.currentOrder != null;
+                        final orderNumber = isEditingOrder
+                            ? '#${localProductProvider.currentOrder!.orderNumber}'
+                            : '#00000';
+                        return Row(
+                          children: [
+                            Text(
+                              isEditingOrder ? 'Edit - ' : 'New - ',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              orderNumber,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                     const Spacer(),
+                    // Keyboard toggle
+                    Consumer<KeyboardProvider>(
+                      builder: (context, keyboardProvider, _) {
+                        final showing = keyboardProvider.showKeyboardFeature;
+                        return IconButton(
+                          onPressed: () {
+                            if (showing) {
+                              keyboardProvider.featureOff();
+                              keyboardProvider.clear();
+                            } else {
+                              keyboardProvider.featureOn();
+                            }
+                          },
+                          icon: Icon(
+                            showing ? Icons.keyboard_hide : Icons.keyboard,
+                            color: showing ? ColorManager.kPrimaryColor : Colors.grey.shade600,
+                          ),
+                          tooltip: showing ? 'Hide Keyboard' : 'Show Keyboard',
+                        );
+                      },
+                    ),
+                    // Sync button
+                    const SyncButton(
+                      showTooltip: true,
+                      showText: false,
+                    ),
+                    const SizedBox(width: 4),
+                    // Connectivity indicator
+                    _ConnectivityIndicatorMobile(),
+                    const SizedBox(width: 8),
+                    // Grid toggle (existing)
                     IconButton(
                       onPressed: () {
                         setState(() {
@@ -383,6 +431,33 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ConnectivityIndicatorMobile extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<BillingProvider>(
+      builder: (context, billingProvider, child) {
+        final hasNet = billingProvider.hasInternet;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          decoration: BoxDecoration(
+            color: hasNet ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: hasNet ? Colors.green : Colors.red,
+              width: 1,
+            ),
+          ),
+          child: Icon(
+            hasNet ? Icons.wifi : Icons.wifi_off,
+            size: 18,
+            color: hasNet ? Colors.green : Colors.red,
+          ),
+        );
+      },
     );
   }
 }

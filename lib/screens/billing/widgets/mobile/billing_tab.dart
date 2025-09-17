@@ -40,15 +40,15 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
           Container(
             color: Colors.white,
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: const Row(
               children: [
                 Icon(
                   Icons.payment,
                   color: ColorManager.kPrimaryColor,
                   size: 24,
                 ),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: 8),
+                Text(
                   'Billing & Payment',
                   style: TextStyle(
                     fontSize: 20,
@@ -172,8 +172,12 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                     fontSize: 16,
                     height: 52,
                     width: double.infinity,
-                    boxColor: hasItems ? ColorManager.kPrimaryColor : Colors.grey.shade300,
-                    borderColor: hasItems ? ColorManager.kPrimaryColor : Colors.grey.shade300,
+                    boxColor: hasItems
+                        ? ColorManager.kPrimaryColor
+                        : Colors.grey.shade300,
+                    borderColor: hasItems
+                        ? ColorManager.kPrimaryColor
+                        : Colors.grey.shade300,
                     textColor: hasItems ? Colors.white : Colors.grey.shade600,
                     radius: 12,
                   );
@@ -299,14 +303,14 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                     ),
                     const SizedBox(height: 4),
                     ...provider.getSelectedPaymentMethodsExcludingEmpty().map(
-                      (method) => Text(
-                        '• $method',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: ColorManager.kPrimaryColor,
+                          (method) => Text(
+                            '• $method',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: ColorManager.kPrimaryColor,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -327,10 +331,13 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: isSelected ? ColorManager.kPrimaryColor.withValues(alpha: 0.1) : Colors.grey.shade50,
+          color: isSelected
+              ? ColorManager.kPrimaryColor.withValues(alpha: 0.1)
+              : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? ColorManager.kPrimaryColor : Colors.grey.shade300,
+            color:
+                isSelected ? ColorManager.kPrimaryColor : Colors.grey.shade300,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -338,7 +345,9 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
           children: [
             Icon(
               icon,
-              color: isSelected ? ColorManager.kPrimaryColor : Colors.grey.shade600,
+              color: isSelected
+                  ? ColorManager.kPrimaryColor
+                  : Colors.grey.shade600,
               size: 24,
             ),
             const SizedBox(height: 4),
@@ -347,7 +356,9 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? ColorManager.kPrimaryColor : Colors.grey.shade700,
+                color: isSelected
+                    ? ColorManager.kPrimaryColor
+                    : Colors.grey.shade700,
               ),
             ),
           ],
@@ -373,7 +384,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.local_shipping,
                       color: ColorManager.kPrimaryColor,
                       size: 20,
@@ -485,7 +496,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.local_offer,
                       color: ColorManager.kPrimaryColor,
                       size: 20,
@@ -510,9 +521,10 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: provider.coupenCodeTextController.text.isEmpty
-                                  ? Colors.grey.shade600
-                                  : Colors.black87,
+                              color:
+                                  provider.coupenCodeTextController.text.isEmpty
+                                      ? Colors.grey.shade600
+                                      : Colors.black87,
                             ),
                           ),
                         ],
@@ -531,8 +543,9 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
             Consumer<LocalProductProvider>(
               builder: (context, localProvider, child) {
                 final summary = localProvider.priceSummary;
-                if (summary != null && 
-                    (summary.flatDiscount > 0 || summary.percentageDiscount > 0)) {
+                if (summary != null &&
+                    (summary.flatDiscount > 0 ||
+                        summary.percentageDiscount > 0)) {
                   return Container(
                     margin: const EdgeInsets.only(top: 8),
                     padding: const EdgeInsets.all(8),

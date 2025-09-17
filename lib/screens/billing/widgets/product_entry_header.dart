@@ -197,7 +197,7 @@ class ProductEntryHeader extends StatelessWidget {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       CustomRoundButton(
-                                        title: "Add Item",
+                                        title: "Add",
                                         boxColor: ColorManager.kButtonGreen,
                                         borderColor: ColorManager.kButtonGreen,
                                         isLoading: billingProvider.isLoadingAddItem,

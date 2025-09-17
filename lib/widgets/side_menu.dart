@@ -163,7 +163,13 @@ class _SideMenuState extends State<SideMenu> {
           const SizedBox(
             height: 15,
           ),
-          Center(child: WebsafeSvg.asset(ImageAssets.posLogo)),
+          Center(
+            child: Image.asset(
+              ImageAssets.posImageLogo,
+              height: 40,
+              fit: BoxFit.contain,
+            ),
+          ),
           const SizedBox(
             height: 5,
           ),
@@ -710,10 +716,14 @@ class DrawerListTile extends StatelessWidget {
               width: leadingBox,
               height: leadingBox,
               child: Center(
-                child: Image.asset(
-                  ImageAssets.posImageLogo,
-                  height: 40,
-                  fit: BoxFit.contain,
+                child: WebsafeSvg.asset(
+                  iconPath,
+                  width: resolvedIconSize,
+                  height: resolvedIconSize,
+                  colorFilter: const ColorFilter.mode(
+                    ColorManager.kPrimaryColor,
+                    BlendMode.srcIn,
+                  ),
                 ),
               ),
             ),
