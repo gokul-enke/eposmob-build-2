@@ -8,12 +8,14 @@ import 'package:pos_machine/screens/billing/widgets/customer_input.dart';
 import 'package:pos_machine/screens/billing/widgets/payment_summary.dart';
 import 'package:pos_machine/screens/billing/coordinators/payment_coordinator.dart';
 import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 
 class MobileBillingTab extends StatefulWidget {
   final GlobalKey autocompletePhoneKey;
   final VoidCallback onConfirmOrder;
   final VoidCallback onSaveOrder;
   final VoidCallback onCreateOrderAndPrint;
+  final bool isConfirmingOrder;
 
   const MobileBillingTab({
     super.key,
@@ -21,6 +23,7 @@ class MobileBillingTab extends StatefulWidget {
     required this.onConfirmOrder,
     required this.onSaveOrder,
     required this.onCreateOrderAndPrint,
+    this.isConfirmingOrder = false,
   });
 
   @override
@@ -31,9 +34,15 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    // Calculate a safe bottom padding so content can scroll fully above the
+    // persistent bottomSheet buttons. This avoids the Order Summary being
+    // partially hidden behind the buttons.
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    // Approximate height of bottom actions: padding(16) + row(48) + gap(12) + button(52) + padding(16)
+    const double bottomActionsHeight = 144;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           // Header
@@ -63,7 +72,17 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
           // Content
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics()),
+              keyboardDismissBehavior:
+                  ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                // Add extra bottom padding so last section clears the bottomSheet
+                bottomActionsHeight + bottomInset + 16,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -113,7 +132,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                     child: const PaymentSummary(compact: false),
                   ),
 
-                  const SizedBox(height: 100), // Space for bottom actions
+                  // Bottom spacing now handled by scroll view padding above
                 ],
               ),
             ),
@@ -180,6 +199,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                         : Colors.grey.shade300,
                     textColor: hasItems ? Colors.white : Colors.grey.shade600,
                     radius: 12,
+                    isLoading: widget.isConfirmingOrder,
                   );
                 },
               ),
@@ -232,138 +252,86 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
   Widget _buildPaymentMethodsSection() {
     return Consumer<BillingProvider>(
       builder: (context, provider, child) {
+        final selectedMethods =
+            provider.getSelectedPaymentMethodsExcludingEmpty();
+
+        // Build a single row styled exactly like Delivery section
+        final summaryText = selectedMethods.isEmpty
+            ? 'Select Payment Method'
+            : selectedMethods.join(', ');
+
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Payment Method Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: _buildPaymentMethodButton(
-                    'Cash',
-                    Icons.money,
-                    provider.isCashSelected,
-                    () => PaymentCoordinator.showPaymentMethodModal(context),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildPaymentMethodButton(
-                    'Card',
-                    Icons.credit_card,
-                    provider.isCardSelected,
-                    () => PaymentCoordinator.showPaymentMethodModal(context),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildPaymentMethodButton(
-                    'UPI',
-                    Icons.qr_code,
-                    provider.isUpiSelected,
-                    () => PaymentCoordinator.showPaymentMethodModal(context),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildPaymentMethodButton(
-                    'Debit',
-                    Icons.account_balance,
-                    provider.isDebitSelected,
-                    () => PaymentCoordinator.showPaymentMethodModal(context),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Selected Payment Methods Summary
-            if (provider.getSelectedPaymentMethodsExcludingEmpty().isNotEmpty)
-              Container(
+            GestureDetector(
+              onTap: () => PaymentCoordinator.showPaymentMethodModal(context),
+              child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: ColorManager.kPrimaryColor.withValues(alpha: 0.1),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: ColorManager.kPrimaryColor.withOpacity(0.3),
-                  ),
+                  border: Border.all(color: Colors.grey.shade300),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    const Text(
-                      'Selected Payment Methods:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: ColorManager.kPrimaryColor,
-                      ),
+                    const Icon(
+                      Icons.payment,
+                      color: ColorManager.kPrimaryColor,
+                      size: 20,
                     ),
-                    const SizedBox(height: 4),
-                    ...provider.getSelectedPaymentMethodsExcludingEmpty().map(
-                          (method) => Text(
-                            '• $method',
-                            style: const TextStyle(
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Payment Method',
+                            style: TextStyle(
                               fontSize: 12,
-                              color: ColorManager.kPrimaryColor,
+                              color: Colors.grey,
                             ),
                           ),
-                        ),
+                          Text(
+                            summaryText,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: selectedMethods.isEmpty
+                                  ? Colors.grey.shade700
+                                  : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.grey.shade400,
+                      size: 16,
+                    ),
                   ],
                 ),
               ),
+            ),
+            if (selectedMethods.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildOptionButton(
+                      selectedMethods.length > 1
+                          ? 'Modify Payment Methods'
+                          : 'Change Payment Method',
+                      Icons.edit,
+                      () => PaymentCoordinator.showPaymentMethodModal(context),
+                    ),
+                  ),
+                ],
+              ),
+            ]
           ],
         );
       },
-    );
-  }
-
-  Widget _buildPaymentMethodButton(
-    String title,
-    IconData icon,
-    bool isSelected,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? ColorManager.kPrimaryColor.withValues(alpha: 0.1)
-              : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color:
-                isSelected ? ColorManager.kPrimaryColor : Colors.grey.shade300,
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: isSelected
-                  ? ColorManager.kPrimaryColor
-                  : Colors.grey.shade600,
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected
-                    ? ColorManager.kPrimaryColor
-                    : Colors.grey.shade700,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -378,7 +346,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.grey.shade300),
                 ),
@@ -424,14 +392,14 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
             // Additional Options
             Row(
               children: [
-                Expanded(
-                  child: _buildOptionButton(
-                    'Set Date/Time',
-                    Icons.schedule,
-                    () => PaymentCoordinator.showDeliveryMethodModal(context),
-                  ),
-                ),
-                const SizedBox(width: 8),
+                // Expanded(
+                //   child: _buildOptionButton(
+                //     'Set Date/Time',
+                //     Icons.schedule,
+                //     () => PaymentCoordinator.showDeliveryMethodModal(context),
+                //   ),
+                // ),
+                // const SizedBox(width: 8),
                 Expanded(
                   child: _buildOptionButton(
                     'Add Comment',
@@ -453,7 +421,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.grey.shade300),
         ),
@@ -490,7 +458,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.grey.shade300),
                 ),
@@ -507,23 +475,22 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Apply Coupon',
+                            'Discount / Coupon',
                             style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                              fontSize: 12,
+                              color: Colors.grey,
                             ),
                           ),
                           Text(
                             provider.coupenCodeTextController.text.isEmpty
-                                ? 'Tap to add coupon code'
+                                ? 'Add or apply coupon'
                                 : provider.coupenCodeTextController.text,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                               color:
                                   provider.coupenCodeTextController.text.isEmpty
-                                      ? Colors.grey.shade600
+                                      ? Colors.grey.shade700
                                       : Colors.black87,
                             ),
                           ),
@@ -585,29 +552,140 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
 
   void _showCommentDialog(BuildContext context) {
     final provider = Provider.of<BillingProvider>(context, listen: false);
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Comment'),
-        content: TextField(
-          controller: provider.commentController,
-          decoration: const InputDecoration(
-            hintText: 'Enter your comment...',
-            border: OutlineInputBorder(),
-          ),
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Save'),
-          ),
-        ],
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
+      builder: (context) {
+        final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 8),
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.comment,
+                      color: ColorManager.kPrimaryColor,
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Add Comment',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Text Field
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  controller: provider.commentController,
+                  maxLength: 200,
+                  minLines: 3,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    labelText: 'Comment',
+                    hintText: 'Enter any special instructions or notes...',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: ColorManager.kPrimaryColor,
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                  textInputAction: TextInputAction.newline,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Actions
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: BorderSide(color: Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(color: Colors.grey.shade700),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          backgroundColor: ColorManager.kPrimaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          showScaffold(
+                            context: context,
+                            message: 'Comment updated',
+                          );
+                        },
+                        child: const Text(
+                          'Save',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

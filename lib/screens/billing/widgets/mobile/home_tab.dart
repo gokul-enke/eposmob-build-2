@@ -11,6 +11,7 @@ import 'package:pos_machine/widgets/sidebar_product_list.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/helpers/product_cart_helper.dart';
 
 class MobileHomeTab extends StatefulWidget {
   final GlobalKey autocompleteProductKey;
@@ -34,16 +35,17 @@ class MobileHomeTab extends StatefulWidget {
 
 class _MobileHomeTabState extends State<MobileHomeTab> {
   bool _isCartExpanded = true;
-  bool _isProductGridVisible = false;
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final productProvider = Provider.of<GridSelectionProvider>(context, listen: false);
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final productProvider =
+        Provider.of<GridSelectionProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           // Product Entry Header
@@ -58,7 +60,8 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                     // Left: Order label + number (like desktop)
                     Consumer<LocalProductProvider>(
                       builder: (context, localProductProvider, _) {
-                        final isEditingOrder = localProductProvider.currentOrder != null;
+                        final isEditingOrder =
+                            localProductProvider.currentOrder != null;
                         final orderNumber = isEditingOrder
                             ? '#${localProductProvider.currentOrder!.orderNumber}'
                             : '#00000';
@@ -100,7 +103,9 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                           },
                           icon: Icon(
                             showing ? Icons.keyboard_hide : Icons.keyboard,
-                            color: showing ? ColorManager.kPrimaryColor : Colors.grey.shade600,
+                            color: showing
+                                ? ColorManager.kPrimaryColor
+                                : Colors.grey.shade600,
                           ),
                           tooltip: showing ? 'Hide Keyboard' : 'Show Keyboard',
                         );
@@ -115,18 +120,16 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                     // Connectivity indicator
                     _ConnectivityIndicatorMobile(),
                     const SizedBox(width: 8),
-                    // Grid toggle (existing)
+                    // Grid toggle - Show modal instead
                     IconButton(
                       onPressed: () {
-                        setState(() {
-                          _isProductGridVisible = !_isProductGridVisible;
-                        });
+                        _showProductGridModal(context);
                       },
-                      icon: Icon(
-                        _isProductGridVisible ? Icons.grid_view : Icons.grid_view_outlined,
+                      icon: const Icon(
+                        Icons.grid_view_outlined,
                         color: ColorManager.kPrimaryColor,
                       ),
-                      tooltip: 'Toggle Product Grid',
+                      tooltip: 'Show Product Grid',
                     ),
                   ],
                 ),
@@ -137,7 +140,8 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                   barcodeController: billingProvider.barcodeController,
                   quantityController: billingProvider.quantityController,
                   unitPriceController: billingProvider.unitPriceController,
-                  selectedProductIdController: billingProvider.selectedProductIdController,
+                  selectedProductIdController:
+                      billingProvider.selectedProductIdController,
                   productProvider: productProvider,
                   autocompleteProductKey: widget.autocompleteProductKey,
                   onProcessBarcode: widget.onProcessBarcode,
@@ -148,29 +152,14 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
             ),
           ),
 
-          // Content Area
+          // Content Area - Now just cart and actions
           Expanded(
             child: Column(
               children: [
-                // Product Grid (if visible)
-                if (_isProductGridVisible)
-                  Container(
-                    height: 200,
-                    color: Colors.white,
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: BuildBoxShadowContainer(
-                      circleRadius: 12,
-                      child: const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: SideBarProductList(),
-                      ),
-                    ),
-                  ),
-
-                // Cart Section
+                // Cart Section - Takes most of the space
                 Expanded(
                   child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                     child: BuildBoxShadowContainer(
                       circleRadius: 12,
                       child: Column(
@@ -193,7 +182,7 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                             ),
                             child: Row(
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.shopping_cart,
                                   color: ColorManager.kPrimaryColor,
                                   size: 20,
@@ -211,9 +200,11 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                                 // Cart Summary
                                 Consumer<LocalProductProvider>(
                                   builder: (context, provider, child) {
-                                    final summary = provider.priceSummary;
+                                    // Use cartTotal getter to recalculate and update summary live
+                                    final total = provider.cartTotal;
                                     return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
                                       children: [
                                         Text(
                                           '${provider.cartItems.length} items',
@@ -223,8 +214,8 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                                           ),
                                         ),
                                         Text(
-                                          '₹${summary?.netTotal.toStringAsFixed(2) ?? '0.00'}',
-                                          style: TextStyle(
+                                          '₹${total.toStringAsFixed(2)}',
+                                          style: const TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.bold,
                                             color: ColorManager.kPrimaryColor,
@@ -254,7 +245,7 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                             ),
                           ),
 
-                          // Cart Items
+                          // Cart Items - Takes remaining space
                           if (_isCartExpanded)
                             const Expanded(
                               child: CartItemsTable(),
@@ -265,9 +256,9 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                   ),
                 ),
 
-                // Quick Actions
+                // Quick Actions - Fixed at bottom
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                   child: Row(
                     children: [
                       // Clear Cart Button
@@ -275,8 +266,12 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                         child: Consumer<BillingProvider>(
                           builder: (context, provider, child) {
                             return CustomRoundButton(
-                              title: provider.isLoadingClearCart ? "Clearing..." : "Clear Cart",
-                              fct: provider.isLoadingClearCart ? () {} : widget.onClearCart,
+                              title: provider.isLoadingClearCart
+                                  ? "Clearing..."
+                                  : "Clear Cart",
+                              fct: provider.isLoadingClearCart
+                                  ? () {}
+                                  : widget.onClearCart,
                               fontSize: 14,
                               height: 48,
                               width: double.infinity,
@@ -289,23 +284,24 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // Add Custom Product Button
-                      Expanded(
-                        child: CustomRoundButton(
-                          title: "Add Custom",
-                          fct: () {
-                            // Show add custom product modal
-                            _showAddCustomProductModal(context);
-                          },
-                          fontSize: 14,
-                          height: 48,
-                          width: double.infinity,
-                          boxColor: ColorManager.kPrimaryColor.withOpacity(0.1),
-                          borderColor: ColorManager.kPrimaryColor,
-                          textColor: ColorManager.kPrimaryColor,
-                          radius: 12,
-                        ),
-                      ),
+                      // Add Custom Product Button (commented out)
+                      // const SizedBox(width: 12),
+                      // Expanded(
+                      //   child: CustomRoundButton(
+                      //     title: "Add Custom",
+                      //     fct: () {
+                      //       // Show add custom product modal
+                      //       _showAddCustomProductModal(context);
+                      //     },
+                      //     fontSize: 14,
+                      //     height: 48,
+                      //     width: double.infinity,
+                      //     boxColor: ColorManager.kPrimaryColor.withOpacity(0.1),
+                      //     borderColor: ColorManager.kPrimaryColor,
+                      //     textColor: ColorManager.kPrimaryColor,
+                      //     radius: 12,
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),
@@ -317,13 +313,13 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
     );
   }
 
-  void _showAddCustomProductModal(BuildContext context) {
+  void _showProductGridModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
+        height: MediaQuery.of(context).size.height * 0.85,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.only(
@@ -348,8 +344,14 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
+                  const Icon(
+                    Icons.grid_view,
+                    color: ColorManager.kPrimaryColor,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
                   const Text(
-                    'Add Custom Product',
+                    'Product Grid',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -359,72 +361,34 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.grey.shade100,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-            // Form fields would go here
+            // Product Grid Content
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    TextField(
-                      decoration: InputDecoration(
-                        labelText: 'Product Name',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            decoration: InputDecoration(
-                              labelText: 'Price',
-                              prefixText: '₹',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextField(
-                            decoration: InputDecoration(
-                              labelText: 'Quantity',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    SizedBox(
-                      width: double.infinity,
-                      child: CustomRoundButton(
-                        title: "Add to Cart",
-                        fct: () {
-                          // Add custom product logic
-                          Navigator.pop(context);
-                        },
-                        fontSize: 16,
-                        height: 50,
-                        width: double.infinity,
-                        boxColor: ColorManager.kPrimaryColor,
-                        borderColor: ColorManager.kPrimaryColor,
-                        textColor: Colors.white,
-                        radius: 12,
-                      ),
-                    ),
-                  ],
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: SideBarProductList(
+                  categoryHeight: 80,
+                  dividerHeight: 1,
+                  onProductSelected: (product) async {
+                    // Add selected product to cart, then close the modal
+                    await ProductCartHelper.handleProductSelection(
+                      context: context,
+                      product: product,
+                      addToCartDirectly: true,
+                    );
+                    if (mounted) {
+                      Navigator.pop(context);
+                    }
+                  },
                 ),
               ),
             ),
@@ -433,6 +397,13 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
       ),
     );
   }
+
+  /*
+  // Commented out since the 'Add Custom' button is disabled.
+  void _showAddCustomProductModal(BuildContext context) {
+    // ... modal implementation was here
+  }
+  */
 }
 
 class _ConnectivityIndicatorMobile extends StatelessWidget {
@@ -444,7 +415,9 @@ class _ConnectivityIndicatorMobile extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           decoration: BoxDecoration(
-            color: hasNet ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+            color: hasNet
+                ? Colors.green.withValues(alpha: 0.1)
+                : Colors.red.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: hasNet ? Colors.green : Colors.red,

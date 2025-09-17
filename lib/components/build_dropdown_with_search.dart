@@ -59,6 +59,7 @@ class _BuildDropDownWithSearchState<T>
   int? _selectedIndex;
   int? _keyboardSelectedIndex;
   bool _isLoading = false;
+  bool _isUsingKeyboard = false; // Track if user is using keyboard navigation
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _dropdownKey = GlobalKey();
 
@@ -84,7 +85,8 @@ class _BuildDropDownWithSearchState<T>
   @override
   void didUpdateWidget(BuildDropDownWithSearch<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.value != oldWidget.value) {
+    // Only update text if value changed and user is not currently typing
+    if (widget.value != oldWidget.value && !_userHasTyped) {
       if (widget.value != null) {
         _controller.text = widget.displayText(widget.value!);
       } else {
@@ -180,6 +182,9 @@ class _BuildDropDownWithSearchState<T>
     setState(() {
       _isDropdownOpen = true;
       _userHasTyped = true;
+      _isUsingKeyboard = false; // Reset to mouse mode when opening
+      _keyboardSelectedIndex = null;
+      _selectedIndex = null;
     });
 
     _filterItems(_controller.text);
@@ -191,9 +196,10 @@ class _BuildDropDownWithSearchState<T>
 
     setState(() {
       _isDropdownOpen = false;
-      _userHasTyped = false;
+      // Don't reset _userHasTyped here to preserve user's search text
       _selectedIndex = null;
       _keyboardSelectedIndex = null;
+      _isUsingKeyboard = false;
     });
 
     _removeOverlay();
@@ -208,15 +214,15 @@ class _BuildDropDownWithSearchState<T>
           children: [
             // Background barrier - only closes dropdown when tapped directly
             Positioned.fill(
-              child: Container(
-                color: Colors.transparent,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onTap: () {
-                    debugPrint('🔻 Background tapped - closing dropdown');
-                    _hideDropdown();
-                    _focusNode.unfocus();
-                  },
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () {
+                  debugPrint('🔻 Background tapped - closing dropdown');
+                  _hideDropdown();
+                  _focusNode.unfocus();
+                },
+                child: Container(
+                  color: Colors.transparent,
                 ),
               ),
             ),
@@ -325,9 +331,8 @@ class _BuildDropDownWithSearchState<T>
       physics: const ClampingScrollPhysics(),
       itemBuilder: (context, index) {
         final item = _filteredItems[index];
-        final isKeyboardSelected = _keyboardSelectedIndex == index;
-        final isMouseSelected =
-            _selectedIndex == index && _keyboardSelectedIndex == null;
+        final isKeyboardSelected = _keyboardSelectedIndex == index && _isUsingKeyboard;
+        final isMouseSelected = _selectedIndex == index && !_isUsingKeyboard;
         final isSelected = isKeyboardSelected || isMouseSelected;
 
         return _DropdownItem<T>(
@@ -340,15 +345,25 @@ class _BuildDropDownWithSearchState<T>
             _onItemSelected(item);
           },
           onHover: (isHovered) {
-            if (isHovered && _keyboardSelectedIndex == null) {
+            // Only handle mouse hover if not using keyboard navigation
+            if (!_isUsingKeyboard) {
+              if (isHovered) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              } else if (_selectedIndex == index) {
+                setState(() {
+                  _selectedIndex = null;
+                });
+              }
+            }
+          },
+          onMouseMove: () {
+            // Switch to mouse mode when mouse moves over items
+            if (_isUsingKeyboard) {
               setState(() {
-                _selectedIndex = index;
-              });
-            } else if (!isHovered &&
-                _selectedIndex == index &&
-                _keyboardSelectedIndex == null) {
-              setState(() {
-                _selectedIndex = null;
+                _isUsingKeyboard = false;
+                _keyboardSelectedIndex = null;
               });
             }
           },
@@ -367,7 +382,7 @@ class _BuildDropDownWithSearchState<T>
     _focusNode.unfocus();
 
     setState(() {
-      _userHasTyped = false;
+      _userHasTyped = false; // Reset only when item is actually selected
     });
   }
 
@@ -415,8 +430,10 @@ class _BuildDropDownWithSearchState<T>
           '⌨️ Key pressed: ${event.logicalKey}, Current keyboard index: $_keyboardSelectedIndex, Filtered items: ${_filteredItems.length}');
 
       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        _setKeyboardMode();
         _navigateDown();
       } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        _setKeyboardMode();
         _navigateUp();
       } else if (event.logicalKey == LogicalKeyboardKey.enter) {
         if (_keyboardSelectedIndex != null &&
@@ -431,11 +448,19 @@ class _BuildDropDownWithSearchState<T>
     }
   }
 
+  void _setKeyboardMode() {
+    if (!_isUsingKeyboard) {
+      setState(() {
+        _isUsingKeyboard = true;
+        _selectedIndex = null; // Clear mouse selection when switching to keyboard
+      });
+    }
+  }
+
   void _navigateDown() {
     debugPrint(
         '🔽 Navigate Down - Filtered items count: ${_filteredItems.length}, Current index: $_keyboardSelectedIndex');
     setState(() {
-      _selectedIndex = null;
       if (_keyboardSelectedIndex == null) {
         _keyboardSelectedIndex = 0;
       } else if (_keyboardSelectedIndex! < _filteredItems.length - 1) {
@@ -454,7 +479,6 @@ class _BuildDropDownWithSearchState<T>
 
   void _navigateUp() {
     setState(() {
-      _selectedIndex = null;
       if (_keyboardSelectedIndex == null) {
         _keyboardSelectedIndex = _filteredItems.length - 1;
       } else if (_keyboardSelectedIndex! > 0) {
@@ -521,7 +545,12 @@ class _BuildDropDownWithSearchState<T>
                       setState(() {
                         _userHasTyped = true;
                       });
-                      if (_controller.text.isNotEmpty) {
+                      // Only select all text if it matches the current selected value
+                      // This prevents clearing user's search input
+                      if (_controller.text.isNotEmpty && 
+                          widget.value != null && 
+                          _controller.text == widget.displayText(widget.value!) &&
+                          !_isDropdownOpen) {
                         _controller.selection = TextSelection(
                           baseOffset: 0,
                           extentOffset: _controller.text.length,
@@ -566,7 +595,7 @@ class _BuildDropDownWithSearchState<T>
                                 _controller.clear();
                                 widget.onChanged(null);
                                 setState(() {
-                                  _userHasTyped = true;
+                                  _userHasTyped = true; // Keep user in typing mode
                                 });
                                 _focusNode.requestFocus();
                                 if (!_isDropdownOpen) {
@@ -608,6 +637,7 @@ class _DropdownItem<T> extends StatefulWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final Function(bool) onHover;
+  final VoidCallback onMouseMove;
 
   const _DropdownItem({
     Key? key,
@@ -616,6 +646,7 @@ class _DropdownItem<T> extends StatefulWidget {
     required this.isSelected,
     required this.onTap,
     required this.onHover,
+    required this.onMouseMove,
   }) : super(key: key);
 
   @override
@@ -635,6 +666,7 @@ class _DropdownItemState<T> extends State<_DropdownItem<T>> {
           _isHovered = true;
         });
         widget.onHover(true);
+        widget.onMouseMove(); // Notify parent about mouse movement
       },
       onExit: (_) {
         setState(() {
@@ -642,34 +674,35 @@ class _DropdownItemState<T> extends State<_DropdownItem<T>> {
         });
         widget.onHover(false);
       },
-      child: GestureDetector(
+      onHover: (_) {
+        widget.onMouseMove(); // Notify parent about mouse movement
+      },
+      child: InkWell(
         onTap: () {
           debugPrint(
-              '👉 GestureDetector tapped: ${widget.displayText(widget.item)}');
+              '👉 InkWell tapped: ${widget.displayText(widget.item)}');
           widget.onTap();
         },
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            constraints:
-                const BoxConstraints(minHeight: 32.0), // Reduced minimum height
-            decoration: BoxDecoration(
-              color: isHighlighted ? Colors.blue.shade50 : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          width: double.infinity,
+          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          constraints:
+              const BoxConstraints(minHeight: 32.0), // Reduced minimum height
+          decoration: BoxDecoration(
+            color: isHighlighted ? Colors.blue.shade50 : Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            widget.displayText(widget.item),
+            style: TextStyle(
+              fontSize: 12,
+              color: isHighlighted ? Colors.blue.shade800 : Colors.black87,
+              fontWeight: isHighlighted ? FontWeight.w600 : FontWeight.normal,
             ),
-            child: Text(
-              widget.displayText(widget.item),
-              style: TextStyle(
-                fontSize: 12,
-                color: isHighlighted ? Colors.blue.shade800 : Colors.black87,
-                fontWeight: isHighlighted ? FontWeight.w600 : FontWeight.normal,
-              ),
-              maxLines: null, // Allow unlimited lines
-              softWrap: true, // Enable text wrapping
-            ),
+            maxLines: null, // Allow unlimited lines
+            softWrap: true, // Enable text wrapping
           ),
         ),
       ),

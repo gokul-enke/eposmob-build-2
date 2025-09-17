@@ -634,20 +634,22 @@ class DrawerListTile extends StatelessWidget {
     return selected
         ? Stack(
             children: [
-              Positioned.fill(
-                  child: Container(
-                alignment: Alignment.center,
-                width: 200,
-                height: MediaQuery.of(context).size.height * .055,
-                margin: ResponsiveWidget.isTablet(context)
-                    ? const EdgeInsets.only(left: 10, bottom: 5)
-                    : const EdgeInsets.only(left: 20, bottom: 5),
-                padding: const EdgeInsets.only(left: 20),
-                decoration: BoxDecoration(
-                  color: ColorManager.kPrimaryColor,
-                  borderRadius: BorderRadius.circular(8),
+              Positioned(
+                left: ResponsiveWidget.isTablet(context) ? 10 : 20,
+                right: ResponsiveWidget.isTablet(context) ? 10 : 20,
+                child: Container(
+                  alignment: Alignment.center,
+                  // width intentionally omitted so it won't stretch full width
+                  height: MediaQuery.of(context).size.height * .055,
+                  // keep only a small bottom margin for spacing between tiles
+                  margin: const EdgeInsets.only(bottom: 5),
+                  padding: const EdgeInsets.only(left: 20),
+                  decoration: BoxDecoration(
+                    color: ColorManager.kPrimaryColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-              )),
+              ),
               ListTile(
                 selected: selected,
                 contentPadding: ResponsiveWidget.isTablet(context)

@@ -105,15 +105,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
         "  - Customer ID from provider: ${customerSelectionProvider.selectedCustomerID}");
 
     if (widget.onProductSelected != null) {
-      debugPrint("  - Using custom callback");
-      // If there's a custom callback, use the helper but handle the callback manually
-      await ProductCartHelper.handleProductSelection(
-        context: context,
-        product: product,
-        addToCartDirectly: false, // Don't add to cart, let callback handle it
-        // Customer info will be fetched from global provider in the helper
-      );
-      // Call the custom callback
+      debugPrint("  - Using custom callback (caller handles add-to-cart)");
+      // Defer add-to-cart handling to the provided callback to avoid duplicate flows
       widget.onProductSelected!(product);
     } else {
       debugPrint("  - Using default behavior - adding to cart directly");
@@ -194,7 +187,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
         // Category horizontal list
         Container(
           height: widget.categoryHeight,
-          margin: const EdgeInsets.symmetric(vertical: 10),
+          margin: const EdgeInsets.symmetric(vertical: 8),
           child: Consumer<CategoryProvider>(
             builder: (context, categoryProvider, child) {
               // Prefer the same list used by Category page; fallback to category
@@ -277,83 +270,85 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     // Category image with highlight effect
-                                    Stack(
-                                      alignment: Alignment.center,
-                                      children: [
-                                        // Outer circle highlight
-                                        if (isSelected)
-                                          Container(
-                                            width: 76,
-                                            height: 76,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              gradient: LinearGradient(
-                                                colors: [
-                                                  ColorManager.kPrimaryColor
-                                                      .withOpacity(0.7),
-                                                  ColorManager.kPrimaryColor
-                                                      .withOpacity(0.3),
-                                                ],
-                                                begin: Alignment.topLeft,
-                                                end: Alignment.bottomRight,
-                                              ),
-                                            ),
-                                          ),
-
-                                        // Main circle avatar
-                                        CircleAvatar(
-                                          backgroundColor: isSelected
-                                              ? Colors.white
-                                              : Colors.grey.shade200,
-                                          radius: 34,
-                                          child: ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(33),
-                                            child: category.categoryImage !=
-                                                    null
-                                                ? Image.network(
-                                                    category.categoryImage!,
-                                                    width: 64,
-                                                    height: 64,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (context,
-                                                            error,
-                                                            stackTrace) =>
-                                                        Icon(Icons.category,
-                                                            size: 30,
-                                                            color: isSelected
-                                                                ? ColorManager
-                                                                    .kPrimaryColor
-                                                                : Colors.grey
-                                                                    .shade400),
-                                                  )
-                                                : Icon(Icons.category,
-                                                    size: 30,
-                                                    color: isSelected
-                                                        ? ColorManager
-                                                            .kPrimaryColor
-                                                        : Colors.grey.shade400),
-                                          ),
-                                        ),
-
-                                        // Selection indicator dot
-                                        if (isSelected)
-                                          Positioned(
-                                            bottom: 0,
-                                            child: Container(
-                                              width: 12,
-                                              height: 3,
+                                    Flexible(
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          // Outer circle highlight
+                                          if (isSelected)
+                                            Container(
+                                              width: 64,
+                                              height: 64,
                                               decoration: BoxDecoration(
-                                                color:
-                                                    ColorManager.kPrimaryColor,
-                                                borderRadius:
-                                                    BorderRadius.circular(2),
+                                                shape: BoxShape.circle,
+                                                gradient: LinearGradient(
+                                                  colors: [
+                                                    ColorManager.kPrimaryColor
+                                                        .withOpacity(0.7),
+                                                    ColorManager.kPrimaryColor
+                                                        .withOpacity(0.3),
+                                                  ],
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                ),
                                               ),
                                             ),
+
+                                          // Main circle avatar
+                                          CircleAvatar(
+                                            backgroundColor: isSelected
+                                                ? Colors.white
+                                                : Colors.grey.shade200,
+                                            radius: 28,
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(28),
+                                              child: category.categoryImage !=
+                                                      null
+                                                  ? Image.network(
+                                                      category.categoryImage!,
+                                                      width: 56,
+                                                      height: 56,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (context,
+                                                              error,
+                                                              stackTrace) =>
+                                                          Icon(Icons.category,
+                                                              size: 24,
+                                                              color: isSelected
+                                                                  ? ColorManager
+                                                                      .kPrimaryColor
+                                                                  : Colors.grey
+                                                                      .shade400),
+                                                    )
+                                                  : Icon(Icons.category,
+                                                      size: 24,
+                                                      color: isSelected
+                                                          ? ColorManager
+                                                              .kPrimaryColor
+                                                          : Colors.grey.shade400),
+                                            ),
                                           ),
-                                      ],
+
+                                          // Selection indicator dot
+                                          if (isSelected)
+                                            Positioned(
+                                              bottom: 0,
+                                              child: Container(
+                                                width: 12,
+                                                height: 3,
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      ColorManager.kPrimaryColor,
+                                                  borderRadius:
+                                                      BorderRadius.circular(2),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                     ),
-                                    const SizedBox(height: 6),
+                                    const SizedBox(height: 4),
                                     // Category name
                                     Text(
                                       category.categoryName ?? 'Unknown',
@@ -390,7 +385,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
 
         // Product search section
         Padding(
-          padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+          padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
           child: Row(
             children: [
               Expanded(
@@ -402,7 +397,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                       style: buildCustomStyle(FontWeightManager.semiBold,
                           FontSize.s18, 0.30, ColorManager.textColor),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
                         Expanded(

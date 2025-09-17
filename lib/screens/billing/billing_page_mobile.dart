@@ -52,6 +52,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
   final FocusNode _focusNode = FocusNode();
   StreamSubscription<String>? _barcodeSubscription;
   String? _lastRehydratedOrderId;
+  bool _isConfirmingOrder = false;
 
   @override
   void initState() {
@@ -545,7 +546,19 @@ class BillingPageMobileState extends State<BillingPageMobile>
       return;
     }
 
-    await CheckoutService(context).confirmOrder();
+    setState(() {
+      _isConfirmingOrder = true;
+    });
+
+    try {
+      await CheckoutService(context).confirmOrder();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isConfirmingOrder = false;
+        });
+      }
+    }
     _focusTextField();
   }
 
@@ -602,7 +615,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
         focusNode: _focusNode,
         onKeyEvent: _handleKeyPress,
         child: Scaffold(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: Colors.white,
           body: Form(
             key: _formKey,
             child: TabBarView(
@@ -633,6 +646,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
                   onConfirmOrder: confirmOrder,
                   onSaveOrder: saveOrder,
                   onCreateOrderAndPrint: createOrderAndPrint,
+                  isConfirmingOrder: _isConfirmingOrder,
                 ),
                 // Orders Tab
                 MobileOrdersTab(

@@ -33,7 +33,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
   int? _highlightedOptionIndex;
   final FocusNode _textFieldFocus = FocusNode();
   final ScrollController _scrollController = ScrollController();
-  final double _itemHeight = 56.0; // Slightly larger for mobile touch targets
+  final double _itemHeight = 56.0; // Mobile-friendly touch targets
   final double _maxOptionsHeight = 300.0; // Reduced max height for mobile
 
   @override
@@ -46,25 +46,34 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
   void _scrollToHighlightedItem() {
     if (_highlightedOptionIndex == null) return;
 
+    // Calculate the offset to scroll to, with the item index
     final double scrollOffset = _highlightedOptionIndex! * _itemHeight;
+
+    // Get the current scroll position and visible height
     final double currentScroll = _scrollController.offset;
     final double visibleHeight = _maxOptionsHeight;
 
-    const double bufferSpace = 8.0;
+    // Adding buffer space to ensure the item is fully visible
+    const double bufferSpace = 4.0;
 
+    // Check if item is already visible
     if (scrollOffset < currentScroll + bufferSpace) {
+      // Item is above visible area or partially visible at the top - scroll up to it
       _scrollController.animateTo(
         scrollOffset > 0 ? scrollOffset - bufferSpace : 0,
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
       );
-    } else if (scrollOffset + _itemHeight > currentScroll + visibleHeight - bufferSpace) {
+    } else if (scrollOffset + _itemHeight >
+        currentScroll + visibleHeight - bufferSpace) {
+      // Item is below visible area or partially visible at bottom - scroll down to it
       _scrollController.animateTo(
         scrollOffset - visibleHeight + _itemHeight + bufferSpace,
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
       );
     }
+    // If item is already fully visible, do nothing
   }
 
   List<GetProduct> _searchProducts(String query) {
@@ -73,6 +82,8 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
     }
 
     final productProvider = Provider.of<LocalProductProvider>(context, listen: false);
+
+    // Search through the complete products list, not the filtered one
     return productProvider.products
         .where((product) => (product.productName ?? '')
             .toLowerCase()
@@ -83,15 +94,24 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
   Future<void> _handleProductSelection(GetProduct product) async {
     debugPrint("🎯 MOBILE AUTOCOMPLETE PRODUCT SELECTION:");
     debugPrint("  - Product: ${product.productName}");
+    debugPrint("  - Product Unit: ${product.unit}");
+    debugPrint("  - Product ID: ${product.productId}");
 
-    final customerSelectionProvider = Provider.of<CustomerSelectionProvider>(context, listen: false);
-    debugPrint("  - Customer: ${customerSelectionProvider.selectedCustomerName}");
+    // Get customer info from global provider
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    debugPrint(
+        "  - Customer from provider: ${customerSelectionProvider.selectedCustomerName}");
+    debugPrint(
+        "  - Customer ID from provider: ${customerSelectionProvider.selectedCustomerID}");
 
     await ProductCartHelper.handleProductSelection(
       context: context,
       product: product,
       onSelected: widget.onSelected,
-      addToCartDirectly: false,
+      addToCartDirectly:
+          false, // Prefill form fields for review before adding to cart
+      // Customer info will be fetched from global provider in the helper
     );
   }
 
@@ -100,7 +120,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
     Iterable<GetProduct> currentOptions = const Iterable<GetProduct>.empty();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 2.0),
       child: Autocomplete<GetProduct>(
         key: widget.autocompleteProductKey,
         optionsBuilder: (TextEditingValue textEditingValue) {
@@ -145,7 +165,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
                     if (_highlightedOptionIndex == null) {
                       _highlightedOptionIndex = 0;
                     } else {
-                      _highlightedOptionIndex = (_highlightedOptionIndex! + 1) % currentOptions.length;
+                      _highlightedOptionIndex = _highlightedOptionIndex! + 1;
                     }
                   });
                   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -154,9 +174,9 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
                 } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
                   setState(() {
                     if (_highlightedOptionIndex == null) {
-                      _highlightedOptionIndex = currentOptions.length - 1;
-                    } else {
-                      _highlightedOptionIndex = (_highlightedOptionIndex! - 1) % currentOptions.length;
+                      _highlightedOptionIndex = 0;
+                    } else if (_highlightedOptionIndex! > 0) {
+                      _highlightedOptionIndex = _highlightedOptionIndex! - 1;
                     }
                   });
                   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -175,12 +195,18 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
                 }
               }
             },
-            child: _buildMobileTextField(
+            child: buildColumnWidgetForTextFields(
               controller: textEditingController,
               focusNode: focusNode,
+              autofocus: widget.autofocus,
+              size: widget.size,
+              width: double.infinity,
+              hintText: 'Search Product',
               onSubmitted: (_) => onFieldSubmitted(),
               onTap: () {
-                keyboardProvider.show('text', textEditingController, replaceOnFirstInput: true);
+                // Show alphanumeric virtual keyboard connected to this controller
+                keyboardProvider.show('text', textEditingController,
+                    replaceOnFirstInput: true);
               },
             ),
           );
@@ -194,46 +220,50 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
 
 return Align(
   alignment: Alignment.topLeft,
-  child: Material(
-    elevation: 4.0,
-    borderRadius: BorderRadius.circular(8), // ✅ match Barcode field
-    child: Container(
-      width: double.infinity, // ✅ same as Expanded TextField
-      constraints: BoxConstraints(
-        maxHeight: _maxOptionsHeight,
-      ),
-      decoration: ShapeDecoration(
-        color: Colors.white,
-        shape: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8), // ✅ exactly like TextField
-          borderSide: BorderSide(
-            color: Colors.grey.shade400,
-            width: 1,
-          ),
-        ),
-      ),
-      child: ListView.builder(
-        controller: _scrollController,
-        padding: EdgeInsets.zero,
-        shrinkWrap: true,
-        itemExtent: _itemHeight,
-        itemCount: options.length,
-        itemBuilder: (BuildContext context, int index) {
-          final option = options.elementAt(index);
-          final bool isHighlighted = _highlightedOptionIndex == index;
+  child: BuildBoxShadowContainer(
+    circleRadius: 7,
+    constraints: BoxConstraints(
+      maxHeight: _maxOptionsHeight,
+      maxWidth: double.infinity,
+    ),
+    color: Colors.white,
+    child: ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      shrinkWrap: true,
+      itemExtent: _itemHeight,
+      itemCount: options.length,
+      itemBuilder: (BuildContext context, int index) {
+        final option = options.elementAt(index);
+        final bool isHighlighted = _highlightedOptionIndex == index;
 
-          return InkWell(
-            onTap: () => onSelected(option),
-            child: Container(
+        return MouseRegion(
+          onEnter: (_) {
+            setState(() {
+              _highlightedOptionIndex = index;
+            });
+          },
+          child: Container(
+            margin: const EdgeInsets.symmetric(
+              horizontal: 4,
+              vertical: 2,
+            ),
+            decoration: BoxDecoration(
               color: isHighlighted ? Colors.blue.shade50 : Colors.white,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 14.0, // ✅ match Barcode TextField padding
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: ListTile(
+              dense: true,
+              visualDensity: VisualDensity.compact,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8, // Slightly more padding for mobile
               ),
-              child: Text(
+              title: Text(
                 option.productName ?? '',
+                maxLines: 2,
                 style: TextStyle(
-                  fontSize: 16.0,
+                  fontSize: 14, // Slightly larger for mobile
                   color: isHighlighted
                       ? Colors.blue.shade800
                       : Colors.black87,
@@ -241,13 +271,23 @@ return Align(
                       ? FontWeight.w500
                       : FontWeight.normal,
                 ),
-                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
+              trailing: Text(
+                '${option.price?.price ?? ''} ${option.currency ?? ''}',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: isHighlighted
+                      ? Colors.blue.shade900
+                      : Colors.black87,
+                ),
+              ),
+              onTap: () => onSelected(option),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     ),
   ),
 );
@@ -261,34 +301,6 @@ return Align(
     );
   }
 
-  Widget _buildMobileTextField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required Function(String) onSubmitted,
-    required VoidCallback onTap,
-  }) {
-    return TextField(
-      controller: controller,
-      focusNode: focusNode,
-      autofocus: widget.autofocus,
-      decoration: InputDecoration(
-        hintText: 'Search Product',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16.0,
-          vertical: 14.0,
-        ),
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.search),
-          onPressed: () {},
-        ),
-      ),
-      style: const TextStyle(fontSize: 16.0),
-      onSubmitted: onSubmitted,
-      onTap: onTap,
-    );
-  }
+
 }
 

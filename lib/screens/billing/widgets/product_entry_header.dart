@@ -12,6 +12,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
+import 'package:pos_machine/widgets/product_autocomplete_list_mobile.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/components/build_round_button.dart';
@@ -111,7 +112,7 @@ class ProductEntryHeader extends StatelessWidget {
                                       mainAxisAlignment: MainAxisAlignment.start,
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        ProductAutocomplete(
+                                        MobileProductAutocomplete(
                                           autocompleteProductKey: autocompleteProductKey,
                                           autofocus:
                                               !appSettingsProvider.appSettings!.barcodeSales,

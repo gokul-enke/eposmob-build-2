@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
@@ -21,12 +22,58 @@ class MobileOrdersTab extends StatefulWidget {
 class _MobileOrdersTabState extends State<MobileOrdersTab> {
   String _searchQuery = '';
   String _selectedFilter = 'All';
-  final List<String> _filterOptions = ['All', 'Today', 'This Week', 'This Month'];
+  final List<String> _filterOptions = [
+    'All',
+    'Today',
+    'This Week',
+    'This Month'
+  ];
+
+  String _formatPaymentSummary(String? paymentMethod) {
+    if (paymentMethod == null || paymentMethod.isEmpty) return 'N/A';
+    try {
+      if (paymentMethod.trim().startsWith('{')) {
+        final map = jsonDecode(paymentMethod) as Map<String, dynamic>;
+        final methods = List<String>.from(map['methods'] ?? const []);
+        final amounts = Map<String, dynamic>.from(map['amounts'] ?? const {});
+        final parts = <String>[];
+        for (final m in methods) {
+          final raw = amounts[m];
+          final num? val =
+              raw is num ? raw : num.tryParse(raw?.toString() ?? '');
+          if (val != null && val > 0) {
+            final label = m[0] + m.substring(1).toLowerCase();
+            parts.add('$label ₹${val.toStringAsFixed(2)}');
+          } else {
+            final label = m[0] + m.substring(1).toLowerCase();
+            parts.add(label);
+          }
+        }
+        if (parts.isEmpty) return 'Multiple';
+        // Avoid overly long text
+        return parts.length > 3
+            ? parts.take(3).join(', ') + ' +' + (parts.length - 3).toString()
+            : parts.join(', ');
+      }
+    } catch (_) {
+      // Fall through to simple handling
+    }
+    final up = paymentMethod.toUpperCase();
+    switch (up) {
+      case 'CASH':
+      case 'CARD':
+      case 'UPI':
+      case 'DEBIT':
+        return up[0] + up.substring(1).toLowerCase();
+      default:
+        return paymentMethod;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           // Header
@@ -37,7 +84,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
               children: [
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.receipt_long,
                       color: ColorManager.kPrimaryColor,
                       size: 24,
@@ -55,14 +102,15 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
                     Consumer<LocalProductProvider>(
                       builder: (context, provider, child) {
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: ColorManager.kPrimaryColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
                             '${provider.savedOrders.length} orders',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: ColorManager.kPrimaryColor,
@@ -103,11 +151,13 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: ColorManager.kPrimaryColor),
+                            borderSide: const BorderSide(
+                                color: ColorManager.kPrimaryColor),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           filled: true,
-                          fillColor: Colors.grey.shade50,
+                          fillColor: Colors.white,
                         ),
                       ),
                     ),
@@ -118,7 +168,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.grey.shade300),
                         ),
@@ -159,7 +209,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
             child: Consumer<LocalProductProvider>(
               builder: (context, provider, child) {
                 final filteredOrders = _getFilteredOrders(provider.savedOrders);
-                
+
                 if (filteredOrders.isEmpty) {
                   return _buildEmptyState();
                 }
@@ -186,9 +236,12 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((order) {
-        return order.customerName?.toLowerCase().contains(_searchQuery.toLowerCase()) == true ||
-               order.customerPhone?.contains(_searchQuery) == true ||
-               order.id?.contains(_searchQuery) == true;
+        return order.customerName
+                    ?.toLowerCase()
+                    .contains(_searchQuery.toLowerCase()) ==
+                true ||
+            order.customerPhone?.contains(_searchQuery) == true ||
+            order.id?.contains(_searchQuery) == true;
       }).toList();
     }
 
@@ -199,8 +252,8 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
         filtered = filtered.where((order) {
           final orderDate = DateTime.parse(order.createdAt);
           return orderDate.year == now.year &&
-                 orderDate.month == now.month &&
-                 orderDate.day == now.day;
+              orderDate.month == now.month &&
+              orderDate.day == now.day;
         }).toList();
         break;
       case 'This Week':
@@ -250,9 +303,9 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
             _searchQuery.isNotEmpty
                 ? 'Try adjusting your search or filter'
                 : 'Saved orders will appear here',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade500,
+              color: Colors.white,
             ),
             textAlign: TextAlign.center,
           ),
@@ -263,7 +316,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
 
   Widget _buildOrderCard(SavedOrder order) {
     final orderDate = DateTime.parse(order.createdAt);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: BuildBoxShadowContainer(
@@ -307,7 +360,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
                       children: [
                         Text(
                           '₹${order.total.toStringAsFixed(2)}',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: ColorManager.kPrimaryColor,
@@ -315,40 +368,40 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
                         ),
                         Text(
                           _formatDate(orderDate),
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 11,
-                            color: Colors.grey.shade500,
+                            color: Colors.white,
                           ),
                         ),
                       ],
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // Order Details
-                Row(
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
                   children: [
                     _buildInfoChip(
                       Icons.shopping_cart,
                       '${order.items.length} items',
                     ),
-                    const SizedBox(width: 8),
                     _buildInfoChip(
                       Icons.payment,
-                      order.paymentMethod ?? 'N/A',
+                      _formatPaymentSummary(order.paymentMethod),
                     ),
-                    const SizedBox(width: 8),
                     _buildInfoChip(
                       Icons.local_shipping,
                       order.deliveryMethod ?? 'Store',
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // Action Buttons
                 Row(
                   children: [
@@ -419,11 +472,16 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
             color: Colors.grey.shade600,
           ),
           const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.grey.shade700,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 160),
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.grey.shade700,
+              ),
             ),
           ),
         ],
@@ -434,7 +492,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays == 0) {
       return 'Today ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     } else if (difference.inDays == 1) {
@@ -514,7 +572,7 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
                       [
                         'Order ID: ${order.id}',
                         'Date: ${_formatDate(DateTime.parse(order.createdAt))}',
-                        'Payment: ${order.paymentMethod ?? 'N/A'}',
+                        'Payment: ${_formatPaymentSummary(order.paymentMethod)}',
                         'Delivery: ${order.deliveryMethod ?? 'N/A'}',
                         'Total: ₹${order.total.toStringAsFixed(2)}',
                       ],
@@ -524,9 +582,10 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
                     if (order.items.isNotEmpty)
                       _buildDetailSection(
                         'Items (${order.items.length})',
-                        order.items.map((item) => 
-                          '${item.product.productName} x ${item.quantity} = ₹${((item.price ?? 0) * item.quantity).toStringAsFixed(2)}'
-                        ).toList(),
+                        order.items
+                            .map((item) =>
+                                '${item.product.productName} x ${item.quantity} = ₹${((item.price ?? 0) * item.quantity).toStringAsFixed(2)}')
+                            .toList(),
                       ),
                   ],
                 ),
@@ -596,22 +655,24 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.grey.shade50,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.grey.shade200),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: details.map((detail) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                detail,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade700,
-                ),
-              ),
-            )).toList(),
+            children: details
+                .map((detail) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        detail,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ))
+                .toList(),
           ),
         ),
       ],
@@ -637,7 +698,8 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Order'),
-        content: Text('Are you sure you want to delete this order for ${order.customerName ?? 'Unknown Customer'}?'),
+        content: Text(
+            'Are you sure you want to delete this order for ${order.customerName ?? 'Unknown Customer'}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -646,7 +708,8 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              final provider = Provider.of<LocalProductProvider>(context, listen: false);
+              final provider =
+                  Provider.of<LocalProductProvider>(context, listen: false);
               provider.deleteSavedOrder(order.id);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(

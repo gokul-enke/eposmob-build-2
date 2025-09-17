@@ -21,253 +21,325 @@ class CartItemsTable extends StatelessWidget {
       builder: (context, localProductProvider, child) {
         final cartItems = localProductProvider.getCartItems();
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            return Container(
-              width: constraints.maxWidth,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.transparent),
-              ),
-              child: Column(
-                children: [
-                  // Fixed header
-                  Container(
-                    color: ColorManager.kPrimaryColor.withValues(alpha: 0.1),
-                    child: Row(
-                      children: [
-                        _buildHeaderCell('#', flex: 1, alignment: Alignment.center),
-                        _buildHeaderCell('Item Name', flex: 3, alignment: Alignment.centerLeft),
-                        _buildHeaderCell('Unit', flex: 1, alignment: Alignment.centerLeft),
-                        _buildHeaderCell('Qty', flex: 2, alignment: Alignment.center),
-                        _buildHeaderCell('MRP', flex: 1, alignment: Alignment.centerLeft),
-                        _buildHeaderCell('Price', flex: 1, alignment: Alignment.centerLeft),
-                        _buildHeaderCell('Total', flex: 1, alignment: Alignment.centerLeft),
-                        _buildHeaderCell('Actions', flex: 1, alignment: Alignment.centerLeft),
-                      ],
+        if (cartItems.isEmpty) {
+          return _buildEmptyCart();
+        }
+
+        // Define fixed column widths for better mobile experience
+        const double indexWidth = 40;
+        const double itemNameWidth = 180;
+        const double unitWidth = 60;
+        const double qtyWidth = 120;
+        const double mrpWidth = 80;
+        const double priceWidth = 80;
+        const double totalWidth = 80;
+        const double actionsWidth = 50;
+        
+        const double totalTableWidth = indexWidth + itemNameWidth + unitWidth + 
+                                     qtyWidth + mrpWidth + priceWidth + totalWidth + actionsWidth;
+
+        return Column(
+          children: [
+            // Scroll hint indicator
+            // Container(
+            //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            //   child: Row(
+            //     mainAxisAlignment: MainAxisAlignment.center,
+            //     children: [
+            //       Icon(
+            //         Icons.swipe_left,
+            //         size: 16,
+            //         color: Colors.grey.shade500,
+            //       ),
+            //       const SizedBox(width: 4),
+            //       Text(
+            //         'Swipe to see all columns',
+            //         style: TextStyle(
+            //           fontSize: 11,
+            //           color: Colors.grey.shade500,
+            //           fontStyle: FontStyle.italic,
+            //         ),
+            //       ),
+            //       const SizedBox(width: 4),
+            //       Icon(
+            //         Icons.swipe_right,
+            //         size: 16,
+            //         color: Colors.grey.shade500,
+            //       ),
+            //     ],
+            //   ),
+            // ),
+            
+            // Fixed header with horizontal scroll
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Container(
+                width: totalTableWidth,
+                decoration: BoxDecoration(
+                  color: ColorManager.kPrimaryColor.withValues(alpha: 0.1),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: ColorManager.kPrimaryColor.withValues(alpha: 0.2),
+                      width: 1,
                     ),
                   ),
-                  // Scrollable content
-                  Expanded(
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.grab,
-                      child: ScrollConfiguration(
-                        behavior: ScrollConfiguration.of(context).copyWith(
-                          dragDevices: {
-                            PointerDeviceKind.mouse,
-                            PointerDeviceKind.touch,
-                            PointerDeviceKind.stylus,
-                            PointerDeviceKind.trackpad,
-                          },
+                ),
+                child: Row(
+                  children: [
+                    _buildFixedHeaderCell('#', width: indexWidth, alignment: Alignment.center),
+                    _buildFixedHeaderCell('Item Name', width: itemNameWidth, alignment: Alignment.centerLeft),
+                    _buildFixedHeaderCell('Unit', width: unitWidth, alignment: Alignment.center),
+                    _buildFixedHeaderCell('Quantity', width: qtyWidth, alignment: Alignment.center),
+                    _buildFixedHeaderCell('MRP', width: mrpWidth, alignment: Alignment.center),
+                    _buildFixedHeaderCell('Price', width: priceWidth, alignment: Alignment.center),
+                    _buildFixedHeaderCell('Total', width: totalWidth, alignment: Alignment.center),
+                    _buildFixedHeaderCell('', width: actionsWidth, alignment: Alignment.center),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Scrollable content
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: SizedBox(
+                  width: totalTableWidth,
+                  child: ListView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: cartItems.length,
+                    itemBuilder: (context, index) {
+                      final item = cartItems[index];
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: index % 2 == 0 ? Colors.white : Colors.grey.shade50,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.grey.shade200,
+                              width: 0.5,
+                            ),
+                          ),
                         ),
-                        child: ListView.builder(
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: cartItems.length,
-                          itemBuilder: (context, index) {
-                            final item = cartItems[index];
-                            return Container(
-                              color: index % 2 == 0 ? Colors.white : Colors.grey.shade50,
-                              child: Row(
-                                children: [
-                                  // Index Number
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: Text(
-                                        '${index + 1}',
-                                        style: buildCustomStyle(
-                                          FontWeightManager.regular,
-                                          11,
-                                          0.21,
-                                          ColorManager.textColor,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.center,
-                                  ),
-
-                                  // Item Name
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: Text(
-                                        item.product.productName ?? 'Unknown',
-                                        style: buildCustomStyle(
-                                          FontWeightManager.regular,
-                                          11,
-                                          0.21,
-                                          ColorManager.textColor,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    flex: 3,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-
-                                  // Unit
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: Text(
-                                        item.product.unit ?? '-',
-                                        style: buildCustomStyle(
-                                          FontWeightManager.regular,
-                                          11,
-                                          0.21,
-                                          ColorManager.textColor,
-                                        ),
-                                        textAlign: TextAlign.left,
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-
-                                  // Qty
-                                  _buildContentCell(
-                                    Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 2),
-                                        child: CompactQuantityControlLocal(
-                                          productId: item.product.productId!,
-                                          quantity: item.quantity.toDouble(),
-                                          unitPrice: item.price.toString(),
-                                          productUnit: item.product.unit,
-                                          product: item.product,
-                                          selectedStock: item.selectedStock,
-                                        ),
-                                      ),
-                                    ),
-                                    flex: 2,
-                                    alignment: Alignment.center,
-                                  ),
-
-                                  // MRP
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: SizedBox(
-                                        width: 70,
-                                        child: MrpTextField(
-                                          item: item,
-                                          localProductProvider: localProductProvider,
-                                        ),
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-
-                                  // Price
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: SizedBox(
-                                        width: 70,
-                                        child: PriceTextField(
-                                          item: item,
-                                          localProductProvider: localProductProvider,
-                                        ),
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-
-                                  // Total
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: SizedBox(
-                                        width: 70,
-                                        child: Text(
-                                          (item.price! * item.quantity).toStringAsFixed(3),
-                                          style: const TextStyle(fontSize: 11),
-                                          textAlign: TextAlign.left,
-                                        ),
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-
-                                  // Actions
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: IconButton(
-                                        icon: WebsafeSvg.asset(
-                                          ImageAssets.oderlistCloseIcon,
-                                          width: 15,
-                                        ),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                        visualDensity: VisualDensity.compact,
-                                        onPressed: () async {
-                                          final billingProvider = Provider.of<BillingProvider>(context, listen: false);
-                                          billingProvider.setLoadingAddItem(true);
-                                          try {
-                                            localProductProvider.removeFromCart(
-                                              item.product.productId!,
-                                              item.selectedStock,
-                                            );
-                                          } finally {
-                                            billingProvider.setLoadingAddItem(false);
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-                                ],
+                        child: Row(
+                          children: [
+                            // Index Number
+                            _buildFixedContentCell(
+                              Text(
+                                '${index + 1}',
+                                style: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  12,
+                                  0.21,
+                                  ColorManager.textColor,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                            );
-                          },
+                              width: indexWidth,
+                              alignment: Alignment.center,
+                            ),
+
+                            // Item Name
+                            _buildFixedContentCell(
+                              Tooltip(
+                                message: item.product.productName ?? 'Unknown',
+                                child: Text(
+                                  item.product.productName ?? 'Unknown',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    12,
+                                    0.21,
+                                    ColorManager.textColor,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              width: itemNameWidth,
+                              alignment: Alignment.centerLeft,
+                            ),
+
+                            // Unit
+                            _buildFixedContentCell(
+                              Text(
+                                item.product.unit ?? '-',
+                                style: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  12,
+                                  0.21,
+                                  ColorManager.textColor,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              width: unitWidth,
+                              alignment: Alignment.center,
+                            ),
+
+                            // Qty
+                            _buildFixedContentCell(
+                              CompactQuantityControlLocal(
+                                productId: item.product.productId!,
+                                quantity: item.quantity.toDouble(),
+                                unitPrice: item.price.toString(),
+                                productUnit: item.product.unit,
+                                product: item.product,
+                                selectedStock: item.selectedStock,
+                              ),
+                              width: qtyWidth,
+                              alignment: Alignment.center,
+                            ),
+
+                            // MRP
+                            _buildFixedContentCell(
+                              SizedBox(
+                                width: 70,
+                                child: MrpTextField(
+                                  item: item,
+                                  localProductProvider: localProductProvider,
+                                ),
+                              ),
+                              width: mrpWidth,
+                              alignment: Alignment.center,
+                            ),
+
+                            // Price
+                            _buildFixedContentCell(
+                              SizedBox(
+                                width: 70,
+                                child: PriceTextField(
+                                  item: item,
+                                  localProductProvider: localProductProvider,
+                                ),
+                              ),
+                              width: priceWidth,
+                              alignment: Alignment.center,
+                            ),
+
+                            // Total
+                            _buildFixedContentCell(
+                              Text(
+                                '₹${(item.price! * item.quantity).toStringAsFixed(2)}',
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  12,
+                                  0.21,
+                                  ColorManager.kPrimaryColor,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              width: totalWidth,
+                              alignment: Alignment.center,
+                            ),
+
+                            // Actions
+                            _buildFixedContentCell(
+                              IconButton(
+                                icon: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade50,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: Colors.red.shade600,
+                                  ),
+                                ),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                visualDensity: VisualDensity.compact,
+                                onPressed: () async {
+                                  final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+                                  billingProvider.setLoadingAddItem(true);
+                                  try {
+                                    localProductProvider.removeFromCart(
+                                      item.product.productId!,
+                                      item.selectedStock,
+                                    );
+                                  } finally {
+                                    billingProvider.setLoadingAddItem(false);
+                                  }
+                                },
+                              ),
+                              width: actionsWidth,
+                              alignment: Alignment.center,
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
-                ],
+                ),
               ),
-            );
-          },
+            ),
+          ],
         );
       },
     );
   }
 
-  Widget _buildHeaderCell(String text, {required int flex, required Alignment alignment}) {
-    return Expanded(
-      flex: flex,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        alignment: alignment,
-        child: Text(
-          text,
-          textAlign: alignment == Alignment.center ? TextAlign.center : TextAlign.left,
-          style: buildCustomStyle(
-            FontWeightManager.bold,
-            12,
-            0.21,
-            ColorManager.textColor,
+  Widget _buildEmptyCart() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.shopping_cart_outlined,
+            size: 64,
+            color: Colors.grey.shade400,
           ),
-        ),
+          const SizedBox(height: 16),
+          Text(
+            'Your cart is empty',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add products using the search bar above',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildContentCell(Widget child, {required int flex, required Alignment alignment}) {
-    return Expanded(
-      flex: flex,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        alignment: alignment,
-        child: child,
+  Widget _buildFixedHeaderCell(String text, {required double width, required Alignment alignment}) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      alignment: alignment,
+      child: Text(
+        text,
+        textAlign: alignment == Alignment.center ? TextAlign.center : TextAlign.left,
+        style: buildCustomStyle(
+          FontWeightManager.bold,
+          12,
+          0.21,
+          ColorManager.textColor,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
+    );
+  }
+
+  Widget _buildFixedContentCell(Widget child, {required double width, required Alignment alignment}) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      alignment: alignment,
+      child: child,
     );
   }
 }
