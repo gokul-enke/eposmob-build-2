@@ -206,22 +206,15 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     super.dispose();
   }
 
-  // Base balance calculation with toggle consideration
+  // Base balance calculation: always based on current purchase total
   double _computeBaseBalance() {
     double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
     double totalCollected = cashAmount + cardAmount + upiAmount;
 
-    double netDue;
-    if (toCustomerCreditEnabled) {
-      // Toggle ON: Include previous balance in calculation
-      // Positive balance = customer has credit, Negative = customer owes
-      netDue = widget.cartTotal - widget.customerPrevBalance;
-    } else {
-      // Toggle OFF: Ignore previous balance completely
-      netDue = widget.cartTotal;
-    }
+    // Net due is always the current purchase total in the modal
+    final double netDue = widget.cartTotal;
 
     double balance = totalCollected - netDue;
     return balance > 0 ? balance : 0.0;
@@ -234,14 +227,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
     double totalCollected = cashAmount + cardAmount + upiAmount;
 
-    double netDue;
-    if (toCustomerCreditEnabled) {
-      // Toggle ON: Include previous balance
-      netDue = widget.cartTotal - widget.customerPrevBalance;
-    } else {
-      // Toggle OFF: Only current purchase
-      netDue = widget.cartTotal;
-    }
+    // Net due is always the current purchase total in the modal
+    final double netDue = widget.cartTotal;
 
     double balance = totalCollected - netDue;
 
@@ -255,20 +242,13 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     };
 
     if (balance <= 0) {
-      // Not enough collected - all goes to settle purchase/dues
+      // Not enough collected - all goes to settle purchase
       postingAmounts['cash'] = cashAmount;
       postingAmounts['card'] = cardAmount;
       postingAmounts['upi'] = upiAmount;
 
-      // For Toggle ON case with insufficient funds, calculate partial credit settlement
-      if (toCustomerCreditEnabled && widget.customerPrevBalance < 0) {
-        // Customer owes money, partial payment reduces the debt
-        double remainingDebt = netDue - totalCollected;
-        postingAmounts['toCustomerCredit'] =
-            widget.customerPrevBalance + remainingDebt;
-      } else {
-        postingAmounts['toCustomerCredit'] = 0.0;
-      }
+      // No extra for credit/balance when underpaid
+      postingAmounts['toCustomerCredit'] = 0.0;
       postingAmounts['balance'] = 0.0;
     } else {
       // Extra money collected
@@ -295,10 +275,6 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         postingAmounts['cash'] = cashPortion;
         postingAmounts['card'] = cardPortion;
         postingAmounts['upi'] = upiPortion;
-      } else {
-        postingAmounts['cash'] = 0.0;
-        postingAmounts['card'] = 0.0;
-        postingAmounts['upi'] = 0.0;
       }
 
       postingAmounts['toCustomerCredit'] = toCredit;
@@ -1056,12 +1032,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   }
 
   Widget _buildNetDueRow() {
-    double netDue;
-    if (toCustomerCreditEnabled) {
-      netDue = widget.cartTotal - widget.customerPrevBalance;
-    } else {
-      netDue = widget.cartTotal;
-    }
+    // Net due display is always based on current purchase
+    final double netDue = widget.cartTotal;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),

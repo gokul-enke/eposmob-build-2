@@ -70,11 +70,8 @@ void main() async {
   Hive.registerAdapter(HiveProductPriceAdapter());
   Hive.registerAdapter(HiveAttachmentAdapter());
 
-  // Open boxes
-  await Hive.openBox<HiveProduct>('products');
-  await Hive.openBox<HiveLocalCartItem>('cart_items');
-  await Hive.openBox<HiveSavedOrder>('saved_orders');
-  await Hive.openBox<HiveSavedOrder>('confirmed_orders');
+  // Open boxes with error handling and retry logic
+  await _initializeHiveBoxes();
 
   Get.put(SideBarController());
 
@@ -87,6 +84,99 @@ void main() async {
   Get.put(CategoryProvider());
   HttpOverrides.global = MyHttpOverrides();
   runApp(const MyApp());
+}
+
+Future<void> _initializeHiveBoxes() async {
+  const maxRetries = 3;
+  const retryDelay = Duration(seconds: 2);
+  
+  final boxNames = ['products', 'cart_items', 'saved_orders', 'confirmed_orders'];
+  
+  for (String boxName in boxNames) {
+    int attempts = 0;
+    bool success = false;
+    
+    while (attempts < maxRetries && !success) {
+      try {
+        attempts++;
+        debugPrint('🔄 Attempting to open $boxName box (attempt $attempts/$maxRetries)');
+        
+        // Check if box is already open
+        if (Hive.isBoxOpen(boxName)) {
+          debugPrint('✅ Box $boxName is already open');
+          success = true;
+          continue;
+        }
+        
+        // Try to open the box based on its type
+        switch (boxName) {
+          case 'products':
+            await Hive.openBox<HiveProduct>(boxName);
+            break;
+          case 'cart_items':
+            await Hive.openBox<HiveLocalCartItem>(boxName);
+            break;
+          case 'saved_orders':
+          case 'confirmed_orders':
+            await Hive.openBox<HiveSavedOrder>(boxName);
+            break;
+        }
+        
+        debugPrint('✅ Successfully opened $boxName box');
+        success = true;
+        
+      } catch (e) {
+        debugPrint('❌ Failed to open $boxName box (attempt $attempts): $e');
+        
+        if (attempts >= maxRetries) {
+          debugPrint('🚨 Max retries reached for $boxName box. Attempting cleanup...');
+          await _cleanupLockFiles(boxName);
+          
+          // Final attempt after cleanup
+          try {
+            switch (boxName) {
+              case 'products':
+                await Hive.openBox<HiveProduct>(boxName);
+                break;
+              case 'cart_items':
+                await Hive.openBox<HiveLocalCartItem>(boxName);
+                break;
+              case 'saved_orders':
+              case 'confirmed_orders':
+                await Hive.openBox<HiveSavedOrder>(boxName);
+                break;
+            }
+            debugPrint('✅ Successfully opened $boxName box after cleanup');
+            success = true;
+          } catch (finalError) {
+            debugPrint('💥 Critical error: Cannot open $boxName box even after cleanup: $finalError');
+            // Continue with other boxes instead of crashing the app
+          }
+        } else {
+          // Wait before retrying
+          await Future.delayed(retryDelay);
+        }
+      }
+    }
+  }
+}
+
+Future<void> _cleanupLockFiles(String boxName) async {
+  try {
+    final supportDir = await getApplicationSupportDirectory();
+    final hiveBaseDir = Directory('${supportDir.path}/epos/hive_data');
+    final lockFile = File('${hiveBaseDir.path}/$boxName.lock');
+    
+    if (await lockFile.exists()) {
+      debugPrint('🧹 Attempting to remove stale lock file: ${lockFile.path}');
+      await lockFile.delete();
+      debugPrint('✅ Successfully removed lock file');
+    } else {
+      debugPrint('ℹ️ No lock file found for $boxName');
+    }
+  } catch (e) {
+    debugPrint('⚠️ Could not cleanup lock file for $boxName: $e');
+  }
 }
 
 class MyHttpOverrides extends HttpOverrides {

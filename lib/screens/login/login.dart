@@ -613,6 +613,14 @@ class _SignInScreenState extends State<SignInScreen> {
   void initState() {
     super.initState();
     _loadUserEmailPassword();
+    // Ensure on-screen keyboard feature is OFF by default when opening login
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final keyboardProvider = Provider.of<KeyboardProvider>(context, listen: false);
+        keyboardProvider.featureOff();
+        keyboardProvider.clear();
+      } catch (_) {}
+    });
   }
 
   void _loadUserEmailPassword() async {
@@ -688,6 +696,12 @@ class _SignInScreenState extends State<SignInScreen> {
     Size size = MediaQuery.of(context).size;
     double height = size.height;
     double width = size.width;
+    // Responsive helpers
+    final bool isMobile = width < 600;
+    final double formWidth = isMobile ? (width - 40) : (width / 2);
+    final EdgeInsets fieldPadding = EdgeInsets.symmetric(horizontal: isMobile ? 16 : 25);
+    final double titleTopSpace = isMobile ? height * .06 : height * .1;
+    final double betweenTitleAndForm = isMobile ? 24.0 : height * .08;
     final authModel = Provider.of<AuthModel>(context);
     return Scaffold(
       body: Stack(
@@ -703,14 +717,14 @@ class _SignInScreenState extends State<SignInScreen> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       SizedBox(
-                        height: height * .1,
+                        height: titleTopSpace,
                       ),
                       BuildTextTile(
                         title: 'Login',
                         textStyle: buildTitleStyle,
                       ),
                       SizedBox(
-                        height: height * .08,
+                        height: betweenTitleAndForm,
                       ),
                       Form(
                         key: _formKey,
@@ -719,10 +733,9 @@ class _SignInScreenState extends State<SignInScreen> {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               SizedBox(
-                                width: size.width / 2,
+                                width: formWidth,
                                 child: Padding(
-                                  padding:
-                                  const EdgeInsets.symmetric(horizontal: 25),
+                                  padding: fieldPadding,
                                   child: TextFormField(
                                     autovalidateMode:
                                     AutovalidateMode.onUserInteraction,
@@ -768,10 +781,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                 height: 30,
                               ),
                               SizedBox(
-                                width: size.width / 2,
+                                width: formWidth,
                                 child: Padding(
-                                  padding:
-                                  const EdgeInsets.symmetric(horizontal: 25),
+                                  padding: fieldPadding,
                                   child: TextFormField(
                                     key: const Key("Password_Sign_in"),
                                     obscureText: _obscureText,
@@ -825,56 +837,61 @@ class _SignInScreenState extends State<SignInScreen> {
                                 ),
                               ),
                               SizedBox(
-                                width: size.width / 2,
+                                width: formWidth,
                                 child: Padding(
-                                  padding: const EdgeInsets.all(30.0),
+                                  padding: EdgeInsets.all(isMobile ? 16.0 : 30.0),
                                   child: Row(
                                     mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Row(
-                                        children: [
-                                          GestureDetector(
-                                            onTap: () {
-                                              setState(() {
-                                                _rememberMe = !_rememberMe;
-                                                _handleRememberMe(_rememberMe);
-                                              });
-                                            },
-                                            child: Container(
-                                              height: height * 0.02,
-                                              width: width * 0.02,
+                                      InkWell(
+                                        borderRadius: BorderRadius.circular(8),
+                                        onTap: () {
+                                          setState(() {
+                                            _rememberMe = !_rememberMe;
+                                            _handleRememberMe(_rememberMe);
+                                          });
+                                        },
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              height: isMobile ? 24 : 20,
+                                              width: isMobile ? 24 : 20,
                                               decoration: BoxDecoration(
                                                 shape: BoxShape.circle,
                                                 border: _rememberMe
                                                     ? null
                                                     : Border.all(
-                                                    color: ColorManager.grey,
-                                                    width: 2.0),
+                                                        color: ColorManager.grey,
+                                                        width: 2.0,
+                                                      ),
                                                 color: _rememberMe
                                                     ? ColorManager.kPrimaryColor
                                                     : Colors.white,
                                               ),
+                                              alignment: Alignment.center,
                                               child: _rememberMe
                                                   ? const Icon(
-                                                Icons.check,
-                                                size: 10,
-                                                color: Colors.white,
-                                              )
+                                                      Icons.check,
+                                                      size: 14,
+                                                      color: Colors.white,
+                                                    )
                                                   : null,
                                             ),
-                                          ),
-                                          const Text(
-                                            'Remember Me',
-                                            style: TextStyle(
-                                              fontWeight: FontWeightManager.regular,
-                                              fontFamily: FontConstants.fontFamily,
-                                              fontSize: FontSize.s8,
-                                              letterSpacing: 0.12,
-                                              color: Colors.black,
+                                            SizedBox(width: isMobile ? 12 : 10),
+                                            const Text(
+                                              'Remember Me',
+                                              style: TextStyle(
+                                                fontWeight: FontWeightManager.regular,
+                                                fontFamily: FontConstants.fontFamily,
+                                                fontSize: FontSize.s10,
+                                                letterSpacing: 0.2,
+                                                color: Colors.black,
+                                              ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                       TextButton(
                                         onPressed: () {
@@ -909,7 +926,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 25, vertical: 5),
                                 child: CustomRoundButton(
-                                  width: width / 2,
+                                  width: formWidth,
                                   fontSize: FontSize.s12,
                                   height: size.height * .07,
                                   key: const Key("Button_Sign_in"),
@@ -1139,9 +1156,9 @@ class _SignInScreenState extends State<SignInScreen> {
                               // Reset API Key Button
                               const SizedBox(height: 20),
                               SizedBox(
-                                width: size.width / 2,
+                                width: formWidth,
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 25),
+                                  padding: fieldPadding,
                                   child: TextButton.icon(
                                     onPressed: _resetApiKey,
                                     icon: const Icon(
@@ -1168,7 +1185,37 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
             ),
           ),
-          
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: IconButton(
+                  icon: Icon(
+                    Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                        ? Icons.keyboard_hide
+                        : Icons.keyboard,
+                    color: Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                        ? ColorManager.kPrimaryColor
+                        : Colors.grey.shade600,
+                  ),
+                  tooltip: Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                      ? 'Hide Keyboard'
+                      : 'Show Keyboard',
+                  onPressed: () {
+                    final keyboardProvider = Provider.of<KeyboardProvider>(context, listen: false);
+                    if (keyboardProvider.showKeyboardFeature) {
+                      keyboardProvider.featureOff();
+                      keyboardProvider.clear();
+                    } else {
+                      keyboardProvider.featureOn();
+                    }
+                  },
+                ),
+              ),
+            ),
+          ),
+
           // Add overlay for data loading
           if (_isLoadingData)
             Container(

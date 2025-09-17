@@ -383,6 +383,16 @@ class BillingProvider extends ChangeNotifier {
     notifyListeners();
   }
   
+  void clearSelectedCustomerButKeepText() {
+    _selectedCustomer = null;
+    _selectedCustomerID = null;
+    _selectedCustomerPhone = null;
+    _isCustomerFound = false;
+    _isCustomerManuallySelected = false;
+    _highlightedCustomerIndex = null;
+    notifyListeners();
+  }
+
   void clearSelectedCustomer() {
     _selectedCustomer = null;
     _selectedCustomerID = null;
@@ -856,6 +866,27 @@ class BillingProvider extends ChangeNotifier {
     if (_isUpiSelected) methods.add("UPI");
     if (_isDebitSelected) methods.add("DEBIT");
     return methods;
+  }
+
+  // Lightweight helper: any payment selected (without amount validation)
+  bool hasAnyPaymentSelected() {
+    return getSelectedPaymentMethods().isNotEmpty;
+  }
+
+  // Delivery helpers
+  bool requiresCarNumber() {
+    try {
+      return (deliveryMethod == "Car Delivery");
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool validateCarNumberIfNeeded() {
+    if (requiresCarNumber()) {
+      return carNumberController.text.isNotEmpty;
+    }
+    return true;
   }
   
   List<Map<String, dynamic>> getPaidMethods() {
