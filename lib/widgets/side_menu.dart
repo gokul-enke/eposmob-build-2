@@ -710,14 +710,10 @@ class DrawerListTile extends StatelessWidget {
               width: leadingBox,
               height: leadingBox,
               child: Center(
-                child: WebsafeSvg.asset(
-                  iconPath,
-                  width: resolvedIconSize,
-                  height: resolvedIconSize,
-                  colorFilter: const ColorFilter.mode(
-                    ColorManager.kPrimaryColor,
-                    BlendMode.srcIn,
-                  ),
+                child: Image.asset(
+                  ImageAssets.posImageLogo,
+                  height: 40,
+                  fit: BoxFit.contain,
                 ),
               ),
             ),

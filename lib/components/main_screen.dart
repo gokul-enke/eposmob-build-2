@@ -6,6 +6,7 @@ import 'package:pos_machine/widgets/side_menu_mobile.dart';
 
 import '../controllers/sidebar_controller.dart';
 import '../resources/color_manager.dart';
+import '../widgets/user_switcher.dart';
 
 import '../widgets/side_menu.dart';
 
@@ -59,6 +60,58 @@ class _MainScreenState extends State<MainScreen> {
                   ],
                 ),
               ),
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.white,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                        ),
+                        builder: (ctx) {
+                          return SafeArea(
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                              ),
+                              child: const SizedBox(
+                                height: 420,
+                                child: Padding(
+                                  padding: EdgeInsets.all(12.0),
+                                  child: UserSwitcher(),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.transparent,
+                        border: Border.all(
+                          color: ColorManager.kPrimaryColor,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.person_outline,
+                          color: ColorManager.kPrimaryColor,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               leading: Builder(builder: (context) {
                 return IconButton(
                   color: ColorManager.kPrimaryColor,
