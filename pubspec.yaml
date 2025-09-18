@@ -92,6 +92,7 @@ dependencies:
   virtual_keyboard_custom_layout: ^1.0.1
   whatsapp_bot_flutter: ^2.1.1
   pretty_qr_code: ^3.5.0
+  dropdown_search: ^6.0.2
 
 dev_dependencies:
   flutter_test:
