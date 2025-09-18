@@ -31,6 +31,9 @@ import 'package:pos_machine/screens/profile/open_profile.dart';
 import 'package:pos_machine/screens/purchase/widgets/view_purchase.dart';
 import 'package:pos_machine/screens/purchase/widgets/view_voucher.dart';
 import 'package:pos_machine/screens/reports/account_book/account_book.dart';
+import 'package:pos_machine/screens/reports/customer_transactions_reports/customer_tranctions_reports%20.dart';
+// Adding import for the new simple transaction details screen
+import 'package:pos_machine/screens/reports/customer_transactions_reports/simple_transaction_details_screen.dart';
 import 'package:pos_machine/screens/reports/product_sales_report/product_sales_report.dart';
 import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
 import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
@@ -38,7 +41,7 @@ import 'package:pos_machine/screens/reports/sales_executive_report/sales_executi
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/add_company_account.dart';
-import 'package:pos_machine/screens/transactions/company_accounts/account_details_screen.dart'; // Added import
+import 'package:pos_machine/screens/transactions/company_accounts/account_details_screen.dart';
 import 'package:pos_machine/screens/sales/sales.dart';
 import 'package:pos_machine/screens/sales_return/sales_return.dart';
 import 'package:pos_machine/screens/sales_return/sales_return_list.dart';
@@ -70,6 +73,10 @@ class SideBarController extends GetxController {
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
   RxBool isExpanded = false.obs;
+
+  // Variable to hold the customer name for transaction details screen
+  RxString transactionCustomerName = ''.obs;
+
   void toggleExpansion() {
     isExpanded.value = !isExpanded.value;
   }
@@ -140,5 +147,7 @@ class SideBarController extends GetxController {
     SettingsScreen(), // 62 Settings Home
     WhatsappSettingsScreen(), // 63 WhatsApp Settings
     CompanyInfoScreen(), // 64 Company Info
+    CustomerTransactionsReportScreen(), // 65 Customer Transactions Report
+    SimpleTransactionDetailsScreen(), // 66 Simple Transaction Details Screen
   ];
 }
