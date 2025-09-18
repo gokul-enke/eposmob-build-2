@@ -354,18 +354,19 @@ class _SideMenuState extends State<SideMenu> {
                   sideBarController.index.value = 58; // Sales Executive Report
                 },
                 onTapTitle2: () {
-                  // TODO: Add additional reports navigation
+                  sideBarController.index.value = 65;
                 },
                 listTitle1: "Sales Executive Reports",
-                // listTitle2: "Other Reports",
+                listTitle2: "Customer Transactions Reports ",
                 iconPath: ImageAssets.transactionIcon,
                 title: 'Reports',
                 onTap: () {
                   sideBarController.index.value =
                       58; // Default to Sales Executive Report
                 },
-                selected: sideBarController.index.value ==
-                    58, // Add proper selected condition
+                selected: sideBarController.index.value == 58 ||
+                    sideBarController.index.value == 65 ||
+                    sideBarController.index.value == 66 
               ),
             ),
           if (_hasRole('sales_executive'))

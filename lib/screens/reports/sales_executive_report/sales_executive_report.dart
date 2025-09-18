@@ -81,16 +81,22 @@ class _SalesExecutiveReportScreenState
       if (fromDateController.text.isNotEmpty) {
         List<String> fromDateParts = fromDateController.text.split('/');
         if (fromDateParts.length == 3) {
-          fromDate =
-              '${fromDateParts[2]}-${fromDateParts[1].padLeft(2, '0')}-${fromDateParts[0].padLeft(2, '0')}';
+          // Ensure proper padding for month and day
+          String day = fromDateParts[0].padLeft(2, '0');
+          String month = fromDateParts[1].padLeft(2, '0');
+          String year = fromDateParts[2];
+          fromDate = '$year-$month-$day';
         }
       }
 
       if (toDateController.text.isNotEmpty) {
         List<String> toDateParts = toDateController.text.split('/');
         if (toDateParts.length == 3) {
-          toDate =
-              '${toDateParts[2]}-${toDateParts[1].padLeft(2, '0')}-${toDateParts[0].padLeft(2, '0')}';
+          // Ensure proper padding for month and day
+          String day = toDateParts[0].padLeft(2, '0');
+          String month = toDateParts[1].padLeft(2, '0');
+          String year = toDateParts[2];
+          toDate = '$year-$month-$day';
         }
       }
 
@@ -172,6 +178,7 @@ class _SalesExecutiveReportScreenState
     );
 
     if (picked != null) {
+      // Format date as DD/MM/YYYY for display
       final formattedDate =
           "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
       if (isFromDate) {
@@ -179,6 +186,7 @@ class _SalesExecutiveReportScreenState
       } else {
         toDateController.text = formattedDate;
       }
+      // Trigger search immediately after date selection
       searchSalesExecutives();
     }
   }
