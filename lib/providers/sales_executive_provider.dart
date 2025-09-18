@@ -227,16 +227,21 @@ class SalesExecutiveProvider extends ChangeNotifier {
         throw const HttpException("API key not found. Please restart the app.");
       }
 
-      final url = Uri.parse(APPUrl.getSalesExecutiveReport).replace(
-          queryParameters: queryParameters.isNotEmpty ? queryParameters : null);
+      // Construct URL with query parameters
+      final Uri url = Uri.parse(APPUrl.getSalesExecutiveReport).replace(
+        queryParameters: queryParameters.isNotEmpty ? queryParameters : null,
+      );
 
       debugPrint("📊 Making API call to: ${url.toString()}");
 
-      final response = await http.get(url, headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-        'X-Tenant': apiKey,
-      });
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      );
 
       debugPrint('📊 API response status code: ${response.statusCode}');
       debugPrint(

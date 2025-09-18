@@ -57,7 +57,7 @@ class SettingsScreen extends StatelessWidget {
                         crossAxisSpacing: 14,
                         childAspectRatio: 1.08,
                       ),
-                      itemCount: 2,
+                      itemCount: 3, // Updated count
                       itemBuilder: (context, index) {
                         switch (index) {
                           case 0:
@@ -77,6 +77,16 @@ class SettingsScreen extends StatelessWidget {
                               onTap: () {
                                 Get.find<SideBarController>().index.value =
                                     64; // Navigate to Company Info screen
+                              },
+                            );
+                          case 2: // New case for Customer Transactions Report
+                            return _SettingsCard(
+                              title: 'Customer Transactions',
+                              iconPath: ImageAssets
+                                  .reportIcon, // Using existing report icon
+                              onTap: () {
+                                Get.find<SideBarController>().index.value =
+                                    65; // Navigate to Customer Transactions Report screen
                               },
                             );
                           default:
