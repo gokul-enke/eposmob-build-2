@@ -163,33 +163,36 @@ class _SideMenuState extends State<SideMenu> {
           const SizedBox(
             height: 15,
           ),
-          Center(
-            child: Image.asset(
-              ImageAssets.posImageLogo,
-              height: 40,
-              fit: BoxFit.contain,
-            ),
-          ),
-          const SizedBox(
-            height: 5,
-          ),
-          Center(
-            child: RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                text: 'Cloud',
-                style: buildCustomStyle(FontWeightManager.semiBold,
-                    FontSize.s18, 0.27, ColorManager.textColor),
-                children: <TextSpan>[
-                  TextSpan(
-                    text: 'POS',
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s18, 0.27, ColorManager.kPrimaryColor),
-                  ),
-                ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 0),
+            child: Center(
+              child: Image.asset(
+                ImageAssets.posImageLogo,
+                height: 30,
+                fit: BoxFit.contain,
               ),
             ),
           ),
+          // const SizedBox(
+          //   height: 5,
+          // ),
+          // Center(
+          //   child: RichText(
+          //     textAlign: TextAlign.center,
+          //     text: TextSpan(
+          //       text: 'Cloud',
+          //       style: buildCustomStyle(FontWeightManager.semiBold,
+          //           FontSize.s18, 0.27, ColorManager.textColor),
+          //       children: <TextSpan>[
+          //         TextSpan(
+          //           text: 'POS',
+          //           style: buildCustomStyle(FontWeightManager.semiBold,
+          //               FontSize.s18, 0.27, ColorManager.kPrimaryColor),
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
           if (_hasRole('sales_executive'))
             const SizedBox(
               height: 20,
@@ -356,24 +359,24 @@ class _SideMenuState extends State<SideMenu> {
           if (_hasRole('sales_executive'))
             Obx(
               () => DrawerListTileExpandableColumn(
-                onTapTitle1: () {
-                  sideBarController.index.value = 58; // Sales Executive Report
-                },
-                onTapTitle2: () {
-                  sideBarController.index.value = 65;
-                },
-                listTitle1: "Sales Executive Reports",
-                listTitle2: "Customer Transactions Reports ",
-                iconPath: ImageAssets.transactionIcon,
-                title: 'Reports',
-                onTap: () {
-                  sideBarController.index.value =
-                      58; // Default to Sales Executive Report
-                },
-                selected: sideBarController.index.value == 58 ||
-                    sideBarController.index.value == 65 ||
-                    sideBarController.index.value == 66 
-              ),
+                  onTapTitle1: () {
+                    sideBarController.index.value =
+                        58; // Sales Executive Report
+                  },
+                  onTapTitle2: () {
+                    sideBarController.index.value = 65;
+                  },
+                  listTitle1: "Sales Executive Reports",
+                  listTitle2: "Customer Transactions Reports ",
+                  iconPath: ImageAssets.transactionIcon,
+                  title: 'Reports',
+                  onTap: () {
+                    sideBarController.index.value =
+                        58; // Default to Sales Executive Report
+                  },
+                  selected: sideBarController.index.value == 58 ||
+                      sideBarController.index.value == 65 ||
+                      sideBarController.index.value == 66),
             ),
           if (_hasRole('sales_executive'))
             Obx(

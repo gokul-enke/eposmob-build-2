@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/resources/asset_manager.dart';
 
 import 'package:pos_machine/responsive.dart';
 import 'package:pos_machine/widgets/side_menu_mobile.dart';
@@ -19,7 +20,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   late SideBarController sideBarController;
-  
+
   @override
   void initState() {
     super.initState();
@@ -40,25 +41,10 @@ class _MainScreenState extends State<MainScreen> {
               elevation: 0,
               backgroundColor: Colors.white,
               centerTitle: true,
-              title: RichText(
-                text: const TextSpan(
-                  text: 'Cloud',
-                  style: TextStyle(
-                    color: ColorManager.textColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
-                  children: <TextSpan>[
-                    TextSpan(
-                      text: 'POS',
-                      style: TextStyle(
-                        color: ColorManager.kPrimaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
-                    ),
-                  ],
-                ),
+              title: Image.asset(
+                ImageAssets.posImageLogo,
+                height: 30,
+                fit: BoxFit.contain,
               ),
               actions: [
                 Padding(
@@ -70,7 +56,8 @@ class _MainScreenState extends State<MainScreen> {
                         isScrollControlled: true,
                         backgroundColor: Colors.white,
                         shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                          borderRadius:
+                              BorderRadius.vertical(top: Radius.circular(16)),
                         ),
                         builder: (ctx) {
                           return SafeArea(

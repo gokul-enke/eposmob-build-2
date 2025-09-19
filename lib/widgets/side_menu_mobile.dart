@@ -77,28 +77,28 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Center(
                 child: Image.asset(
                   ImageAssets.posImageLogo,
-                  height: 40,
+                  height: 30,
                   fit: BoxFit.contain,
                 ),
               ),
-              const SizedBox(height: 5),
-              Center(
-                child: RichText(
-                  textAlign: TextAlign.center,
-                  text: TextSpan(
-                    text: 'Cloud',
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s18, 0.27, ColorManager.textColor),
-                    children: <TextSpan>[
-                      TextSpan(
-                        text: 'POS',
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s18, 0.27, ColorManager.kPrimaryColor),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // const SizedBox(height: 5),
+              // Center(
+              //   child: RichText(
+              //     textAlign: TextAlign.center,
+              //     text: TextSpan(
+              //       text: 'Cloud',
+              //       style: buildCustomStyle(FontWeightManager.semiBold,
+              //           FontSize.s18, 0.27, ColorManager.textColor),
+              //       children: <TextSpan>[
+              //         TextSpan(
+              //           text: 'POS',
+              //           style: buildCustomStyle(FontWeightManager.semiBold,
+              //               FontSize.s18, 0.27, ColorManager.kPrimaryColor),
+              //         ),
+              //       ],
+              //     ),
+              //   ),
+              // ),
               if (_hasRole('sales_executive')) const SizedBox(height: 20),
               if (_hasRole('sales_executive'))
                 const Padding(
