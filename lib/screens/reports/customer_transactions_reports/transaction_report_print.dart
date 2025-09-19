@@ -14,37 +14,38 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/screens/print/print_thermal.dart';
-import 'package:pos_machine/screens/print/print_standard.dart';
+import 'package:pos_machine/screens/reports/customer_transactions_reports/transaction_report_print_thermal.dart';
+import 'package:pos_machine/screens/reports/customer_transactions_reports/transaction_report_print_standard.dart';
 
 class TransactionReportPrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
-  final String? storeName;
-  final String formattedTotal;
-  final String? savedTotal;
-  final String? discountAmount;
-  final String orderDate;
-  final String orderNumber;
   final bool isFromLocalStorage;
   final String? customerName;
   final String? customerPhone;
   final String? customerEmail;
   final String? customerAddress;
+  final String formattedTotal;
+  final String? savedTotal;
+  final String orderDate;
+  final String orderNumber;
+  // Add date range parameters
+  final String? fromDate;
+  final String? toDate;
 
   const TransactionReportPrintPage({
     Key? key,
     required this.cartItems,
-    required this.formattedTotal,
-    this.savedTotal,
-    this.discountAmount,
-    this.storeName,
-    required this.orderDate,
-    required this.orderNumber,
     this.isFromLocalStorage = false,
     this.customerName,
     this.customerPhone,
     this.customerEmail,
     this.customerAddress,
+    required this.formattedTotal,
+    this.savedTotal,
+    required this.orderDate,
+    required this.orderNumber,
+    this.fromDate,
+    this.toDate,
   }) : super(key: key);
 
   @override
@@ -62,7 +63,7 @@ class _TransactionReportPrintPageState
   bool _isLoading = true;
   String selectedPaperSize = '80mm';
 
-  DocumentConfig? _billDocumentConfig;
+  DocumentConfig? _customerStatementDocumentConfig;
 
   static const Color primaryColor = Color(0XFF3C92F5);
   static const Color accentColor = Color(0xFF4CAF50);
@@ -202,7 +203,7 @@ class _TransactionReportPrintPageState
         _isLoading = false;
       });
 
-      if (selectedPrinter != null && _billDocumentConfig != null) {
+      if (selectedPrinter != null && _customerStatementDocumentConfig != null) {
         final appSettingsProvider =
             Provider.of<AppSettingsProvider>(context, listen: false);
         final appSettings = appSettingsProvider.appSettings;
@@ -251,11 +252,12 @@ class _TransactionReportPrintPageState
           Provider.of<DocumentConfigProvider>(context, listen: false);
 
       debugPrint("Loading document configurations from provider...");
-      _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+      _customerStatementDocumentConfig =
+          docConfigProvider.getDocumentConfig("Customer Statement");
 
-      if (_billDocumentConfig == null) {
+      if (_customerStatementDocumentConfig == null) {
         debugPrint(
-            "WARNING: Bill document configuration not found in provider, may need to load manually");
+            "WARNING: Customer Statement document configuration not found in provider, may need to load manually");
         // Fallback: try to load if not available
         String? accessToken =
             Provider.of<AuthModel>(context, listen: false).token;
@@ -265,7 +267,8 @@ class _TransactionReportPrintPageState
           return;
         }
       } else {
-        debugPrint("SUCCESS: Bill document configuration loaded from provider");
+        debugPrint(
+            "SUCCESS: Customer Statement document configuration loaded from provider");
       }
 
       setState(() {
@@ -287,13 +290,15 @@ class _TransactionReportPrintPageState
       await docConfigProvider.fetchDocumentConfigurations(
           accessToken: accessToken);
 
-      _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+      _customerStatementDocumentConfig =
+          docConfigProvider.getDocumentConfig("Customer Statement");
 
-      if (_billDocumentConfig != null) {
-        debugPrint("SUCCESS: Bill document configuration loaded from API");
+      if (_customerStatementDocumentConfig != null) {
+        debugPrint(
+            "SUCCESS: Customer Statement document configuration loaded from API");
       } else {
         debugPrint(
-            "ERROR: Bill document configuration still null after API fetch");
+            "ERROR: Customer Statement document configuration still null after API fetch");
       }
 
       setState(() {
@@ -315,8 +320,9 @@ class _TransactionReportPrintPageState
 
   Future<void> _handlePrinting(
       String customerCareNumber, String customerCareEmail) async {
-    if (_billDocumentConfig == null) {
-      debugPrint("ERROR: Bill document configuration not loaded yet.");
+    if (_customerStatementDocumentConfig == null) {
+      debugPrint(
+          "ERROR: Customer Statement document configuration not loaded yet.");
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -335,49 +341,51 @@ class _TransactionReportPrintPageState
 
   Future<void> _printThermalReceipt(
       String customerCareNumber, String customerCareEmail) async {
-    final thermalPrinter = ThermalPrinter(context);
+    final thermalPrinter = TransactionReportThermalPrinter(context);
 
-    await thermalPrinter.printReceipt(
+    await thermalPrinter.printTransactionReport(
       selectedPrinter: selectedPrinter!,
       cartItems: widget.cartItems,
       formattedTotal: widget.formattedTotal,
       savedTotal: widget.savedTotal,
-      discountAmount: widget.discountAmount,
       orderDate: widget.orderDate,
       orderNumber: widget.orderNumber,
       isFromLocalStorage: widget.isFromLocalStorage,
       selectedPaperSize: selectedPaperSize,
-      billDocumentConfig: _billDocumentConfig,
+      billDocumentConfig: _customerStatementDocumentConfig,
       customerCareNumber: customerCareNumber,
       customerCareEmail: customerCareEmail,
       customerName: widget.customerName,
       customerPhone: widget.customerPhone,
       customerEmail: widget.customerEmail,
       customerAddress: widget.customerAddress,
+      fromDate: widget.fromDate,
+      toDate: widget.toDate,
     );
   }
 
   Future<void> _generateAndPrintPDF(
       String customerCareNumber, String customerCareEmail) async {
-    final standardPrinter = StandardPrinter(context);
+    final standardPrinter = TransactionReportStandardPrinter(context);
 
-    await standardPrinter.generateAndPrintPDF(
+    await standardPrinter.generateAndPrintTransactionReportPDF(
       selectedPrinter: selectedPrinter,
       cartItems: widget.cartItems,
       formattedTotal: widget.formattedTotal,
       savedTotal: widget.savedTotal,
-      discountAmount: widget.discountAmount,
       orderDate: widget.orderDate,
       orderNumber: widget.orderNumber,
       isFromLocalStorage: widget.isFromLocalStorage,
       selectedPaperSize: selectedPaperSize,
-      billDocumentConfig: _billDocumentConfig,
+      billDocumentConfig: _customerStatementDocumentConfig,
       customerCareNumber: customerCareNumber,
       customerCareEmail: customerCareEmail,
       customerName: widget.customerName,
       customerPhone: widget.customerPhone,
       customerEmail: widget.customerEmail,
       customerAddress: widget.customerAddress,
+      fromDate: widget.fromDate,
+      toDate: widget.toDate,
     );
   }
 
@@ -645,7 +653,7 @@ class _TransactionReportPrintPageState
                     ),
             ),
             const SizedBox(height: 16),
-            if (_billDocumentConfig == null)
+            if (_customerStatementDocumentConfig == null)
               Container(
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 8),
@@ -696,7 +704,7 @@ class _TransactionReportPrintPageState
                   );
                   return;
                 }
-                if (_billDocumentConfig == null) {
+                if (_customerStatementDocumentConfig == null) {
                   showScaffoldError(
                     context: context,
                     message:

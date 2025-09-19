@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/list_transaction.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
+import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -47,20 +51,33 @@ class _SimpleTransactionDetailsScreenState
   String searchType = '';
   String searchCustomer = '';
 
-  // For dropdown options
-  List<String> transactionTypes = ['Credit', 'Debit'];
-  List<String> statuses = ['Pending', 'Completed', 'Cancelled'];
-  List<String> types = ['Sale', 'Purchase', 'Return'];
+  // For dropdown options - updated to match actual data values
+  List<String> transactionTypes = ['Receipt', 'Invoice', 'Voucher'];
+  List<String> statuses = [
+    'SUCC',
+    'FAIL',
+    'INIT',
+  ];
+  List<String> types = ['Credit', 'Debit'];
 
   @override
   void initState() {
     super.initState();
-    // Set the customer name from the sidebar controller
-    searchCustomer = sideBarController.transactionCustomerName.value;
-    _customerController.text = searchCustomer;
-    loadInitData();
+    // Set the customer name from the TransactionProvider instead of sidebar controller
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final customerName =
+          Provider.of<TransactionProvider>(context, listen: false).customerName;
+      setState(() {
+        searchCustomer = customerName;
+        _customerController.text = customerName;
+      });
+      // Set default date values
+      _setInitialDateFilters();
+      loadInitData(); // This will now work properly
+    });
   }
 
+  // Add the missing loadInitData method
   Future<void> loadInitData() async {
     setState(() {
       initLoading = true;
@@ -81,8 +98,8 @@ class _SimpleTransactionDetailsScreenState
         ListTransactionModel listTransactionModel =
             ListTransactionModel.fromJson(value);
         allTransactions = listTransactionModel.data?.transactions ?? [];
-        filteredTransactions = List.from(allTransactions ?? []);
-        // Apply initial filter for customer
+
+        // Apply filters immediately to show only transactions for the selected customer
         _applyFilters();
       } else {
         if (mounted) {
@@ -95,11 +112,11 @@ class _SimpleTransactionDetailsScreenState
         }
       }
     } catch (error) {
-      debugPrint('Error loading transaction data: $error');
+      debugPrint("Error loading transactions: $error");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Error loading transaction data: $error"),
+            content: Text("Error loading transactions: $error"),
             backgroundColor: Colors.red,
           ),
         );
@@ -109,6 +126,26 @@ class _SimpleTransactionDetailsScreenState
         initLoading = false;
       });
     }
+  }
+
+  // Set default date values: 1 month before current date for from_date, current date for to_date
+  void _setInitialDateFilters() {
+    final now = DateTime.now();
+    final oneMonthAgo = DateTime(now.year, now.month - 1, now.day);
+
+    final formatter = DateFormat('yyyy-MM-dd');
+    final fromDateStr = formatter.format(oneMonthAgo);
+    final toDateStr = formatter.format(now);
+
+    setState(() {
+      _fromDateController.text = fromDateStr;
+      _toDateController.text = toDateStr;
+    });
+
+    // Apply filters immediately after setting default dates
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applyFilters();
+    });
   }
 
   void _applyFilters() {
@@ -131,8 +168,8 @@ class _SimpleTransactionDetailsScreenState
           .toList();
     }
 
-    // Transaction type filter
-    if (searchTransactionType.isNotEmpty) {
+    // Transaction type filter - use contains matching instead of exact match
+    if (searchTransactionType.isNotEmpty && searchTransactionType != 'All') {
       filteredList = filteredList
           .where((transaction) => (transaction.transactionType ?? '')
               .toLowerCase()
@@ -140,8 +177,8 @@ class _SimpleTransactionDetailsScreenState
           .toList();
     }
 
-    // Status filter
-    if (searchStatus.isNotEmpty) {
+    // Status filter - use contains matching instead of exact match
+    if (searchStatus.isNotEmpty && searchStatus != 'All') {
       filteredList = filteredList
           .where((transaction) => (transaction.status ?? '')
               .toLowerCase()
@@ -149,8 +186,8 @@ class _SimpleTransactionDetailsScreenState
           .toList();
     }
 
-    // Type filter
-    if (searchType.isNotEmpty) {
+    // Type filter - use contains matching instead of exact match
+    if (searchType.isNotEmpty && searchType != 'All') {
       filteredList = filteredList
           .where((transaction) => (transaction.type ?? '')
               .toLowerCase()
@@ -170,13 +207,17 @@ class _SimpleTransactionDetailsScreenState
           try {
             final transactionDate = formatter.parse(transaction.date!);
 
+            // If from date is set, check that transaction date is not before it
             if (_fromDateController.text.isNotEmpty) {
               final fromDate = formatter.parse(_fromDateController.text);
               if (transactionDate.isBefore(fromDate)) return false;
             }
 
+            // If to date is set, check that transaction date is not after it
             if (_toDateController.text.isNotEmpty) {
               final toDate = formatter.parse(_toDateController.text);
+              // Include the to date by adding one day and checking if transaction date is before
+              final toDatePlusOne = toDate.add(const Duration(days: 1));
               if (transactionDate.isAfter(toDate)) return false;
             }
 
@@ -197,25 +238,30 @@ class _SimpleTransactionDetailsScreenState
   }
 
   void _resetFilters() {
-    // Clear the text controllers
+    // Clear the text controllers for dropdown filters
     _transactionTypeController.clear();
     _statusController.clear();
     _typeController.clear();
-    _fromDateController.clear();
-    _toDateController.clear();
 
-    // Reset the search variables
+    // Reset the search variables for dropdown filters
     setState(() {
       searchTransactionType = '';
       searchStatus = '';
       searchType = '';
-      // Keep the customer filter as it's pre-filled
-      searchCustomer = sideBarController.transactionCustomerName.value;
-      _customerController.text = searchCustomer;
+      // Keep the customer filter as it's pre-filled from the provider
+      final customerName =
+          Provider.of<TransactionProvider>(context, listen: false).customerName;
+      searchCustomer = customerName;
+      _customerController.text = customerName;
+
+      // Reset date filters to default values
+      _setInitialDateFilters();
     });
 
-    // Force a refresh of the filters
-    _applyFilters();
+    // Apply filters after resetting
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applyFilters();
+    });
   }
 
   Future<void> _selectDate(BuildContext context, bool isFromDate) async {
@@ -234,277 +280,9 @@ class _SimpleTransactionDetailsScreenState
           _toDateController.text = formattedDate;
         }
       });
-      // Call _applyFilters after setState completes
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _applyFilters();
-      });
+      // Apply filters immediately after date selection
+      _applyFilters();
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: () async => loadInitData(),
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
-              ),
-            ],
-            color: Colors.white,
-          ),
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(size),
-                const SizedBox(height: 20),
-                _buildFilters(),
-                const SizedBox(height: 20),
-                _buildReportTable(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(Size size) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          "Transaction Details",
-          style: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s20,
-            0.30,
-            ColorManager.textColor,
-          ),
-        ),
-        CustomRoundButton(
-          title: "Back",
-          boxColor: Colors.white,
-          textColor: ColorManager.kPrimaryColor,
-          borderColor: ColorManager.kPrimaryColor,
-          fct: () {
-            sideBarController.index.value =
-                65; // Navigate back to Customer Transactions Report
-          },
-          height: 40,
-          width: 80,
-          fontSize: FontSize.s12,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFilters() {
-    return BuildBoxShadowContainer(
-      circleRadius: 10,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Filters",
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s16,
-              0.25,
-              ColorManager.textColor,
-            ),
-          ),
-          const SizedBox(height: 15),
-          // First row of filters (4 filters)
-          SizedBox(
-            height: 90,
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 1,
-                  child: _buildTextFieldWithLabel(
-                    "Customer",
-                    _customerController,
-                    enabled: false,
-                    onFilterChanged: (value) {
-                      setState(() {
-                        searchCustomer = value;
-                      });
-                    },
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: _buildDropdownField(
-                    "Transaction Type",
-                    _transactionTypeController,
-                    transactionTypes,
-                    (value) {
-                      setState(() {
-                        searchTransactionType = value;
-                      });
-                    },
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: _buildDropdownField(
-                    "Status",
-                    _statusController,
-                    statuses,
-                    (value) {
-                      setState(() {
-                        searchStatus = value;
-                      });
-                    },
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: _buildDropdownField(
-                    "Type",
-                    _typeController,
-                    types,
-                    (value) {
-                      setState(() {
-                        searchType = value;
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Second row of filters (2 date filters + print button + reset button)
-          SizedBox(
-            height: 90,
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 1,
-                  child: _buildDateField(
-                    "From Date",
-                    _fromDateController,
-                    true,
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: _buildDateField(
-                    "To Date",
-                    _toDateController,
-                    false,
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 30, left: 10),
-                    child: CustomRoundButton(
-                      title: "Print",
-                      boxColor: ColorManager.kPrimaryColor,
-                      textColor: Colors.white,
-                      fct: _printReport,
-                      height: 45,
-                      width: double.infinity,
-                      fontSize: FontSize.s12,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 30, left: 10),
-                    child: CustomRoundButton(
-                      title: "Reset",
-                      boxColor: Colors.white,
-                      textColor: ColorManager.kPrimaryColor,
-                      fct: _resetFilters,
-                      height: 45,
-                      width: double.infinity,
-                      fontSize: FontSize.s12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTextFieldWithLabel(
-      String label, TextEditingController controller,
-      {bool enabled = true, Function(String)? onFilterChanged}) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              label,
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s14,
-                0.27,
-                Colors.black.withOpacity(0.6),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          BuildBoxShadowContainer(
-            height: 45,
-            width: double.infinity,
-            circleRadius: 7,
-            child: TextFormField(
-              readOnly: !enabled,
-              keyboardType: TextInputType.text,
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s10,
-                0.18,
-                ColorManager.textColor,
-              ),
-              decoration: decoration.copyWith(
-                hintText: label,
-                hintStyle: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s10,
-                  0.18,
-                  ColorManager.textColor,
-                ),
-                prefixIconColor: Colors.black,
-              ),
-              controller: controller,
-              onChanged: (value) {
-                if (onFilterChanged != null) {
-                  onFilterChanged(value);
-                }
-                _applyFilters();
-              },
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildDropdownField(String label, TextEditingController controller,
@@ -532,7 +310,9 @@ class _SimpleTransactionDetailsScreenState
             width: double.infinity,
             circleRadius: 7,
             child: DropdownButtonFormField<String>(
-              value: controller.text.isEmpty ? null : controller.text,
+              value: controller.text.isEmpty || controller.text == 'All'
+                  ? null
+                  : controller.text,
               decoration: decoration.copyWith(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 10),
                 hintText: "All $label",
@@ -547,15 +327,13 @@ class _SimpleTransactionDetailsScreenState
               ),
               dropdownColor: Colors.white,
               items: [
-                DropdownMenuItem(
+                const DropdownMenuItem(
                   value: null,
                   child: Text(
-                    "All $label",
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s10,
-                      0.18,
-                      ColorManager.textColor,
+                    "All",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
                     ),
                   ),
                 ),
@@ -577,9 +355,9 @@ class _SimpleTransactionDetailsScreenState
               onChanged: (String? value) {
                 setState(() {
                   controller.text = value ?? '';
+                  // Update the search variable and apply filters
                   onFilterChanged(value ?? '');
                 });
-                _applyFilters();
               },
             ),
           ),
@@ -911,7 +689,7 @@ class _SimpleTransactionDetailsScreenState
       ),
       children: [
         _buildTableCell(slNo.toString()),
-        _buildTableCell(transaction.orderId?.toString() ?? "N/A"),
+        _buildTableCell(transaction.orderNumber?.toString() ?? "N/A"),
         _buildTableCell(transaction.transactionType ?? "N/A"),
         _buildTableCell(transaction.amount ?? "0.00"),
         Center(child: _buildTypeCell(transaction.type ?? "N/A")),
@@ -921,26 +699,140 @@ class _SimpleTransactionDetailsScreenState
     );
   }
 
-  void _printReport() {
+  void _printReport() async {
+    // Show loading indicator
+    if (mounted) {
+      showScaffold(
+        context: context,
+        message: "Preparing transaction report...",
+      );
+    }
+
+    // Show loading state
+    setState(() {
+      initLoading = true;
+    });
+
+    // Fetch customer details
+    String customerName = _customerController.text;
+    String customerPhone = "";
+    String customerEmail = "";
+    String customerAddress = "";
+
+    if (customerName.isNotEmpty) {
+      try {
+        String? accessToken =
+            Provider.of<AuthModel>(context, listen: false).token;
+        if (accessToken != null) {
+          final customerProvider =
+              Provider.of<CustomerProvider>(context, listen: false);
+
+          // Try to find customer by name
+          debugPrint("Attempting to fetch customer details for: $customerName");
+          final customerResponse = await customerProvider.findCustomerByName(
+            accessToken,
+            customerName,
+            context,
+          );
+          debugPrint("Customer API response: $customerResponse");
+
+          if (customerResponse['status'] == 'success' &&
+              customerResponse['data'] != null &&
+              customerResponse['data'].isNotEmpty) {
+            // Get the first matching customer
+            final customerData = customerResponse['data'][0];
+            debugPrint("Raw customer data received: $customerData");
+            final customer = CustomerListModelData.fromJson(customerData);
+
+            customerPhone = customer.phone ?? "";
+            customerEmail = customer.email ?? "";
+
+            // Debug individual address components
+            debugPrint("Address components:");
+            debugPrint("  address: ${customer.address}");
+            debugPrint("  city: ${customer.city}");
+            debugPrint("  state: ${customer.state}");
+            debugPrint("  pincode: ${customer.pincode}");
+            debugPrint("  country: ${customer.country}");
+
+            // Check if all address components are null
+            if (customer.address == null &&
+                customer.city == null &&
+                customer.state == null &&
+                customer.pincode == null &&
+                customer.country == null) {
+              debugPrint(
+                  "WARNING: All address components are NULL for this customer");
+            }
+
+            // Build complete address
+            List<String> addressParts = [];
+            if (customer.address != null && customer.address!.isNotEmpty) {
+              addressParts.add(customer.address!);
+            }
+            if (customer.city != null && customer.city!.isNotEmpty) {
+              addressParts.add(customer.city!);
+            }
+            if (customer.state != null && customer.state!.isNotEmpty) {
+              addressParts.add(customer.state!);
+            }
+            if (customer.pincode != null && customer.pincode!.isNotEmpty) {
+              addressParts.add(customer.pincode!);
+            }
+            if (customer.country != null && customer.country!.isNotEmpty) {
+              addressParts.add(customer.country!);
+            }
+
+            customerAddress = addressParts.join(", ");
+            debugPrint("Final constructed address: '$customerAddress'");
+            debugPrint("Is final address empty? ${customerAddress.isEmpty}");
+          } else {
+            debugPrint("Customer API returned no data or error status");
+            if (customerResponse['status'] != 'success') {
+              debugPrint("Customer API error: ${customerResponse['message']}");
+            }
+            if (customerResponse['data'] == null ||
+                customerResponse['data'].isEmpty) {
+              debugPrint("Customer API returned empty data array");
+            }
+          }
+        } else {
+          debugPrint("Access token is null, cannot fetch customer details");
+        }
+      } catch (e, stackTrace) {
+        debugPrint("Error fetching customer details: $e");
+        debugPrint("Stack trace: $stackTrace");
+        // Continue with just the name if we can't fetch details
+      }
+    } else {
+      debugPrint("Customer name is empty, skipping customer details fetch");
+    }
+
+    // Hide loading state
+    setState(() {
+      initLoading = false;
+    });
+
     // Create a list of cart items from the filtered transactions
-    List<Map<String, dynamic>> cartItems = [];
+    List<ListTransaction> cartItems = filteredTransactions ?? [];
+
+    // Calculate totals
+    double totalCredit = 0.0;
+    double totalDebit = 0.0;
 
     for (var transaction in filteredTransactions ?? []) {
-      cartItems.add({
-        'productName':
-            '${transaction.transactionType ?? "N/A"} - Order #${transaction.orderId ?? "N/A"}',
-        'mrp': transaction.amount ?? "0.00",
-        'quantity': '1',
-        'unitPrice': transaction.amount ?? "0.00",
-        'totalPrice': transaction.amount ?? "0.00",
-      });
+      double amount = double.tryParse(transaction.amount ?? "0.00") ?? 0.0;
+      String type = transaction.type ?? "";
+
+      if (type.toLowerCase() == 'credit') {
+        totalCredit += amount;
+      } else if (type.toLowerCase() == 'debit') {
+        totalDebit += amount;
+      }
     }
 
-    // Calculate total amount
-    double totalAmount = 0.0;
-    for (var transaction in filteredTransactions ?? []) {
-      totalAmount += double.tryParse(transaction.amount ?? "0.00") ?? 0.0;
-    }
+    // Calculate total amount (for backwards compatibility)
+    double totalAmount = totalCredit - totalDebit;
 
     // Calculate saved amount (for this report, we'll set it to 0)
     double savedAmount = 0.0;
@@ -949,24 +841,312 @@ class _SimpleTransactionDetailsScreenState
     String orderDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
     String orderNumber = "TXN-REPORT-${DateTime.now().millisecondsSinceEpoch}";
 
+    // Get date range values
+    String? fromDate =
+        _fromDateController.text.isNotEmpty ? _fromDateController.text : null;
+    String? toDate =
+        _toDateController.text.isNotEmpty ? _toDateController.text : null;
+
     // Navigate to the print page with the transaction data
+    debugPrint("Customer data being passed to print:");
+    debugPrint("  Name: '$customerName'");
+    debugPrint("  Phone: '$customerPhone'");
+    debugPrint("  Email: '$customerEmail'");
+    debugPrint("  Address: '$customerAddress'");
+    debugPrint("  From Date: '$fromDate'");
+    debugPrint("  To Date: '$toDate'");
+
     Get.to(() => TransactionReportPrintPage(
           cartItems: cartItems,
           formattedTotal: totalAmount.toStringAsFixed(2),
           savedTotal: savedAmount.toStringAsFixed(2),
           orderDate: orderDate,
           orderNumber: orderNumber,
-          customerName: _customerController.text,
-          customerPhone: "", // We don't have customer phone in this screen
-          customerEmail: "", // We don't have customer email in this screen
-          customerAddress: "", // We don't have customer address in this screen
+          customerName: customerName,
+          customerPhone: customerPhone,
+          customerEmail: customerEmail,
+          customerAddress: customerAddress,
+          fromDate: fromDate,
+          toDate: toDate,
+          isFromLocalStorage: false,
         ));
 
     // Show a message that the print process has started
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Preparing transaction report for printing..."),
-        backgroundColor: ColorManager.kPrimaryColor,
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Preparing transaction report for printing..."),
+          backgroundColor: ColorManager.kPrimaryColor,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Size size = MediaQuery.of(context).size;
+
+    return SafeArea(
+      child: RefreshIndicator(
+        onRefresh: () async => loadInitData(),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: const [
+              BoxShadow(
+                color: ColorManager.boxShadowColor,
+                blurRadius: 6,
+                offset: Offset(1, 1),
+              ),
+            ],
+            color: Colors.white,
+          ),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(size),
+                const SizedBox(height: 20),
+                _buildFilters(),
+                const SizedBox(height: 20),
+                _buildReportTable(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(Size size) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          "Transaction Details",
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s20,
+            0.30,
+            ColorManager.textColor,
+          ),
+        ),
+        CustomRoundButton(
+          title: "Back",
+          boxColor: Colors.white,
+          textColor: ColorManager.kPrimaryColor,
+          borderColor: ColorManager.kPrimaryColor,
+          fct: () {
+            sideBarController.index.value =
+                65; // Navigate back to Customer Transactions Report
+          },
+          height: 40,
+          width: 80,
+          fontSize: FontSize.s12,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilters() {
+    return BuildBoxShadowContainer(
+      circleRadius: 10,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Filters",
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s16,
+              0.25,
+              ColorManager.textColor,
+            ),
+          ),
+          const SizedBox(height: 15),
+          // First row of filters (4 filters)
+          SizedBox(
+            height: 90,
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: _buildTextFieldWithLabel(
+                    "Customer",
+                    _customerController,
+                    enabled: false,
+                    onFilterChanged: (value) {
+                      setState(() {
+                        searchCustomer = value;
+                      });
+                      _applyFilters();
+                    },
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: _buildDropdownField(
+                    "Transaction Type",
+                    _transactionTypeController,
+                    transactionTypes,
+                    (value) {
+                      setState(() {
+                        searchTransactionType = value;
+                      });
+                      _applyFilters();
+                    },
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: _buildDropdownField(
+                    "Status",
+                    _statusController,
+                    statuses,
+                    (value) {
+                      setState(() {
+                        searchStatus = value;
+                      });
+                      _applyFilters();
+                    },
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: _buildDropdownField(
+                    "Type",
+                    _typeController,
+                    types,
+                    (value) {
+                      setState(() {
+                        searchType = value;
+                      });
+                      _applyFilters();
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Second row of filters (2 date filters + print button + reset button)
+          SizedBox(
+            height: 90,
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: _buildDateField(
+                    "From Date",
+                    _fromDateController,
+                    true,
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: _buildDateField(
+                    "To Date",
+                    _toDateController,
+                    false,
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 30, left: 10),
+                    child: CustomRoundButton(
+                      title: "Print",
+                      boxColor: ColorManager.kPrimaryColor,
+                      textColor: Colors.white,
+                      fct: _printReport,
+                      height: 45,
+                      width: double.infinity,
+                      fontSize: FontSize.s12,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 30, left: 10),
+                    child: CustomRoundButton(
+                      title: "Reset",
+                      boxColor: Colors.white,
+                      textColor: ColorManager.kPrimaryColor,
+                      fct: _resetFilters,
+                      height: 45,
+                      width: double.infinity,
+                      fontSize: FontSize.s12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextFieldWithLabel(
+      String label, TextEditingController controller,
+      {bool enabled = true, Function(String)? onFilterChanged}) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              label,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.27,
+                Colors.black.withOpacity(0.6),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          BuildBoxShadowContainer(
+            height: 45,
+            width: double.infinity,
+            circleRadius: 7,
+            child: TextFormField(
+              readOnly: !enabled,
+              keyboardType: TextInputType.text,
+              cursorColor: ColorManager.kPrimaryColor,
+              cursorHeight: 13,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s10,
+                0.18,
+                ColorManager.textColor,
+              ),
+              decoration: decoration.copyWith(
+                hintText: label,
+                hintStyle: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s10,
+                  0.18,
+                  ColorManager.textColor,
+                ),
+                prefixIconColor: Colors.black,
+              ),
+              controller: controller,
+              onChanged: (value) {
+                if (onFilterChanged != null) {
+                  onFilterChanged(value);
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,0 +1,1459 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/providers/payment_gateways_provider.dart';
+import 'package:pos_machine/models/payment_gateway.dart';
+import 'package:provider/provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:share_plus/share_plus.dart';
+import 'package:open_file/open_file.dart';
+import 'package:pos_machine/models/document_configurations.dart';
+import 'package:pos_machine/models/bluetooth_printer.dart';
+import 'package:flutter/foundation.dart';
+
+class TransactionReportStandardPrinter {
+  final BuildContext context;
+
+  TransactionReportStandardPrinter(this.context);
+
+  // Helper method to get or create the epos directory
+  Future<Directory> _getEposDirectory() async {
+    try {
+      final documentsDir = await getApplicationDocumentsDirectory();
+      final eposDir = Directory('${documentsDir.path}/epos');
+      if (!await eposDir.exists()) {
+        await eposDir.create(recursive: true);
+        debugPrint('Created epos directory: ${eposDir.path}');
+      }
+      return eposDir;
+    } catch (e) {
+      debugPrint('Could not access Documents/epos directory, using temp: $e');
+      return await getTemporaryDirectory();
+    }
+  }
+
+  Future<void> generateAndPrintTransactionReportPDF({
+    required BluetoothPrinter? selectedPrinter,
+    required List<dynamic> cartItems,
+    required String formattedTotal,
+    required String? savedTotal,
+    String? discountAmount,
+    required String orderDate,
+    required String orderNumber,
+    required bool isFromLocalStorage,
+    required String selectedPaperSize,
+    required DocumentConfig? billDocumentConfig,
+    required String customerCareNumber,
+    required String customerCareEmail,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? customerAddress,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    debugPrint("===== PDF GENERATION DEBUG INFO =====");
+    debugPrint("Customer data received:");
+    debugPrint("  Name: $customerName");
+    debugPrint("  Phone: $customerPhone");
+    debugPrint("  Email: $customerEmail");
+    debugPrint("  Address: $customerAddress");
+    debugPrint("===== END PDF GENERATION DEBUG INFO =====");
+
+    try {
+      // Ensure billDocumentConfig is loaded before printing
+      if (billDocumentConfig == null) {
+        debugPrint("ERROR: Bill document configuration not loaded yet.");
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: "Document configurations not loaded. Please wait.",
+          );
+        }
+        return;
+      }
+
+      final displayConfig = billDocumentConfig.displayConfiguration?.options;
+
+      // Debug the document configuration being used
+      debugPrint("===== DOCUMENT CONFIG BEING USED FOR PRINTING =====");
+      debugPrint("billDocumentConfig ID: ${billDocumentConfig.id}");
+      debugPrint("billDocumentConfig Type: ${billDocumentConfig.type}");
+      debugPrint(
+          "billDocumentConfig Updated At: ${billDocumentConfig.updatedAt}");
+      debugPrint(
+          "billDocumentConfig Has Display Config: ${billDocumentConfig.displayConfiguration != null}");
+      debugPrint("Display Config Options Count: ${displayConfig?.length ?? 0}");
+      if (displayConfig != null) {
+        debugPrint("Display Config Keys: ${displayConfig.keys.toList()}");
+      }
+      debugPrint("===== END DOCUMENT CONFIG INFO =====");
+
+      _debugPrintTemplateSettings(displayConfig);
+
+      if (context.mounted) {
+        showScaffold(
+          context: context,
+          message: "Preparing $selectedPaperSize document for printing...",
+        );
+      }
+
+      // Create a PDF document
+      final pdf = pw.Document();
+
+      // Get settings from the loaded display configuration
+      final updatedSettings = displayConfig;
+
+      debugPrint("PDF Generation - Using user settings:");
+      debugPrint("showHeader: ${updatedSettings?['showHeader']?.visible}");
+      debugPrint(
+          "showSubheader: ${updatedSettings?['showSubheader']?.visible}");
+      debugPrint("showFooter: ${updatedSettings?['showFooter']?.visible}");
+      debugPrint(
+          "showCustomerName: ${updatedSettings?['showCustomerName']?.visible}");
+      debugPrint(
+          "showCustomerEmail: ${updatedSettings?['showCustomerEmail']?.visible}");
+      debugPrint(
+          "showCustomerPhone: ${updatedSettings?['showCustomerPhone']?.visible}");
+      debugPrint(
+          "showCustomerAddress: ${updatedSettings?['showCustomerAddress']?.visible}");
+      debugPrint(
+          "showTotalCredit: ${updatedSettings?['showTotalCredit']?.visible}");
+      debugPrint(
+          "showTotalDebit: ${updatedSettings?['showTotalDebit']?.visible}");
+      debugPrint("showBalance: ${updatedSettings?['showBalance']?.visible}");
+      debugPrint(
+          "showOrderNumber: ${updatedSettings?['showOrderNumber']?.visible}");
+      debugPrint("showStatus: ${updatedSettings?['showStatus']?.visible}");
+      debugPrint("showTax: ${updatedSettings?['showTax']?.visible}");
+
+      // debugPrint("showRate: ${updatedSettings?['showRate']?.visible}");
+      // debugPrint("showTotal: ${updatedSettings?['showTotal']?.visible}");
+      // debugPrint("showDiscount: ${updatedSettings?['showDiscount']?.visible}");
+      // debugPrint(
+      //     "showNetAmount: ${updatedSettings?['showNetAmount']?.visible}");
+      // debugPrint("showMRPTotal: ${updatedSettings?['showMRPTotal']?.visible}");
+      // debugPrint("showSaved: ${updatedSettings?['showSaved']?.visible}");
+      // debugPrint(
+      //     "showAmountInWords: ${updatedSettings?['showAmountInWords']?.visible}");
+      // debugPrint(
+      //     "showItemsCount: ${updatedSettings?['showItemsCount']?.visible}");
+      // debugPrint(
+      //     "showThankYouMessage: ${updatedSettings?['showThankYouMessage']?.visible}");
+      // debugPrint("showQRCode: ${updatedSettings?['showQRCode']?.visible}");
+      // debugPrint(
+      //     "showTermsConditions: ${updatedSettings?['showTermsConditions']?.visible}");
+
+      // Access Payment Gateways Provider for QR code link
+      final paymentGatewaysProvider =
+          Provider.of<PaymentGatewaysProvider>(context, listen: false);
+      final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
+          .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
+              orElse: () => PaymentGateway(
+                    id: 0,
+                    name: "",
+                    code: "",
+                    label: "",
+                    link: "",
+                    image: "",
+                    status: "",
+                    isWebActive: 0,
+                    isAndroidActive: 0,
+                    isIosActive: 0,
+                    contactEmail: "",
+                    contactPhone: "",
+                    createdAt: "",
+                    updatedAt: "",
+                  ));
+
+      // Determine page format based on paper size
+      PdfPageFormat pageFormat =
+          selectedPaperSize == 'A4' ? PdfPageFormat.a4 : PdfPageFormat.a5;
+
+      // Define styles with adjustments for A5 vs A4 - optimized for space and professional look
+      final headerStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5'
+            ? 16.0
+            : 18.0, // Increased for better hierarchy
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
+      );
+      final subheaderStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5'
+            ? 9.0
+            : 11.0, // Reduced for better proportion
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
+      );
+      final bodyStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5'
+            ? 6.0
+            : 8.0, // Reduced for smaller table text
+        color: PdfColors.black,
+      );
+      final smallStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5' ? 5.0 : 7.0, // Reduced further
+        color: PdfColors.black,
+      );
+      final tableHeaderStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5'
+            ? 6.0
+            : 8.0, // Reduced for smaller table headers
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
+      );
+      final summaryStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5'
+            ? 8.0
+            : 10.0, // Reduced for better proportion
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
+      );
+      final netTotalStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5'
+            ? 9.0
+            : 11.0, // Reduced for better proportion
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
+      );
+
+      // Add content to a multi-page PDF with minimal margins and optimized spacing
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: pageFormat,
+          margin: const pw.EdgeInsets.all(15), // Reduced from 30
+          footer: (context) => pw.Padding(
+            padding: const pw.EdgeInsets.only(top: 5), // Reduced from 10
+            child: pw.Text(
+              'Page ${context.pageNumber} of ${context.pagesCount}',
+              style: const pw.TextStyle(fontSize: 6), // Reduced from 8
+              textAlign: pw.TextAlign.center,
+            ),
+          ),
+          build: (pw.Context context) => [
+            // Wrap entire content in a Column so it flows
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Header with store information - compact design
+                pw.Center(
+                  child: pw.Column(
+                    children: [
+                      // Store name
+                      pw.Text(
+                        'EPosenke',
+                        style: headerStyle,
+                      ),
+
+                      // Store description
+                      pw.Text(
+                        'Customer Transaction Report',
+                        style: pw.TextStyle(
+                          fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                pw.SizedBox(height: 5), // Reduced from 10
+
+                // Date and Time Row - minimal design
+                _buildDateTimeRowPDF(selectedPaperSize, orderDate),
+
+                // Customer Information Section - if available
+                if (customerName != null ||
+                    customerPhone != null ||
+                    customerEmail != null ||
+                    customerAddress != null ||
+                    fromDate != null ||
+                    toDate != null)
+                  _buildCustomerDetailsPDF(
+                    selectedPaperSize,
+                    customerName,
+                    customerPhone,
+                    customerEmail,
+                    customerAddress,
+                    subheaderStyle,
+                    bodyStyle,
+                    fromDate,
+                    toDate,
+                  ),
+
+                // Items table - minimal design without borders
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(
+                      vertical: 5, horizontal: 8), // Reduced padding
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _buildPdfTransactionReportItemsTable(
+                          tableHeaderStyle,
+                          bodyStyle,
+                          updatedSettings,
+                          cartItems,
+                          isFromLocalStorage,
+                          billDocumentConfig),
+                    ],
+                  ),
+                ),
+
+                // Cart Total Row - added after items table
+                _buildCartTotalRow(selectedPaperSize, cartItems,
+                    isFromLocalStorage, summaryStyle),
+
+                pw.SizedBox(height: 5), // Reduced from 8
+              ],
+            ),
+          ],
+        ),
+      );
+
+      // Save PDF to documents/epos folder for better organization
+      final output = await _getEposDirectory();
+
+      // Sanitize filename for Windows compatibility
+      String sanitizedOrderNumber =
+          orderNumber.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+      final file =
+          File('${output.path}/TransactionReport_$sanitizedOrderNumber.pdf');
+      await file.writeAsBytes(await pdf.save());
+
+      // Determine if running on Windows
+      final bool isWindows = Platform.isWindows;
+
+      if (isWindows) {
+        await _handleWindowsPdf(file);
+      } else {
+        // Try to open the PDF directly for non-Windows platforms
+        try {
+          final result = await OpenFile.open(file.path);
+          if (result.type != 'done') {
+            if (!isWindows) {
+              await _sharePdfFallback(file);
+            } else {
+              if (context.mounted) {
+                showScaffold(
+                    context: context, message: "PDF created successfully");
+                Navigator.pop(context);
+                SideBarController sideBarController =
+                    Get.put(SideBarController());
+                sideBarController.index.value =
+                    65; // Back to transaction report
+              }
+            }
+          } else {
+            if (context.mounted) {
+              showScaffold(
+                  context: context, message: "PDF opened for printing");
+              Navigator.pop(context);
+              SideBarController sideBarController =
+                  Get.put(SideBarController());
+              sideBarController.index.value = 65; // Back to transaction report
+            }
+          }
+        } catch (e) {
+          debugPrint("Error opening PDF: ${e.toString()}");
+          if (!isWindows) {
+            await _sharePdfFallback(file);
+          } else {
+            if (context.mounted) {
+              showScaffold(
+                  context: context, message: "PDF created successfully");
+              Navigator.pop(context);
+              SideBarController sideBarController =
+                  Get.put(SideBarController());
+              sideBarController.index.value = 65; // Back to transaction report
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error generating PDF: ${e.toString()}");
+      if (context.mounted) {
+        showScaffoldError(
+          context: context,
+          message: "Error generating PDF: ${e.toString()}",
+        );
+      }
+    }
+  }
+
+  // Windows-specific handling for PDF
+  Future<void> _handleWindowsPdf(File file) async {
+    try {
+      // First try to open with the default Windows PDF viewer
+      final result = await OpenFile.open(file.path);
+
+      // Always close the page on Windows, regardless of result
+      if (context.mounted) {
+        showScaffold(context: context, message: "PDF created successfully");
+        Navigator.pop(context);
+        SideBarController sideBarController = Get.put(SideBarController());
+        sideBarController.index.value = 65; // Back to transaction report
+      }
+    } catch (e) {
+      debugPrint("Windows PDF handling error: $e");
+      // Still close the page on error
+      if (context.mounted) {
+        showScaffold(context: context, message: "PDF created successfully");
+        Navigator.pop(context);
+        SideBarController sideBarController = Get.put(SideBarController());
+        sideBarController.index.value = 65; // Back to transaction report
+      }
+    }
+  }
+
+  // Show information about file location (for Windows) - Now unused but kept for reference
+  void _showFileLocationInfo(File file) {
+    if (context.mounted) {
+      // Just close the page instead of showing dialog
+      Navigator.pop(context);
+      SideBarController sideBarController = Get.put(SideBarController());
+      sideBarController.index.value = 65; // Back to transaction report
+    }
+  }
+
+  // Fallback method to share PDF if direct opening fails (for mobile platforms)
+  Future<void> _sharePdfFallback(File file) async {
+    try {
+      debugPrint("Attempting to share PDF as fallback...");
+      // Only try to share on non-Windows platforms
+      if (!Platform.isWindows) {
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          subject:
+              'Transaction Report #${file.path.split('/').last.replaceAll('.pdf', '').replaceAll('TransactionReport-', '')}',
+          text: 'Your transaction report',
+        );
+
+        if (context.mounted) {
+          showScaffold(
+              context: context, message: "PDF shared. Please open it to print");
+          Navigator.pop(context);
+          SideBarController sideBarController = Get.put(SideBarController());
+          sideBarController.index.value = 65; // Back to transaction report
+        }
+      } else {
+        // For Windows, show the file location
+        _showFileLocationInfo(file);
+      }
+    } catch (e) {
+      debugPrint("Error sharing PDF fallback: ${e.toString()}");
+      if (context.mounted) {
+        if (Platform.isWindows) {
+          // Show file location on Windows
+          _showFileLocationInfo(file);
+        } else {
+          showScaffoldError(
+            context: context,
+            message:
+                "Unable to open or share PDF: ${e.toString()}. Please check app permissions.",
+          );
+        }
+      }
+    }
+  }
+
+  pw.Widget _buildPdfTransactionReportItemsTable(
+      pw.TextStyle headerStyle,
+      pw.TextStyle contentStyle,
+      Map<String, DisplayOption>? displayConfig,
+      List<dynamic> cartItems,
+      bool isFromLocalStorage,
+      DocumentConfig? billDocumentConfig) {
+    // Create headers for the table based on visibility and resolved labels
+    final List<String> tableHeaders = [];
+    final Map<int, pw.Alignment> cellAlignmentsMap = {};
+    final List<double> columnWidths = [];
+    int visibleColIndex = 0;
+
+    // Add Sl.No column
+    tableHeaders.add('Sl.No');
+    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
+    columnWidths.add(1);
+
+    // Add Order Number column
+    tableHeaders.add('Order Number');
+    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
+    columnWidths.add(2);
+
+    // Add Transaction Type column
+    tableHeaders.add('Transaction Type');
+    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
+    columnWidths.add(2);
+
+    // Add Type column
+    tableHeaders.add('Type');
+    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
+    columnWidths.add(1);
+
+    // Add Amount column
+    tableHeaders.add('Amount');
+    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+    columnWidths.add(1.5);
+
+    // Add Tax column
+    tableHeaders.add('Tax');
+    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+    columnWidths.add(1);
+
+    // Add Status column
+    tableHeaders.add('Status');
+    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
+    columnWidths.add(1.5);
+
+    // Add Date column
+    tableHeaders.add('Date');
+    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
+    columnWidths.add(2);
+
+    // Create table data based on visibility with smart product name handling
+    List<List<String>> tableData = [];
+    for (var i = 0; i < cartItems.length; i++) {
+      var item = cartItems[i];
+
+      String orderNumber = '';
+      String transactionType = '';
+      String type = '';
+      String amount = '';
+      String tax = '10'; // Default tax value as shown in example
+      String status = '';
+      String date = '';
+
+      if (isFromLocalStorage) {
+        // Handle local storage data
+        orderNumber = item['orderNumber'] ?? 'N/A';
+        transactionType = item['transactionType'] ?? 'N/A';
+        type = item['type'] ?? 'N/A';
+        amount = item['amount'] ?? '0.00';
+        status = item['status'] ?? 'N/A';
+        date = item['date'] ?? 'N/A';
+      } else {
+        // Handle different object types - check if it's a Map or an object
+        if (item is Map<String, dynamic>) {
+          // Handle Map case (from API responses or converted data)
+          orderNumber = item['order_number']?.toString() ??
+              item['orderNumber']?.toString() ??
+              item['order_id']?.toString() ??
+              item['orderId']?.toString() ??
+              'N/A';
+          transactionType = item['transaction_type']?.toString() ??
+              item['transactionType']?.toString() ??
+              'N/A';
+          type = item['type']?.toString() ?? 'N/A';
+          amount = item['amount']?.toString() ?? '0.00';
+          status = item['status']?.toString() ?? 'N/A';
+          date = item['date']?.toString() ?? 'N/A';
+        } else {
+          // Handle object case (ListTransaction or similar)
+          try {
+            orderNumber = item.orderNumber?.toString() ??
+                item.orderId?.toString() ??
+                'N/A';
+            transactionType = item.transactionType?.toString() ?? 'N/A';
+            type = item.type?.toString() ?? 'N/A';
+            amount = item.amount?.toString() ?? '0.00';
+            status = item.status?.toString() ?? 'N/A';
+            date = item.date?.toString() ?? 'N/A';
+          } catch (e) {
+            debugPrint('Error accessing cart item properties: $e');
+            debugPrint('Item type: ${item.runtimeType}');
+            debugPrint('Item: $item');
+            // Fallback to safe defaults
+            orderNumber = 'N/A';
+            transactionType = 'N/A';
+            type = 'N/A';
+            amount = '0.00';
+            status = 'N/A';
+            date = 'N/A';
+          }
+        }
+      }
+
+      List<String> rowData = [
+        (i + 1).toString(), // Sl.No
+        orderNumber, // Order Number
+        transactionType, // Transaction Type
+        type, // Type
+        amount, // Amount
+        tax, // Tax
+        status, // Status
+        date, // Date
+      ];
+
+      tableData.add(rowData);
+    }
+
+    return pw.Table.fromTextArray(
+      headers: tableHeaders,
+      data: tableData,
+      headerStyle: headerStyle,
+      headerDecoration: const pw.BoxDecoration(
+        color: PdfColors.grey200,
+      ),
+      headerHeight: 20,
+      cellStyle: contentStyle,
+      cellHeight: 18,
+      cellAlignments: cellAlignmentsMap,
+      cellPadding: const pw.EdgeInsets.all(3),
+      border: const pw.TableBorder(
+        top: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+        bottom: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+        left: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+        right: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+        horizontalInside: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+        verticalInside: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+      ),
+      columnWidths: {
+        for (var i in columnWidths.asMap().keys)
+          i: pw.FlexColumnWidth(columnWidths[i])
+      },
+    );
+  }
+
+  pw.Widget _buildPdfSummary(
+      pw.TextStyle style,
+      pw.TextStyle netTotalStyle,
+      Map<String, DisplayOption>? displayConfig,
+      String formattedTotal,
+      String? savedTotal,
+      String? discountAmount,
+      int itemCount,
+      DocumentConfig? billDocumentConfig) {
+    double savedTotalValue = double.tryParse(savedTotal ?? '0.0') ?? 0.0;
+    double formattedTotalValue = double.tryParse(formattedTotal) ?? 0.0;
+    double discountAmountValue =
+        double.tryParse(discountAmount ?? '0.0') ?? 0.0;
+    double totalMRP = savedTotalValue + formattedTotalValue;
+
+    List<pw.Widget> summaryWidgets = [];
+
+    // Display Item Count
+    if (displayConfig?['showItemsCount']?.visible == true) {
+      summaryWidgets.add(
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('Total Transactions:', style: style),
+            pw.Text(itemCount.toString(), style: style),
+          ],
+        ),
+      );
+      summaryWidgets.add(pw.SizedBox(height: 3)); // Reduced from 5
+    }
+
+    // Display Total MRP
+    if (displayConfig?['showMRPTotal']?.visible == true) {
+      summaryWidgets.add(
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('Total Amount:', style: style),
+            pw.Text(totalMRP.toStringAsFixed(2), style: style),
+          ],
+        ),
+      );
+      summaryWidgets.add(pw.SizedBox(height: 3)); // Reduced from 5
+    }
+
+    // Display You Saved
+    if (displayConfig?['showSaved']?.visible == true) {
+      summaryWidgets.add(
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('You Saved:', style: style),
+            pw.Text(savedTotalValue.toStringAsFixed(2), style: style),
+          ],
+        ),
+      );
+      summaryWidgets.add(pw.SizedBox(height: 3)); // Reduced from 5
+    }
+
+    // Display Discount
+    if (displayConfig?['showDiscount']?.visible == true) {
+      summaryWidgets.add(
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('Discount:', style: style),
+            pw.Text(discountAmountValue.toStringAsFixed(2), style: style),
+          ],
+        ),
+      );
+      summaryWidgets.add(pw.SizedBox(height: 3)); // Reduced from 5
+    }
+
+    // Display Net Total (Amount)
+    if (displayConfig?['showNetAmount']?.visible == true) {
+      const label = 'Net Total';
+      summaryWidgets.add(pw.Divider(color: PdfColors.black));
+      summaryWidgets.add(
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('$label:', style: netTotalStyle),
+            pw.Text(formattedTotalValue.toStringAsFixed(2),
+                style: netTotalStyle),
+          ],
+        ),
+      );
+    }
+
+    return pw.Column(children: summaryWidgets);
+  }
+
+  // Date and Time Row for PDF - minimal design
+  pw.Widget _buildDateTimeRowPDF(String selectedPaperSize, String orderDate) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(
+          vertical: 0, horizontal: 8), // Reduced padding
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'Date: ${DateHelper.formatISODate(orderDate)}',
+            style: pw.TextStyle(
+              fontSize:
+                  selectedPaperSize == 'A5' ? 7.0 : 9.0, // Reduced font size
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.Text(
+            'Time: ${DateHelper.formatISODateToIST(orderDate)}',
+            style: pw.TextStyle(
+              fontSize:
+                  selectedPaperSize == 'A5' ? 7.0 : 9.0, // Reduced font size
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Date Range Row for PDF - same format as date and time row
+  pw.Widget _buildDateRangeRowPDF(
+      String selectedPaperSize, String? fromDate, String? toDate) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(
+          vertical: 0, horizontal: 8), // Same padding as date/time row
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'From: ${fromDate ?? 'N/A'}',
+            style: pw.TextStyle(
+              fontSize: selectedPaperSize == 'A5'
+                  ? 7.0
+                  : 9.0, // Same font size as date/time row
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.Text(
+            'To: ${toDate ?? 'N/A'}',
+            style: pw.TextStyle(
+              fontSize: selectedPaperSize == 'A5'
+                  ? 7.0
+                  : 9.0, // Same font size as date/time row
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Order ID Barcode for PDF - compact design with vertical padding
+  pw.Widget _buildOrderBarcodePDF(
+      String selectedPaperSize, String orderNumber) {
+    return pw.Center(
+      child: pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(
+            vertical: 5), // Added vertical padding
+        child: pw.Column(
+          children: [
+            pw.BarcodeWidget(
+              textPadding: 2,
+              barcode: pw.Barcode.code128(),
+              data: orderNumber,
+              width: selectedPaperSize == 'A5' ? 100 : 120, // Smaller size
+              height: selectedPaperSize == 'A5' ? 25 : 30, // Smaller height
+            ),
+            pw.SizedBox(height: 5), // Reduced from 10
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper method to check if terms data is available
+  bool _hasTermsData(Map<String, DisplayOption>? displayConfig,
+      DocumentConfig billDocumentConfig) {
+    // Get terms from displayConfig value first, then fallback to billDocumentConfig
+    String? terms = displayConfig?['showTermsConditions']?.value as String?;
+    if (terms == null || terms.trim().isEmpty) {
+      // Fallback to billDocumentConfig terms
+      terms = billDocumentConfig.terms;
+    }
+    return terms != null && terms.trim().isNotEmpty;
+  }
+
+  // Terms & Conditions in a Box for PDF - minimal design
+  pw.Widget _buildTermsConditionsBoxPDF(
+      String selectedPaperSize,
+      Map<String, DisplayOption>? displayConfig,
+      DocumentConfig billDocumentConfig) {
+    // Get terms from displayConfig value first, then fallback to billDocumentConfig
+    String? terms = displayConfig?['showTermsConditions']?.value as String?;
+    if (terms == null || terms.trim().isEmpty) {
+      terms = billDocumentConfig.terms;
+    }
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 5), // Reduced padding
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Divider(color: PdfColors.black),
+          ...terms!.split('\n').map((term) {
+            if (term.trim().isEmpty) {
+              return pw.SizedBox(height: 1); // Reduced from 2
+            }
+            return pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 2), // Reduced from 3
+              child: pw.Text(
+                term,
+                style: pw.TextStyle(
+                  fontSize: selectedPaperSize == 'A5'
+                      ? 7.0
+                      : 7.0, // Reduced font size
+                ),
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+  void _debugPrintTemplateSettings(Map<String, DisplayOption>? displayConfig) {
+    if (displayConfig == null) {
+      debugPrint("ERROR: Display configuration is null!");
+      return;
+    }
+
+    debugPrint("===== DISPLAY CONFIGURATION DEBUG ANALYSIS =====");
+    debugPrint("DisplayConfig Map Type: ${displayConfig.runtimeType}");
+    debugPrint("DisplayConfig Keys Count: ${displayConfig.keys.length}");
+    debugPrint("DisplayConfig Keys: ${displayConfig.keys.toList()}");
+
+    debugPrint("\nDETAILED DISPLAY CONFIGURATION:");
+    displayConfig.forEach((key, value) {
+      debugPrint("- $key:");
+      debugPrint(
+          "  * visible: ${value.visible} (${value.visible.runtimeType})");
+      debugPrint(
+          "  * value: ${value.value} (${value.value?.runtimeType ?? 'null'})");
+      debugPrint("  * DisplayOption object: $value");
+    });
+
+    // Special focus on showDiscount
+    if (displayConfig.containsKey('showDiscount')) {
+      final discountConfig = displayConfig['showDiscount']!;
+      debugPrint("\n🔍 SHOWDISCOUNT DETAILED ANALYSIS:");
+      debugPrint("  * Raw object: $discountConfig");
+      debugPrint("  * Visible field: ${discountConfig.visible}");
+      debugPrint("  * Visible type: ${discountConfig.visible.runtimeType}");
+      debugPrint("  * Value field: ${discountConfig.value}");
+      debugPrint(
+          "  * Value type: ${discountConfig.value?.runtimeType ?? 'null'}");
+      debugPrint("  * Object hashCode: ${discountConfig.hashCode}");
+    } else {
+      debugPrint("\n⚠️ showDiscount key NOT FOUND in displayConfig!");
+    }
+    debugPrint("===== END DISPLAY CONFIGURATION DEBUG =====");
+  }
+
+  // Customer Details Section for PDF - compact design with increased font size
+  pw.Widget _buildCustomerDetailsPDF(
+    String selectedPaperSize,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? customerAddress,
+    pw.TextStyle headerStyle,
+    pw.TextStyle bodyStyle,
+    String? fromDate,
+    String? toDate,
+  ) {
+    // Create a larger style for customer details
+    final customerDetailStyle = pw.TextStyle(
+      fontSize:
+          selectedPaperSize == 'A5' ? 8.0 : 10.0, // Increased from bodyStyle
+      fontWeight: pw.FontWeight.bold,
+      color: PdfColors.black,
+    );
+
+    // Create a style for customer information header
+    final customerInfoHeaderStyle = pw.TextStyle(
+      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+      fontWeight: pw.FontWeight.bold,
+      color: PdfColors.black,
+    );
+
+    debugPrint("===== PDF CUSTOMER DETAILS DEBUG =====");
+    debugPrint("Building customer details section for PDF:");
+    debugPrint("  customerName: '$customerName'");
+    debugPrint("  customerPhone: '$customerPhone'");
+    debugPrint("  customerEmail: '$customerEmail'");
+    debugPrint("  customerAddress: '$customerAddress'");
+    debugPrint("  fromDate: '$fromDate'");
+    debugPrint("  toDate: '$toDate'");
+    debugPrint("  Are any customer fields non-null and non-empty?");
+    debugPrint("    Name: ${customerName != null && customerName.isNotEmpty}");
+    debugPrint(
+        "    Phone: ${customerPhone != null && customerPhone.isNotEmpty}");
+    debugPrint(
+        "    Email: ${customerEmail != null && customerEmail.isNotEmpty}");
+    debugPrint(
+        "    Address: ${customerAddress != null && customerAddress.isNotEmpty}");
+    debugPrint("===== END PDF CUSTOMER DETAILS DEBUG =====");
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(
+          vertical: 8, horizontal: 8), // Increased vertical padding
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          // Add a header for customer details
+          pw.Text(
+            'Customer Information',
+            style: customerInfoHeaderStyle,
+          ),
+          pw.SizedBox(height: 5),
+          if (customerName != null && customerName.isNotEmpty)
+            pw.Text('Name: $customerName', style: customerDetailStyle),
+          if (customerEmail != null && customerEmail.isNotEmpty)
+            pw.Text('Email: $customerEmail', style: customerDetailStyle),
+          if (customerPhone != null && customerPhone.isNotEmpty)
+            pw.Text('Phone: $customerPhone', style: customerDetailStyle),
+          if (customerAddress != null && customerAddress.isNotEmpty)
+            pw.Text('Address: $customerAddress', style: customerDetailStyle),
+          // Add date range information in the same format as date/time row
+          if ((fromDate != null && fromDate.isNotEmpty) ||
+              (toDate != null && toDate.isNotEmpty))
+            pw.SizedBox(height: 5),
+          if ((fromDate != null && fromDate.isNotEmpty) ||
+              (toDate != null && toDate.isNotEmpty))
+            _buildDateRangeRowPDF(selectedPaperSize, fromDate, toDate),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to calculate cart total from items
+  double _calculateCartTotal(List<dynamic> cartItems, bool isFromLocalStorage) {
+    double totalCredit = 0.0;
+    double totalDebit = 0.0;
+
+    for (var item in cartItems) {
+      double amount = 0.0;
+      String type = '';
+
+      if (isFromLocalStorage) {
+        amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
+        type = item['type']?.toString() ?? '';
+      } else {
+        if (item is Map<String, dynamic>) {
+          amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
+          type = item['type']?.toString() ?? '';
+        } else {
+          try {
+            amount = double.tryParse(item.amount?.toString() ?? '0') ?? 0.0;
+            type = item.type?.toString() ?? '';
+          } catch (e) {
+            debugPrint('Error accessing item amount/type: $e');
+            amount = 0.0;
+            type = '';
+          }
+        }
+      }
+
+      if (type.toLowerCase() == 'credit') {
+        totalCredit += amount;
+      } else if (type.toLowerCase() == 'debit') {
+        totalDebit += amount;
+      }
+    }
+
+    return totalCredit - totalDebit;
+  }
+
+  // Helper method to build cart total row after items table
+  pw.Widget _buildCartTotalRow(
+    String selectedPaperSize,
+    List<dynamic> cartItems,
+    bool isFromLocalStorage,
+    pw.TextStyle summaryStyle,
+  ) {
+    // Calculate totals
+    double totalCredit = 0.0;
+    double totalDebit = 0.0;
+
+    for (var item in cartItems) {
+      double amount = 0.0;
+      String type = '';
+
+      if (isFromLocalStorage) {
+        amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
+        type = item['type']?.toString() ?? '';
+      } else {
+        if (item is Map<String, dynamic>) {
+          amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
+          type = item['type']?.toString() ?? '';
+        } else {
+          try {
+            amount = double.tryParse(item.amount?.toString() ?? '0') ?? 0.0;
+            type = item.type?.toString() ?? '';
+          } catch (e) {
+            debugPrint('Error accessing item amount/type: $e');
+            amount = 0.0;
+            type = '';
+          }
+        }
+      }
+
+      if (type.toLowerCase() == 'credit') {
+        totalCredit += amount;
+      } else if (type.toLowerCase() == 'debit') {
+        totalDebit += amount;
+      }
+    }
+
+    double balance = totalCredit - totalDebit;
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'Total Credit:',
+                style: pw.TextStyle(
+                  fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.black,
+                ),
+              ),
+              pw.Text(
+                'Rs. ${totalCredit.toStringAsFixed(2)}',
+                style: pw.TextStyle(
+                  fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.black,
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 5),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'Total Debit:',
+                style: pw.TextStyle(
+                  fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.black,
+                ),
+              ),
+              pw.Text(
+                'Rs. ${totalDebit.toStringAsFixed(2)}',
+                style: pw.TextStyle(
+                  fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.black,
+                ),
+              ),
+            ],
+          ),
+          pw.Divider(color: PdfColors.black),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'Balance:',
+                style: pw.TextStyle(
+                  fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                  fontWeight: pw.FontWeight.bold,
+                  color: balance < 0 ? PdfColors.red : PdfColors.green,
+                ),
+              ),
+              pw.Text(
+                'Rs. ${balance.toStringAsFixed(2)}',
+                style: pw.TextStyle(
+                  fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                  fontWeight: pw.FontWeight.bold,
+                  color: balance < 0 ? PdfColors.red : PdfColors.green,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Generate PDF for sharing without printing
+  Future<File?> generateTransactionReportPDFForSharing({
+    required List<dynamic> cartItems,
+    required String formattedTotal,
+    required String? savedTotal,
+    String? discountAmount,
+    required String orderDate,
+    required String orderNumber,
+    required bool isFromLocalStorage,
+    required String selectedPaperSize,
+    required DocumentConfig? billDocumentConfig,
+    required String customerCareNumber,
+    required String customerCareEmail,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? customerAddress,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    try {
+      // Ensure billDocumentConfig is loaded before generating PDF
+      if (billDocumentConfig == null) {
+        debugPrint("ERROR: Bill document configuration not loaded yet.");
+        return null;
+      }
+
+      final displayConfig = billDocumentConfig.displayConfiguration?.options;
+      _debugPrintTemplateSettings(displayConfig);
+
+      // Create a PDF document
+      final pdf = pw.Document();
+
+      // Get settings from the loaded display configuration
+      final updatedSettings = displayConfig;
+
+      // Access Payment Gateways Provider for QR code link
+      final paymentGatewaysProvider =
+          Provider.of<PaymentGatewaysProvider>(context, listen: false);
+      final manualPaymentGateway = paymentGatewaysProvider.paymentGateways
+          .firstWhere((gateway) => gateway.code == "MANUAL_PAYMENT_GATEWAY",
+              orElse: () => PaymentGateway(
+                    id: 0,
+                    name: "",
+                    code: "",
+                    label: "",
+                    link: "",
+                    image: "",
+                    status: "",
+                    isWebActive: 0,
+                    isAndroidActive: 0,
+                    isIosActive: 0,
+                    contactEmail: "",
+                    contactPhone: "",
+                    createdAt: "",
+                    updatedAt: "",
+                  ));
+
+      // Determine page format based on paper size
+      PdfPageFormat pageFormat =
+          selectedPaperSize == 'A4' ? PdfPageFormat.a4 : PdfPageFormat.a5;
+
+      // Define styles with adjustments for A5 vs A4 - optimized for space and professional look
+      final headerStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5'
+            ? 16.0
+            : 18.0, // Increased for better hierarchy
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
+      );
+      final subheaderStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5'
+            ? 9.0
+            : 11.0, // Reduced for better proportion
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
+      );
+      final bodyStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5'
+            ? 6.0
+            : 8.0, // Reduced for smaller table text
+        color: PdfColors.black,
+      );
+      final smallStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5' ? 5.0 : 7.0, // Reduced further
+        color: PdfColors.black,
+      );
+      final tableHeaderStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5'
+            ? 6.0
+            : 8.0, // Reduced for smaller table headers
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
+      );
+      final summaryStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5'
+            ? 8.0
+            : 10.0, // Reduced for better proportion
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
+      );
+      final netTotalStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5'
+            ? 9.0
+            : 11.0, // Reduced for better proportion
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.black,
+      );
+
+      // Add content to a multi-page PDF with minimal margins and optimized spacing
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: pageFormat,
+          margin: const pw.EdgeInsets.all(15), // Reduced from 30
+          footer: (context) => pw.Padding(
+            padding: const pw.EdgeInsets.only(top: 5), // Reduced from 10
+            child: pw.Column(
+              children: [
+                // QR Code (if enabled)
+                if (updatedSettings?['showQRCode']?.visible == true &&
+                    manualPaymentGateway.link.isNotEmpty)
+                  pw.Center(
+                    child: pw.BarcodeWidget(
+                      barcode: pw.Barcode.qrCode(),
+                      data: manualPaymentGateway.link,
+                      width: selectedPaperSize == 'A5' ? 40 : 50,
+                      height: selectedPaperSize == 'A5' ? 40 : 50,
+                    ),
+                  ),
+                pw.SizedBox(height: 5),
+                // Thank You Message
+                if (updatedSettings?['showThankYouMessage']?.visible == true)
+                  pw.Center(
+                    child: pw.Text(
+                      'Thank you for your business!',
+                      style: smallStyle,
+                    ),
+                  ),
+                // Customer Care Information
+                pw.Center(
+                  child: pw.Column(
+                    children: [
+                      if (customerCareNumber.isNotEmpty)
+                        pw.Text(
+                          'Customer Care: $customerCareNumber',
+                          style: smallStyle,
+                        ),
+                      if (customerCareEmail.isNotEmpty)
+                        pw.Text(
+                          'Email: $customerCareEmail',
+                          style: smallStyle,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          build: (context) => [
+            // Store Name Header
+            if (updatedSettings?['showStoreName']?.visible == true)
+              pw.Center(
+                child: pw.Text(
+                  (updatedSettings?['showStoreName']?.value as String?) ??
+                      'Store Name',
+                  style: headerStyle,
+                ),
+              ),
+            // Description
+            if (updatedSettings?['showDescription']?.visible == true)
+              pw.Center(
+                child: pw.Text(
+                  (updatedSettings?['showDescription']?.value as String?) ??
+                      'Description',
+                  style: subheaderStyle,
+                ),
+              ),
+            // Store Address
+            if (updatedSettings?['showStoreAddress']?.visible == true)
+              pw.Center(
+                child: pw.Text(
+                  (updatedSettings?['showStoreAddress']?.value as String?) ??
+                      'Store Address',
+                  style: bodyStyle,
+                ),
+              ),
+            // FSSAI Info
+            if (updatedSettings?['showFssaiInfo']?.visible == true)
+              pw.Center(
+                child: pw.Text(
+                  (updatedSettings?['showFssaiInfo']?.value as String?) ??
+                      'FSSAI Info',
+                  style: bodyStyle,
+                ),
+              ),
+            // Tel
+            if (updatedSettings?['showTel']?.visible == true)
+              pw.Center(
+                child: pw.Text(
+                  'Tel: ${(updatedSettings?['showTel']?.value as String?) ?? 'Tel Number'}',
+                  style: bodyStyle,
+                ),
+              ),
+            // Email
+            if (updatedSettings?['showEmail']?.visible == true)
+              pw.Center(
+                child: pw.Text(
+                  'Email: ${(updatedSettings?['showEmail']?.value as String?) ?? 'Email Address'}',
+                  style: bodyStyle,
+                ),
+              ),
+            pw.SizedBox(height: 10),
+            pw.Divider(color: PdfColors.black),
+            // Report Title
+            if (updatedSettings?['showInvoiceTitle']?.visible == true)
+              pw.Center(
+                child: pw.Text(
+                  (updatedSettings?['showInvoiceTitle']?.value as String?) ??
+                      'CUSTOMER TRANSACTION REPORT',
+                  style: subheaderStyle,
+                ),
+              ),
+            // Report Number
+            if (updatedSettings?['showInvoiceNumber']?.visible == true)
+              pw.Center(
+                child: pw.Text(
+                  'Report No: $orderNumber',
+                  style: bodyStyle,
+                ),
+              ),
+            // Date Header
+            if (updatedSettings?['showDateHeader']?.visible == true)
+              _buildDateTimeRowPDF(selectedPaperSize, orderDate),
+            // Customer Details
+            if (customerName != null ||
+                customerPhone != null ||
+                customerEmail != null ||
+                customerAddress != null ||
+                fromDate != null ||
+                toDate != null)
+              _buildCustomerDetailsPDF(
+                selectedPaperSize,
+                customerName,
+                customerPhone,
+                customerEmail,
+                customerAddress,
+                headerStyle,
+                bodyStyle,
+                fromDate,
+                toDate,
+              ),
+            pw.SizedBox(height: 10),
+            // Items Table
+            _buildPdfTransactionReportItemsTable(
+              tableHeaderStyle,
+              bodyStyle,
+              updatedSettings,
+              cartItems,
+              isFromLocalStorage,
+              billDocumentConfig,
+            ),
+            pw.SizedBox(height: 10),
+            // Cart Total Row
+            _buildCartTotalRow(
+                selectedPaperSize, cartItems, isFromLocalStorage, summaryStyle),
+            // Summary Section
+            _buildPdfSummary(
+              summaryStyle,
+              netTotalStyle,
+              updatedSettings,
+              formattedTotal,
+              savedTotal,
+              discountAmount,
+              cartItems.length,
+              billDocumentConfig,
+            ),
+            // Amount in Words
+            if (updatedSettings?['showAmountInWords']?.visible == true)
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(vertical: 5),
+                child: pw.Text(
+                  'Amount in words: ${AmountHelper().convertNumberToWords(double.tryParse(formattedTotal) ?? 0.0)}',
+                  style: bodyStyle,
+                ),
+              ),
+            // Items Count
+            if (updatedSettings?['showItemsCount']?.visible == true)
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(vertical: 5),
+                child: pw.Text(
+                  'Total Transactions: ${cartItems.length}',
+                  style: bodyStyle,
+                ),
+              ),
+            // Terms & Conditions
+            if (updatedSettings?['showTermsConditions']?.visible == true &&
+                _hasTermsData(updatedSettings, billDocumentConfig))
+              _buildTermsConditionsBoxPDF(
+                selectedPaperSize,
+                updatedSettings,
+                billDocumentConfig,
+              ),
+            // Order Barcode
+            _buildOrderBarcodePDF(selectedPaperSize, orderNumber),
+          ],
+        ),
+      );
+
+      // Save PDF to a more accessible location for sharing in documents/epos folder
+      final output = await _getEposDirectory();
+
+      // Sanitize filename for Windows compatibility
+      String sanitizedOrderNumber =
+          orderNumber.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+      final file =
+          File('${output.path}/TransactionReport_$sanitizedOrderNumber.pdf');
+
+      final pdfBytes = await pdf.save();
+      await file.writeAsBytes(pdfBytes);
+
+      // Verify file was created successfully
+      final fileExists = await file.exists();
+      final fileSize = fileExists ? await file.length() : 0;
+
+      debugPrint('PDF generated for sharing: ${file.path}');
+      debugPrint(
+          'PDF directory type: ${output.path.contains('epos') ? 'Documents/epos' : (output.path.contains('Documents') ? 'Documents' : 'Temp')}');
+      debugPrint('PDF file exists: $fileExists');
+      debugPrint('PDF file size: $fileSize bytes');
+
+      if (!fileExists || fileSize == 0) {
+        debugPrint('ERROR: PDF file was not created properly');
+        return null;
+      }
+
+      return file;
+    } catch (e) {
+      debugPrint("Error generating PDF for sharing: ${e.toString()}");
+      return null;
+    }
+  }
+}
