@@ -27,6 +27,8 @@ class PaymentMethodModal extends StatefulWidget {
   final Function(
           bool, bool, bool, bool, String, String, String, String, String, bool)
       onPaymentMethodSelected;
+  final VoidCallback? onAfterApply; // Optional callback to execute after applying payment methods
+  final String? customButtonTitle; // Optional custom button title
 
   const PaymentMethodModal({
     Key? key,
@@ -42,6 +44,8 @@ class PaymentMethodModal extends StatefulWidget {
     required this.cartTotal,
     this.customerPrevBalance = 0.0,
     required this.onPaymentMethodSelected,
+    this.onAfterApply,
+    this.customButtonTitle,
   }) : super(key: key);
 
   @override
@@ -820,7 +824,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
             const SizedBox(height: 20),
             CustomRoundButton(
-              title: "Apply Payment Methods",
+              title: widget.customButtonTitle ?? "Apply Payment Methods",
               fct: () {
                 // Map To Customer Credit to legacy debit params for callback compatibility
                 final double mappedCredit =
@@ -844,6 +848,14 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   toCustomerCreditEnabled,
                 );
                 Navigator.of(context).pop();
+                
+                // Execute the callback function if provided (e.g., _saveOrder, _confirmOrder)
+                if (widget.onAfterApply != null) {
+                  // Use a small delay to ensure the modal is fully closed before executing the callback
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    widget.onAfterApply!();
+                  });
+                }
               },
               fontSize: FontSize.s14,
               height: 45,

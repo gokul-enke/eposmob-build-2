@@ -40,6 +40,7 @@ import 'package:pos_machine/widgets/horizontal_product_view_local.dart';
 import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:pos_machine/widgets/sidebar_product_list.dart';
+import 'package:pos_machine/widgets/product_details_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
@@ -466,6 +467,8 @@ class BillingPageState extends State<BillingPage>
             String name = selectedCustomer!.name ?? '';
             String phone = selectedCustomer!.phone ?? '';
             mobileNumberTextController.text = "$name $phone".trim();
+            mobileNumberText = "$name $phone"
+                .trim(); // Fix: Set mobileNumberText for Autocomplete initialValue
             isCustomerFound = true;
           } else {
             // Phone-only order - show just the phone number
@@ -1819,7 +1822,7 @@ class BillingPageState extends State<BillingPage>
                                     child: WebsafeSvg.asset(
                                       ImageAssets.oderlistCloseIcon,
                                       width: 27,
-                                      colorFilter: ColorFilter.mode(
+                                      colorFilter: const ColorFilter.mode(
                                           ColorManager.kButtonRed,
                                           BlendMode.srcIn),
                                     ),
@@ -1925,19 +1928,53 @@ class BillingPageState extends State<BillingPage>
 
                                   // Item Name
                                   _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: Text(
-                                        item.product.productName ?? 'Unknown',
-                                        style: buildCustomStyle(
-                                          FontWeightManager.regular,
-                                          11,
-                                          0.21,
-                                          ColorManager.textColor,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                    GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () =>
+                                          _showProductDetailsDialog(item),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          Expanded(
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: Text(
+                                                item.product.productName ??
+                                                    'Unknown',
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.regular,
+                                                  11,
+                                                  0.21,
+                                                  ColorManager.textColor,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Tooltip(
+                                            message: 'View details',
+                                            waitDuration: const Duration(
+                                                milliseconds: 400),
+                                            child: InkWell(
+                                              onTap: () =>
+                                                  _showProductDetailsDialog(
+                                                      item),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              child: const Icon(
+                                                Icons.info_outline,
+                                                size: 16,
+                                                color:
+                                                    ColorManager.kPrimaryColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                     flex: 3,
@@ -2028,8 +2065,8 @@ class BillingPageState extends State<BillingPage>
                                       child: SizedBox(
                                         width: 70,
                                         child: Text(
-                                          (item.price! * item.quantity)
-                                              .toStringAsFixed(3),
+                                          AmountHelper.formatAmount(
+                                              (item.price! * item.quantity)),
                                           style: const TextStyle(fontSize: 11),
                                           textAlign: TextAlign.left,
                                         ),
@@ -2110,6 +2147,29 @@ class BillingPageState extends State<BillingPage>
         alignment: alignment,
         child: child,
       ),
+    );
+  }
+
+  // Show product details dialog for the given cart item using reusable widget
+  void _showProductDetailsDialog(LocalCartItem item) {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? '';
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return ProductDetailsDialog(
+          product: item.product,
+          unitPrice: item.price,
+          mrp: item.mrp,
+          quantity: item.quantity,
+          selectedStock: item.selectedStock,
+          isCompact: false,
+          currency: currency,
+        );
+      },
     );
   }
 
@@ -2982,7 +3042,7 @@ class BillingPageState extends State<BillingPage>
                       child: WebsafeSvg.asset(
                         ImageAssets.oderlistCloseIcon,
                         width: 27,
-                        colorFilter: ColorFilter.mode(
+                        colorFilter: const ColorFilter.mode(
                             ColorManager.kButtonRed, BlendMode.srcIn),
                       ),
                     ),
@@ -3262,6 +3322,23 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
+      // Check if customer is selected
+      if (selectedCustomerID == null && mobileNumberText == "") {
+        showScaffoldError(
+          context: context,
+          message: "Please select a customer",
+        );
+        // Auto-focus on customer field
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_autocompleteFocusNode != null) {
+            FocusScope.of(context).requestFocus(_autocompleteFocusNode!);
+          } else {
+            FocusScope.of(context).requestFocus(_customerTextFieldFocus);
+          }
+        });
+        return;
+      }
+
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
 
@@ -3417,6 +3494,41 @@ class BillingPageState extends State<BillingPage>
         showScaffoldError(
           context: context,
           message: "Please add items to cart",
+        );
+        return;
+      }
+
+      // Check if customer is selected
+      if (selectedCustomerID == null && mobileNumberText == "") {
+        showScaffoldError(
+          context: context,
+          message: "Please select a customer",
+        );
+        // Auto-focus on customer field
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_autocompleteFocusNode != null) {
+            FocusScope.of(context).requestFocus(_autocompleteFocusNode!);
+          } else {
+            FocusScope.of(context).requestFocus(_customerTextFieldFocus);
+          }
+        });
+        return;
+      }
+
+      // Check if any payment method is selected
+      List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
+      if (selectedPaymentMethods.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: "Please select a payment method",
+        );
+        // Show the payment method modal for user to select payment methods and auto-apply save & print
+        setState(() {
+          isLoadingSaveOrderAndPrint = false;
+        });
+        _showPaymentMethodModal(
+          onAfterApply: _saveOrderAndPrint,
+          customButtonTitle: "Apply & Save and Print",
         );
         return;
       }
@@ -3607,6 +3719,14 @@ class BillingPageState extends State<BillingPage>
           context: context,
           message: "Please select a customer",
         );
+        // Auto-focus on customer field
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_autocompleteFocusNode != null) {
+            FocusScope.of(context).requestFocus(_autocompleteFocusNode!);
+          } else {
+            FocusScope.of(context).requestFocus(_customerTextFieldFocus);
+          }
+        });
         return;
       }
 
@@ -3618,7 +3738,13 @@ class BillingPageState extends State<BillingPage>
           message: "Please select a payment method",
         );
         // Show the payment method modal for user to select payment methods
-        _showPaymentMethodModal();
+        setState(() {
+          isLoadingCreateOrder = false;
+        });
+        _showPaymentMethodModal(
+          onAfterApply: _createOrderAndPrint,
+          customButtonTitle: "Apply & Create Order",
+        );
         return;
       }
 
@@ -3887,6 +4013,14 @@ class BillingPageState extends State<BillingPage>
           context: context,
           message: "Please select a customer",
         );
+        // Auto-focus on customer field
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_autocompleteFocusNode != null) {
+            FocusScope.of(context).requestFocus(_autocompleteFocusNode!);
+          } else {
+            FocusScope.of(context).requestFocus(_customerTextFieldFocus);
+          }
+        });
         return;
       }
 
@@ -3898,7 +4032,13 @@ class BillingPageState extends State<BillingPage>
           message: "Please select a payment method",
         );
         // Show the payment method modal for user to select payment methods
-        _showPaymentMethodModal();
+        setState(() {
+          isLoadingConfirmOrder = false;
+        });
+        _showPaymentMethodModal(
+          onAfterApply: _confirmOrder,
+          customButtonTitle: "Apply & Confirm Order",
+        );
         return;
       }
 
@@ -4568,7 +4708,7 @@ class BillingPageState extends State<BillingPage>
     );
   }
 
-  void _showPaymentMethodModal() {
+  void _showPaymentMethodModal({VoidCallback? onAfterApply, String? customButtonTitle}) {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
@@ -4599,6 +4739,8 @@ class BillingPageState extends State<BillingPage>
         initialTransactionNumber: _transactionNumberController.text,
         cartTotal: localProductProvider.cartTotal,
         customerPrevBalance: selectedCustomer?.balance ?? 0.0,
+        onAfterApply: onAfterApply,
+        customButtonTitle: customButtonTitle,
         onPaymentMethodSelected: (isCash,
             isCard,
             isUpi,

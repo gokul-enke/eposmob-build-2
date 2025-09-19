@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:pos_machine/components/build_title.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -38,7 +39,7 @@ class BuildDropDownWithSearch<T> extends StatefulWidget {
     this.margin,
     this.contentPadding,
     this.width,
-    this.autofocus = false,
+    this.autofocus = true,
   });
 
   @override
@@ -49,11 +50,15 @@ class BuildDropDownWithSearch<T> extends StatefulWidget {
 class _BuildDropDownWithSearchState<T>
     extends State<BuildDropDownWithSearch<T>> {
   late TextEditingController _searchController;
+  late FocusNode _searchFocusNode;
 
   @override
   void initState() {
     super.initState();
     _searchController = widget.searchController ?? TextEditingController();
+    _searchFocusNode = FocusNode();
+    // Intercept key events while the search field is focused
+    _searchFocusNode.onKey = _onSearchKey;
   }
 
   @override
@@ -61,7 +66,29 @@ class _BuildDropDownWithSearchState<T>
     if (widget.searchController == null) {
       _searchController.dispose();
     }
+    _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  KeyEventResult _onSearchKey(FocusNode node, RawKeyEvent event) {
+    // Only react on key down to avoid duplicate handling
+    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      final BuildContext? searchCtx = node.context;
+      if (searchCtx != null) {
+        // Defer to next microtask to avoid TextField reasserting focus
+        Future.microtask(() {
+          final scope = FocusScope.of(searchCtx);
+          final moved = scope.focusInDirection(TraversalDirection.down);
+          if (!moved) {
+            scope.nextFocus();
+          }
+        });
+      }
+      // Mark as handled so the TextField doesn't consume the key
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -107,7 +134,6 @@ class _BuildDropDownWithSearchState<T>
             ),
             child: DropdownSearch<T>(
               items: (filter, infiniteScrollProps) => widget.items,
-              // Custom renderer to vertically center text/hint within fixed height
               dropdownBuilder: (context, selectedItem) {
                 final bool hasValue = selectedItem != null;
                 final String text = hasValue
@@ -143,7 +169,6 @@ class _BuildDropDownWithSearchState<T>
               },
               decoratorProps: DropDownDecoratorProps(
                 decoration: InputDecoration(
-                  // Hint is rendered by dropdownBuilder to avoid duplication
                   hintText: null,
                   hintStyle: buildCustomStyle(
                     FontWeightManager.medium,
@@ -160,14 +185,6 @@ class _BuildDropDownWithSearchState<T>
                   isDense: true,
                   contentPadding:
                       widget.contentPadding ?? const EdgeInsets.only(left: 15),
-                  // For TextField content vertical centering
-                  // Note: This affects the input text baseline positioning
-                  // and helps with consistent centering across platforms.
-                  // Using TextAlignVertical.center supported by TextField via decoration.
-                  // If older Flutter SDKs complain, we can remove this line.
-                  // However, most recent SDKs accept it.
-                  // ignore: deprecated_member_use_from_same_package
-                  // textAlignVertical is a property on TextField, not InputDecoration.
                   suffixIcon: Center(
                     child: Icon(
                       Icons.arrow_drop_down,
@@ -192,6 +209,7 @@ class _BuildDropDownWithSearchState<T>
                 showSearchBox: true,
                 searchFieldProps: TextFieldProps(
                   controller: _searchController,
+                  focusNode: _searchFocusNode,
                   autofocus: widget.autofocus,
                   decoration: InputDecoration(
                     hintText: widget.searchHintText ?? 'Search...',
