@@ -8,6 +8,9 @@ import '../providers/purchase_provider.dart';
 import '../providers/stock_provider.dart';
 import '../providers/auth_model.dart';
 import '../providers/supplier_provider.dart';
+import 'general_settings_provider.dart';
+import 'app_settings_provider.dart';
+import '../providers/delivery_methods_provider.dart';
 
 /// Comprehensive sync provider that handles synchronization of all data
 /// across the application. Follows the Provider Pattern preference for
@@ -48,6 +51,20 @@ class SyncProvider extends ChangeNotifier {
       debugPrint("🔄 Starting comprehensive data sync...");
       debugPrint("Access Token: ${accessToken.substring(0, 20)}...");
 
+      // Pre-Step: Refresh settings (general and app)
+      _updateProgress(0.05, "Refreshing settings...");
+      try {
+        await Provider.of<GeneralSettingsProvider>(context, listen: false)
+            .fetchGeneralSettings();
+        debugPrint("✅ General settings refreshed");
+        await Provider.of<AppSettingsProvider>(context, listen: false)
+            .fetchAppSettings();
+        debugPrint("✅ App settings refreshed");
+      } catch (e) {
+        debugPrint("⚠️ Failed to refresh settings during sync: $e");
+        // Continue sync even if general settings refresh fails
+      }
+
       // Step 1: Sync Products (20%)
       _updateProgress(0.1, "Syncing products...");
       await _syncProducts(context, accessToken);
@@ -71,6 +88,10 @@ class SyncProvider extends ChangeNotifier {
       // Step 6: Sync Purchase Data (90%)
       _updateProgress(0.75, "Syncing purchase data...");
       await _syncPurchaseData(context, accessToken);
+
+      // Step 6.5: Sync Delivery Methods (92%)
+      _updateProgress(0.92, "Syncing delivery methods...");
+      await _syncDeliveryMethods(context);
 
       // Step 7: Sync Suppliers (95%)
       _updateProgress(0.95, "Syncing suppliers...");
@@ -221,6 +242,20 @@ class SyncProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint("❌ Failed to sync suppliers: $e");
       throw Exception('Failed to sync suppliers: $e');
+    }
+  }
+
+  /// Sync delivery methods
+  Future<void> _syncDeliveryMethods(BuildContext context) async {
+    try {
+      debugPrint("🚚 Syncing delivery methods...");
+      final deliveryMethodsProvider =
+          Provider.of<DeliveryMethodsProvider>(context, listen: false);
+      await deliveryMethodsProvider.fetchDeliveryMethods();
+      debugPrint("✅ Delivery methods synced successfully");
+    } catch (e) {
+      debugPrint("⚠️ Failed to sync delivery methods: $e");
+      // Do not throw; non-critical for completing overall sync
     }
   }
 

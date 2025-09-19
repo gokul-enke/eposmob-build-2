@@ -464,19 +464,33 @@ class Stock {
   });
 
   factory Stock.fromJson(Map<String, dynamic> json) => Stock(
-        id: json["id"],
-        productId: json["product_id"],
-        supplier: json["supplier"],
-        quantity: json["quantity"],
-        price: json["price"],
-        sku: json["sku"],
-        mrp: json["mrp"],
-        unit: json["unit"],
-        purchasePrice: json["purchase_price"],
-        date: json["date"],
-        expiryDate: json["expiry_date"],
-        rack: json["rack"],
-        hsnCode: json["hsn_code"], // Added HSN code field
+        id: json["id"] is String ? int.tryParse(json["id"]) : json["id"],
+        productId: json["product_id"] is String
+            ? int.tryParse(json["product_id"])
+            : json["product_id"],
+        supplier: json["supplier"]?.toString(),
+        quantity: (() {
+          final q = json["quantity"];
+          if (q == null) return null;
+          if (q is num) return q;
+          if (q is String) {
+            // Try int first, then double
+            final i = int.tryParse(q);
+            if (i != null) return i;
+            final d = double.tryParse(q);
+            if (d != null) return d;
+          }
+          return null;
+        })(),
+        price: json["price"]?.toString(),
+        sku: json["sku"]?.toString(),
+        mrp: json["mrp"]?.toString(),
+        unit: json["unit"]?.toString(),
+        purchasePrice: json["purchase_price"]?.toString(),
+        date: json["date"]?.toString(),
+        expiryDate: json["expiry_date"]?.toString(),
+        rack: json["rack"]?.toString(),
+        hsnCode: json["hsn_code"]?.toString(), // Added HSN code field
       );
 
   Map<String, dynamic> toJson() => {

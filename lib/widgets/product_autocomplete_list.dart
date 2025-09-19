@@ -228,6 +228,7 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
               focusNode: focusNode,
               autofocus: widget.autofocus,
               size: widget.size,
+              width: double.infinity,
               hintText: 'Search Product',
               onSubmitted: (_) => onFieldSubmitted(),
               onTap: () {

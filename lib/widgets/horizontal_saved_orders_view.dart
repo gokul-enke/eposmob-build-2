@@ -9,6 +9,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart'; // Added import
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/screens/billing/billing_page.dart';
+import 'package:pos_machine/services/print_service.dart';
 import 'package:provider/provider.dart';
 
 /// A widget to display saved orders in a grid layout with new order button at top
@@ -296,14 +297,8 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
-                      onPressed: () {
-                        if (context
-                                .findAncestorStateOfType<BillingPageState>() !=
-                            null) {
-                          context
-                              .findAncestorStateOfType<BillingPageState>()!
-                              .printFromSavedOrder(order);
-                        }
+                      onPressed: () async {
+                        await const PrintService().printSavedOrder(context, order);
                       },
                       icon: const Icon(Icons.print, size: 20),
                       color: Colors.blue,

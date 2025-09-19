@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/resources/asset_manager.dart';
 
 import 'package:pos_machine/responsive.dart';
 import 'package:pos_machine/widgets/side_menu_mobile.dart';
 
 import '../controllers/sidebar_controller.dart';
 import '../resources/color_manager.dart';
+import '../widgets/user_switcher.dart';
 
 import '../widgets/side_menu.dart';
 
@@ -18,7 +20,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   late SideBarController sideBarController;
-  
+
   @override
   void initState() {
     super.initState();
@@ -39,26 +41,64 @@ class _MainScreenState extends State<MainScreen> {
               elevation: 0,
               backgroundColor: Colors.white,
               centerTitle: true,
-              title: RichText(
-                text: const TextSpan(
-                  text: 'Cloud',
-                  style: TextStyle(
-                    color: ColorManager.textColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
-                  children: <TextSpan>[
-                    TextSpan(
-                      text: 'POS',
-                      style: TextStyle(
-                        color: ColorManager.kPrimaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
+              title: Image.asset(
+                ImageAssets.posImageLogo,
+                height: 30,
+                fit: BoxFit.contain,
+              ),
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.white,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.vertical(top: Radius.circular(16)),
+                        ),
+                        builder: (ctx) {
+                          return SafeArea(
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                              ),
+                              child: const SizedBox(
+                                height: 420,
+                                child: Padding(
+                                  padding: EdgeInsets.all(12.0),
+                                  child: UserSwitcher(),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.transparent,
+                        border: Border.all(
+                          color: ColorManager.kPrimaryColor,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.person_outline,
+                          color: ColorManager.kPrimaryColor,
+                          size: 20,
+                        ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
               leading: Builder(builder: (context) {
                 return IconButton(
                   color: ColorManager.kPrimaryColor,

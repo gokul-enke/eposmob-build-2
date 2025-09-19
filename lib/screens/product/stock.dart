@@ -12,16 +12,17 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
-import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/stock_provider.dart';
+import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/resources/app_url.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
 
 import '../../models/list_stock.dart';
-import '../../providers/auth_model.dart';
-import '../../providers/stock_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -72,11 +73,21 @@ class _AddStockScreenState extends State<AddStockScreen> {
         return;
       }
 
+      // Load categories from CategoryProvider with caching (same as sidebar)
+      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+      if (!categoryProvider.isCategoriesLoaded) {
+        debugPrint("📥 Loading categories from API...");
+        await categoryProvider.listAllCategory();
+        debugPrint("✅ Categories loaded and cached");
+      } else {
+        debugPrint("📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
+      }
+
       // Load all stocks for local pagination
       await Provider.of<StockProvider>(context, listen: false)
           .loadAllStocks(accessToken);
 
-      // Extract unique categories and stores from stocks
+      // Extract categories from CategoryProvider and stores from stocks
       _extractCategoriesAndStores();
 
       setState(() {
@@ -95,33 +106,40 @@ class _AddStockScreenState extends State<AddStockScreen> {
   }
 
   void _extractCategoriesAndStores() {
-    final provider = Provider.of<StockProvider>(context, listen: false);
-    final allStocks = provider.allStocks;
+    final stockProvider = Provider.of<StockProvider>(context, listen: false);
+    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+    final allStocks = stockProvider.allStocks;
 
+    // Get categories from CategoryProvider (same as sidebar)
+    final categoryList = categoryProvider.category ?? [];
+    final uniqueCategories = categoryList
+        .map((category) => category.categoryName ?? "")
+        .where((categoryName) => categoryName.isNotEmpty)
+        .toList();
+
+    // Sort categories alphabetically
+    uniqueCategories.sort();
+
+    // Extract unique stores from stocks
+    List<String> uniqueStores = [];
     if (allStocks != null && allStocks.isNotEmpty) {
-      // Extract unique categories
-      final uniqueCategories = allStocks
-          .map((stock) => stock.categoryName ?? "")
-          .where((category) => category.isNotEmpty)
-          .toSet()
-          .toList();
-
-      // Extract unique stores
-      final uniqueStores = allStocks
+      uniqueStores = allStocks
           .map((stock) => stock.storeName ?? "")
           .where((store) => store.isNotEmpty)
           .toSet()
           .toList();
 
-      // Sort categories and stores alphabetically
-      uniqueCategories.sort();
+      // Sort stores alphabetically
       uniqueStores.sort();
-
-      setState(() {
-        categories = ["All Categories", ...uniqueCategories];
-        stores = ["All Stores", ...uniqueStores];
-      });
     }
+
+    setState(() {
+      categories = ["All Categories", ...uniqueCategories];
+      stores = ["All Stores", ...uniqueStores];
+    });
+
+    debugPrint("📋 CATEGORIES LOADED: ${categories.length} categories found");
+    debugPrint("📋 Categories: $categories");
   }
 
   void searchStocks() {

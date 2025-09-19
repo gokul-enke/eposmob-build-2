@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+// import 'package:pos_machine/screens/billing/billing_page_desktop.dart';
+import 'package:pos_machine/screens/billing/billing_page_mobile.dart';
 import 'billing_page.dart';
-import 'mobile_screen/billing_page_mobile.dart';
 
 class BillingPageResponsive extends StatelessWidget {
   const BillingPageResponsive({super.key});

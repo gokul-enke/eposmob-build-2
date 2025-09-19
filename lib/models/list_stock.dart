@@ -52,7 +52,7 @@ class ListStockModelData {
   final String? categoryName;
   final String? supplierName;
   final String? orderDate;
-  final int? qty;
+  final double? qty;
   final String? retailPrice;
   final String? wholesalePrice;
   final String? purchaseRate;
@@ -81,16 +81,18 @@ class ListStockModelData {
   factory ListStockModelData.fromJson(Map<String, dynamic> json) =>
       ListStockModelData(
         stockId: json["id"],
-        barCode: json["barcode"],
+        barCode: json["barcode"]?.toString(),
         productName: json["product_name"],
         categoryName: json["category_name"],
         supplierName: json["supplier_name"],
         orderDate: json["order_date"],
-        qty: json["qty"],
-        retailPrice: json["retail_price"],
-        wholesalePrice: json["wholesale_price"],
-        purchaseRate: json["purchase_rate"],
-        mrp: json["mrp"],
+        qty: json["qty"] is num
+            ? (json["qty"] as num).toDouble()
+            : double.tryParse(json["qty"].toString()),
+        retailPrice: json["retail_price"]?.toString(),
+        wholesalePrice: json["wholesale_price"]?.toString(),
+        purchaseRate: json["purchase_rate"]?.toString(),
+        mrp: json["mrp"]?.toString(),
         unit: json["unit"],
         storeName: json["store_name"],
         rack: json["rack"],

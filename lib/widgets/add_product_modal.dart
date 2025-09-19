@@ -530,8 +530,7 @@ class _AddProductWithBarcodeModalState
                             quantity: _productQuantityController.text,
                             barcode: _productBarcodeController.text,
                             accessToken: accessToken ?? "",
-                            // TODO: Add purchasePrice parameter when API supports it
-                            // purchasePrice: _productPurchasePriceController.text,
+                            purchasePrice: _productPurchasePriceController.text,
                           );
 
                           // Handle success response
@@ -563,7 +562,20 @@ class _AddProductWithBarcodeModalState
                                     listen: false)
                                 .refreshProducts();
 
-                            Navigator.pop(context);
+                            // Return the created product and the entered quantity back to the caller so they can auto-fill
+                            // Prefer returning the parsed GetProduct object. Include initialQuantity explicitly.
+                            try {
+                              final returnedProduct = GetProduct.fromJson(result['data']);
+                              Navigator.pop(context, {
+                                'product': returnedProduct,
+                                'initialQuantity': _productQuantityController.text,
+                              });
+                            } catch (_) {
+                              Navigator.pop(context, {
+                                'product': result['data'],
+                                'initialQuantity': _productQuantityController.text,
+                              });
+                            }
                             showScaffold(
                               context: context,
                               message: 'Product added successfully',

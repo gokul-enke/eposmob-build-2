@@ -74,6 +74,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
         initLoading = true;
       });
 
+      // Load categories from CategoryProvider with caching (same as sidebar and stock)
+      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+      if (!categoryProvider.isCategoriesLoaded) {
+        debugPrint("📥 Loading categories from API...");
+        await categoryProvider.listAllCategory();
+        debugPrint("✅ Categories loaded and cached");
+      } else {
+        debugPrint("📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
+      }
+
       LocalProductProvider localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
 
@@ -1226,18 +1236,22 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         "${product.price?.price ?? 'N/A'}"),
                                                     _buildTableCell(
                                                         "${product.mrp ?? 'N/A'}"),
-                                                    _buildTableCell(product
-                                                            .purchasePrice ??
-                                                        (product.stock !=
-                                                                    null &&
-                                                                product.stock!
-                                                                    .isNotEmpty
-                                                            ? product
-                                                                .stock!
-                                                                .first
-                                                                .purchasePrice
-                                                            : null) ??
-                                                        'N/A'),
+                                                    _buildTableCell(() {
+                                                      // Debug purchase price resolution
+                                                      final productPurchasePrice = product.purchasePrice;
+                                                      final stockPurchasePrice = product.stock != null && product.stock!.isNotEmpty 
+                                                          ? product.stock!.first.purchasePrice 
+                                                          : null;
+                                                      final finalPrice = productPurchasePrice ?? stockPurchasePrice ?? 'N/A';
+                                                      
+                                                      debugPrint("🔍 PURCHASE PRICE DEBUG for ${product.productName}:");
+                                                      debugPrint("  - Product Purchase Price: $productPurchasePrice");
+                                                      debugPrint("  - Stock Purchase Price: $stockPurchasePrice");
+                                                      debugPrint("  - Final Display Price: $finalPrice");
+                                                      debugPrint("  - Stock Count: ${product.stock?.length ?? 0}");
+                                                      
+                                                      return finalPrice.toString();
+                                                    }()),
                                                     _buildTableCell(
                                                         product.unit ?? 'N/A'),
                                                     _buildTableCell(

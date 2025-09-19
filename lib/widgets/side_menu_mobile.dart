@@ -66,6 +66,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
     }
 
     return Drawer(
+      backgroundColor: Colors.white,
       child: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -73,25 +74,31 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 15),
-              Center(child: WebsafeSvg.asset(ImageAssets.posLogo)),
-              const SizedBox(height: 5),
               Center(
-                child: RichText(
-                  textAlign: TextAlign.center,
-                  text: TextSpan(
-                    text: 'Cloud',
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s18, 0.27, ColorManager.textColor),
-                    children: <TextSpan>[
-                      TextSpan(
-                        text: 'POS',
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s18, 0.27, ColorManager.kPrimaryColor),
-                      ),
-                    ],
-                  ),
+                child: Image.asset(
+                  ImageAssets.posImageLogo,
+                  height: 30,
+                  fit: BoxFit.contain,
                 ),
               ),
+              // const SizedBox(height: 5),
+              // Center(
+              //   child: RichText(
+              //     textAlign: TextAlign.center,
+              //     text: TextSpan(
+              //       text: 'Cloud',
+              //       style: buildCustomStyle(FontWeightManager.semiBold,
+              //           FontSize.s18, 0.27, ColorManager.textColor),
+              //       children: <TextSpan>[
+              //         TextSpan(
+              //           text: 'POS',
+              //           style: buildCustomStyle(FontWeightManager.semiBold,
+              //               FontSize.s18, 0.27, ColorManager.kPrimaryColor),
+              //         ),
+              //       ],
+              //     ),
+              //   ),
+              // ),
               if (_hasRole('sales_executive')) const SizedBox(height: 20),
               if (_hasRole('sales_executive'))
                 const Padding(
@@ -127,7 +134,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       onTap: () => navigate(1),
                       selected: sideBarController.index.value == 1,
                     )),
-              if (_hasAnyRole(['kitchen_master', 'attender', 'sales_executive']))
+              if (_hasAnyRole(
+                  ['kitchen_master', 'attender', 'sales_executive']))
                 Obx(() => DrawerListTileExpandableColumn(
                       onTapTitle1: () => navigate(2),
                       onTapTitle2: () => navigate(54),
@@ -138,19 +146,25 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       iconPath: ImageAssets.saleIcon,
                       title: 'Sales',
                       onTap: () {
-                        final salesProvider = Provider.of<SalesProvider>(context, listen: false);
-                        String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-                        salesProvider.fetchOrders(accessToken: accessToken ?? '', storeId: 1);
+                        final salesProvider =
+                            Provider.of<SalesProvider>(context, listen: false);
+                        String? accessToken =
+                            Provider.of<AuthModel>(context, listen: false)
+                                .token;
+                        salesProvider.fetchOrders(
+                            accessToken: accessToken ?? '', storeId: 1);
                         navigate(2);
                       },
-                      selected: [2, 51, 54, 50, 49, 11].contains(sideBarController.index.value),
+                      selected: [2, 51, 54, 50, 49, 11]
+                          .contains(sideBarController.index.value),
                     )),
               if (_hasAnyRole(['kitchen_master', 'sales_executive', 'admin']))
                 Obx(() => DrawerListTile(
                       iconPath: ImageAssets.creditCardIcon,
                       title: 'Category',
                       onTap: () => navigate(12),
-                      selected: [12, 13, 27, 16, 34].contains(sideBarController.index.value),
+                      selected: [12, 13, 27, 16, 34]
+                          .contains(sideBarController.index.value),
                     )),
               if (_hasAnyRole(['kitchen_master', 'sales_executive']))
                 Obx(() => DrawerListTileExpandableColumn(
@@ -161,16 +175,22 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       iconPath: ImageAssets.allCategoryIcon,
                       title: 'Product',
                       onTap: () => navigate(14),
-                      selected: [14, 15, 18, 28, 17, 33, 35].contains(sideBarController.index.value),
+                      selected: [14, 15, 18, 28, 17, 33, 35]
+                          .contains(sideBarController.index.value),
                     )),
               if (_hasRole('sales_executive'))
                 Obx(() => DrawerListTile(
                       iconPath: ImageAssets.cardIcon,
                       title: 'Suppliers',
                       onTap: () {
-                        final supplierProvider = Provider.of<SupplierProvider>(context, listen: false);
-                        String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-                        supplierProvider.fetchSuppliers(accessToken: accessToken ?? '');
+                        final supplierProvider = Provider.of<SupplierProvider>(
+                            context,
+                            listen: false);
+                        String? accessToken =
+                            Provider.of<AuthModel>(context, listen: false)
+                                .token;
+                        supplierProvider.fetchSuppliers(
+                            accessToken: accessToken ?? '');
                         navigate(52);
                       },
                       selected: sideBarController.index.value == 52,
@@ -184,7 +204,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       iconPath: ImageAssets.transactionIcon,
                       title: 'Accounts',
                       onTap: () => navigate(21),
-                      selected: [21, 22, 30, 31, 32, 24, 25, 48, 47].contains(sideBarController.index.value),
+                      selected: [21, 22, 30, 31, 32, 24, 25, 48, 47]
+                          .contains(sideBarController.index.value),
                     )),
               if (_hasRole('sales_executive'))
                 Obx(() => DrawerListTileExpandableColumn(
@@ -202,7 +223,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       iconPath: ImageAssets.customerIcon,
                       title: 'Customers',
                       onTap: () => navigate(5),
-                      selected: [5, 9, 38].contains(sideBarController.index.value),
+                      selected:
+                          [5, 9, 38].contains(sideBarController.index.value),
                     )),
               if (_hasRole('sales_executive')) const SizedBox(height: 15),
               if (_hasRole('sales_executive'))
@@ -225,13 +247,15 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       iconPath: ImageAssets.consultingIcon,
                       title: 'Settings',
                       onTap: () => navigate(62),
-                      selected: [62, 63].contains(sideBarController.index.value),
+                      selected:
+                          [62, 63].contains(sideBarController.index.value),
                     )),
               DrawerListTile(
                 iconPath: ImageAssets.logoutIcon,
                 title: 'Logout',
                 onTap: () async {
-                  final authModel = Provider.of<AuthModel>(context, listen: false);
+                  final authModel =
+                      Provider.of<AuthModel>(context, listen: false);
                   String token = authModel.token ?? '';
                   showDialog(
                       context: context,
@@ -241,18 +265,24 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                           child: CircularProgressIndicator.adaptive(),
                         );
                       });
-                  await AuthenticationProvider().logout(token, context).then((value) async {
+                  await AuthenticationProvider()
+                      .logout(token, context)
+                      .then((value) async {
                     if (value["status"] == "success") {
                       authModel.logout();
                       SharedPreferenceProvider().removeTokenAndCustomerId();
-                      showScaffold(context: context, message: '${value["message"]}');
+                      showScaffold(
+                          context: context, message: '${value["message"]}');
                       Navigator.pop(context);
-                      await Future.delayed(const Duration(seconds: 0)).then((value) =>
-                          Navigator.pushReplacement(context,
-                              MaterialPageRoute(builder: (context) => const SignInScreen())));
+                      await Future.delayed(const Duration(seconds: 0)).then(
+                          (value) => Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const SignInScreen())));
                     } else {
                       Navigator.pop(context);
-                      showScaffoldError(context: context, message: '${value["message"]}');
+                      showScaffoldError(
+                          context: context, message: '${value["message"]}');
                     }
                   });
                 },

@@ -163,27 +163,36 @@ class _SideMenuState extends State<SideMenu> {
           const SizedBox(
             height: 15,
           ),
-          Center(child: WebsafeSvg.asset(ImageAssets.posLogo)),
-          const SizedBox(
-            height: 5,
-          ),
-          Center(
-            child: RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                text: 'Cloud',
-                style: buildCustomStyle(FontWeightManager.semiBold,
-                    FontSize.s18, 0.27, ColorManager.textColor),
-                children: <TextSpan>[
-                  TextSpan(
-                    text: 'POS',
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s18, 0.27, ColorManager.kPrimaryColor),
-                  ),
-                ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 0),
+            child: Center(
+              child: Image.asset(
+                ImageAssets.posImageLogo,
+                height: 30,
+                fit: BoxFit.contain,
               ),
             ),
           ),
+          // const SizedBox(
+          //   height: 5,
+          // ),
+          // Center(
+          //   child: RichText(
+          //     textAlign: TextAlign.center,
+          //     text: TextSpan(
+          //       text: 'Cloud',
+          //       style: buildCustomStyle(FontWeightManager.semiBold,
+          //           FontSize.s18, 0.27, ColorManager.textColor),
+          //       children: <TextSpan>[
+          //         TextSpan(
+          //           text: 'POS',
+          //           style: buildCustomStyle(FontWeightManager.semiBold,
+          //               FontSize.s18, 0.27, ColorManager.kPrimaryColor),
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
           if (_hasRole('sales_executive'))
             const SizedBox(
               height: 20,
@@ -350,59 +359,58 @@ class _SideMenuState extends State<SideMenu> {
           if (_hasRole('sales_executive'))
             Obx(
               () => DrawerListTileExpandableColumn(
-                onTapTitle1: () {
-                  sideBarController.index.value = 58; // Sales Executive Report
-                },
-                onTapTitle2: () {
-                  sideBarController.index.value = 65;
-                },
-                listTitle1: "Sales Executive Reports",
-                listTitle2: "Customer Transactions Reports ",
-                iconPath: ImageAssets.transactionIcon,
-                title: 'Reports',
-                onTap: () {
-                  sideBarController.index.value =
-                      58; // Default to Sales Executive Report
-                },
-                selected: sideBarController.index.value == 58 ||
-                    sideBarController.index.value == 65 ||
-                    sideBarController.index.value == 66 
-              ),
+                  onTapTitle1: () {
+                    sideBarController.index.value =
+                        58; // Sales Executive Report
+                  },
+                  onTapTitle2: () {
+                    sideBarController.index.value = 65;
+                  },
+                  listTitle1: "Sales Executive Reports",
+                  listTitle2: "Customer Transactions Reports ",
+                  iconPath: ImageAssets.transactionIcon,
+                  title: 'Reports',
+                  onTap: () {
+                    sideBarController.index.value =
+                        58; // Default to Sales Executive Report
+                  },
+                  selected: sideBarController.index.value == 58 ||
+                      sideBarController.index.value == 65 ||
+                      sideBarController.index.value == 66),
             ),
           if (_hasRole('sales_executive'))
             Obx(
               () => DrawerListTileExpandableColumn(
-                onTapTitle1: () {
-                  sideBarController.index.value = 21;
-                },
-                onTapTitle2: () {
-                  sideBarController.index.value = 47;
-                },
-                onTapTitle3: () {
-                  sideBarController.index.value = 59; // Company Accounts
-                },
-                listTitle1: "Invoice",
-                listTitle2: "Receipts",
-                listTitle3: "Company Accounts",
-                iconPath: ImageAssets.transactionIcon,
-                title: 'Accounts',
-                onTap: () {
-                  sideBarController.index.value = 21;
-                  // debugPrint(" 'Category',${sideBarController.index.value}");
-                },
-                selected: sideBarController.index.value == 21 ||
-                    sideBarController.index.value == 22 ||
-                    sideBarController.index.value == 30 ||
-                    sideBarController.index.value == 31 ||
-                    sideBarController.index.value == 32 ||
-                    sideBarController.index.value == 24 ||
-                    sideBarController.index.value == 25 ||
-                    sideBarController.index.value == 48 ||
-                    sideBarController.index.value == 47 ||
-                    sideBarController.index.value == 59 ||
-                    sideBarController.index.value == 60 ||
-                    sideBarController.index.value == 61
-              ),
+                  onTapTitle1: () {
+                    sideBarController.index.value = 21;
+                  },
+                  onTapTitle2: () {
+                    sideBarController.index.value = 47;
+                  },
+                  onTapTitle3: () {
+                    sideBarController.index.value = 59; // Company Accounts
+                  },
+                  listTitle1: "Invoice",
+                  listTitle2: "Receipts",
+                  listTitle3: "Company Accounts",
+                  iconPath: ImageAssets.transactionIcon,
+                  title: 'Accounts',
+                  onTap: () {
+                    sideBarController.index.value = 21;
+                    // debugPrint(" 'Category',${sideBarController.index.value}");
+                  },
+                  selected: sideBarController.index.value == 21 ||
+                      sideBarController.index.value == 22 ||
+                      sideBarController.index.value == 30 ||
+                      sideBarController.index.value == 31 ||
+                      sideBarController.index.value == 32 ||
+                      sideBarController.index.value == 24 ||
+                      sideBarController.index.value == 25 ||
+                      sideBarController.index.value == 48 ||
+                      sideBarController.index.value == 47 ||
+                      sideBarController.index.value == 59 ||
+                      sideBarController.index.value == 60 ||
+                      sideBarController.index.value == 61),
             ),
           if (_hasRole('sales_executive'))
             Obx(
@@ -624,25 +632,28 @@ class DrawerListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double resolvedIconSize = iconSize ?? 18.0;
-    final double leadingBox = resolvedIconSize + 4.0; // small padding around icon
+    final double leadingBox =
+        resolvedIconSize + 4.0; // small padding around icon
     final double gap = horizontalGap ?? 12.0;
     return selected
         ? Stack(
             children: [
-              Positioned.fill(
-                  child: Container(
-                alignment: Alignment.center,
-                width: 200,
-                height: MediaQuery.of(context).size.height * .055,
-                margin: ResponsiveWidget.isTablet(context)
-                    ? const EdgeInsets.only(left: 10, bottom: 5)
-                    : const EdgeInsets.only(left: 20, bottom: 5),
-                padding: const EdgeInsets.only(left: 20),
-                decoration: BoxDecoration(
-                  color: ColorManager.kPrimaryColor,
-                  borderRadius: BorderRadius.circular(8),
+              Positioned(
+                left: ResponsiveWidget.isTablet(context) ? 10 : 20,
+                right: ResponsiveWidget.isTablet(context) ? 10 : 20,
+                child: Container(
+                  alignment: Alignment.center,
+                  // width intentionally omitted so it won't stretch full width
+                  height: MediaQuery.of(context).size.height * .055,
+                  // keep only a small bottom margin for spacing between tiles
+                  margin: const EdgeInsets.only(bottom: 5),
+                  padding: const EdgeInsets.only(left: 20),
+                  decoration: BoxDecoration(
+                    color: ColorManager.kPrimaryColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-              )),
+              ),
               ListTile(
                 selected: selected,
                 contentPadding: ResponsiveWidget.isTablet(context)
@@ -715,7 +726,7 @@ class DrawerListTile extends StatelessWidget {
                   iconPath,
                   width: resolvedIconSize,
                   height: resolvedIconSize,
-                  colorFilter: ColorFilter.mode(
+                  colorFilter: const ColorFilter.mode(
                     ColorManager.kPrimaryColor,
                     BlendMode.srcIn,
                   ),

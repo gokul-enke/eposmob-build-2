@@ -100,14 +100,22 @@ class CategoryProvider extends ChangeNotifier {
     int? page,
   }) async {
     // If categories are already loaded and no filtering is applied, return early
-    if (_isCategoriesLoaded && filterName == null && filterParent == null) {
+    // BUT also check if categoryList is not empty to avoid empty list issues
+    if (_isCategoriesLoaded && 
+        filterName == null && 
+        filterParent == null && 
+        categoryList != null && 
+        categoryList!.isNotEmpty) {
+      debugPrint("🏷️ [CategoryProvider] Using cached categories: ${categoryList!.length}");
       return;
     }
 
     // If filtering is applied, we need to make a new API call regardless
     if (filterName != null || filterParent != null) {
-      // Reset the loaded flag for filtered results
-      _isCategoriesLoaded = false;
+      debugPrint("🏷️ [CategoryProvider] Making API call for filtering: filterName=$filterName");
+      // Don't reset the loaded flag for filtered results, just make the call
+    } else {
+      debugPrint("🏷️ [CategoryProvider] Making initial API call for categories");
     }
 
     isLoading = true;
@@ -168,8 +176,9 @@ class CategoryProvider extends ChangeNotifier {
       }
     } catch (error) {
       isLoading = false;
+      _isCategoriesLoaded = false; // Reset flag on error
       notifyListeners();
-      // debugPrint('Error fetching categories: $error');
+      debugPrint('Error fetching categories: $error');
       rethrow;
     }
   }
@@ -177,11 +186,33 @@ class CategoryProvider extends ChangeNotifier {
   // Add a method to force refresh categories (useful for manual refresh)
   Future<void> refreshCategories() async {
     _isCategoriesLoaded = false;
+    categoryList?.clear();
+    _originalCategoryList?.clear();
     await listAllCategory();
   }
 
+  // Add a method to check if categories are properly loaded
+  bool get hasValidCategories => 
+      categoryList != null && categoryList!.isNotEmpty;
+
   // Add a getter to check if categories are loaded
   bool get isCategoriesLoaded => _isCategoriesLoaded;
+  
+  // Add a setter to update the categories loaded flag
+  set isCategoriesLoaded(bool value) {
+    _isCategoriesLoaded = value;
+    notifyListeners();
+  }
+
+  // Method to ensure categories are available for UI components like sidebar
+  Future<void> ensureCategoriesLoaded() async {
+    if (!_isCategoriesLoaded || categoryList == null || categoryList!.isEmpty) {
+      debugPrint("🏷️ [CategoryProvider] ensureCategoriesLoaded - loading categories");
+      await listAllCategory();
+    } else {
+      debugPrint("🏷️ [CategoryProvider] ensureCategoriesLoaded - categories already available: ${categoryList!.length}");
+    }
+  }
 
   /// Resets the category filter without making an API call
   /// This method restores the original unfiltered category list
