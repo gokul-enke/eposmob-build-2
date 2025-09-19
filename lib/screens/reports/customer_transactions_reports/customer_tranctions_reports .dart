@@ -7,6 +7,8 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/list_transaction.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
+// Use TransactionProvider instead of CustomerTransactionProvider
+import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -265,8 +267,8 @@ class _CustomerTransactionsReportScreenState
                                   defaultVerticalAlignment:
                                       TableCellVerticalAlignment.middle,
                                   children: customerSummary.entries
-                                      .map((entry) =>
-                                          _buildCustomerRow(entry.value))
+                                      .map((entry) => _buildCustomerRow(
+                                          entry.value, context))
                                       .toList(),
                                 ),
                               ),
@@ -334,7 +336,8 @@ class _CustomerTransactionsReportScreenState
     );
   }
 
-  TableRow _buildCustomerRow(CustomerTransactionSummary summary) {
+  TableRow _buildCustomerRow(
+      CustomerTransactionSummary summary, BuildContext context) {
     // Alternate row colors for better readability
     final int index =
         customerSummary.keys.toList().indexOf(summary.customerName);
@@ -369,9 +372,9 @@ class _CustomerTransactionsReportScreenState
                   color: ColorManager.kPrimaryColor.withOpacity(0.9),
                 ),
                 onPressed: () {
-                  // Set the customer name in the sidebar controller and navigate
-                  sideBarController.transactionCustomerName.value =
-                      summary.customerName;
+                  // Use the TransactionProvider instead of the CustomerTransactionProvider
+                  Provider.of<TransactionProvider>(context, listen: false)
+                      .setCustomerName(summary.customerName);
                   sideBarController.index.value =
                       66; // Navigate to SimpleTransactionDetailsScreen
                 },

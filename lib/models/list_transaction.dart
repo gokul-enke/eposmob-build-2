@@ -123,6 +123,7 @@ class ListTransaction {
   final String? status;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final String? orderNumber;
   final String? customerName;
   ListTransaction({
     this.id,
@@ -140,6 +141,7 @@ class ListTransaction {
     this.createdAt,
     this.updatedAt,
     this.customerName,
+    this.orderNumber,
   });
 
   factory ListTransaction.fromJson(Map<String, dynamic> json) =>
@@ -158,6 +160,7 @@ class ListTransaction {
         reference: json["reference"],
         transactionComment: json["transaction_comment"],
         status: json["status"],
+        orderNumber: json["order_number"],
         createdAt: json["created_at"] == null
             ? null
             : DateTime.parse(json["created_at"]),

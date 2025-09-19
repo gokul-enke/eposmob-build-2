@@ -26,6 +26,9 @@ class TransactionProvider extends ChangeNotifier {
   String? _transactionFilterPaymentMode;
   String? _transactionFilterSupplier;
 
+  // Customer name for transaction details
+  String _customerName = '';
+
   // Loading state
   bool _transactionIsLoading = false;
 
@@ -47,6 +50,9 @@ class TransactionProvider extends ChangeNotifier {
   String? get transactionFilterPaymentMode => _transactionFilterPaymentMode;
   String? get transactionFilterSupplier => _transactionFilterSupplier;
   bool get transactionIsLoading => _transactionIsLoading;
+
+  // Getter for customer name
+  String get customerName => _customerName;
 
   /* ---------- PUBLIC METHODS ---------- */
   Future<void> fetchTransactionsAPI({
@@ -110,7 +116,8 @@ class TransactionProvider extends ChangeNotifier {
               applyTransactionFiltersLocally(page: 1);
             } else {
               _listTransactionModelDataList = transactionList;
-              _filteredTransactionsList = List.from(_listTransactionModelDataList!);
+              _filteredTransactionsList =
+                  List.from(_listTransactionModelDataList!);
               _transactionCurrentPage = data['current_page'] ?? 1;
               _transactionTotalPages = data['last_page'] ?? 1;
             }
@@ -129,68 +136,86 @@ class TransactionProvider extends ChangeNotifier {
   }
 
   void applyTransactionFiltersLocally({
-  String? filterName,
-  String? filterType,
-  String? filterStatus,
-  String? filterPaymentMode,
-  String? filterSupplier,
-  int? page,
-}) {
-  if (_allTransactions == null || _allTransactions!.isEmpty) return;
+    String? filterName,
+    String? filterType,
+    String? filterStatus,
+    String? filterPaymentMode,
+    String? filterSupplier,
+    int? page,
+  }) {
+    if (_allTransactions == null || _allTransactions!.isEmpty) return;
 
-  // Store filter values
-  _transactionFilterName = filterName;
-  _transactionFilterType = filterType;
-  _transactionFilterStatus = filterStatus;
-  _transactionFilterPaymentMode = filterPaymentMode;
-  _transactionFilterSupplier = filterSupplier;
+    // Store filter values
+    _transactionFilterName = filterName;
+    _transactionFilterType = filterType;
+    _transactionFilterStatus = filterStatus;
+    _transactionFilterPaymentMode = filterPaymentMode;
+    _transactionFilterSupplier = filterSupplier;
 
-  // Apply filters
-  List<TransactionModel> filtered = List.from(_allTransactions!);
+    // Apply filters
+    List<TransactionModel> filtered = List.from(_allTransactions!);
 
-  // Name filter (searches both reference and supplier name)
-  if (filterName != null && filterName.isNotEmpty) {
-    filtered = filtered.where((tx) =>
-        tx.reference.toLowerCase().contains(filterName.toLowerCase()) ||
-        tx.supplier.user.name.toLowerCase().contains(filterName.toLowerCase())
-    ).toList();
+    // Name filter (searches both reference and supplier name)
+    if (filterName != null && filterName.isNotEmpty) {
+      filtered = filtered
+          .where((tx) =>
+              tx.reference.toLowerCase().contains(filterName.toLowerCase()) ||
+              tx.supplier.user.name
+                  .toLowerCase()
+                  .contains(filterName.toLowerCase()))
+          .toList();
+    }
+
+    // Type filter
+    if (filterType != null &&
+        filterType.isNotEmpty &&
+        filterType != "All Types") {
+      filtered = filtered
+          .where((tx) => tx.type.toLowerCase() == filterType.toLowerCase())
+          .toList();
+    }
+
+    // Status filter
+    if (filterStatus != null &&
+        filterStatus.isNotEmpty &&
+        filterStatus != "All Status") {
+      filtered = filtered
+          .where((tx) => tx.status.toLowerCase() == filterStatus.toLowerCase())
+          .toList();
+    }
+
+    // Payment mode filter
+    if (filterPaymentMode != null &&
+        filterPaymentMode.isNotEmpty &&
+        filterPaymentMode != "All Payment Modes") {
+      filtered = filtered
+          .where((tx) =>
+              tx.paymentMode.toLowerCase() == filterPaymentMode.toLowerCase())
+          .toList();
+    }
+
+    // Supplier filter - Changed to use contains instead of exact match
+    if (filterSupplier != null && filterSupplier.isNotEmpty) {
+      filtered = filtered
+          .where((tx) => tx.supplier.user.name
+              .toLowerCase()
+              .contains(filterSupplier.toLowerCase()))
+          .toList();
+    }
+
+    // Update pagination
+    _updatePagination(filtered, page);
+    notifyListeners();
   }
-
-  // Type filter
-  if (filterType != null && filterType.isNotEmpty && filterType != "All Types") {
-    filtered = filtered.where((tx) => tx.type.toLowerCase() == filterType.toLowerCase()).toList();
-  }
-
-  // Status filter
-  if (filterStatus != null && filterStatus.isNotEmpty && filterStatus != "All Status") {
-    filtered = filtered.where((tx) => tx.status.toLowerCase() == filterStatus.toLowerCase()).toList();
-  }
-
-  // Payment mode filter
-  if (filterPaymentMode != null && 
-      filterPaymentMode.isNotEmpty && 
-      filterPaymentMode != "All Payment Modes") {
-    filtered = filtered.where((tx) => tx.paymentMode.toLowerCase() == filterPaymentMode.toLowerCase()).toList();
-  }
-
-  // Supplier filter - Changed to use contains instead of exact match
-  if (filterSupplier != null && filterSupplier.isNotEmpty) {
-    filtered = filtered.where((tx) => 
-      tx.supplier.user.name.toLowerCase().contains(filterSupplier.toLowerCase())
-    ).toList();
-  }
-
-  // Update pagination
-  _updatePagination(filtered, page);
-  notifyListeners();
-}
 
   void _updatePagination(List<TransactionModel> filtered, int? page) {
-    _transactionTotalPages = (filtered.length / _transactionItemsPerPage).ceil();
+    _transactionTotalPages =
+        (filtered.length / _transactionItemsPerPage).ceil();
     _transactionCurrentPage = page ?? 1;
 
     if (_transactionCurrentPage < 1) _transactionCurrentPage = 1;
-    if (_transactionCurrentPage > _transactionTotalPages && _transactionTotalPages > 0) {
+    if (_transactionCurrentPage > _transactionTotalPages &&
+        _transactionTotalPages > 0) {
       _transactionCurrentPage = _transactionTotalPages;
     }
 
@@ -273,9 +298,21 @@ class TransactionProvider extends ChangeNotifier {
     _accessToken = token;
   }
 
+  // Method to set customer name
+  void setCustomerName(String name) {
+    _customerName = name;
+    notifyListeners();
+  }
+
+  // Method to clear customer name
+  void clearCustomerName() {
+    _customerName = '';
+    notifyListeners();
+  }
+
   Future<void> fetchAllTransactionsBatch() async {
     if (_accessToken == null) throw Exception('Access token not set');
-    
+
     _transactionIsLoading = true;
     notifyListeners();
 
@@ -309,8 +346,6 @@ class TransactionProvider extends ChangeNotifier {
     if (_allTransactions != null && _allTransactions!.isNotEmpty) {
       applyTransactionFiltersLocally(page: 1);
     }
-
-    
   }
 
   void goToTransactionPage(int page) {
@@ -338,11 +373,13 @@ class TransactionProvider extends ChangeNotifier {
     _transactionFilterPaymentMode = null;
     _transactionFilterSupplier = null;
     _transactionIsLoading = false;
+    _customerName = ''; // Clear customer name when clearing transaction data
     notifyListeners();
   }
 
   /* ---------- PRIVATE HELPERS ---------- */
-  TransactionModel _createTransactionFromJson(Map<String, dynamic> json, int index) {
+  TransactionModel _createTransactionFromJson(
+      Map<String, dynamic> json, int index) {
     String supplierName = 'Unknown';
     if (json['supplier'] != null && json['supplier'] is Map) {
       final supplier = json['supplier'] as Map<String, dynamic>;
@@ -363,7 +400,8 @@ class TransactionProvider extends ChangeNotifier {
         name: supplierName,
         email: json['supplier']?['user']?['email'] ?? '',
         phone: json['supplier']?['user']?['phone'] ?? '',
-        phoneVerified: _safeParseInt(json['supplier']?['user']?['phone_verified']),
+        phoneVerified:
+            _safeParseInt(json['supplier']?['user']?['phone_verified']),
         companyId: _safeParseInt(json['supplier']?['user']?['company_id']),
         createdAt: json['supplier']?['user']?['created_at'] ?? '',
         updatedAt: json['supplier']?['user']?['updated_at'] ?? '',

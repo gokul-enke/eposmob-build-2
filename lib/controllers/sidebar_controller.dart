@@ -31,7 +31,7 @@ import 'package:pos_machine/screens/profile/open_profile.dart';
 import 'package:pos_machine/screens/purchase/widgets/view_purchase.dart';
 import 'package:pos_machine/screens/purchase/widgets/view_voucher.dart';
 import 'package:pos_machine/screens/reports/account_book/account_book.dart';
-import 'package:pos_machine/screens/reports/customer_transactions_reports/customer_tranctions_reports%20.dart';
+import 'package:pos_machine/screens/reports/customer_transactions_reports/customer_tranctions_reports .dart';
 // Adding import for the new simple transaction details screen
 import 'package:pos_machine/screens/reports/customer_transactions_reports/simple_transaction_details_screen.dart';
 import 'package:pos_machine/screens/reports/product_sales_report/product_sales_report.dart';
@@ -74,8 +74,7 @@ class SideBarController extends GetxController {
       0.obs; // Default to HomeNew, will be set based on user role during login
   RxBool isExpanded = false.obs;
 
-  // Variable to hold the customer name for transaction details screen
-  RxString transactionCustomerName = ''.obs;
+  // Removed transactionCustomerName variable as it's now handled by TransactionProvider
 
   void toggleExpansion() {
     isExpanded.value = !isExpanded.value;
