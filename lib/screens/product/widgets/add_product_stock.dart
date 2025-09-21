@@ -141,6 +141,31 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   RestrictedPaymentData paymentData = RestrictedPaymentData();
   double totalStockValue = 0.0;
 
+  // Debug logging throttles for dropdown rebuild spam control
+  final Map<int, int> _lastDropdownProductCount = {}; // row index -> count
+  final Map<int, int?> _lastDropdownCategoryId = {}; // row index -> categoryId
+  final Map<int, DateTime> _lastDropdownLogTime = {}; // row index -> last log time
+
+  bool _shouldLogProductDropdown(int index, int productCount, int? categoryId) {
+    final now = DateTime.now();
+    final lastCount = _lastDropdownProductCount[index];
+    final lastCat = _lastDropdownCategoryId[index];
+    final lastTime = _lastDropdownLogTime[index];
+
+    final changed = lastCount != productCount || lastCat != categoryId;
+    final elapsed = lastTime == null
+        ? true
+        : now.difference(lastTime).inMilliseconds > 2000; // 2s throttle
+
+    if (changed || elapsed) {
+      _lastDropdownProductCount[index] = productCount;
+      _lastDropdownCategoryId[index] = categoryId;
+      _lastDropdownLogTime[index] = now;
+      return true;
+    }
+    return false;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -3203,18 +3228,27 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
         List<GetProduct> allProducts = localProductProvider.products;
-        debugPrint('🧠 Product dropdown build for row $index');
-        debugPrint('   - Total products before filter: ${allProducts.length}');
+        // Throttle logs to avoid spam on rebuilds
+        bool logHeader = _shouldLogProductDropdown(
+            index, allProducts.length, stockItems[index].categoryData?.categoryId);
+        if (logHeader) {
+          debugPrint('🧠 Product dropdown build for row $index');
+          debugPrint('   - Total products before filter: ${allProducts.length}');
+        }
         // Filter products by the selected category for this row, if any
         final selectedCategoryId = stockItems[index].categoryData?.categoryId;
         if (selectedCategoryId != null) {
           allProducts = allProducts
               .where((p) => p.categoryId == selectedCategoryId)
               .toList();
-          debugPrint('   - Selected categoryId: $selectedCategoryId');
-          debugPrint('   - Products after category filter: ${allProducts.length}');
+          if (logHeader) {
+            debugPrint('   - Selected categoryId: $selectedCategoryId');
+            debugPrint('   - Products after category filter: ${allProducts.length}');
+          }
         } else {
-          debugPrint('   - No category selected; no filter applied.');
+          if (logHeader) {
+            debugPrint('   - No category selected; no filter applied.');
+          }
         }
         List<GetProduct> uniqueProducts = [];
         Map<int, GetProduct> productMap = {};
@@ -3228,7 +3262,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           }
           uniqueProducts = productMap.values.toList();
         }
-        debugPrint('   - Unique products after de-dup: ${uniqueProducts.length}');
+        if (logHeader) {
+          debugPrint('   - Unique products after de-dup: ${uniqueProducts.length}');
+        }
 
         // Ensure the selected value exists in the items list
         GetProduct? selectedProduct = stockItems[index].productData;
@@ -3238,16 +3274,22 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             final matched = uniqueProducts.firstWhere(
               (product) => product.productId == selectedProduct!.productId,
             );
-            debugPrint('   - Selected product present in filtered list: ${matched.productName} (ID: ${matched.productId})');
+            if (logHeader) {
+              debugPrint('   - Selected product present in filtered list: ${matched.productName} (ID: ${matched.productId})');
+            }
             selectedProduct = matched;
           } catch (e) {
-            debugPrint('⚠️ Selected product (ID: ${selectedProduct!.productId}) NOT found in filtered list.');
-            debugPrint('   - Possible reason: category filter mismatch. selectedCategoryId=$selectedCategoryId product.categoryId=${stockItems[index].productData?.categoryId}');
+            if (logHeader) {
+              debugPrint('⚠️ Selected product (ID: ${selectedProduct!.productId}) NOT found in filtered list.');
+              debugPrint('   - Possible reason: category filter mismatch. selectedCategoryId=$selectedCategoryId product.categoryId=${stockItems[index].productData?.categoryId}');
+            }
             // If missing due to category mismatch, keep null to avoid dropdown error
             selectedProduct = null;
           }
         } else {
-          debugPrint('   - No pre-selected product to reconcile in dropdown.');
+          if (logHeader) {
+            debugPrint('   - No pre-selected product to reconcile in dropdown.');
+          }
         }
 
         return BuildDropDownWithSearch<GetProduct>(
