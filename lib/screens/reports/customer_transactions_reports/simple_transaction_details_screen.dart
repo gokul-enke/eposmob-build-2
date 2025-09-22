@@ -20,6 +20,10 @@ import 'package:intl/intl.dart';
 
 // Add this import for the new print functionality
 import 'package:pos_machine/screens/reports/customer_transactions_reports/transaction_report_print.dart';
+// Add this import for the CustomerAutocomplete widget
+import 'package:pos_machine/screens/transactions/widgets/customer_auto_complete.dart';
+// Add this import for Timer
+import 'dart:async';
 
 class SimpleTransactionDetailsScreen extends StatefulWidget {
   const SimpleTransactionDetailsScreen({super.key});
@@ -51,6 +55,12 @@ class _SimpleTransactionDetailsScreenState
   String searchType = '';
   String searchCustomer = '';
 
+  // Customer suggestions for autocomplete
+  List<String> customerSuggestions = [];
+
+  // Timer for debouncing customer search
+  Timer? _customerSearchTimer;
+
   // For dropdown options - updated to match actual data values
   List<String> transactionTypes = ['Receipt', 'Invoice', 'Voucher'];
   List<String> statuses = [
@@ -59,6 +69,22 @@ class _SimpleTransactionDetailsScreenState
     'INIT',
   ];
   List<String> types = ['Credit', 'Debit'];
+
+  List<String> getCustomerSuggestions() {
+    if (allTransactions == null) return [];
+    final suggestions = allTransactions!
+        .map((t) => t.customerName ?? '')
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList();
+
+    // Limit to 100 suggestions for better performance
+    if (suggestions.length > 100) {
+      return suggestions.take(100).toList();
+    }
+
+    return suggestions;
+  }
 
   @override
   void initState() {
@@ -98,6 +124,9 @@ class _SimpleTransactionDetailsScreenState
         ListTransactionModel listTransactionModel =
             ListTransactionModel.fromJson(value);
         allTransactions = listTransactionModel.data?.transactions ?? [];
+
+        // Populate customer suggestions
+        customerSuggestions = getCustomerSuggestions();
 
         // Apply filters immediately to show only transactions for the selected customer
         _applyFilters();
@@ -238,21 +267,21 @@ class _SimpleTransactionDetailsScreenState
   }
 
   void _resetFilters() {
+    // Cancel any pending search
+    _customerSearchTimer?.cancel();
+
     // Clear the text controllers for dropdown filters
     _transactionTypeController.clear();
     _statusController.clear();
     _typeController.clear();
+    _customerController.clear();
 
     // Reset the search variables for dropdown filters
     setState(() {
       searchTransactionType = '';
       searchStatus = '';
       searchType = '';
-      // Keep the customer filter as it's pre-filled from the provider
-      final customerName =
-          Provider.of<TransactionProvider>(context, listen: false).customerName;
-      searchCustomer = customerName;
-      _customerController.text = customerName;
+      searchCustomer = '';
 
       // Reset date filters to default values
       _setInitialDateFilters();
@@ -420,7 +449,13 @@ class _SimpleTransactionDetailsScreenState
                 ),
                 filled: true,
                 fillColor: Colors.white,
+                // Center the hint text vertically and horizontally with final adjustment
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+                isDense: true,
+                alignLabelWithHint: true,
               ),
+              textAlignVertical: TextAlignVertical.center,
             ),
           ),
         ],
@@ -976,17 +1011,7 @@ class _SimpleTransactionDetailsScreenState
               children: [
                 Expanded(
                   flex: 1,
-                  child: _buildTextFieldWithLabel(
-                    "Customer",
-                    _customerController,
-                    enabled: false,
-                    onFilterChanged: (value) {
-                      setState(() {
-                        searchCustomer = value;
-                      });
-                      _applyFilters();
-                    },
-                  ),
+                  child: _buildCustomerAutocompleteField(),
                 ),
                 Expanded(
                   flex: 1,
@@ -1092,9 +1117,7 @@ class _SimpleTransactionDetailsScreenState
     );
   }
 
-  Widget _buildTextFieldWithLabel(
-      String label, TextEditingController controller,
-      {bool enabled = true, Function(String)? onFilterChanged}) {
+  Widget _buildCustomerAutocompleteField() {
     return Padding(
       padding: const EdgeInsets.only(left: 10.0),
       child: Column(
@@ -1103,7 +1126,7 @@ class _SimpleTransactionDetailsScreenState
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              label,
+              "Customer",
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,
@@ -1113,38 +1136,19 @@ class _SimpleTransactionDetailsScreenState
             ),
           ),
           const SizedBox(height: 8),
-          BuildBoxShadowContainer(
-            height: 45,
-            width: double.infinity,
-            circleRadius: 7,
-            child: TextFormField(
-              readOnly: !enabled,
-              keyboardType: TextInputType.text,
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s10,
-                0.18,
-                ColorManager.textColor,
-              ),
-              decoration: decoration.copyWith(
-                hintText: label,
-                hintStyle: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s10,
-                  0.18,
-                  ColorManager.textColor,
-                ),
-                prefixIconColor: Colors.black,
-              ),
-              controller: controller,
-              onChanged: (value) {
-                if (onFilterChanged != null) {
-                  onFilterChanged(value);
-                }
-              },
-            ),
+          CustomerAutocomplete(
+            size: MediaQuery.of(context).size,
+            customerList: customerSuggestions,
+            controller: _customerController,
+            onSelected: (String selectedCustomer) {
+              // Cancel any pending search
+              _customerSearchTimer?.cancel();
+
+              setState(() {
+                searchCustomer = selectedCustomer;
+              });
+              _applyFilters();
+            },
           ),
         ],
       ),
@@ -1159,6 +1163,7 @@ class _SimpleTransactionDetailsScreenState
     _typeController.dispose();
     _fromDateController.dispose();
     _toDateController.dispose();
+    _customerSearchTimer?.cancel();
     super.dispose();
   }
 }
