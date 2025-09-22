@@ -353,7 +353,8 @@ class _SideMenuState extends State<SideMenu> {
                       accessToken: accessToken ?? '');
                 },
                 selected: sideBarController.index.value == 52 ||
-                    sideBarController.index.value == 57,
+                    sideBarController.index.value == 57 ||
+                    sideBarController.index.value == 67,
               ),
             ),
           if (_hasRole('sales_executive'))

@@ -545,11 +545,11 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                       supplierProvider
                                                                           .selectSupplier(
                                                                               supplier);
-                                                                      // Navigate to supplier details using sidebar controller (like sales screen)
+                                                                      // Navigate to supplier details using sidebar controller
                                                                       Get.find<
                                                                               SideBarController>()
                                                                           .index
-                                                                          .value = 57; // New index for supplier details
+                                                                          .value = 67; // Index for OpenSupplierProfileScreen
                                                                     },
                                                                     constraints:
                                                                         const BoxConstraints(
