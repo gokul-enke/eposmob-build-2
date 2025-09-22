@@ -628,7 +628,7 @@ class _SimpleTransactionDetailsScreenState
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
         child: Text(
           content,
           textAlign: TextAlign.center,
@@ -644,49 +644,57 @@ class _SimpleTransactionDetailsScreenState
   }
 
   Widget _buildStatusChip(String status) {
-    Color backgroundColor;
-    Color textColor;
+    // Match styling to _buildTypeCell: radius 8, opacity 0.1, bold, fontSize 12
+    Color bg;
+    Color fg;
+    String label;
 
     switch (status.toUpperCase()) {
       case 'SUCC':
       case 'SUCCESS':
       case 'COMPLETED':
-        backgroundColor = Colors.green.withOpacity(0.1);
-        textColor = Colors.green;
+        bg = Colors.green.withOpacity(0.1);
+        fg = Colors.green;
+        label = 'Success';
         break;
       case 'INIT':
       case 'INITIATED':
       case 'PENDING':
-        backgroundColor = Colors.orange.withOpacity(0.1);
-        textColor = Colors.orange;
+        bg = Colors.orange.withOpacity(0.1);
+        fg = Colors.orange;
+        label = 'Pending';
         break;
       case 'FAIL':
       case 'FAILED':
       case 'CANCELLED':
-        backgroundColor = Colors.red.withOpacity(0.1);
-        textColor = Colors.red;
+        bg = Colors.red.withOpacity(0.1);
+        fg = Colors.red;
+        label = 'Failed';
         break;
       default:
-        backgroundColor = Colors.grey.withOpacity(0.1);
-        textColor = Colors.grey;
+        bg = Colors.grey.withOpacity(0.1);
+        fg = Colors.grey;
+        label = status.isEmpty ? 'N/A' : status;
     }
 
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            status.toUpperCase(),
-            style: TextStyle(
-              color: textColor,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
+        padding: const EdgeInsets.symmetric(vertical: 10.0),
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: fg,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
             ),
           ),
         ),
@@ -727,9 +735,16 @@ class _SimpleTransactionDetailsScreenState
         _buildTableCell(transaction.orderNumber?.toString() ?? "N/A"),
         _buildTableCell(transaction.transactionType ?? "N/A"),
         _buildTableCell(transaction.amount ?? "0.00"),
-        Center(child: _buildTypeCell(transaction.type ?? "N/A")),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10.0),
+            child: Center(child: _buildTypeCell(transaction.type ?? "N/A")),
+          ),
+        ),
         _buildTableCell(transaction.date ?? "N/A"),
-        Center(child: _buildStatusChip(transaction.status ?? "N/A")),
+        // _buildStatusChip already returns a TableCell. It must not be wrapped in Center.
+        _buildStatusChip(transaction.status ?? "N/A"),
       ],
     );
   }

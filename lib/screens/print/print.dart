@@ -32,7 +32,7 @@ class PrintPage extends StatefulWidget {
   final String? customerAddress;
 
   const PrintPage({
-    Key? key,
+    super.key,
     required this.cartItems,
     required this.formattedTotal,
     this.savedTotal,
@@ -45,7 +45,7 @@ class PrintPage extends StatefulWidget {
     this.customerPhone,
     this.customerEmail,
     this.customerAddress,
-  }) : super(key: key);
+  });
 
   @override
   _PrintPageState createState() => _PrintPageState();
