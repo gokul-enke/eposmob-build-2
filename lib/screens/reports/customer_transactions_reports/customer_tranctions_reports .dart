@@ -13,9 +13,14 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'dart:ui';
+import 'package:intl/intl.dart';
 
 // Import the new simple transaction details screen
 import 'simple_transaction_details_screen.dart';
+// Add imports for customer autocomplete and date filtering
+import 'package:pos_machine/screens/transactions/widgets/customer_auto_complete.dart';
+import 'package:pos_machine/components/build_text_fields.dart';
+import 'dart:async';
 
 class CustomerTransactionsReportScreen extends StatefulWidget {
   const CustomerTransactionsReportScreen({super.key});
@@ -34,10 +39,75 @@ class _CustomerTransactionsReportScreenState
   // For grouping customer transactions
   Map<String, CustomerTransactionSummary> customerSummary = {};
 
+  // Controllers for filters
+  final TextEditingController _customerController = TextEditingController();
+  final TextEditingController _fromDateController = TextEditingController();
+  final TextEditingController _toDateController = TextEditingController();
+
+  // Filter variables
+  String searchCustomer = '';
+
+  // Customer suggestions for autocomplete
+  List<String> customerSuggestions = [];
+
+  // Timer for debouncing customer search
+  Timer? _customerSearchTimer;
+
+  // For dropdown options - using the same values as in simple_transaction_details_screen.dart
+  List<String> transactionTypes = ['Receipt', 'Invoice', 'Voucher'];
+  List<String> statuses = [
+    'SUCC',
+    'FAIL',
+    'INIT',
+  ];
+  List<String> types = ['Credit', 'Debit'];
+
+  List<String> getCustomerSuggestions() {
+    if (allTransactions == null) return [];
+    final suggestions = allTransactions!
+        .map((t) => t.customerName ?? '')
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList();
+
+    // Limit to 100 suggestions for better performance
+    if (suggestions.length > 100) {
+      return suggestions.take(100).toList();
+    }
+
+    return suggestions;
+  }
+
   @override
   void initState() {
     super.initState();
+    // Set default date values
+    _setInitialDateFilters();
     loadInitData();
+  }
+
+  @override
+  void dispose() {
+    _customerController.dispose();
+    _fromDateController.dispose();
+    _toDateController.dispose();
+    _customerSearchTimer?.cancel();
+    super.dispose();
+  }
+
+  // Set default date values: 1 month before current date for from_date, current date for to_date
+  void _setInitialDateFilters() {
+    final now = DateTime.now();
+    final oneMonthAgo = DateTime(now.year, now.month - 1, now.day);
+
+    final formatter = DateFormat('yyyy-MM-dd');
+    final fromDateStr = formatter.format(oneMonthAgo);
+    final toDateStr = formatter.format(now);
+
+    setState(() {
+      _fromDateController.text = fromDateStr;
+      _toDateController.text = toDateStr;
+    });
   }
 
   Future<void> loadInitData() async {
@@ -60,7 +130,17 @@ class _CustomerTransactionsReportScreenState
         ListTransactionModel listTransactionModel =
             ListTransactionModel.fromJson(value);
         allTransactions = listTransactionModel.data?.transactions ?? [];
-        calculateCustomerSummary();
+
+        // Populate customer suggestions
+        final suggestions = getCustomerSuggestions();
+
+        // Apply filters immediately
+        _applyFilters();
+
+        // Update the customer suggestions and trigger a rebuild
+        setState(() {
+          customerSuggestions = suggestions;
+        });
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -88,18 +168,78 @@ class _CustomerTransactionsReportScreenState
     }
   }
 
-  void calculateCustomerSummary() {
-    customerSummary.clear();
+  void _applyFilters() {
+    if (allTransactions == null || allTransactions!.isEmpty) {
+      setState(() {
+        customerSummary.clear();
+      });
+      return;
+    }
 
-    if (allTransactions == null) return;
+    // Apply filters
+    List<ListTransaction> filteredList = [...allTransactions!];
 
-    for (var transaction in allTransactions!) {
+    // Customer filter
+    if (searchCustomer.isNotEmpty) {
+      filteredList = filteredList
+          .where((transaction) => (transaction.customerName ?? '')
+              .toLowerCase()
+              .contains(searchCustomer.toLowerCase()))
+          .toList();
+    }
+
+    // Date range filter
+    if (_fromDateController.text.isNotEmpty ||
+        _toDateController.text.isNotEmpty) {
+      try {
+        final formatter = DateFormat('yyyy-MM-dd');
+
+        filteredList = filteredList.where((transaction) {
+          if (transaction.date == null) return false;
+
+          try {
+            final transactionDate = formatter.parse(transaction.date!);
+
+            // If from date is set, check that transaction date is not before it
+            if (_fromDateController.text.isNotEmpty) {
+              final fromDate = formatter.parse(_fromDateController.text);
+              if (transactionDate.isBefore(fromDate)) return false;
+            }
+
+            // If to date is set, check that transaction date is not after it
+            if (_toDateController.text.isNotEmpty) {
+              final toDate = formatter.parse(_toDateController.text);
+              // Include the to date by adding one day and checking if transaction date is before
+              final toDatePlusOne = toDate.add(const Duration(days: 1));
+              if (transactionDate.isAfter(toDate)) return false;
+            }
+
+            return true;
+          } catch (e) {
+            debugPrint('Date parsing error for transaction: $e');
+            return false;
+          }
+        }).toList();
+      } catch (e) {
+        debugPrint('Date parsing error: $e');
+      }
+    }
+
+    // Recalculate customer summary with filtered transactions
+    _calculateCustomerSummaryFromFilteredList(filteredList);
+  }
+
+  void _calculateCustomerSummaryFromFilteredList(
+      List<ListTransaction> filteredList) {
+    Map<String, CustomerTransactionSummary> filteredCustomerSummary = {};
+
+    for (var transaction in filteredList) {
       String customerName = transaction.customerName ?? 'Unknown Customer';
       double amount = double.tryParse(transaction.amount ?? '0') ?? 0.0;
       String type = transaction.type ?? 'unknown';
 
-      if (!customerSummary.containsKey(customerName)) {
-        customerSummary[customerName] = CustomerTransactionSummary(
+      if (!filteredCustomerSummary.containsKey(customerName)) {
+        filteredCustomerSummary[customerName] = CustomerTransactionSummary(
           customerName: customerName,
           totalDebit: 0.0,
           totalCredit: 0.0,
@@ -108,18 +248,62 @@ class _CustomerTransactionsReportScreenState
 
       // Assuming "Credit" type increases balance and "Debit" type decreases balance
       if (transaction.type?.toLowerCase() == 'credit') {
-        customerSummary[customerName]!.totalCredit += amount;
+        filteredCustomerSummary[customerName]!.totalCredit += amount;
       } else if (transaction.type?.toLowerCase() == 'debit') {
-        customerSummary[customerName]!.totalDebit += amount;
+        filteredCustomerSummary[customerName]!.totalDebit += amount;
       }
     }
 
     // Calculate balance for each customer
-    customerSummary.forEach((name, summary) {
+    filteredCustomerSummary.forEach((name, summary) {
       summary.balance = summary.totalCredit - summary.totalDebit;
     });
 
-    setState(() {});
+    setState(() {
+      customerSummary = filteredCustomerSummary;
+    });
+  }
+
+  void _resetFilters() {
+    // Cancel any pending search
+    _customerSearchTimer?.cancel();
+
+    // Clear the text controllers
+    _customerController.clear();
+    _fromDateController.clear();
+    _toDateController.clear();
+
+    // Reset the search variables
+    setState(() {
+      searchCustomer = '';
+    });
+
+    // Set default date values
+    _setInitialDateFilters();
+
+    // Reload data
+    loadInitData();
+  }
+
+  Future<void> _selectDate(BuildContext context, bool isFromDate) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null) {
+      final formattedDate = DateFormat('yyyy-MM-dd').format(picked);
+      setState(() {
+        if (isFromDate) {
+          _fromDateController.text = formattedDate;
+        } else {
+          _toDateController.text = formattedDate;
+        }
+      });
+      // Apply filters immediately after date selection
+      _applyFilters();
+    }
   }
 
   @override
@@ -151,11 +335,185 @@ class _CustomerTransactionsReportScreenState
               children: [
                 _buildHeader(size),
                 const SizedBox(height: 20),
+                _buildFilters(),
+                const SizedBox(height: 20),
                 _buildReportTable(),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFilters() {
+    return BuildBoxShadowContainer(
+      circleRadius: 10,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Filters",
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s16,
+              0.25,
+              ColorManager.textColor,
+            ),
+          ),
+          const SizedBox(height: 15),
+          // First row of filters (2 filters)
+          SizedBox(
+            height: 90,
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: _buildCustomerAutocompleteField(),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: _buildDateField(
+                    "From Date",
+                    _fromDateController,
+                    true,
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: _buildDateField(
+                    "To Date",
+                    _toDateController,
+                    false,
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 30, left: 10),
+                    child: CustomRoundButton(
+                      title: "Reset",
+                      boxColor: Colors.white,
+                      textColor: ColorManager.kPrimaryColor,
+                      fct: _resetFilters,
+                      height: 45,
+                      width: double.infinity,
+                      fontSize: FontSize.s12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomerAutocompleteField() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              "Customer",
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.27,
+                Colors.black.withOpacity(0.6),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          CustomerAutocomplete(
+            size: MediaQuery.of(context).size,
+            customerList: customerSuggestions, // This will now update properly
+            controller: _customerController,
+            onSelected: (String selectedCustomer) {
+              // Cancel any pending search
+              _customerSearchTimer?.cancel();
+
+              setState(() {
+                searchCustomer = selectedCustomer;
+              });
+              _applyFilters();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateField(
+      String label, TextEditingController controller, bool isFromDate) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              label,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.27,
+                Colors.black.withOpacity(0.6),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          BuildBoxShadowContainer(
+            height: 45,
+            width: double.infinity,
+            circleRadius: 7,
+            child: TextFormField(
+              controller: controller,
+              onTap: () => _selectDate(context, isFromDate),
+              readOnly: true,
+              cursorColor: ColorManager.kPrimaryColor,
+              cursorHeight: 13,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s10,
+                0.18,
+                ColorManager.textColor,
+              ),
+              decoration: InputDecoration(
+                hintText: "DD/MM/YYYY",
+                hintStyle: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s10,
+                  0.18,
+                  ColorManager.textColor,
+                ),
+                prefixIcon: Container(
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(
+                    Icons.calendar_today,
+                    size: 16,
+                    color: ColorManager.kPrimaryColor,
+                  ),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                border: InputBorder.none,
+                // Center the hint text vertically and horizontally with final adjustment
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+                isDense: true,
+                alignLabelWithHint: true,
+              ),
+              textAlignVertical: TextAlignVertical.center,
+            ),
+          ),
+        ],
       ),
     );
   }
