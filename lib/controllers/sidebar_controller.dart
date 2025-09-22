@@ -39,6 +39,7 @@ import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
 import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
 import 'package:pos_machine/screens/reports/sales_executive_report/sales_executive_report.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
+import 'package:pos_machine/screens/supplier_profile/open_supplier_profile.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/add_company_account.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/account_details_screen.dart';
@@ -148,5 +149,6 @@ class SideBarController extends GetxController {
     CompanyInfoScreen(), // 64 Company Info
     CustomerTransactionsReportScreen(), // 65 Customer Transactions Report
     SimpleTransactionDetailsScreen(), // 66 Simple Transaction Details Screen
+    OpenSupplierProfileScreen(), // 67 Open Supplier Profile Screen
   ];
 }
