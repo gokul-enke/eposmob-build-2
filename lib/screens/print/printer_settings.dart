@@ -82,19 +82,24 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   @override
   void dispose() {
+    debugPrint('[PrinterSettings] dispose(): canceling discovery subscription if any');
     _subscription?.cancel();
     super.dispose();
   }
 
   Future<void> _checkPermissions() async {
+    debugPrint('[PrinterSettings] _checkPermissions() called');
     if (await _requestPermissions()) {
+      debugPrint('[PrinterSettings] Permissions granted. Proceeding to scan.');
       _scan();
     } else {
+      debugPrint('[PrinterSettings] Permissions NOT granted. Showing dialog.');
       _showPermissionDeniedDialog();
     }
   }
 
   Future<bool> _requestPermissions() async {
+    debugPrint('[PrinterSettings] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
     if (Theme.of(context).platform == TargetPlatform.android) {
       Map<Permission, PermissionStatus> statuses = await [
         Permission.bluetooth,
@@ -103,8 +108,15 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         Permission.location,
       ].request();
 
-      return statuses.values.every((status) => status.isGranted);
+      statuses.forEach((perm, status) {
+        debugPrint('[PrinterSettings] Permission ${perm.toString()} => ${status.toString()}');
+      });
+
+      final granted = statuses.values.every((status) => status.isGranted);
+      debugPrint('[PrinterSettings] All permissions granted: $granted');
+      return granted;
     }
+    debugPrint('[PrinterSettings] Non-Android platform; skipping runtime permission request.');
     return true;
   }
 
@@ -129,27 +141,46 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   }
 
   void _scan() async {
-    if (_isScanning) return;
+    if (_isScanning) {
+      debugPrint('[PrinterSettings] _scan() requested but a scan is already in progress. Ignoring.');
+      return;
+    }
+    debugPrint('[PrinterSettings] Starting scan... platform=${Platform.operatingSystem}');
+    // Cancel any prior discovery subscription
+    await _subscription?.cancel();
     setState(() {
       _isScanning = true;
       devices.clear();
     });
 
     try {
-      _subscription = printerManager
-          .discovery(type: PrinterType.bluetooth, isBle: false)
-          .listen((device) {
-        final printer = BluetoothPrinter(
-          deviceName: device.name,
-          address: device.address,
-          typePrinter: PrinterType.bluetooth.toString(),
-        );
-        setState(() {
-          devices.add(printer);
-        });
-      });
+      // Bluetooth discovery only on mobile platforms
+      if (Platform.isAndroid || Platform.isIOS) {
+        debugPrint('[PrinterSettings] Beginning Bluetooth discovery (isBle=false)');
+        _subscription = printerManager
+            .discovery(type: PrinterType.bluetooth, isBle: false)
+            .listen((device) {
+          debugPrint('[PrinterSettings] BT device found: name=${device.name}, address=${device.address}');
+          final printer = BluetoothPrinter(
+            deviceName: device.name,
+            address: device.address,
+            typePrinter: PrinterType.bluetooth.toString(),
+          );
+          setState(() {
+            devices.add(printer);
+          });
+        }, onError: (err) {
+          debugPrint('[PrinterSettings] Bluetooth discovery error: $err');
+        }, onDone: () {
+          debugPrint('[PrinterSettings] Bluetooth discovery done. Total BT devices: ${devices.where((p) => p.typePrinter == PrinterType.bluetooth.toString()).length}');
+        }, cancelOnError: false);
+      } else {
+        debugPrint('[PrinterSettings] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
+      }
 
+      debugPrint('[PrinterSettings] Beginning USB discovery');
       await printerManager.discovery(type: PrinterType.usb).forEach((device) {
+        debugPrint('[PrinterSettings] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
         final printer = BluetoothPrinter(
           deviceName: device.name,
           vendorId: device.vendorId,
@@ -160,12 +191,15 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           devices.add(printer);
         });
       });
-    } catch (e) {
-      debugPrint('Error during scanning: $e');
+      debugPrint('[PrinterSettings] USB discovery completed. Total devices now: ${devices.length}');
+    } catch (e, st) {
+      debugPrint('[PrinterSettings] Error during scanning: $e');
+      debugPrint('[PrinterSettings] Stacktrace: $st');
     } finally {
       setState(() {
         _isScanning = false;
       });
+      debugPrint('[PrinterSettings] Scan finished. devices.length=${devices.length}');
     }
   }
 
