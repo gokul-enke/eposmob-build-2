@@ -1464,28 +1464,40 @@ class ThermalPrinter {
     //   ),
     // );
 
-    // Customer Name
-    if (customerName != null && customerName.isNotEmpty) {
+    // Customer Name + Phone on a single line without labels when both are present
+    if ((customerName != null && customerName.isNotEmpty) &&
+        (customerPhone != null && customerPhone.isNotEmpty)) {
+      final combined = _sanitizeTextForThermalPrinter('$customerName - $customerPhone');
       bytes += generator.text(
-        'Name: $customerName',
+        combined,
         styles: PosStyles(
           fontType: fontType,
           height: textSizeSmall,
           width: textSizeSmall,
         ),
       );
-    }
-
-    // Customer Phone
-    if (customerPhone != null && customerPhone.isNotEmpty) {
-      bytes += generator.text(
-        'Phone: $customerPhone',
-        styles: PosStyles(
-          fontType: fontType,
-          height: textSizeSmall,
-          width: textSizeSmall,
-        ),
-      );
+    } else {
+      // Otherwise show whichever exists, without labels
+      if (customerName != null && customerName.isNotEmpty) {
+        bytes += generator.text(
+          _sanitizeTextForThermalPrinter(customerName),
+          styles: PosStyles(
+            fontType: fontType,
+            height: textSizeSmall,
+            width: textSizeSmall,
+          ),
+        );
+      }
+      if (customerPhone != null && customerPhone.isNotEmpty) {
+        bytes += generator.text(
+          _sanitizeTextForThermalPrinter(customerPhone),
+          styles: PosStyles(
+            fontType: fontType,
+            height: textSizeSmall,
+            width: textSizeSmall,
+          ),
+        );
+      }
     }
 
     // Customer Email
@@ -1500,10 +1512,10 @@ class ThermalPrinter {
     //   );
     // }
 
-    // Customer Address
+    // Customer Address without label
     if (customerAddress != null && customerAddress.isNotEmpty) {
       bytes += generator.text(
-        'Address: $customerAddress',
+        _sanitizeTextForThermalPrinter(customerAddress),
         styles: PosStyles(
           fontType: fontType,
           height: textSizeSmall,

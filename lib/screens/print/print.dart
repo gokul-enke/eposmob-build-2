@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:get/get.dart';
@@ -32,7 +33,7 @@ class PrintPage extends StatefulWidget {
   final String? customerAddress;
 
   const PrintPage({
-    Key? key,
+    super.key,
     required this.cartItems,
     required this.formattedTotal,
     this.savedTotal,
@@ -45,7 +46,7 @@ class PrintPage extends StatefulWidget {
     this.customerPhone,
     this.customerEmail,
     this.customerAddress,
-  }) : super(key: key);
+  });
 
   @override
   _PrintPageState createState() => _PrintPageState();
@@ -93,19 +94,24 @@ class _PrintPageState extends State<PrintPage> {
 
   @override
   void dispose() {
+    debugPrint('[PrintPage] dispose(): canceling discovery subscription if any');
     _subscription?.cancel();
     super.dispose();
   }
 
   Future<void> _checkPermissions() async {
+    debugPrint('[PrintPage] _checkPermissions() called');
     if (await _requestPermissions()) {
+      debugPrint('[PrintPage] Permissions granted. Proceeding to scan.');
       _scan();
     } else {
+      debugPrint('[PrintPage] Permissions NOT granted. Showing dialog.');
       _showPermissionDeniedDialog();
     }
   }
 
   Future<bool> _requestPermissions() async {
+    debugPrint('[PrintPage] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
     if (Theme.of(context).platform == TargetPlatform.android) {
       Map<Permission, PermissionStatus> statuses = await [
         Permission.bluetooth,
@@ -114,8 +120,15 @@ class _PrintPageState extends State<PrintPage> {
         Permission.location,
       ].request();
 
-      return statuses.values.every((status) => status.isGranted);
+      statuses.forEach((perm, status) {
+        debugPrint('[PrintPage] Permission ${perm.toString()} => ${status.toString()}');
+      });
+
+      final granted = statuses.values.every((status) => status.isGranted);
+      debugPrint('[PrintPage] All permissions granted: $granted');
+      return granted;
     }
+    debugPrint('[PrintPage] Non-Android platform; skipping runtime permission request.');
     return true;
   }
 
@@ -140,27 +153,46 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   void _scan() async {
-    if (_isScanning) return;
+    if (_isScanning) {
+      debugPrint('[PrintPage] _scan() requested but a scan is already in progress. Ignoring.');
+      return;
+    }
+    debugPrint('[PrintPage] Starting scan... platform=${Platform.operatingSystem}');
+    await _subscription?.cancel();
     setState(() {
       _isScanning = true;
       devices.clear();
     });
 
     try {
-      _subscription = printerManager
-          .discovery(type: PrinterType.bluetooth, isBle: false)
-          .listen((device) {
-        final printer = BluetoothPrinter(
-          deviceName: device.name,
-          address: device.address,
-          typePrinter: PrinterType.bluetooth,
-        );
-        setState(() {
-          devices.add(printer);
-        });
-      });
+      // Bluetooth discovery only on mobile platforms
+      if (Platform.isAndroid || Platform.isIOS) {
+        debugPrint('[PrintPage] Beginning Bluetooth discovery (isBle=false)');
+        _subscription = printerManager
+            .discovery(type: PrinterType.bluetooth, isBle: false)
+            .listen((device) {
+          debugPrint('[PrintPage] BT device found: name=${device.name}, address=${device.address}');
+          final printer = BluetoothPrinter(
+            deviceName: device.name,
+            address: device.address,
+            typePrinter: PrinterType.bluetooth,
+          );
+          setState(() {
+            devices.add(printer);
+          });
+        }, onError: (err) {
+          debugPrint('[PrintPage] Bluetooth discovery error: $err');
+        }, onDone: () {
+          final btCount = devices.where((p) => p.typePrinter == PrinterType.bluetooth).length;
+          debugPrint('[PrintPage] Bluetooth discovery done. Total BT devices: $btCount');
+        }, cancelOnError: false);
+      } else {
+        debugPrint('[PrintPage] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
+      }
 
+      debugPrint('[PrintPage] Beginning USB discovery');
       await printerManager.discovery(type: PrinterType.usb).forEach((device) {
+        debugPrint('[PrintPage] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
         final printer = BluetoothPrinter(
           deviceName: device.name,
           vendorId: device.vendorId,
@@ -171,16 +203,20 @@ class _PrintPageState extends State<PrintPage> {
           devices.add(printer);
         });
       });
-    } catch (e) {
-      debugPrint('Error during scanning: $e');
+      debugPrint('[PrintPage] USB discovery completed. Total devices now: ${devices.length}');
+    } catch (e, st) {
+      debugPrint('[PrintPage] Error during scanning: $e');
+      debugPrint('[PrintPage] Stacktrace: $st');
     } finally {
       setState(() {
         _isScanning = false;
       });
+      debugPrint('[PrintPage] Scan finished. devices.length=${devices.length}');
     }
   }
 
   Future<void> _loadDefaultPrinter() async {
+    debugPrint('[PrintPage] _loadDefaultPrinter() reading from SharedPreferences');
     final prefs = await SharedPreferences.getInstance();
     final defaultPrinterJson = prefs.getString('default_printer');
 
@@ -199,6 +235,7 @@ class _PrintPageState extends State<PrintPage> {
         );
         _isLoading = false;
       });
+      debugPrint('[PrintPage] Default printer loaded: name=${selectedPrinter?.deviceName}, address=${selectedPrinter?.address}, type=${selectedPrinter?.typePrinter}');
 
       if (selectedPrinter != null && _billDocumentConfig != null) {
           final appSettingsProvider =
@@ -213,6 +250,7 @@ class _PrintPageState extends State<PrintPage> {
       setState(() {
         _isLoading = false;
       });
+      debugPrint('[PrintPage] No default printer found in SharedPreferences');
     }
   }
 
@@ -229,6 +267,7 @@ class _PrintPageState extends State<PrintPage> {
   }
 
   void selectPrinter(BluetoothPrinter printer) {
+    debugPrint('[PrintPage] selectPrinter(): name=${printer.deviceName}, address=${printer.address}, type=${printer.typePrinter}');
     setState(() {
       selectedPrinter = printer;
     });
