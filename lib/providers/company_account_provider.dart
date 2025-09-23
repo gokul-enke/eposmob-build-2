@@ -539,4 +539,50 @@ class CompanyAccountProvider extends ChangeNotifier {
     debugPrint("Could not fetch detailed data for account: $accountName");
     return null;
   }
+
+  List<String> getTypeOptions() {
+    if (_allCompanyAccounts == null || _allCompanyAccounts!.isEmpty) {
+      return ["All Types"];
+    }
+
+    final uniqueTypes = _allCompanyAccounts!
+        .map((account) => account.type)
+        .where((type) => type != null && type.isNotEmpty)
+        .map((type) => type!)
+        .toSet()
+        .toList();
+
+    uniqueTypes.sort();
+    return ["All Types", ...uniqueTypes];
+  }
+
+  List<String> getStatusOptions() {
+    if (_allCompanyAccounts == null || _allCompanyAccounts!.isEmpty) {
+      return ["All Status"];
+    }
+
+    final uniqueStatuses = _allCompanyAccounts!
+        .map((account) => account.accountStatus)
+        .where((status) => status.isNotEmpty)
+        .toSet()
+        .toList();
+
+    uniqueStatuses.sort();
+    return ["All Status", ...uniqueStatuses];
+  }
+
+  List<String> getPaymentMethodOptions() {
+    if (_allCompanyAccounts == null || _allCompanyAccounts!.isEmpty) {
+      return ["All Methods"];
+    }
+
+    final uniqueMethods = _allCompanyAccounts!
+        .expand((account) => account.paymentMethod ?? [])
+        .where((method) => method.isNotEmpty)
+        .toSet()
+        .toList();
+
+    uniqueMethods.sort();
+    return ["All Methods", ...uniqueMethods];
+  }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/models/list_receipt.dart';
 import 'package:provider/provider.dart';
@@ -483,55 +484,31 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                   0.27, Colors.black.withOpacity(0.6)),
             ),
           ),
-          SizedBox(height: 8),
-          BuildBoxShadowContainer(
-            circleRadius: 7,
-            height: 45,
-            width: double.infinity, // Take full available width
-            child: DropdownButtonFormField<String>(
-              value: selectedStatus,
-              decoration: decoration.copyWith(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                hintText: "All Status",
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s10, 0.18, ColorManager.textColor),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              dropdownColor: Colors.white,
-              items: [
-                DropdownMenuItem(
-                  value: null,
-                  child: Text(
-                    "All Status",
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s10, 0.18, ColorManager.textColor),
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: "paid",
-                  child: Text(
-                    "Paid",
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s10, 0.18, ColorManager.textColor),
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: "pending",
-                  child: Text(
-                    "Pending",
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s10, 0.18, ColorManager.textColor),
-                  ),
-                ),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  selectedStatus = value;
-                });
-                searchReceipts();
-              },
-            ),
+          const SizedBox(height: 8),
+          Consumer<InvoiceProvider>(
+            builder: (context, invoiceProvider, child) {
+              List<String> statusOptions =
+                  invoiceProvider.getReceiptStatusOptions();
+
+              return BuildDropDownWithSearch<String>(
+                title: null,
+                showName: false,
+                hintText: 'All Status',
+                value: selectedStatus,
+                items: statusOptions
+                    .where((status) => status != "All Status")
+                    .toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedStatus = newValue;
+                  });
+                  searchReceipts();
+                },
+                displayText: (status) => status,
+                height: 45,
+                margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+              );
+            },
           ),
         ],
       ),
@@ -552,55 +529,31 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                   0.27, Colors.black.withOpacity(0.6)),
             ),
           ),
-          SizedBox(height: 8),
-          BuildBoxShadowContainer(
-            circleRadius: 7,
-            height: 45,
-            width: double.infinity, // Take full available width
-            child: DropdownButtonFormField<String>(
-              value: paymentMethod,
-              decoration: decoration.copyWith(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                hintText: "All Payment",
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s12, 0.27, ColorManager.textColor),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              dropdownColor: Colors.white,
-              items: [
-                DropdownMenuItem(
-                  value: null,
-                  child: Text(
-                    "All Payment",
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s10, 0.18, ColorManager.textColor),
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: "CASH",
-                  child: Text(
-                    "Cash",
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s10, 0.18, ColorManager.textColor),
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: "UPI",
-                  child: Text(
-                    "UPI",
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s10, 0.18, ColorManager.textColor),
-                  ),
-                ),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  paymentMethod = value;
-                });
-                searchReceipts();
-              },
-            ),
+          const SizedBox(height: 8),
+          Consumer<InvoiceProvider>(
+            builder: (context, invoiceProvider, child) {
+              List<String> paymentMethodOptions =
+                  invoiceProvider.getPaymentMethodOptions();
+
+              return BuildDropDownWithSearch<String>(
+                title: null,
+                showName: false,
+                hintText: 'All Payment',
+                value: paymentMethod,
+                items: paymentMethodOptions
+                    .where((method) => method != "All Payment Methods")
+                    .toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    paymentMethod = newValue;
+                  });
+                  searchReceipts();
+                },
+                displayText: (method) => method,
+                height: 45,
+                margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+              );
+            },
           ),
         ],
       ),
@@ -704,8 +657,8 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                     _buildDetailRow('Status', receipt.receiptStatus),
                     _buildDetailRow(
                         'Payment Reference', receipt.paymentReference),
-                    _buildDetailRow('Date',
-                        DateHelper.formatDate(receipt.createdAt)),
+                    _buildDetailRow(
+                        'Date', DateHelper.formatDate(receipt.createdAt)),
                     if (receipt.company?.name != null)
                       _buildDetailRow('Company', receipt.company!.name),
                   ],

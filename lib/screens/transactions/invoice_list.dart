@@ -8,6 +8,7 @@ import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
+import '../../components/build_dropdown_with_search.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../providers/auth_model.dart';
@@ -530,55 +531,38 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   0.27, Colors.black.withOpacity(0.6)),
             ),
           ),
-          SizedBox(height: 8),
-          BuildBoxShadowContainer(
-            height: 45,
-            width: double.infinity,
-            circleRadius: 7,
-            child: DropdownButtonFormField<String>(
-              value: selectedStatus,
-              decoration: decoration.copyWith(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                hintText: "All Status",
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s10, 0.18, ColorManager.textColor),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              dropdownColor: Colors.white,
-              items: [
-                DropdownMenuItem(
-                  value: null,
-                  child: Text(
-                    "All Status",
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s10, 0.18, ColorManager.textColor),
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: "paid",
-                  child: Text(
-                    "Paid",
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s10, 0.18, ColorManager.textColor),
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: "pending",
-                  child: Text(
-                    "Pending",
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s10, 0.18, ColorManager.textColor),
-                  ),
-                ),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  selectedStatus = value;
-                });
-                searchInvoices();
-              },
-            ),
+          const SizedBox(height: 8),
+          Consumer<InvoiceProvider>(
+            builder: (context, invoiceProvider, child) {
+              List<String> statusOptions = invoiceProvider.getStatusOptions();
+
+              // Find the display text for the currently selected status
+              String? selectedStatusDisplay;
+              if (selectedStatus != null) {
+                selectedStatusDisplay = statusOptions.contains(selectedStatus)
+                    ? selectedStatus
+                    : "All Status";
+              }
+
+              return BuildDropDownWithSearch<String>(
+                title: null,
+                showName: false,
+                hintText: 'All Status',
+                value: selectedStatus,
+                items: statusOptions
+                    .where((status) => status != "All Status")
+                    .toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedStatus = newValue;
+                  });
+                  searchInvoices();
+                },
+                displayText: (status) => status.toUpperCase(),
+                height: 45,
+                margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+              );
+            },
           ),
         ],
       ),
@@ -671,13 +655,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                             'Invoice Number', invoice.invoiceNumber),
                         _buildDetailRow(
                             'Customer Name', invoice.customer.user.name),
-                        _buildDetailRow('Customer Phone', invoice.customer.user.phone),
+                        _buildDetailRow(
+                            'Customer Phone', invoice.customer.user.phone),
                         _buildDetailRow('Order Number', ""), //no order number
-
 
                         _buildDetailRow('Type', invoice.type),
                         _buildDetailRow('Invoice Date', invoice.invoiceDate),
-                        _buildDetailRow('Due Date',invoice.dueDate),
+                        _buildDetailRow('Due Date', invoice.dueDate),
                         _buildDetailRow('Amount', invoice.amount.toString()),
                         _buildDetailRow('Status', invoice.status),
                       ],
