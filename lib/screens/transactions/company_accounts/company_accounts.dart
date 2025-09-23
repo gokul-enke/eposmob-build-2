@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/company_accounts.dart';
 import 'package:pos_machine/providers/company_account_provider.dart';
@@ -409,78 +410,30 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        BuildBoxShadowContainer(
-          height: 45,
-          width: double.infinity,
-          circleRadius: 7,
-          child: DropdownButtonFormField<String>(
-            value: selectedPaymentMethod,
-            decoration: decoration.copyWith(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-              hintText: "All Methods",
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-            dropdownColor: Colors.white,
-            items: [
-              DropdownMenuItem(
-                value: null,
-                child: Text(
-                  "All Methods",
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s10, 0.18, ColorManager.textColor),
-                ),
-              ),
-              DropdownMenuItem(
-                value: "COD",
-                child: Text(
-                  "COD",
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s10, 0.18, ColorManager.textColor),
-                ),
-              ),
-              DropdownMenuItem(
-                value: "CASH",
-                child: Text(
-                  "CASH",
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s10, 0.18, ColorManager.textColor),
-                ),
-              ),
-              DropdownMenuItem(
-                value: "Online",
-                child: Text(
-                  "Online",
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s10, 0.18, ColorManager.textColor),
-                ),
-              ),
-              DropdownMenuItem(
-                value: "UPI",
-                child: Text(
-                  "UPI",
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s10, 0.18, ColorManager.textColor),
-                ),
-              ),
-              DropdownMenuItem(
-                value: "Cheque",
-                child: Text(
-                  "Cheque",
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s10, 0.18, ColorManager.textColor),
-                ),
-              ),
-            ],
-            onChanged: (value) {
-              setState(() {
-                selectedPaymentMethod = value;
-              });
-              searchAccounts();
-            },
-          ),
+        Consumer<CompanyAccountProvider>(
+          builder: (context, companyAccountProvider, child) {
+            List<String> paymentMethodOptions =
+                companyAccountProvider.getPaymentMethodOptions();
+
+            return BuildDropDownWithSearch<String>(
+              title: null,
+              showName: false,
+              hintText: 'All Methods',
+              value: selectedPaymentMethod,
+              items: paymentMethodOptions
+                  .where((method) => method != "All Methods")
+                  .toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedPaymentMethod = newValue;
+                });
+                searchAccounts();
+              },
+              displayText: (method) => method,
+              height: 45,
+              margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+            );
+          },
         ),
       ],
     );
@@ -499,54 +452,27 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        BuildBoxShadowContainer(
-          height: 45,
-          width: double.infinity,
-          circleRadius: 7,
-          child: DropdownButtonFormField<String>(
-            value: selectedType,
-            decoration: decoration.copyWith(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-              hintText: "All Types",
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-            dropdownColor: Colors.white,
-            items: [
-              DropdownMenuItem(
-                value: null,
-                child: Text(
-                  "All Types",
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s10, 0.18, ColorManager.textColor),
-                ),
-              ),
-              DropdownMenuItem(
-                value: "Cash",
-                child: Text(
-                  "Cash",
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s10, 0.18, ColorManager.textColor),
-                ),
-              ),
-              DropdownMenuItem(
-                value: "Bank",
-                child: Text(
-                  "Bank",
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s10, 0.18, ColorManager.textColor),
-                ),
-              ),
-            ],
-            onChanged: (value) {
-              setState(() {
-                selectedType = value;
-              });
-              searchAccounts();
-            },
-          ),
+        Consumer<CompanyAccountProvider>(
+          builder: (context, companyAccountProvider, child) {
+            List<String> typeOptions = companyAccountProvider.getTypeOptions();
+
+            return BuildDropDownWithSearch<String>(
+              title: null,
+              showName: false,
+              hintText: 'All Types',
+              value: selectedType,
+              items: typeOptions.where((type) => type != "All Types").toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedType = newValue;
+                });
+                searchAccounts();
+              },
+              displayText: (type) => type,
+              height: 45,
+              margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+            );
+          },
         ),
       ],
     );
@@ -565,62 +491,30 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        BuildBoxShadowContainer(
-          height: 45,
-          width: double.infinity,
-          circleRadius: 7,
-          child: DropdownButtonFormField<String>(
-            value: selectedStatus,
-            decoration: decoration.copyWith(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-              hintText: "All Status",
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-            dropdownColor: Colors.white,
-            items: [
-              DropdownMenuItem(
-                value: null,
-                child: Text(
-                  "All Status",
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s10, 0.18, ColorManager.textColor),
-                ),
-              ),
-              DropdownMenuItem(
-                value: "Credit",
-                child: Text(
-                  "Credit",
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s10, 0.18, ColorManager.textColor),
-                ),
-              ),
-              DropdownMenuItem(
-                value: "Debit",
-                child: Text(
-                  "Debit",
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s10, 0.18, ColorManager.textColor),
-                ),
-              ),
-              DropdownMenuItem(
-                value: "Balanced",
-                child: Text(
-                  "Balanced",
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s10, 0.18, ColorManager.textColor),
-                ),
-              ),
-            ],
-            onChanged: (value) {
-              setState(() {
-                selectedStatus = value;
-              });
-              searchAccounts();
-            },
-          ),
+        Consumer<CompanyAccountProvider>(
+          builder: (context, companyAccountProvider, child) {
+            List<String> statusOptions =
+                companyAccountProvider.getStatusOptions();
+
+            return BuildDropDownWithSearch<String>(
+              title: null,
+              showName: false,
+              hintText: 'All Status',
+              value: selectedStatus,
+              items: statusOptions
+                  .where((status) => status != "All Status")
+                  .toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedStatus = newValue;
+                });
+                searchAccounts();
+              },
+              displayText: (status) => status,
+              height: 45,
+              margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+            );
+          },
         ),
       ],
     );

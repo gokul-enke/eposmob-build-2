@@ -391,7 +391,7 @@ class _CustomerTransactionsReportScreenState
                 Expanded(
                   flex: 1,
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 30, left: 10),
+                    padding: const EdgeInsets.only(top: 45, left: 10),
                     child: CustomRoundButton(
                       title: "Reset",
                       boxColor: Colors.white,

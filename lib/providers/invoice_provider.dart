@@ -125,18 +125,18 @@ class InvoiceProvider extends ChangeNotifier {
     _filterPhone = phone;
     _filterEmail = email;
     _currentPage = page;
-  applyFiltersLocally(
-    filterName: name,
-    filterInvoiceNumber: invoiceNumber,
-    filterOrderNumber: orderNumber,
-    filterPhone: phone,
-    filterEmail: email,
-    filterFromDate: fromDate,
-    filterToDate: toDate,
-    filterStatus: status,
-    page: page,
-  );
-}
+    applyFiltersLocally(
+      filterName: name,
+      filterInvoiceNumber: invoiceNumber,
+      filterOrderNumber: orderNumber,
+      filterPhone: phone,
+      filterEmail: email,
+      filterFromDate: fromDate,
+      filterToDate: toDate,
+      filterStatus: status,
+      page: page,
+    );
+  }
 
   void applyReceiptFilters(
       {String? name,
@@ -154,7 +154,6 @@ class InvoiceProvider extends ChangeNotifier {
     _receiptFilterReceiptNumber = receiptNumber;
     _receiptfilterPhone = phone;
     _receiptfilterEmail = email;
-    
 
     _receiptCurrentPage = page;
     applyReceiptFiltersLocally(
@@ -240,22 +239,22 @@ class InvoiceProvider extends ChangeNotifier {
     }
 
     // Apply date range filter
-  // Apply date range filter
-  if (filterFromDate != null && filterFromDate.isNotEmpty) {
-    filteredInvoices = filteredInvoices.where((invoice) {
-      return _isDateAfterOrEqual(invoice.invoiceDate, filterFromDate);
-    }).toList();
-    debugPrint(
-        "After from date filter: ${filteredInvoices.length} invoices after '$filterFromDate'");
-  }
+    // Apply date range filter
+    if (filterFromDate != null && filterFromDate.isNotEmpty) {
+      filteredInvoices = filteredInvoices.where((invoice) {
+        return _isDateAfterOrEqual(invoice.invoiceDate, filterFromDate);
+      }).toList();
+      debugPrint(
+          "After from date filter: ${filteredInvoices.length} invoices after '$filterFromDate'");
+    }
 
-  if (filterToDate != null && filterToDate.isNotEmpty) {
-    filteredInvoices = filteredInvoices.where((invoice) {
-      return _isDateBeforeOrEqual(invoice.invoiceDate, filterToDate);
-    }).toList();
-    debugPrint(
-        "After to date filter: ${filteredInvoices.length} invoices before '$filterToDate'");
-  }
+    if (filterToDate != null && filterToDate.isNotEmpty) {
+      filteredInvoices = filteredInvoices.where((invoice) {
+        return _isDateBeforeOrEqual(invoice.invoiceDate, filterToDate);
+      }).toList();
+      debugPrint(
+          "After to date filter: ${filteredInvoices.length} invoices before '$filterToDate'");
+    }
 
     // Apply status filter
     if (filterStatus != null && filterStatus.isNotEmpty) {
@@ -263,37 +262,37 @@ class InvoiceProvider extends ChangeNotifier {
         return invoice.status.toLowerCase() == filterStatus.toLowerCase();
       }).toList();
     }
-  //     if (filterOrderNumber != null && filterOrderNumber.isNotEmpty) {
-  //   filteredInvoices = filteredInvoices.where((invoice) {
-  //     // Assuming you have an orderNumber field in your Invoice model
-  //     // If not, you'll need to add it to the model first
-  //     return invoice.orderNumber != null && 
-  //            invoice.orderNumber.toLowerCase().contains(filterOrderNumber.toLowerCase());
-  //   }).toList();
-  //   debugPrint(
-  //       "After order number filter: ${filteredInvoices.length} invoices match '$filterOrderNumber'");
-  // }
+    //     if (filterOrderNumber != null && filterOrderNumber.isNotEmpty) {
+    //   filteredInvoices = filteredInvoices.where((invoice) {
+    //     // Assuming you have an orderNumber field in your Invoice model
+    //     // If not, you'll need to add it to the model first
+    //     return invoice.orderNumber != null &&
+    //            invoice.orderNumber.toLowerCase().contains(filterOrderNumber.toLowerCase());
+    //   }).toList();
+    //   debugPrint(
+    //       "After order number filter: ${filteredInvoices.length} invoices match '$filterOrderNumber'");
+    // }
     // Apply phone filter
-  if (filterPhone != null && filterPhone.isNotEmpty) {
-    filteredInvoices = filteredInvoices.where((invoice) {
-      return invoice.customer.user.phone != null && 
-             invoice.customer.user.phone.contains(filterPhone);
-    }).toList();
-    debugPrint(
-        "After phone filter: ${filteredInvoices.length} invoices match '$filterPhone'");
-  }
+    if (filterPhone != null && filterPhone.isNotEmpty) {
+      filteredInvoices = filteredInvoices.where((invoice) {
+        return invoice.customer.user.phone != null &&
+            invoice.customer.user.phone.contains(filterPhone);
+      }).toList();
+      debugPrint(
+          "After phone filter: ${filteredInvoices.length} invoices match '$filterPhone'");
+    }
 
-  // Apply email filter
-  if (filterEmail != null && filterEmail.isNotEmpty) {
-    filteredInvoices = filteredInvoices.where((invoice) {
-      return invoice.customer.user.email != null && 
-             invoice.customer.user.email.toLowerCase().contains(filterEmail.toLowerCase());
-    }).toList();
-    debugPrint(
-        "After email filter: ${filteredInvoices.length} invoices match '$filterEmail'");
-  }
-
-
+    // Apply email filter
+    if (filterEmail != null && filterEmail.isNotEmpty) {
+      filteredInvoices = filteredInvoices.where((invoice) {
+        return invoice.customer.user.email != null &&
+            invoice.customer.user.email
+                .toLowerCase()
+                .contains(filterEmail.toLowerCase());
+      }).toList();
+      debugPrint(
+          "After email filter: ${filteredInvoices.length} invoices match '$filterEmail'");
+    }
 
     // Update total pages
     _totalPages = (filteredInvoices.length / _itemsPerPage).ceil();
@@ -379,23 +378,25 @@ class InvoiceProvider extends ChangeNotifier {
       }).toList();
     }
     if (filterPhone != null && filterPhone.isNotEmpty) {
-    filteredReceipts = filteredReceipts.where((receipt) {
-      return receipt.customer.user.phone != null && 
-             receipt.customer.user.phone.contains(filterPhone);
-    }).toList();
-    debugPrint(
-        "After phone filter: ${filteredReceipts.length} invoices match '$filterPhone'");
-  }
+      filteredReceipts = filteredReceipts.where((receipt) {
+        return receipt.customer.user.phone != null &&
+            receipt.customer.user.phone.contains(filterPhone);
+      }).toList();
+      debugPrint(
+          "After phone filter: ${filteredReceipts.length} invoices match '$filterPhone'");
+    }
 
-  // Apply email filter
-  if (filterEmail != null && filterEmail.isNotEmpty) {
-    filteredReceipts = filteredReceipts.where((receipt) {
-      return receipt.customer.user.email != null && 
-             receipt.customer.user.email.toLowerCase().contains(filterEmail.toLowerCase());
-    }).toList();
-    debugPrint(
-        "After email filter: ${filteredReceipts.length} invoices match '$filterEmail'");
-  }
+    // Apply email filter
+    if (filterEmail != null && filterEmail.isNotEmpty) {
+      filteredReceipts = filteredReceipts.where((receipt) {
+        return receipt.customer.user.email != null &&
+            receipt.customer.user.email
+                .toLowerCase()
+                .contains(filterEmail.toLowerCase());
+      }).toList();
+      debugPrint(
+          "After email filter: ${filteredReceipts.length} invoices match '$filterEmail'");
+    }
 
     // Apply payment reference filter
     if (filterPaymentReference != null && filterPaymentReference.isNotEmpty) {
@@ -1032,27 +1033,74 @@ class InvoiceProvider extends ChangeNotifier {
       // Handle exceptions accordingly
     }
   }
+
+  List<String> getStatusOptions() {
+    if (_allInvoices == null || _allInvoices!.isEmpty) {
+      return ["All Status"];
+    }
+
+    final uniqueStatuses = _allInvoices!
+        .map((invoice) => invoice.status)
+        .where((status) => status.isNotEmpty)
+        .toSet()
+        .toList();
+
+    uniqueStatuses.sort();
+    return ["All Status", ...uniqueStatuses];
+  }
+
+  List<String> getReceiptStatusOptions() {
+    if (_allReceipts == null || _allReceipts!.isEmpty) {
+      return ["All Status"];
+    }
+
+    final uniqueStatuses = _allReceipts!
+        .map((receipt) => receipt.receiptStatus)
+        .where((status) => status.isNotEmpty)
+        .toSet()
+        .toList();
+
+    uniqueStatuses.sort();
+    return ["All Status", ...uniqueStatuses];
+  }
+
+  List<String> getPaymentMethodOptions() {
+    if (_allReceipts == null || _allReceipts!.isEmpty) {
+      return ["All Payment Methods"];
+    }
+
+    final uniqueMethods = _allReceipts!
+        .map((receipt) => receipt.paymentMethod)
+        .where((method) => method != null && method.isNotEmpty)
+        .map((method) => method!)
+        .toSet()
+        .toList();
+
+    uniqueMethods.sort();
+    return ["All Payment Methods", ...uniqueMethods];
+  }
 }
+
 bool _isDateAfterOrEqual(String invoiceDate, String compareDate) {
   try {
     // Parse dates in DD/MM/YYYY format
     List<String> invoiceParts = invoiceDate.split('/');
     List<String> compareParts = compareDate.split('/');
-    
+
     DateTime invoiceDateTime = DateTime(
       int.parse(invoiceParts[2]), // year
       int.parse(invoiceParts[1]), // month
       int.parse(invoiceParts[0]), // day
     );
-    
+
     DateTime compareDateTime = DateTime(
       int.parse(compareParts[2]), // year
       int.parse(compareParts[1]), // month
       int.parse(compareParts[0]), // day
     );
-    
-    return invoiceDateTime.isAfter(compareDateTime) || 
-           invoiceDateTime.isAtSameMomentAs(compareDateTime);
+
+    return invoiceDateTime.isAfter(compareDateTime) ||
+        invoiceDateTime.isAtSameMomentAs(compareDateTime);
   } catch (e) {
     debugPrint("Error parsing dates: $e");
     return false;
@@ -1064,21 +1112,21 @@ bool _isDateBeforeOrEqual(String invoiceDate, String compareDate) {
     // Parse dates in DD/MM/YYYY format
     List<String> invoiceParts = invoiceDate.split('/');
     List<String> compareParts = compareDate.split('/');
-    
+
     DateTime invoiceDateTime = DateTime(
       int.parse(invoiceParts[2]), // year
       int.parse(invoiceParts[1]), // month
       int.parse(invoiceParts[0]), // day
     );
-    
+
     DateTime compareDateTime = DateTime(
       int.parse(compareParts[2]), // year
       int.parse(compareParts[1]), // month
       int.parse(compareParts[0]), // day
     );
-    
-    return invoiceDateTime.isBefore(compareDateTime) || 
-           invoiceDateTime.isAtSameMomentAs(compareDateTime);
+
+    return invoiceDateTime.isBefore(compareDateTime) ||
+        invoiceDateTime.isAtSameMomentAs(compareDateTime);
   } catch (e) {
     debugPrint("Error parsing dates: $e");
     return false;
