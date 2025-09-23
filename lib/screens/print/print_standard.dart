@@ -1103,14 +1103,20 @@ class StandardPrinter {
           //   ),
           // ),
           // pw.SizedBox(height: 5),
-          if (customerName != null && customerName.isNotEmpty)
-            pw.Text('Name: $customerName', style: customerDetailStyle),
-          if (customerPhone != null && customerPhone.isNotEmpty)
-            pw.Text('Phone: $customerPhone', style: customerDetailStyle),
+          // Show Name and Phone on a single line without labels when both are present
+          if ((customerName != null && customerName.isNotEmpty) &&
+              (customerPhone != null && customerPhone.isNotEmpty))
+            pw.Text('$customerName - $customerPhone', style: customerDetailStyle)
+          else ...[
+            if (customerName != null && customerName.isNotEmpty)
+              pw.Text(customerName, style: customerDetailStyle),
+            if (customerPhone != null && customerPhone.isNotEmpty)
+              pw.Text(customerPhone, style: customerDetailStyle),
+          ],
           // if (customerEmail != null && customerEmail.isNotEmpty)
           //   pw.Text('Email: $customerEmail', style: customerDetailStyle),
           if (customerAddress != null && customerAddress.isNotEmpty)
-            pw.Text('Address: $customerAddress', style: customerDetailStyle),
+            pw.Text(customerAddress, style: customerDetailStyle),
         ],
       ),
     );
