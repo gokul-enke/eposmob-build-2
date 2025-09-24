@@ -296,7 +296,9 @@ class _SalesScreenState extends State<SalesScreen> {
         customerName: orderData.customerDetails?.name,
         customerPhone: orderData.customerDetails?.phone,
         customerEmail: orderData.customerDetails?.email,
-        customerAddress: orderData.customerDetails?.address?.toString(),
+        customerAddress: orderData.customerDetails?.address?.isNotEmpty == true
+            ? orderData.customerDetails!.address!.join(', ')
+            : null,
       );
 
       // Close loading dialog
@@ -699,7 +701,9 @@ class _SalesScreenState extends State<SalesScreen> {
         customerName: orderData.customerDetails?.name,
         customerPhone: orderData.customerDetails?.phone,
         customerEmail: orderData.customerDetails?.email,
-        customerAddress: orderData.customerDetails?.address?.toString(),
+        customerAddress: orderData.customerDetails?.address?.isNotEmpty == true
+            ? orderData.customerDetails!.address!.join(', ')
+            : null,
       );
 
       if (pdfFile == null) {
