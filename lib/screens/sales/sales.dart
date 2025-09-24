@@ -452,7 +452,7 @@ class _SalesScreenState extends State<SalesScreen> {
                   Navigator.of(context).pop();
                   // Navigate to WhatsApp settings
                   Get.find<SideBarController>().index.value =
-                      28; // Adjust this index to your WhatsApp settings page
+                      63; // Adjust this index to your WhatsApp settings page
                 },
                 child: const Text('Connect WhatsApp'),
               ),
@@ -1523,46 +1523,10 @@ Powered by CloudPOS''',
                                             ),
                                             onTap: () async {
                                               Navigator.pop(ctx);
-                                              final String waUrl = intlPhone !=
-                                                      null
-                                                  ? 'https://wa.me/$intlPhone?text=$encodedMessage'
-                                                  : 'https://wa.me/?text=$encodedMessage';
-                                              final uri = Uri.parse(waUrl);
-                                              if (await canLaunchUrl(uri)) {
-                                                await launchUrl(uri,
-                                                    mode: LaunchMode
-                                                        .externalApplication);
-                                              } else {
-                                                if (context.mounted) {
-                                                  showScaffoldError(
-                                                    context: context,
-                                                    message:
-                                                        'Could not open WhatsApp. Please make sure WhatsApp is installed.',
-                                                  );
-                                                }
-                                              }
-                                            },
-                                          ),
-                                          ListTile(
-                                            leading: CircleAvatar(
-                                              radius: 18,
-                                              backgroundColor: const Color(
-                                                  0x1A25D366), // ~10% opacity WhatsApp green
-                                              child: Icon(
-                                                Icons.smart_toy,
-                                                color: const Color(0xFF25D366),
-                                              ),
-                                            ),
-                                            title: Text(
-                                              intlPhone != null
-                                                  ? 'Send via WhatsApp Bot ($intlPhone)'
-                                                  : 'Send via WhatsApp Bot',
-                                            ),
-                                            onTap: () async {
-                                              Navigator.pop(ctx);
                                               await _shareViaWhatsAppBot(order);
                                             },
                                           ),
+                                          
                                           ListTile(
                                             leading: const CircleAvatar(
                                               radius: 18,
