@@ -56,7 +56,7 @@ class WhatsappSettingsScreen extends StatelessWidget {
                         maxCrossAxisExtent: isWide ? 520 : 440,
                         mainAxisSpacing: 16,
                         crossAxisSpacing: 16,
-                        childAspectRatio: isWide ? 1.2 : 1.4,
+                        childAspectRatio: isWide ? 0.9 : 1.1,
                       ),
                       children: [
                         // Connection Card
@@ -87,26 +87,50 @@ class WhatsappSettingsScreen extends StatelessWidget {
                                             decoration: BoxDecoration(
                                               color: ctrl.connected.value
                                                   ? const Color(0xFF25D366).withOpacity(0.12)
-                                                  : Colors.orange.withOpacity(0.12),
+                                                  : ctrl.isConnecting.value
+                                                      ? Colors.blue.withOpacity(0.12)
+                                                      : Colors.orange.withOpacity(0.12),
                                               borderRadius: BorderRadius.circular(999),
                                               border: Border.all(
-                                                color: ctrl.connected.value ? const Color(0xFF25D366) : Colors.orange,
+                                                color: ctrl.connected.value 
+                                                    ? const Color(0xFF25D366) 
+                                                    : ctrl.isConnecting.value
+                                                        ? Colors.blue
+                                                        : Colors.orange,
                                                 width: 0.8,
                                               ),
                                             ),
                                             child: Text(
-                                              ctrl.connected.value ? 'Connected' : 'Not Connected',
+                                              ctrl.connected.value 
+                                                  ? 'Connected' 
+                                                  : ctrl.isConnecting.value
+                                                      ? 'Connecting...'
+                                                      : 'Not Connected',
                                               style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s12,
                                                 0.18,
-                                                ctrl.connected.value ? const Color(0xFF128C7E) : Colors.orange,
+                                                ctrl.connected.value 
+                                                    ? const Color(0xFF128C7E) 
+                                                    : ctrl.isConnecting.value
+                                                        ? Colors.blue
+                                                        : Colors.orange,
                                               ),
                                             ),
                                           )),
                                     ],
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 8),
+                                  Obx(() => Text(
+                                        'Status: ${ctrl.connectionStatus.value}',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          FontSize.s11,
+                                          0.16,
+                                          Colors.grey.shade600,
+                                        ),
+                                      )),
+                                  const SizedBox(height: 4),
                                   Text(
                                     'Scan the QR code from WhatsApp on your phone (Linked Devices) to connect. First desktop launch may take time to download Chromium.',
                                     style: buildCustomStyle(
@@ -267,6 +291,30 @@ class WhatsappSettingsScreen extends StatelessWidget {
                                             },
                                             child: const Text('Reset'),
                                           ),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.blue,
+                                              foregroundColor: Colors.white,
+                                            ),
+                                            onPressed: ctrl.isConnecting.value
+                                                ? null
+                                                : () {
+                                                    ctrl.forceRefresh();
+                                                  },
+                                            child: const Text('Force Refresh'),
+                                          ),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.purple,
+                                              foregroundColor: Colors.white,
+                                            ),
+                                            onPressed: ctrl.isConnecting.value
+                                                ? null
+                                                : () {
+                                                    ctrl.quickConnect();
+                                                  },
+                                            child: const Text('Quick Connect'),
+                                          ),
                                           if (ctrl.error.value.contains('Failed to unzip') || 
                                               ctrl.error.value.contains('chrome binaries'))
                                             ElevatedButton(
@@ -337,7 +385,7 @@ class WhatsappSettingsScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Connection History',
+                                  'Connection History & Settings',
                                   style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s16,
@@ -348,6 +396,7 @@ class WhatsappSettingsScreen extends StatelessWidget {
                                 const SizedBox(height: 12),
                                 Obx(() {
                                   final lastConnected = ctrl.lastConnected.value;
+                                  final reconnectAttempts = ctrl.reconnectAttempts.value;
                                   return Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -370,9 +419,154 @@ class WhatsappSettingsScreen extends StatelessWidget {
                                           ColorManager.textColor,
                                         ),
                                       ),
+                                      if (reconnectAttempts > 0) ...[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Reconnect Attempts: $reconnectAttempts/5',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.regular,
+                                            FontSize.s12,
+                                            0.18,
+                                            Colors.orange.shade700,
+                                          ),
+                                        ),
+                                      ],
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Auto-Reconnect',
+                                            style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s14,
+                                              0.20,
+                                              ColorManager.textColor,
+                                            ),
+                                          ),
+                                          Switch(
+                                            value: ctrl.autoReconnect.value,
+                                            onChanged: (value) {
+                                              ctrl.toggleAutoReconnect();
+                                            },
+                                            activeColor: const Color(0xFF25D366),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Automatically reconnect WhatsApp when connection is lost',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          FontSize.s11,
+                                          0.16,
+                                          Colors.grey.shade600,
+                                        ),
+                                      ),
                                     ],
                                   );
                                 }),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Test Message Card
+                        BuildBoxShadowContainer(
+                          circleRadius: 12,
+                          offsetValue: const Offset(1, 1),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Test Message',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s16,
+                                    0.24,
+                                    ColorManager.textColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Send a test message to verify WhatsApp integration is working.',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s12,
+                                    0.18,
+                                    ColorManager.textColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                _PhoneAndMessageForm(ctrl: ctrl),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Development Info Card
+                        BuildBoxShadowContainer(
+                          circleRadius: 12,
+                          offsetValue: const Offset(1, 1),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline,
+                                      color: Colors.blue.shade600,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Development Info',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s16,
+                                        0.24,
+                                        ColorManager.textColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.blue.shade200),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Hot Restart Behavior',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.semiBold,
+                                          FontSize.s13,
+                                          0.19,
+                                          Colors.blue.shade800,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '• Hot restart disconnects WhatsApp (Flutter limitation)\n• App detects hot restart and attempts auto-reconnect\n• Use "Quick Connect" for faster reconnection\n• In production, connections persist across app restarts',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          FontSize.s12,
+                                          0.18,
+                                          Colors.blue.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
                           ),

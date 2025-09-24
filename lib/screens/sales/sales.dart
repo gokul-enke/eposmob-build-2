@@ -22,6 +22,7 @@ import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/providers/whatsapp_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/print/print_standard.dart';
@@ -399,6 +400,482 @@ class _SalesScreenState extends State<SalesScreen> {
         showScaffoldError(
           context: context,
           message: 'Error generating or sharing PDF invoice. Please try again.',
+        );
+      }
+    }
+  }
+
+  Future<void> _shareViaWhatsAppBot(ListOrderModelData order) async {
+    try {
+      final whatsappProvider =
+          Provider.of<WhatsappProvider>(context, listen: false);
+
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
+      );
+
+      // Check WhatsApp connection
+      if (!whatsappProvider.isWhatsAppAvailable()) {
+        Navigator.of(context, rootNavigator: true).pop();
+
+        // Show connection dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.warning, color: Colors.orange),
+                const SizedBox(width: 8),
+                const Text('WhatsApp Not Connected'),
+              ],
+            ),
+            content: Text(
+              'WhatsApp bot is not connected. Would you like to connect now?\n\n'
+              'Status: ${whatsappProvider.connectionStatus}',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  // Navigate to WhatsApp settings
+                  Get.find<SideBarController>().index.value =
+                      28; // Adjust this index to your WhatsApp settings page
+                },
+                child: const Text('Connect WhatsApp'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      // Fetch order details
+      final String ordersId = order.orderNumber.toString();
+      final String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      final OrderDetailsresponse = await SalesProvider()
+          .listOrderDetails(context, ordersId, accessToken ?? "");
+
+      if (OrderDetailsresponse["status"] != "success") {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Unable to fetch order details.',
+          );
+        }
+        return;
+      }
+
+      final OrderDetailsModel details =
+          OrderDetailsModel.fromJson(OrderDetailsresponse);
+      final orderData = details.data;
+
+      if (orderData?.customerDetails?.phone == null ||
+          orderData!.customerDetails!.phone!.isEmpty) {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Customer phone number not available.',
+          );
+        }
+        return;
+      }
+
+      // Prepare customer info
+      final customerPhone = orderData.customerDetails!.phone!;
+      final customerName = orderData.customerDetails?.name ?? 'Valued Customer';
+      final totalAmount = orderData.priceSummary?.netPayable?.toString() ??
+          orderData.priceSummary?.netTotal?.toString() ??
+          order.grantTotal ??
+          '0.00';
+      final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+              .appSettings
+              ?.currency ??
+          'INR';
+
+      // Create invoice URL if available
+      String? invoiceUrl;
+      if (order.invoiceHash != null) {
+        invoiceUrl = '${APPUrl.baseURL}/invoice-download/${order.invoiceHash}';
+      }
+
+      // Close loading dialog
+      Navigator.of(context, rootNavigator: true).pop();
+
+      // Show options dialog
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.message, color: Color(0xFF25D366)),
+              const SizedBox(width: 8),
+              const Text('Send via WhatsApp Bot'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Customer: $customerName'),
+              Text('Phone: $customerPhone'),
+              Text('Order: #${order.orderNumber}'),
+              Text('Amount: $currency $totalAmount'),
+              const SizedBox(height: 16),
+              const Text(
+                'Choose what to send:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                // Send invoice message with URL
+                final success = await whatsappProvider.sendInvoiceMessage(
+                  phoneNumber: customerPhone,
+                  orderNumber: order.orderNumber.toString(),
+                  customerName: customerName,
+                  totalAmount: '$currency $totalAmount',
+                  invoiceUrl: invoiceUrl,
+                );
+
+                if (context.mounted) {
+                  if (success) {
+                    showScaffold(
+                      context: context,
+                      message: 'Invoice sent via WhatsApp to $customerPhone',
+                    );
+                  } else {
+                    showScaffoldError(
+                      context: context,
+                      message:
+                          'Failed to send WhatsApp message: ${whatsappProvider.lastError}',
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF25D366),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Send Invoice Link'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _sendWhatsAppWithPDF(order, whatsappProvider);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Send with PDF'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog if still showing
+      if (Navigator.canPop(context)) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      debugPrint('Error in WhatsApp bot sharing: $e');
+      if (context.mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Error sending WhatsApp message. Please try again.',
+        );
+      }
+    }
+  }
+
+  Future<void> _sendWhatsAppWithPDF(
+      ListOrderModelData order, WhatsappProvider whatsappProvider) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
+      );
+
+      // Generate PDF (reuse the existing PDF generation logic)
+      final String ordersId = order.orderNumber.toString();
+      final String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      final OrderDetailsresponse = await SalesProvider()
+          .listOrderDetails(context, ordersId, accessToken ?? "");
+
+      if (OrderDetailsresponse["status"] != "success") {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Unable to fetch order details for PDF generation.',
+          );
+        }
+        return;
+      }
+
+      final OrderDetailsModel details =
+          OrderDetailsModel.fromJson(OrderDetailsresponse);
+      final orderData = details.data;
+
+      if (orderData == null || orderData.cart?.cartItems == null) {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Order details not available for PDF generation.',
+          );
+        }
+        return;
+      }
+
+      // Get app settings and document configuration
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      final docConfigProvider =
+          Provider.of<DocumentConfigProvider>(context, listen: false);
+
+      final appSettings = appSettingsProvider.appSettings;
+      final billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
+
+      if (appSettings == null || billDocumentConfig == null) {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'App settings or document configuration not loaded.',
+          );
+        }
+        return;
+      }
+
+      // Create StandardPrinter instance and generate PDF
+      debugPrint('🔄 Starting PDF generation for WhatsApp sharing...');
+      final standardPrinter = StandardPrinter(context);
+
+      final File? pdfFile = await standardPrinter.generatePDFForSharing(
+        cartItems: orderData.cart!.cartItems!,
+        formattedTotal: orderData.priceSummary?.netPayable?.toString() ??
+            orderData.priceSummary?.netTotal?.toString() ??
+            order.grantTotal ??
+            '0.00',
+        savedTotal: orderData.priceSummary?.savedTotal?.toString() ?? '0.00',
+        discountAmount: orderData.priceSummary?.discount?.toString() ?? '0.00',
+        orderDate: orderData.orderDate ?? DateTime.now().toIso8601String(),
+        orderNumber:
+            orderData.orderNumber?.toString() ?? order.orderNumber.toString(),
+        isFromLocalStorage: false,
+        selectedPaperSize: 'A4',
+        billDocumentConfig: billDocumentConfig,
+        customerCareNumber: appSettings.customerCarePhone,
+        customerCareEmail: appSettings.customerCareEmail,
+        customerName: orderData.customerDetails?.name,
+        customerPhone: orderData.customerDetails?.phone,
+        customerEmail: orderData.customerDetails?.email,
+        customerAddress: orderData.customerDetails?.address?.toString(),
+      );
+
+      if (pdfFile == null) {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'Failed to generate PDF invoice.',
+          );
+        }
+        return;
+      }
+
+      // CRITICAL FIX: Ensure PDF file is completely written and accessible
+      debugPrint('✅ PDF generated: ${pdfFile.path}');
+      
+      // Wait for file system to sync (important for WhatsApp sharing)
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Verify PDF file integrity before sharing
+      if (!await pdfFile.exists()) {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'PDF file was not created properly.',
+          );
+        }
+        return;
+      }
+      
+      final fileSize = await pdfFile.length();
+      debugPrint('📄 PDF file size: $fileSize bytes');
+      
+      if (fileSize < 100) {
+        debugPrint('⚠️  WARNING: PDF file is too small ($fileSize bytes)');
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'PDF file appears to be corrupted or empty ($fileSize bytes).',
+          );
+        }
+        return;
+      }
+      
+      // Test file readability
+      try {
+        final testBytes = await pdfFile.readAsBytes();
+        if (testBytes.isEmpty) {
+          throw Exception('PDF file is empty');
+        }
+        debugPrint('✅ PDF file verification successful: ${testBytes.length} bytes');
+      } catch (e) {
+        debugPrint('❌ PDF file verification failed: $e');
+        Navigator.of(context, rootNavigator: true).pop();
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: 'PDF file verification failed: ${e.toString()}',
+          );
+        }
+        return;
+      }
+
+      // Send WhatsApp message with PDF info
+      final customerPhone = orderData.customerDetails!.phone!;
+      final customerName = orderData.customerDetails?.name ?? 'Valued Customer';
+      final totalAmount = orderData.priceSummary?.netPayable?.toString() ??
+          orderData.priceSummary?.netTotal?.toString() ??
+          order.grantTotal ??
+          '0.00';
+      final currency = appSettings.currency ?? 'INR';
+
+      // Close loading dialog
+      Navigator.of(context, rootNavigator: true).pop();
+
+      debugPrint('🚀 Starting WhatsApp PDF sharing...');
+      debugPrint('📱 Target phone: $customerPhone');
+      debugPrint('📄 PDF file ready: ${pdfFile.path}');
+      debugPrint('📄 File size: ${await pdfFile.length()} bytes');
+      
+      // Send via WhatsApp bot with actual PDF file
+      final success = await whatsappProvider.sendPDFFile(
+        phoneNumber: customerPhone,
+        pdfFile: pdfFile,
+        caption: '''🧾 *Invoice for Order #${order.orderNumber}*
+
+Dear $customerName,
+
+Thank you for your purchase!
+
+📋 Order Number: #${order.orderNumber}
+💰 Total Amount: $currency $totalAmount
+📅 Date: ${DateTime.now().toString().split(' ')[0]}
+
+Please find your invoice attached.
+
+We appreciate your business!
+
+---
+Powered by CloudPOS''',
+        showSuccessMessage: false, // Handle success message ourselves
+      );
+
+      if (context.mounted) {
+        if (success) {
+          showScaffold(
+            context: context,
+            message:
+                'Invoice PDF sent successfully via WhatsApp to $customerPhone!\n\nFile: ${pdfFile.path.split('/').last}\nSize: ${await pdfFile.length()} bytes',
+          );
+
+          // Optionally open the PDF file location
+          if (Platform.isWindows) {
+            try {
+              await Process.start(
+                'explorer.exe',
+                ['/select,', pdfFile.path.replaceAll('/', '\\')],
+                mode: ProcessStartMode.detached,
+              );
+            } catch (e) {
+              debugPrint('Could not open file location: $e');
+            }
+          }
+        } else {
+          // If PDF sending failed, try fallback with message and PDF info
+          debugPrint('🔄 PDF file sending failed, trying fallback approach...');
+          
+          final fallbackSuccess = await whatsappProvider.sendMessageWithPDF(
+            phoneNumber: customerPhone,
+            message: '''🧾 *Invoice for Order #${order.orderNumber}*
+
+Dear $customerName,
+
+Thank you for your purchase!
+
+📋 Order Number: #${order.orderNumber}
+💰 Total Amount: $currency $totalAmount
+📅 Date: ${DateTime.now().toString().split(' ')[0]}
+
+PDF invoice has been generated and saved.
+
+We appreciate your business!
+
+---
+Powered by CloudPOS''',
+            pdfFile: pdfFile,
+          );
+          
+          if (fallbackSuccess) {
+            showScaffold(
+              context: context,
+              message:
+                  'Invoice message sent via WhatsApp to $customerPhone\n\nPDF saved to: ${pdfFile.path}',
+            );
+          } else {
+            showScaffoldError(
+              context: context,
+              message:
+                  'Failed to send WhatsApp message: ${whatsappProvider.lastError}',
+            );
+          }
+        }
+      }
+    } catch (e) {
+      // Close loading dialog if still showing
+      if (Navigator.canPop(context)) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      debugPrint('Error sending WhatsApp with PDF: $e');
+      if (context.mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Error generating or sending PDF. Please try again.',
         );
       }
     }
@@ -1027,7 +1504,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                                   0x1A25D366), // ~10% opacity WhatsApp green
                                               child: WebsafeSvg.asset(
                                                 ImageAssets.whatsappIcon,
-                                                colorFilter: const ColorFilter.mode(
+                                                colorFilter:
+                                                    const ColorFilter.mode(
                                                   Colors.green,
                                                   BlendMode.srcIn,
                                                 ),
@@ -1059,6 +1537,26 @@ class _SalesScreenState extends State<SalesScreen> {
                                                   );
                                                 }
                                               }
+                                            },
+                                          ),
+                                          ListTile(
+                                            leading: CircleAvatar(
+                                              radius: 18,
+                                              backgroundColor: const Color(
+                                                  0x1A25D366), // ~10% opacity WhatsApp green
+                                              child: Icon(
+                                                Icons.smart_toy,
+                                                color: const Color(0xFF25D366),
+                                              ),
+                                            ),
+                                            title: Text(
+                                              intlPhone != null
+                                                  ? 'Send via WhatsApp Bot ($intlPhone)'
+                                                  : 'Send via WhatsApp Bot',
+                                            ),
+                                            onTap: () async {
+                                              Navigator.pop(ctx);
+                                              await _shareViaWhatsAppBot(order);
                                             },
                                           ),
                                           ListTile(
