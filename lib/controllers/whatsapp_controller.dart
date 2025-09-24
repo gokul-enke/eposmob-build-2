@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:whatsapp_bot_flutter/whatsapp_bot_flutter.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 
 class WhatsappController extends GetxController {
   final RxString qrCode = ''.obs;
@@ -38,6 +39,25 @@ class WhatsappController extends GetxController {
   static const String _autoReconnectKey = 'whatsapp_auto_reconnect';
   static const String _hotRestartDetectionKey = 'whatsapp_hot_restart';
   static const String _sessionTimestampKey = 'whatsapp_session_timestamp';
+
+  // UI helpers to show messages via overlay when a context is available
+  void _showSuccess(String message) {
+    final ctx = Get.context;
+    if (ctx != null) {
+      showScaffold(context: ctx, message: message);
+    } else {
+      debugPrint('Success: $message');
+    }
+  }
+
+  void _showError(String message) {
+    final ctx = Get.context;
+    if (ctx != null) {
+      showScaffoldError(context: ctx, message: message);
+    } else {
+      debugPrint('Error: $message');
+    }
+  }
 
   Future<void> connect() async {
     if (isConnecting.value) {
@@ -243,25 +263,13 @@ class WhatsappController extends GetxController {
       debugPrint('📱 WhatsApp: Message sent successfully');
       
       // Show success message
-      Get.snackbar(
-        'Success',
-        'Message sent to $phone',
-        backgroundColor: const Color(0xFF25D366),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
-      );
+      _showSuccess('Message sent to $phone');
     } catch (e) {
       debugPrint('📱 WhatsApp: Error sending message: $e');
       error.value = 'Failed to send message: ${e.toString()}';
       
       // Show error message
-      Get.snackbar(
-        'Error',
-        'Failed to send message: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 5),
-      );
+      _showError('Failed to send message: ${e.toString()}');
     }
   }
 
@@ -370,13 +378,7 @@ class WhatsappController extends GetxController {
           connectionStatus.value = 'Attempting Quick Reconnect...';
           
           // Show user-friendly message for development
-          Get.snackbar(
-            'Development Mode',
-            'Hot restart detected. Attempting to reconnect WhatsApp...',
-            backgroundColor: Colors.blue,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 4),
-          );
+          _showSuccess('Hot restart detected. Attempting to reconnect WhatsApp...');
         } else {
           debugPrint('💾 WhatsApp: Found saved session, attempting to restore...');
           connectionStatus.value = 'Restoring Session...';
@@ -392,13 +394,7 @@ class WhatsappController extends GetxController {
         // Auto-connect if this seems like a hot restart and user had connection
         if (isLikelyHotRestart && lastConnectedTime != null) {
           debugPrint('💡 WhatsApp: Auto-connecting after hot restart...');
-          Get.snackbar(
-            'Auto-Connecting',
-            'Reconnecting WhatsApp after hot restart...',
-            backgroundColor: const Color(0xFF25D366),
-            colorText: Colors.white,
-            duration: const Duration(seconds: 3),
-          );
+          _showSuccess('Reconnecting WhatsApp after hot restart...');
           await Future.delayed(const Duration(seconds: 1));
           await connect();
         }
@@ -419,13 +415,7 @@ class WhatsappController extends GetxController {
       await _client?.logout();
       reset();
       
-      Get.snackbar(
-        'Disconnected',
-        'WhatsApp has been disconnected successfully',
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
-      );
+      _showSuccess('WhatsApp has been disconnected successfully');
     } catch (e) {
       debugPrint('🔌 WhatsApp: Error during disconnect: $e');
       error.value = 'Disconnect failed: ${e.toString()}';

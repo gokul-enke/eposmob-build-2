@@ -7,6 +7,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:get/get.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 
 import '../../controllers/whatsapp_controller.dart';
 
@@ -491,8 +492,15 @@ class WhatsappSettingsScreen extends StatelessWidget {
                                     ),
                                     Switch(
                                       value: ctrl.autoReconnect.value,
-                                      onChanged: (value) =>
-                                          ctrl.toggleAutoReconnect(),
+                                      onChanged: (value) {
+                                        ctrl.toggleAutoReconnect();
+                                        showScaffold(
+                                          context: context,
+                                          message: ctrl.autoReconnect.value
+                                              ? 'Auto-Reconnect enabled'
+                                              : 'Auto-Reconnect disabled',
+                                        );
+                                      },
                                       activeColor: const Color(0xFF25D366),
                                     ),
                                   ],
