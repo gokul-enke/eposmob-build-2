@@ -133,23 +133,6 @@ class TransactionReportStandardPrinter {
       debugPrint("showStatus: ${updatedSettings?['showStatus']?.visible}");
       debugPrint("showTax: ${updatedSettings?['showTax']?.visible}");
 
-      // debugPrint("showRate: ${updatedSettings?['showRate']?.visible}");
-      // debugPrint("showTotal: ${updatedSettings?['showTotal']?.visible}");
-      // debugPrint("showDiscount: ${updatedSettings?['showDiscount']?.visible}");
-      // debugPrint(
-      //     "showNetAmount: ${updatedSettings?['showNetAmount']?.visible}");
-      // debugPrint("showMRPTotal: ${updatedSettings?['showMRPTotal']?.visible}");
-      // debugPrint("showSaved: ${updatedSettings?['showSaved']?.visible}");
-      // debugPrint(
-      //     "showAmountInWords: ${updatedSettings?['showAmountInWords']?.visible}");
-      // debugPrint(
-      //     "showItemsCount: ${updatedSettings?['showItemsCount']?.visible}");
-      // debugPrint(
-      //     "showThankYouMessage: ${updatedSettings?['showThankYouMessage']?.visible}");
-      // debugPrint("showQRCode: ${updatedSettings?['showQRCode']?.visible}");
-      // debugPrint(
-      //     "showTermsConditions: ${updatedSettings?['showTermsConditions']?.visible}");
-
       // Access Payment Gateways Provider for QR code link
       final paymentGatewaysProvider =
           Provider.of<PaymentGatewaysProvider>(context, listen: false);
@@ -176,64 +159,74 @@ class TransactionReportStandardPrinter {
       PdfPageFormat pageFormat =
           selectedPaperSize == 'A4' ? PdfPageFormat.a4 : PdfPageFormat.a5;
 
-      // Define styles with adjustments for A5 vs A4 - optimized for space and professional look
+      // Define styles to match PHP template with better readability
       final headerStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5'
-            ? 16.0
-            : 18.0, // Increased for better hierarchy
+        fontSize: selectedPaperSize == 'A5' ? 16.0 : 20.0,
         fontWeight: pw.FontWeight.bold,
-        color: PdfColors.black,
+        color: PdfColor.fromHex('#2d3748'),
       );
       final subheaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5'
-            ? 9.0
-            : 11.0, // Reduced for better proportion
+        fontSize: selectedPaperSize == 'A5' ? 12.0 : 16.0,
         fontWeight: pw.FontWeight.bold,
-        color: PdfColors.black,
+        color: PdfColor.fromHex('#2d3748'),
       );
       final bodyStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5'
-            ? 6.0
-            : 8.0, // Reduced for smaller table text
-        color: PdfColors.black,
+        fontSize:
+            selectedPaperSize == 'A5' ? 8.0 : 10.0, // Increased from 6.0/8.0
+        color: PdfColors.grey700,
       );
       final smallStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 5.0 : 7.0, // Reduced further
-        color: PdfColors.black,
+        fontSize:
+            selectedPaperSize == 'A5' ? 6.0 : 8.0, // Increased from 5.0/6.0
+        color: PdfColors.grey600,
       );
       final tableHeaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5'
-            ? 6.0
-            : 8.0, // Reduced for smaller table headers
+        fontSize:
+            selectedPaperSize == 'A5' ? 9.0 : 11.0, // Increased from 7.0/9.0
         fontWeight: pw.FontWeight.bold,
-        color: PdfColors.black,
+        color: PdfColors.white,
+      );
+      final tableDataStyle = pw.TextStyle(
+        fontSize:
+            selectedPaperSize == 'A5' ? 8.0 : 10.0, // Increased from 6.0/8.0
+        color: PdfColors.grey700,
       );
       final summaryStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5'
-            ? 8.0
-            : 10.0, // Reduced for better proportion
-        fontWeight: pw.FontWeight.bold,
-        color: PdfColors.black,
+        fontSize:
+            selectedPaperSize == 'A5' ? 10.0 : 12.0, // Increased from 9.0/11.0
+        fontWeight: pw.FontWeight.normal,
+        color: PdfColor.fromHex('#2d3748'),
       );
       final netTotalStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5'
-            ? 9.0
-            : 11.0, // Reduced for better proportion
+        fontSize:
+            selectedPaperSize == 'A5' ? 10.0 : 12.0, // Increased from 9.0/11.0
         fontWeight: pw.FontWeight.bold,
-        color: PdfColors.black,
+        color: PdfColor.fromHex('#2d3748'),
       );
 
-      // Add content to a multi-page PDF with minimal margins and optimized spacing
+      // Add content to a multi-page PDF with styling to match PHP template
       pdf.addPage(
         pw.MultiPage(
           pageFormat: pageFormat,
-          margin: const pw.EdgeInsets.all(15), // Reduced from 30
+          margin: const pw.EdgeInsets.all(20),
           footer: (context) => pw.Padding(
-            padding: const pw.EdgeInsets.only(top: 5), // Reduced from 10
-            child: pw.Text(
-              'Page ${context.pageNumber} of ${context.pagesCount}',
-              style: const pw.TextStyle(fontSize: 6), // Reduced from 8
-              textAlign: pw.TextAlign.center,
+            padding: const pw.EdgeInsets.only(top: 10),
+            child: pw.Column(
+              children: [
+                pw.Divider(color: PdfColors.grey300),
+                pw.SizedBox(height: 5),
+                // Show footer if enabled
+                if (updatedSettings?['showFooter']?.visible == true)
+                  pw.Text(
+                    (updatedSettings?['showFooter']?.value as String?) ??
+                        'This is a computer-generated document. No signature is required.',
+                    style: pw.TextStyle(
+                      fontSize: 8,
+                      color: PdfColors.grey600,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+              ],
             ),
           ),
           build: (pw.Context context) => [
@@ -241,39 +234,50 @@ class TransactionReportStandardPrinter {
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                // Header with store information - compact design
+                // Header with store information - professional design to match PHP template
                 pw.Center(
                   child: pw.Column(
                     children: [
-                      // Store name
-                      pw.Text(
-                        'EPosenke',
-                        style: headerStyle,
-                      ),
-
-                      // Store description
-                      pw.Text(
-                        'Customer Transaction Report',
-                        style: pw.TextStyle(
-                          fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                      // Show header if enabled
+                      if (updatedSettings?['showHeader']?.visible == true)
+                        pw.Text(
+                          (updatedSettings?['showHeader']?.value as String?) ??
+                              'EPosenke',
+                          style: pw.TextStyle(
+                            fontSize: selectedPaperSize == 'A5' ? 20.0 : 24.0,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.grey800,
+                          ),
                         ),
+                      pw.SizedBox(height: 5),
+                      // Show subheader if enabled
+                      if (updatedSettings?['showSubheader']?.visible == true)
+                        pw.Text(
+                          (updatedSettings?['showSubheader']?.value
+                                  as String?) ??
+                              'Customer Transaction Report',
+                          style: pw.TextStyle(
+                            fontSize: selectedPaperSize == 'A5' ? 14.0 : 18.0,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.grey800,
+                          ),
+                        ),
+                      pw.SizedBox(height: 10),
+                      pw.Container(
+                        height: 2,
+                        color: PdfColors.grey800,
                       ),
                     ],
                   ),
                 ),
 
-                pw.SizedBox(height: 5), // Reduced from 10
-
-                // Date and Time Row - minimal design
-                _buildDateTimeRowPDF(selectedPaperSize, orderDate),
+                pw.SizedBox(height: 15),
 
                 // Customer Information Section - if available
                 if (customerName != null ||
                     customerPhone != null ||
                     customerEmail != null ||
-                    customerAddress != null ||
-                    fromDate != null ||
-                    toDate != null)
+                    customerAddress != null)
                   _buildCustomerDetailsPDF(
                     selectedPaperSize,
                     customerName,
@@ -286,10 +290,40 @@ class TransactionReportStandardPrinter {
                     toDate,
                   ),
 
-                // Items table - minimal design without borders
+                // Add date range information outside customer card and align to right
+                if ((fromDate != null && fromDate.isNotEmpty) ||
+                    (toDate != null && toDate.isNotEmpty))
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.end,
+                    children: [
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
+                        children: [
+                          pw.Text(
+                            'From: ${fromDate ?? 'N/A'}',
+                            style: pw.TextStyle(
+                              fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                              color: PdfColor.fromHex('#2d3748'),
+                            ),
+                          ),
+                          pw.Text(
+                            'To: ${toDate ?? 'N/A'}',
+                            style: pw.TextStyle(
+                              fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                              color: PdfColor.fromHex('#2d3748'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                pw.SizedBox(height: 15),
+
+                // Items table - professional design with borders to match PHP template
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(
-                      vertical: 5, horizontal: 8), // Reduced padding
+                      vertical: 15, horizontal: 0),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
@@ -308,7 +342,7 @@ class TransactionReportStandardPrinter {
                 _buildCartTotalRow(selectedPaperSize, cartItems,
                     isFromLocalStorage, summaryStyle),
 
-                pw.SizedBox(height: 5), // Reduced from 8
+                pw.SizedBox(height: 15),
               ],
             ),
           ],
@@ -468,62 +502,19 @@ class TransactionReportStandardPrinter {
       List<dynamic> cartItems,
       bool isFromLocalStorage,
       DocumentConfig? billDocumentConfig) {
-    // Create headers for the table based on visibility and resolved labels
-    final List<String> tableHeaders = [];
-    final Map<int, pw.Alignment> cellAlignmentsMap = {};
-    final List<double> columnWidths = [];
-    int visibleColIndex = 0;
-
-    // Add Sl.No column
-    tableHeaders.add('Sl.No');
-    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
-    columnWidths.add(1);
-
-    // Add Order Number column
-    tableHeaders.add('Order Number');
-    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
-    columnWidths.add(2);
-
-    // Add Transaction Type column
-    tableHeaders.add('Transaction Type');
-    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
-    columnWidths.add(2);
-
-    // Add Type column
-    tableHeaders.add('Type');
-    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
-    columnWidths.add(1);
-
-    // Add Amount column
-    tableHeaders.add('Amount');
-    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
-    columnWidths.add(1.5);
-
-    // Add Tax column
-    tableHeaders.add('Tax');
-    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
-    columnWidths.add(1);
-
-    // Add Status column
-    tableHeaders.add('Status');
-    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
-    columnWidths.add(1.5);
-
-    // Add Date column
-    tableHeaders.add('Date');
-    cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerLeft;
-    columnWidths.add(2);
+    // Calculate running balance
+    double runningBalance = 0.0;
 
     // Create table data based on visibility with smart product name handling
-    List<List<String>> tableData = [];
+    List<List<pw.Widget>> tableData = [];
     for (var i = 0; i < cartItems.length; i++) {
       var item = cartItems[i];
 
       String orderNumber = '';
       String transactionType = '';
       String type = '';
-      String amount = '';
-      String tax = '10'; // Default tax value as shown in example
+      double amount = 0.0;
+      String tax = '0.00';
       String status = '';
       String date = '';
 
@@ -532,7 +523,7 @@ class TransactionReportStandardPrinter {
         orderNumber = item['orderNumber'] ?? 'N/A';
         transactionType = item['transactionType'] ?? 'N/A';
         type = item['type'] ?? 'N/A';
-        amount = item['amount'] ?? '0.00';
+        amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
         status = item['status'] ?? 'N/A';
         date = item['date'] ?? 'N/A';
       } else {
@@ -548,7 +539,7 @@ class TransactionReportStandardPrinter {
               item['transactionType']?.toString() ??
               'N/A';
           type = item['type']?.toString() ?? 'N/A';
-          amount = item['amount']?.toString() ?? '0.00';
+          amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
           status = item['status']?.toString() ?? 'N/A';
           date = item['date']?.toString() ?? 'N/A';
         } else {
@@ -559,7 +550,7 @@ class TransactionReportStandardPrinter {
                 'N/A';
             transactionType = item.transactionType?.toString() ?? 'N/A';
             type = item.type?.toString() ?? 'N/A';
-            amount = item.amount?.toString() ?? '0.00';
+            amount = double.tryParse(item.amount?.toString() ?? '0') ?? 0.0;
             status = item.status?.toString() ?? 'N/A';
             date = item.date?.toString() ?? 'N/A';
           } catch (e) {
@@ -570,51 +561,196 @@ class TransactionReportStandardPrinter {
             orderNumber = 'N/A';
             transactionType = 'N/A';
             type = 'N/A';
-            amount = '0.00';
+            amount = 0.0;
             status = 'N/A';
             date = 'N/A';
           }
         }
       }
 
-      List<String> rowData = [
-        (i + 1).toString(), // Sl.No
-        orderNumber, // Order Number
-        transactionType, // Transaction Type
-        type, // Type
-        amount, // Amount
-        tax, // Tax
-        status, // Status
-        date, // Date
-      ];
+      // Update transaction type display to match PHP template
+      String displayTransactionType = transactionType;
+      if (transactionType == 'Invoice') {
+        displayTransactionType = 'Order';
+      } else if (transactionType == 'Receipt') {
+        displayTransactionType = 'Payment';
+      } else if (transactionType == 'Voucher') {
+        displayTransactionType = 'Voucher';
+      }
+
+      // Update running balance and format amounts
+      String formattedAmount = amount.toStringAsFixed(2);
+      String debitAmount =
+          (type.toLowerCase() == 'debit') ? formattedAmount : '0.00';
+      String creditAmount =
+          (type.toLowerCase() == 'credit') ? formattedAmount : '0.00';
+
+      if (type.toLowerCase() == 'debit') {
+        runningBalance -= amount;
+      } else if (type.toLowerCase() == 'credit') {
+        runningBalance += amount;
+      }
+
+      // Format date to match PHP template (d M Y, h:i A)
+      String formattedDate = date;
+      try {
+        // Try to parse and format the date if it's in a standard format
+        formattedDate = DateHelper.formatISODateToIST(date);
+      } catch (e) {
+        // Keep original date if parsing fails
+        formattedDate = date;
+      }
+
+      // Build row data
+      List<pw.Widget> rowData = [];
+
+      // Add Sl.No
+      rowData.add(pw.Text((i + 1).toString(), style: contentStyle));
+
+      // Add Date
+      rowData.add(pw.Text(formattedDate, style: contentStyle));
+
+      // Add Order Number
+      rowData.add(pw.Text(orderNumber, style: contentStyle));
+
+      // Add Transaction Type
+      rowData.add(pw.Text(displayTransactionType, style: contentStyle));
+
+      // Add Debit column with red color for debit amounts
+      rowData.add(pw.Text(debitAmount,
+          style: pw.TextStyle(
+            color: PdfColors.red800,
+            fontSize: contentStyle.fontSize,
+          )));
+
+      // Add Credit column with green color for credit amounts
+      rowData.add(pw.Text(creditAmount,
+          style: pw.TextStyle(
+            color: PdfColors.green800,
+            fontSize: contentStyle.fontSize,
+          )));
+
+      // Add Tax if enabled
+      if (displayConfig?['showTax']?.visible == true) {
+        rowData.add(pw.Text(tax, style: contentStyle));
+      }
+
+      // Add Balance
+      rowData.add(pw.Text(runningBalance.toStringAsFixed(2),
+          style: pw.TextStyle(
+            color: runningBalance < 0
+                ? PdfColors.red800
+                : runningBalance > 0
+                    ? PdfColors.green800
+                    : contentStyle.color,
+            fontSize: contentStyle.fontSize,
+          )));
+
+      // Add Status if enabled
+      if (displayConfig?['showStatus']?.visible == true) {
+        // Format status to match PHP template
+        String displayStatus = status;
+        if (status == 'SUCC') {
+          displayStatus = 'Paid';
+        } else if (status == 'FAIL') {
+          displayStatus = 'Pending';
+        } else if (status == 'INIT') {
+          displayStatus = 'Initiated';
+        }
+
+        rowData.add(pw.Text(displayStatus,
+            style: pw.TextStyle(
+              color: status == 'SUCC'
+                  ? PdfColors.green800
+                  : status == 'FAIL'
+                      ? PdfColors.red800
+                      : status == 'INIT'
+                          ? PdfColors.grey700
+                          : contentStyle.color,
+              fontWeight:
+                  status == 'SUCC' ? pw.FontWeight.bold : pw.FontWeight.normal,
+              fontSize: contentStyle.fontSize,
+            )));
+      }
 
       tableData.add(rowData);
     }
 
-    return pw.Table.fromTextArray(
-      headers: tableHeaders,
-      data: tableData,
-      headerStyle: headerStyle,
-      headerDecoration: const pw.BoxDecoration(
-        color: PdfColors.grey200,
-      ),
-      headerHeight: 20,
-      cellStyle: contentStyle,
-      cellHeight: 18,
-      cellAlignments: cellAlignmentsMap,
-      cellPadding: const pw.EdgeInsets.all(3),
+    // Create headers for the table based on visibility and resolved labels
+    final List<pw.Widget> tableHeaders = [];
+
+    // Add Sl.No column
+    tableHeaders.add(pw.Text('Sl No', style: headerStyle));
+
+    // Add Date column
+    tableHeaders.add(pw.Text('Date', style: headerStyle));
+
+    // Add Order Number column (newly added)
+    tableHeaders.add(pw.Text('Order Number', style: headerStyle));
+
+    // Add Transaction Type column
+    tableHeaders.add(pw.Text('Transaction Type', style: headerStyle));
+
+    // Add Debit column
+    tableHeaders.add(pw.Text('Debit', style: headerStyle));
+
+    // Add Credit column
+    tableHeaders.add(pw.Text('Credit', style: headerStyle));
+
+    // Add Tax column (if enabled)
+    if (displayConfig?['showTax']?.visible == true) {
+      tableHeaders.add(pw.Text('Tax', style: headerStyle));
+    }
+
+    // Add Balance column
+    tableHeaders.add(pw.Text('Balance', style: headerStyle));
+
+    // Add Status column (if enabled)
+    if (displayConfig?['showStatus']?.visible == true) {
+      tableHeaders.add(pw.Text('Status', style: headerStyle));
+    }
+
+    return pw.Table(
       border: const pw.TableBorder(
-        top: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
-        bottom: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
-        left: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
-        right: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
-        horizontalInside: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
-        verticalInside: pw.BorderSide(color: PdfColors.grey700, width: 0.5),
+        top: pw.BorderSide(color: PdfColors.grey300, width: 1),
+        bottom: pw.BorderSide(color: PdfColors.grey300, width: 1),
+        left: pw.BorderSide(color: PdfColors.grey300, width: 1),
+        right: pw.BorderSide(color: PdfColors.grey300, width: 1),
+        horizontalInside: pw.BorderSide(color: PdfColors.grey300, width: 1),
+        verticalInside: pw.BorderSide(color: PdfColors.grey300, width: 1),
       ),
-      columnWidths: {
-        for (var i in columnWidths.asMap().keys)
-          i: pw.FlexColumnWidth(columnWidths[i])
-      },
+      children: [
+        // Header row with styling to match PHP template
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(
+            color: PdfColors.grey800,
+          ),
+          children: tableHeaders
+              .map((header) => pw.Padding(
+                    padding: const pw.EdgeInsets.all(
+                        12), // Increased padding for larger header height
+                    child: header,
+                  ))
+              .toList(),
+        ),
+        // Data rows with alternating colors to match PHP template and increased height
+        ...tableData.asMap().entries.map((entry) {
+          final int index = entry.key;
+          final List<pw.Widget> row = entry.value;
+          return pw.TableRow(
+            decoration: pw.BoxDecoration(
+              color: index % 2 == 0 ? PdfColors.white : PdfColors.grey100,
+            ),
+            children: row
+                .map((cell) => pw.Padding(
+                      padding: const pw.EdgeInsets.all(
+                          10), // Increased padding for larger row height
+                      child: cell,
+                    ))
+                .toList(),
+          );
+        }).toList(),
+      ],
     );
   }
 
@@ -894,19 +1030,17 @@ class TransactionReportStandardPrinter {
     String? fromDate,
     String? toDate,
   ) {
-    // Create a larger style for customer details
+    // Create styles to match PHP template
     final customerDetailStyle = pw.TextStyle(
-      fontSize:
-          selectedPaperSize == 'A5' ? 8.0 : 10.0, // Increased from bodyStyle
-      fontWeight: pw.FontWeight.bold,
-      color: PdfColors.black,
+      fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0, // Increased font size
+      color: PdfColor.fromHex('#2d3748'),
     );
 
     // Create a style for customer information header
     final customerInfoHeaderStyle = pw.TextStyle(
-      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+      fontSize: selectedPaperSize == 'A5' ? 12.0 : 14.0, // Increased font size
       fontWeight: pw.FontWeight.bold,
-      color: PdfColors.black,
+      color: PdfColor.fromHex('#2d3748'),
     );
 
     debugPrint("===== PDF CUSTOMER DETAILS DEBUG =====");
@@ -928,8 +1062,15 @@ class TransactionReportStandardPrinter {
     debugPrint("===== END PDF CUSTOMER DETAILS DEBUG =====");
 
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(
-          vertical: 8, horizontal: 8), // Increased vertical padding
+      padding: const pw.EdgeInsets.all(15), // Increased padding
+      margin: const pw.EdgeInsets.only(bottom: 20), // Increased margin
+      decoration: pw.BoxDecoration(
+        border:
+            pw.Border.all(color: PdfColors.grey300, width: 1), // Thicker border
+        borderRadius:
+            const pw.BorderRadius.all(pw.Radius.circular(5)), // Larger radius
+        color: PdfColors.grey100,
+      ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
@@ -938,22 +1079,128 @@ class TransactionReportStandardPrinter {
             'Customer Information',
             style: customerInfoHeaderStyle,
           ),
-          pw.SizedBox(height: 5),
-          if (customerName != null && customerName.isNotEmpty)
-            pw.Text('Name: $customerName', style: customerDetailStyle),
-          if (customerEmail != null && customerEmail.isNotEmpty)
-            pw.Text('Email: $customerEmail', style: customerDetailStyle),
-          if (customerPhone != null && customerPhone.isNotEmpty)
-            pw.Text('Phone: $customerPhone', style: customerDetailStyle),
-          if (customerAddress != null && customerAddress.isNotEmpty)
-            pw.Text('Address: $customerAddress', style: customerDetailStyle),
-          // Add date range information in the same format as date/time row
-          if ((fromDate != null && fromDate.isNotEmpty) ||
-              (toDate != null && toDate.isNotEmpty))
-            pw.SizedBox(height: 5),
-          if ((fromDate != null && fromDate.isNotEmpty) ||
-              (toDate != null && toDate.isNotEmpty))
-            _buildDateRangeRowPDF(selectedPaperSize, fromDate, toDate),
+          pw.SizedBox(height: 10),
+          pw.Container(
+            height: 1,
+            color: PdfColors.grey300,
+          ),
+          pw.SizedBox(height: 10),
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    if (customerName != null && customerName.isNotEmpty)
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.only(bottom: 8),
+                        child: pw.Row(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              'Name: ',
+                              style: pw.TextStyle(
+                                fontSize: selectedPaperSize == 'A5'
+                                    ? 8.0
+                                    : 10.0, // Match customer detail style
+                                fontWeight: pw.FontWeight
+                                    .normal, // Removed bold as requested
+                                color: PdfColor.fromHex('#2d3748'),
+                              ),
+                            ),
+                            pw.Expanded(
+                              child: pw.Text(
+                                customerName,
+                                style: customerDetailStyle,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (customerEmail != null && customerEmail.isNotEmpty)
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.only(bottom: 8),
+                        child: pw.Row(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              'Email: ',
+                              style: pw.TextStyle(
+                                fontSize: selectedPaperSize == 'A5'
+                                    ? 8.0
+                                    : 10.0, // Match customer detail style
+                                fontWeight: pw.FontWeight
+                                    .normal, // Removed bold as requested
+                                color: PdfColor.fromHex('#2d3748'),
+                              ),
+                            ),
+                            pw.Expanded(
+                              child: pw.Text(
+                                customerEmail,
+                                style: customerDetailStyle,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (customerPhone != null && customerPhone.isNotEmpty)
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.only(bottom: 8),
+                        child: pw.Row(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              'Phone: ',
+                              style: pw.TextStyle(
+                                fontSize: selectedPaperSize == 'A5'
+                                    ? 8.0
+                                    : 10.0, // Match customer detail style
+                                fontWeight: pw.FontWeight
+                                    .normal, // Removed bold as requested
+                                color: PdfColor.fromHex('#2d3748'),
+                              ),
+                            ),
+                            pw.Expanded(
+                              child: pw.Text(
+                                customerPhone,
+                                style: customerDetailStyle,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (customerAddress != null && customerAddress.isNotEmpty)
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.only(bottom: 8),
+                        child: pw.Row(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              'Address: ',
+                              style: pw.TextStyle(
+                                fontSize: selectedPaperSize == 'A5'
+                                    ? 8.0
+                                    : 10.0, // Match customer detail style
+                                fontWeight: pw.FontWeight
+                                    .normal, // Removed bold as requested
+                                color: PdfColor.fromHex('#2d3748'),
+                              ),
+                            ),
+                            pw.Expanded(
+                              child: pw.Text(
+                                customerAddress,
+                                style: customerDetailStyle,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -1041,74 +1288,116 @@ class TransactionReportStandardPrinter {
     double balance = totalCredit - totalDebit;
 
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
+      padding: const pw.EdgeInsets.symmetric(
+          vertical: 10, horizontal: 0), // Reduced vertical padding
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.end,
         children: [
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text(
-                'Total Credit:',
-                style: pw.TextStyle(
-                  fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.black,
+          pw.Container(
+            padding: const pw.EdgeInsets.all(8), // Reduced padding
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey300, width: 1),
+              borderRadius: const pw.BorderRadius.all(
+                  pw.Radius.circular(4)), // Slightly reduced radius
+              color: PdfColors.grey100,
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.only(
+                          right: 15), // Reduced padding
+                      child: pw.Text(
+                        'Total Credit:',
+                        style: pw.TextStyle(
+                          fontSize: selectedPaperSize == 'A5'
+                              ? 9.0
+                              : 11.0, // Slightly reduced font size
+                          fontWeight: pw.FontWeight.normal, // Removed bold
+                          color: PdfColor.fromHex('#2d3748'),
+                        ),
+                      ),
+                    ),
+                    pw.Text(
+                      'Rs. ${totalCredit.toStringAsFixed(2)}',
+                      style: pw.TextStyle(
+                        fontSize: selectedPaperSize == 'A5'
+                            ? 9.0
+                            : 11.0, // Slightly reduced font size
+                        fontWeight: pw.FontWeight.normal, // Removed bold
+                        color: PdfColors.green800,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              pw.Text(
-                'Rs. ${totalCredit.toStringAsFixed(2)}',
-                style: pw.TextStyle(
-                  fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.black,
+                pw.SizedBox(height: 6), // Reduced height
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.only(
+                          right: 15), // Reduced padding
+                      child: pw.Text(
+                        'Total Debit:',
+                        style: pw.TextStyle(
+                          fontSize: selectedPaperSize == 'A5'
+                              ? 9.0
+                              : 11.0, // Slightly reduced font size
+                          fontWeight: pw.FontWeight.normal, // Removed bold
+                          color: PdfColor.fromHex('#2d3748'),
+                        ),
+                      ),
+                    ),
+                    pw.Text(
+                      'Rs. ${totalDebit.toStringAsFixed(2)}',
+                      style: pw.TextStyle(
+                        fontSize: selectedPaperSize == 'A5'
+                            ? 9.0
+                            : 11.0, // Slightly reduced font size
+                        fontWeight: pw.FontWeight.normal, // Removed bold
+                        color: PdfColors.red800,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 5),
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text(
-                'Total Debit:',
-                style: pw.TextStyle(
-                  fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.black,
+                pw.Divider(color: PdfColors.grey300, thickness: 1),
+                pw.SizedBox(height: 6), // Reduced height
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.only(
+                          right: 15), // Reduced padding
+                      child: pw.Text(
+                        'Balance:',
+                        style: pw.TextStyle(
+                          fontSize: selectedPaperSize == 'A5'
+                              ? 10.0
+                              : 12.0, // Slightly reduced font size
+                          fontWeight: pw.FontWeight.normal, // Removed bold
+                          color: PdfColors.grey800,
+                        ),
+                      ),
+                    ),
+                    pw.Text(
+                      'Rs. ${balance.abs().toStringAsFixed(2)}',
+                      style: pw.TextStyle(
+                        fontSize: selectedPaperSize == 'A5'
+                            ? 10.0
+                            : 12.0, // Slightly reduced font size
+                        fontWeight: pw.FontWeight.normal, // Removed bold
+                        color: balance >= 0
+                            ? PdfColors.green800
+                            : PdfColors.red800,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              pw.Text(
-                'Rs. ${totalDebit.toStringAsFixed(2)}',
-                style: pw.TextStyle(
-                  fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.black,
-                ),
-              ),
-            ],
-          ),
-          pw.Divider(color: PdfColors.black),
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text(
-                'Balance:',
-                style: pw.TextStyle(
-                  fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                  fontWeight: pw.FontWeight.bold,
-                  color: balance < 0 ? PdfColors.red : PdfColors.green,
-                ),
-              ),
-              pw.Text(
-                'Rs. ${balance.toStringAsFixed(2)}',
-                style: pw.TextStyle(
-                  fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                  fontWeight: pw.FontWeight.bold,
-                  color: balance < 0 ? PdfColors.red : PdfColors.green,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -1177,248 +1466,192 @@ class TransactionReportStandardPrinter {
       PdfPageFormat pageFormat =
           selectedPaperSize == 'A4' ? PdfPageFormat.a4 : PdfPageFormat.a5;
 
-      // Define styles with adjustments for A5 vs A4 - optimized for space and professional look
+      // Define styles to match PHP template with better readability
       final headerStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5'
-            ? 16.0
-            : 18.0, // Increased for better hierarchy
+        fontSize: selectedPaperSize == 'A5' ? 16.0 : 20.0,
         fontWeight: pw.FontWeight.bold,
-        color: PdfColors.black,
+        color: PdfColors.grey800,
       );
       final subheaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5'
-            ? 9.0
-            : 11.0, // Reduced for better proportion
+        fontSize: selectedPaperSize == 'A5' ? 12.0 : 16.0,
         fontWeight: pw.FontWeight.bold,
-        color: PdfColors.black,
+        color: PdfColors.grey800,
       );
       final bodyStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5'
-            ? 6.0
-            : 8.0, // Reduced for smaller table text
-        color: PdfColors.black,
+        fontSize:
+            selectedPaperSize == 'A5' ? 8.0 : 10.0, // Increased from 6.0/8.0
+        color: PdfColors.grey700,
       );
       final smallStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 5.0 : 7.0, // Reduced further
-        color: PdfColors.black,
+        fontSize:
+            selectedPaperSize == 'A5' ? 6.0 : 8.0, // Increased from 5.0/6.0
+        color: PdfColors.grey600,
       );
       final tableHeaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5'
-            ? 6.0
-            : 8.0, // Reduced for smaller table headers
+        fontSize:
+            selectedPaperSize == 'A5' ? 9.0 : 11.0, // Increased from 7.0/9.0
         fontWeight: pw.FontWeight.bold,
-        color: PdfColors.black,
+        color: PdfColors.white,
+      );
+      final tableDataStyle = pw.TextStyle(
+        fontSize:
+            selectedPaperSize == 'A5' ? 8.0 : 10.0, // Increased from 6.0/8.0
+        color: PdfColors.grey700,
       );
       final summaryStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5'
-            ? 8.0
-            : 10.0, // Reduced for better proportion
-        fontWeight: pw.FontWeight.bold,
-        color: PdfColors.black,
+        fontSize:
+            selectedPaperSize == 'A5' ? 10.0 : 12.0, // Increased from 9.0/11.0
+        fontWeight: pw.FontWeight.normal,
+        color: PdfColors.grey800,
       );
       final netTotalStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5'
-            ? 9.0
-            : 11.0, // Reduced for better proportion
+        fontSize:
+            selectedPaperSize == 'A5' ? 10.0 : 12.0, // Increased from 9.0/11.0
         fontWeight: pw.FontWeight.bold,
-        color: PdfColors.black,
+        color: PdfColors.grey800,
       );
 
       // Add content to a multi-page PDF with minimal margins and optimized spacing
       pdf.addPage(
         pw.MultiPage(
           pageFormat: pageFormat,
-          margin: const pw.EdgeInsets.all(15), // Reduced from 30
+          margin: const pw.EdgeInsets.all(20),
           footer: (context) => pw.Padding(
-            padding: const pw.EdgeInsets.only(top: 5), // Reduced from 10
+            padding: const pw.EdgeInsets.only(top: 10),
             child: pw.Column(
               children: [
-                // QR Code (if enabled)
-                if (updatedSettings?['showQRCode']?.visible == true &&
-                    manualPaymentGateway.link.isNotEmpty)
-                  pw.Center(
-                    child: pw.BarcodeWidget(
-                      barcode: pw.Barcode.qrCode(),
-                      data: manualPaymentGateway.link,
-                      width: selectedPaperSize == 'A5' ? 40 : 50,
-                      height: selectedPaperSize == 'A5' ? 40 : 50,
-                    ),
-                  ),
+                pw.Divider(color: PdfColors.grey300),
                 pw.SizedBox(height: 5),
-                // Thank You Message
-                if (updatedSettings?['showThankYouMessage']?.visible == true)
-                  pw.Center(
-                    child: pw.Text(
-                      'Thank you for your business!',
-                      style: smallStyle,
+                // Show footer if enabled
+                if (updatedSettings?['showFooter']?.visible == true)
+                  pw.Text(
+                    (updatedSettings?['showFooter']?.value as String?) ??
+                        'This is a computer-generated document. No signature is required.',
+                    style: pw.TextStyle(
+                      fontSize: 8,
+                      color: PdfColors.grey600,
                     ),
+                    textAlign: pw.TextAlign.center,
                   ),
-                // Customer Care Information
-                pw.Center(
-                  child: pw.Column(
-                    children: [
-                      if (customerCareNumber.isNotEmpty)
-                        pw.Text(
-                          'Customer Care: $customerCareNumber',
-                          style: smallStyle,
-                        ),
-                      if (customerCareEmail.isNotEmpty)
-                        pw.Text(
-                          'Email: $customerCareEmail',
-                          style: smallStyle,
-                        ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
-          build: (context) => [
-            // Store Name Header
-            if (updatedSettings?['showStoreName']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  (updatedSettings?['showStoreName']?.value as String?) ??
-                      'Store Name',
-                  style: headerStyle,
+          build: (pw.Context context) => [
+            // Wrap entire content in a Column so it flows
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Header with store information - professional design to match PHP template
+                pw.Center(
+                  child: pw.Column(
+                    children: [
+                      // Show header if enabled
+                      if (updatedSettings?['showHeader']?.visible == true)
+                        pw.Text(
+                          (updatedSettings?['showHeader']?.value as String?) ??
+                              'EPosenke',
+                          style: pw.TextStyle(
+                            fontSize: selectedPaperSize == 'A5' ? 20.0 : 24.0,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.grey800,
+                          ),
+                        ),
+                      pw.SizedBox(height: 5),
+                      // Show subheader if enabled
+                      if (updatedSettings?['showSubheader']?.visible == true)
+                        pw.Text(
+                          (updatedSettings?['showSubheader']?.value
+                                  as String?) ??
+                              'Customer Transaction Report',
+                          style: pw.TextStyle(
+                            fontSize: selectedPaperSize == 'A5' ? 14.0 : 18.0,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.grey800,
+                          ),
+                        ),
+                      pw.SizedBox(height: 10),
+                      pw.Container(
+                        height: 2,
+                        color: PdfColors.grey800,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            // Description
-            if (updatedSettings?['showDescription']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  (updatedSettings?['showDescription']?.value as String?) ??
-                      'Description',
-                  style: subheaderStyle,
+
+                pw.SizedBox(height: 15),
+
+                // Customer Information Section - if available
+                if (customerName != null ||
+                    customerPhone != null ||
+                    customerEmail != null ||
+                    customerAddress != null)
+                  _buildCustomerDetailsPDF(
+                    selectedPaperSize,
+                    customerName,
+                    customerPhone,
+                    customerEmail,
+                    customerAddress,
+                    subheaderStyle,
+                    bodyStyle,
+                    fromDate,
+                    toDate,
+                  ),
+
+                // Add date range information outside customer card and align to right
+                if ((fromDate != null && fromDate.isNotEmpty) ||
+                    (toDate != null && toDate.isNotEmpty))
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.end,
+                    children: [
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
+                        children: [
+                          pw.Text(
+                            'From: ${fromDate ?? 'N/A'}',
+                            style: pw.TextStyle(
+                              fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                              color: PdfColor.fromHex('#2d3748'),
+                            ),
+                          ),
+                          pw.Text(
+                            'To: ${toDate ?? 'N/A'}',
+                            style: pw.TextStyle(
+                              fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                              color: PdfColor.fromHex('#2d3748'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                pw.SizedBox(height: 15),
+
+                // Items table - professional design with borders to match PHP template
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(
+                      vertical: 15, horizontal: 0),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _buildPdfTransactionReportItemsTable(
+                          tableHeaderStyle,
+                          bodyStyle,
+                          updatedSettings,
+                          cartItems,
+                          isFromLocalStorage,
+                          billDocumentConfig),
+                    ],
+                  ),
                 ),
-              ),
-            // Store Address
-            if (updatedSettings?['showStoreAddress']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  (updatedSettings?['showStoreAddress']?.value as String?) ??
-                      'Store Address',
-                  style: bodyStyle,
-                ),
-              ),
-            // FSSAI Info
-            if (updatedSettings?['showFssaiInfo']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  (updatedSettings?['showFssaiInfo']?.value as String?) ??
-                      'FSSAI Info',
-                  style: bodyStyle,
-                ),
-              ),
-            // Tel
-            if (updatedSettings?['showTel']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  'Tel: ${(updatedSettings?['showTel']?.value as String?) ?? 'Tel Number'}',
-                  style: bodyStyle,
-                ),
-              ),
-            // Email
-            if (updatedSettings?['showEmail']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  'Email: ${(updatedSettings?['showEmail']?.value as String?) ?? 'Email Address'}',
-                  style: bodyStyle,
-                ),
-              ),
-            pw.SizedBox(height: 10),
-            pw.Divider(color: PdfColors.black),
-            // Report Title
-            if (updatedSettings?['showInvoiceTitle']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  (updatedSettings?['showInvoiceTitle']?.value as String?) ??
-                      'CUSTOMER TRANSACTION REPORT',
-                  style: subheaderStyle,
-                ),
-              ),
-            // Report Number
-            if (updatedSettings?['showInvoiceNumber']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  'Report No: $orderNumber',
-                  style: bodyStyle,
-                ),
-              ),
-            // Date Header
-            if (updatedSettings?['showDateHeader']?.visible == true)
-              _buildDateTimeRowPDF(selectedPaperSize, orderDate),
-            // Customer Details
-            if (customerName != null ||
-                customerPhone != null ||
-                customerEmail != null ||
-                customerAddress != null ||
-                fromDate != null ||
-                toDate != null)
-              _buildCustomerDetailsPDF(
-                selectedPaperSize,
-                customerName,
-                customerPhone,
-                customerEmail,
-                customerAddress,
-                headerStyle,
-                bodyStyle,
-                fromDate,
-                toDate,
-              ),
-            pw.SizedBox(height: 10),
-            // Items Table
-            _buildPdfTransactionReportItemsTable(
-              tableHeaderStyle,
-              bodyStyle,
-              updatedSettings,
-              cartItems,
-              isFromLocalStorage,
-              billDocumentConfig,
+
+                // Cart Total Row - added after items table
+                _buildCartTotalRow(selectedPaperSize, cartItems,
+                    isFromLocalStorage, summaryStyle),
+
+                pw.SizedBox(height: 15),
+              ],
             ),
-            pw.SizedBox(height: 10),
-            // Cart Total Row
-            _buildCartTotalRow(
-                selectedPaperSize, cartItems, isFromLocalStorage, summaryStyle),
-            // Summary Section
-            _buildPdfSummary(
-              summaryStyle,
-              netTotalStyle,
-              updatedSettings,
-              formattedTotal,
-              savedTotal,
-              discountAmount,
-              cartItems.length,
-              billDocumentConfig,
-            ),
-            // Amount in Words
-            if (updatedSettings?['showAmountInWords']?.visible == true)
-              pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(vertical: 5),
-                child: pw.Text(
-                  'Amount in words: ${AmountHelper().convertNumberToWords(double.tryParse(formattedTotal) ?? 0.0)}',
-                  style: bodyStyle,
-                ),
-              ),
-            // Items Count
-            if (updatedSettings?['showItemsCount']?.visible == true)
-              pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(vertical: 5),
-                child: pw.Text(
-                  'Total Transactions: ${cartItems.length}',
-                  style: bodyStyle,
-                ),
-              ),
-            // Terms & Conditions
-            if (updatedSettings?['showTermsConditions']?.visible == true &&
-                _hasTermsData(updatedSettings, billDocumentConfig))
-              _buildTermsConditionsBoxPDF(
-                selectedPaperSize,
-                updatedSettings,
-                billDocumentConfig,
-              ),
-            // Order Barcode
-            _buildOrderBarcodePDF(selectedPaperSize, orderNumber),
           ],
         ),
       );
