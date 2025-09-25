@@ -1,7 +1,7 @@
-git tag v0.1.0-dev.182
-git push build v0.1.0-dev.182
+git tag v0.1.0-dev.186
+git push build v0.1.0-dev.186
 git push build1 v0.1.0-dev.179
-git push origin v0.1.0-dev.143
+git push origin v0.1.0-dev.184
 
 # eposenke demo
 https://eposdemo.hypersouq.in
@@ -26,4 +26,24 @@ salesexecutive1@eposenke.in
 # yougoit
 RESTOPOS_oidkN1BDC0Fl6ti5sFtkVpTg0gultasn
 salesexecutive@restopos.com
+123456
+
+
+
+
+
+
+
+
+
+
+
+# eposdemo souq
+https://eposdemo.hypersouq.in/HYPERSOUK
+HYPERSOUK_W9DNqq4uR9Zjpoe4Rw4WQhsV2u7Ay9Zi
+attender@hypersouq.in
+123456
+kitchenmaster@hypersouq.in
+123456
+salesexecutive@hypersouq.in
 123456

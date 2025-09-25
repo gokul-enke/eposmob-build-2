@@ -74,19 +74,10 @@ class SettingsScreen extends StatelessWidget {
                               title: 'Company Info',
                               iconPath: ImageAssets
                                   .reportIcon, // Using existing report icon
+                              iconColor: Colors.green,
                               onTap: () {
                                 Get.find<SideBarController>().index.value =
                                     64; // Navigate to Company Info screen
-                              },
-                            );
-                          case 2: // New case for Customer Transactions Report
-                            return _SettingsCard(
-                              title: 'Customer Transactions',
-                              iconPath: ImageAssets
-                                  .reportIcon, // Using existing report icon
-                              onTap: () {
-                                Get.find<SideBarController>().index.value =
-                                    65; // Navigate to Customer Transactions Report screen
                               },
                             );
                           default:
@@ -110,13 +101,15 @@ class _SettingsCard extends StatelessWidget {
   final String title;
   final String iconPath;
   final VoidCallback onTap;
+  final Color? iconColor;
 
   const _SettingsCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.iconPath,
     required this.onTap,
-  }) : super(key: key);
+    this.iconColor = const Color(0xFF25D366),
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -146,8 +139,10 @@ class _SettingsCard extends StatelessWidget {
                       iconPath,
                       fit: BoxFit.contain,
                       // WhatsApp green
-                      colorFilter: const ColorFilter.mode(
-                          Color(0xFF25D366), BlendMode.srcIn),
+                      colorFilter: ColorFilter.mode(
+                        iconColor ?? const Color(0xFF25D366),
+                        BlendMode.srcIn,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),

@@ -1212,6 +1212,19 @@ class StandardPrinter {
       }
 
       final displayConfig = billDocumentConfig.displayConfiguration?.options;
+      
+      // Debug the document configuration being used
+      debugPrint("===== DOCUMENT CONFIG BEING USED FOR SHARING =====");
+      debugPrint("billDocumentConfig ID: ${billDocumentConfig.id}");
+      debugPrint("billDocumentConfig Type: ${billDocumentConfig.type}");
+      debugPrint("billDocumentConfig Updated At: ${billDocumentConfig.updatedAt}");
+      debugPrint("billDocumentConfig Has Display Config: ${billDocumentConfig.displayConfiguration != null}");
+      debugPrint("Display Config Options Count: ${displayConfig?.length ?? 0}");
+      if (displayConfig != null) {
+        debugPrint("Display Config Keys: ${displayConfig.keys.toList()}");
+      }
+      debugPrint("===== END DOCUMENT CONFIG INFO =====");
+      
       _debugPrintTemplateSettings(displayConfig);
 
       // Create a PDF document
@@ -1219,6 +1232,45 @@ class StandardPrinter {
 
       // Get settings from the loaded display configuration
       final updatedSettings = displayConfig;
+
+      debugPrint("PDF Generation - Using user settings:");
+      debugPrint(
+          "showStoreName: ${updatedSettings?['showStoreName']?.visible}");
+      debugPrint(
+          "showDescription: ${updatedSettings?['showDescription']?.visible}");
+      debugPrint(
+          "showStoreAddress: ${updatedSettings?['showStoreAddress']?.visible}");
+      debugPrint(
+          "showFssaiInfo: ${updatedSettings?['showFssaiInfo']?.visible}");
+      debugPrint("showTel: ${updatedSettings?['showTel']?.visible}");
+      debugPrint("showEmail: ${updatedSettings?['showEmail']?.visible}");
+      debugPrint(
+          "showInvoiceTitle: ${updatedSettings?['showInvoiceTitle']?.visible}");
+      debugPrint(
+          "showInvoiceNumber: ${updatedSettings?['showInvoiceNumber']?.visible}");
+      debugPrint(
+          "showDateHeader: ${updatedSettings?['showDateHeader']?.visible}");
+      debugPrint("showSLNumber: ${updatedSettings?['showSLNumber']?.visible}");
+      debugPrint(
+          "showParticulars: ${updatedSettings?['showParticulars']?.visible}");
+      debugPrint("showMRP: ${updatedSettings?['showMRP']?.visible}");
+      debugPrint("showQty: ${updatedSettings?['showQty']?.visible}");
+      debugPrint("showRate: ${updatedSettings?['showRate']?.visible}");
+      debugPrint("showTotal: ${updatedSettings?['showTotal']?.visible}");
+      debugPrint("showDiscount: ${updatedSettings?['showDiscount']?.visible}");
+      debugPrint(
+          "showNetAmount: ${updatedSettings?['showNetAmount']?.visible}");
+      debugPrint("showMRPTotal: ${updatedSettings?['showMRPTotal']?.visible}");
+      debugPrint("showSaved: ${updatedSettings?['showSaved']?.visible}");
+      debugPrint(
+          "showAmountInWords: ${updatedSettings?['showAmountInWords']?.visible}");
+      debugPrint(
+          "showItemsCount: ${updatedSettings?['showItemsCount']?.visible}");
+      debugPrint(
+          "showThankYouMessage: ${updatedSettings?['showThankYouMessage']?.visible}");
+      debugPrint("showQRCode: ${updatedSettings?['showQRCode']?.visible}");
+      debugPrint(
+          "showTermsConditions: ${updatedSettings?['showTermsConditions']?.visible}");
 
       // Access Payment Gateways Provider for QR code link
       final paymentGatewaysProvider =
@@ -1300,189 +1352,289 @@ class StandardPrinter {
           margin: const pw.EdgeInsets.all(15), // Reduced from 30
           footer: (context) => pw.Padding(
             padding: const pw.EdgeInsets.only(top: 5), // Reduced from 10
-            child: pw.Column(
+            child: pw.Text(
+              'Page ${context.pageNumber} of ${context.pagesCount}',
+              style: const pw.TextStyle(fontSize: 6), // Reduced from 8
+              textAlign: pw.TextAlign.center,
+            ),
+          ),
+          build: (pw.Context context) => [
+            // Wrap entire content in a Column so it flows
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                // QR Code (if enabled)
-                if (updatedSettings?['showQRCode']?.visible == true &&
-                    manualPaymentGateway.link.isNotEmpty)
-                  pw.Center(
-                    child: pw.BarcodeWidget(
-                      barcode: pw.Barcode.qrCode(),
-                      data: manualPaymentGateway.link,
-                      width: selectedPaperSize == 'A5' ? 40 : 50,
-                      height: selectedPaperSize == 'A5' ? 40 : 50,
-                    ),
-                  ),
-                pw.SizedBox(height: 5),
-                // Thank You Message
-                if (updatedSettings?['showThankYouMessage']?.visible == true)
-                  pw.Center(
-                    child: pw.Text(
-                      'Thank you for your purchase!',
-                      style: smallStyle,
-                    ),
-                  ),
-                // Customer Care Information
+                // Header with store information - compact design
                 pw.Center(
                   child: pw.Column(
                     children: [
-                      if (customerCareNumber.isNotEmpty)
+                      // Store name
+                      if (updatedSettings?['showStoreName']?.visible == true)
                         pw.Text(
-                          'Customer Care: $customerCareNumber',
-                          style: smallStyle,
+                          updatedSettings?['showStoreName']?.value as String? ??
+                              billDocumentConfig.header ??
+                              'STORE NAME',
+                          style: headerStyle,
                         ),
-                      if (customerCareEmail.isNotEmpty)
+
+                      // Store description
+                      if (updatedSettings?['showDescription']?.visible == true)
                         pw.Text(
-                          'Email: $customerCareEmail',
-                          style: smallStyle,
+                          updatedSettings?['showDescription']?.value
+                                  as String? ??
+                              billDocumentConfig.subheader ??
+                              '',
+                          style: pw.TextStyle(
+                            fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                          ),
+                        ),
+
+                      // Store address - compact display
+                      if (updatedSettings?['showStoreAddress']?.visible ==
+                          true) ...[
+                        if ((updatedSettings?['showStoreAddress']?.value
+                                    as String?)
+                                ?.isNotEmpty ==
+                            true)
+                          pw.Text(
+                            updatedSettings!['showStoreAddress']!.value
+                                as String,
+                            style: bodyStyle,
+                          ),
+                      ],
+
+                      // FSSAI info - compact display
+                      if (updatedSettings?['showFssaiInfo']?.visible ==
+                          true) ...[
+                        if ((updatedSettings?['showFssaiInfo']?.value
+                                    as String?)
+                                ?.isNotEmpty ==
+                            true)
+                          pw.Text(
+                            updatedSettings!['showFssaiInfo']!.value as String,
+                            style: bodyStyle,
+                          ),
+                      ],
+
+                      // Contact information - compact display
+                      if (updatedSettings?['showTel']?.visible == true)
+                        pw.Text(
+                          updatedSettings?['showTel']?.value as String? ??
+                              customerCareNumber,
+                          style: bodyStyle,
+                        ),
+
+                      if (updatedSettings?['showEmail']?.visible == true)
+                        pw.Text(
+                          updatedSettings?['showEmail']?.value as String? ??
+                              customerCareEmail,
+                          style: bodyStyle,
                         ),
                     ],
                   ),
                 ),
+
+                pw.SizedBox(height: 5), // Reduced from 10
+
+                // Invoice information - minimal design without borders
+                if ((updatedSettings?['showInvoiceTitle']?.visible == true) ||
+                    (updatedSettings?['showInvoiceNumber']?.visible == true))
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                        vertical: 0, horizontal: 8), // Reduced padding
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        if (updatedSettings?['showInvoiceTitle']?.visible ==
+                            true)
+                          pw.Text(
+                              updatedSettings?['showInvoiceTitle']?.value
+                                      as String? ??
+                                  billDocumentConfig.header ??
+                                  'INVOICE',
+                              style: subheaderStyle),
+                        if (updatedSettings?['showInvoiceNumber']?.visible ==
+                            true)
+                          pw.Text(
+                              (billDocumentConfig.numberPrefix != null &&
+                                      billDocumentConfig
+                                          .numberPrefix!.isNotEmpty)
+                                  ? '${billDocumentConfig.numberPrefix}$orderNumber'
+                                  : 'No: $orderNumber',
+                              style: subheaderStyle),
+                      ],
+                    ),
+                  ),
+
+                // Date and Time Row - minimal design
+                _buildDateTimeRowPDF(selectedPaperSize, orderDate),
+
+                // Customer Information Section - if available
+                if (customerName != null ||
+                    customerPhone != null ||
+                    customerEmail != null ||
+                    customerAddress != null)
+                  _buildCustomerDetailsPDF(
+                    selectedPaperSize,
+                    customerName,
+                    customerPhone,
+                    customerEmail,
+                    customerAddress,
+                    subheaderStyle,
+                    bodyStyle,
+                  ),
+
+                // Items table - minimal design without borders
+                if ((updatedSettings?['showSLNumber']?.visible == true) ||
+                    (updatedSettings?['showParticulars']?.visible == true) ||
+                    (updatedSettings?['showMRP']?.visible == true) ||
+                    (updatedSettings?['showQty']?.visible == true) ||
+                    (updatedSettings?['showRate']?.visible == true) ||
+                    (updatedSettings?['showTotal']?.visible == true))
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                        vertical: 5, horizontal: 8), // Reduced padding
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        _buildPdfItemsTable(
+                            tableHeaderStyle,
+                            bodyStyle,
+                            updatedSettings,
+                            cartItems,
+                            isFromLocalStorage,
+                            billDocumentConfig),
+                      ],
+                    ),
+                  ),
+
+                // Cart Total Row - added after items table
+                _buildCartTotalRow(selectedPaperSize, cartItems, isFromLocalStorage, summaryStyle),
+
+                pw.SizedBox(height: 5), // Reduced from 8
+
+                // Summary - minimal design without borders
+                if ((updatedSettings?['showItemsCount']?.visible == true) ||
+                    (updatedSettings?['showMRPTotal']?.visible == true) ||
+                    (updatedSettings?['showSaved']?.visible == true) ||
+                    (updatedSettings?['showDiscount']?.visible == true) ||
+                    (updatedSettings?['showNetAmount']?.visible == true))
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                        vertical: 5, horizontal: 8), // Reduced padding
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('ORDER SUMMARY', style: subheaderStyle),
+                        pw.SizedBox(height: 5), // Reduced from 10
+                        _buildPdfSummary(
+                            summaryStyle,
+                            netTotalStyle,
+                            updatedSettings,
+                            formattedTotal,
+                            savedTotal,
+                            discountAmount,
+                            cartItems.length,
+                            billDocumentConfig),
+                      ],
+                    ),
+                  ),
+
+                // Amount in words - consistent with summary layout
+                if (updatedSettings?['showAmountInWords']?.visible == true)
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                        vertical: 0, horizontal: 8), // Same padding as summary
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text(
+                          'Amount in words:',
+                          style:
+                              summaryStyle, // Same style as other summary items
+                        ),
+                        pw.Text(
+                          '${AmountHelper().convertNumberToWords(double.parse(formattedTotal))} Only.',
+                          style:
+                              summaryStyle, // Same style as other summary items
+                          textAlign: pw.TextAlign.right,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                pw.SizedBox(height: 5), // Reduced from 10
+
+                // Footer section - compact design
+                pw.Column(
+                  children: [
+                    // QR Code for payment - compact size
+                    if (updatedSettings?['showQRCode']?.visible == true) ...[
+                      pw.Center(
+                        child: pw.Column(
+                          children: [
+                            pw.BarcodeWidget(
+                              barcode: pw.Barcode.qrCode(),
+                              data: manualPaymentGateway.link
+                                  .replaceAll(
+                                      '{formattedTotal}', formattedTotal)
+                                  .replaceAll('{orderNumber}', orderNumber),
+                              width: selectedPaperSize == 'A5'
+                                  ? 80
+                                  : 100, // Reduced size
+                              height: selectedPaperSize == 'A5'
+                                  ? 80
+                                  : 100, // Reduced size
+                            ),
+                            pw.SizedBox(height: 3), // Reduced from 5
+                            pw.Text(
+                              updatedSettings?['showQRCode']?.value
+                                      as String? ??
+                                  'Scan to Pay',
+                              style: pw.TextStyle(
+                                fontSize: selectedPaperSize == 'A5' ? 7.0 : 9.0,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      pw.SizedBox(height: 5), // Reduced from 10
+                    ],
+
+                    // Order ID Barcode - compact size
+                    _buildOrderBarcodePDF(selectedPaperSize, orderNumber),
+
+                    // Thank You message - reduced font size
+                    if (updatedSettings?['showThankYouMessage']?.visible ==
+                        true)
+                      pw.Center(
+                        child: pw.Text(
+                          updatedSettings?['showThankYouMessage']?.value
+                                  as String? ??
+                              'Thank You... Visit Again',
+                          style: pw.TextStyle(
+                            fontSize: selectedPaperSize == 'A5'
+                                ? 8.0
+                                : 10.0, // Reduced from subheaderStyle
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.black,
+                          ),
+                        ),
+                      ),
+
+                    // Terms & Conditions - compact design
+                    if (updatedSettings?['showTermsConditions']?.visible ==
+                        true) ...[
+                      if (_hasTermsData(
+                          updatedSettings, billDocumentConfig)) ...[
+                        _buildTermsConditionsBoxPDF(selectedPaperSize,
+                            updatedSettings, billDocumentConfig),
+                      ],
+                    ],
+                  ],
+                ),
               ],
             ),
-          ),
-          build: (context) => [
-            // Store Name Header
-            if (updatedSettings?['showStoreName']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  (updatedSettings?['showStoreName']?.value as String?) ??
-                      'Store Name',
-                  style: headerStyle,
-                ),
-              ),
-            // Description
-            if (updatedSettings?['showDescription']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  (updatedSettings?['showDescription']?.value as String?) ??
-                      'Description',
-                  style: subheaderStyle,
-                ),
-              ),
-            // Store Address
-            if (updatedSettings?['showStoreAddress']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  (updatedSettings?['showStoreAddress']?.value as String?) ??
-                      'Store Address',
-                  style: bodyStyle,
-                ),
-              ),
-            // FSSAI Info
-            if (updatedSettings?['showFssaiInfo']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  (updatedSettings?['showFssaiInfo']?.value as String?) ??
-                      'FSSAI Info',
-                  style: bodyStyle,
-                ),
-              ),
-            // Tel
-            if (updatedSettings?['showTel']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  'Tel: ${(updatedSettings?['showTel']?.value as String?) ?? 'Tel Number'}',
-                  style: bodyStyle,
-                ),
-              ),
-            // Email
-            if (updatedSettings?['showEmail']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  'Email: ${(updatedSettings?['showEmail']?.value as String?) ?? 'Email Address'}',
-                  style: bodyStyle,
-                ),
-              ),
-            pw.SizedBox(height: 10),
-            pw.Divider(color: PdfColors.black),
-            // Invoice Title
-            if (updatedSettings?['showInvoiceTitle']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  (updatedSettings?['showInvoiceTitle']?.value as String?) ??
-                      'INVOICE',
-                  style: subheaderStyle,
-                ),
-              ),
-            // Invoice Number
-            if (updatedSettings?['showInvoiceNumber']?.visible == true)
-              pw.Center(
-                child: pw.Text(
-                  'Invoice No: $orderNumber',
-                  style: bodyStyle,
-                ),
-              ),
-            // Date Header
-            if (updatedSettings?['showDateHeader']?.visible == true)
-              _buildDateTimeRowPDF(selectedPaperSize, orderDate),
-            // Customer Details
-            if (customerName != null ||
-                customerPhone != null ||
-                customerEmail != null ||
-                customerAddress != null)
-              _buildCustomerDetailsPDF(
-                selectedPaperSize,
-                customerName,
-                customerPhone,
-                customerEmail,
-                customerAddress,
-                headerStyle,
-                bodyStyle,
-              ),
-            pw.SizedBox(height: 10),
-            // Items Table
-            _buildPdfItemsTable(
-              tableHeaderStyle,
-              bodyStyle,
-              updatedSettings,
-              cartItems,
-              isFromLocalStorage,
-              billDocumentConfig,
-            ),
-            pw.SizedBox(height: 10),
-            // Cart Total Row
-            _buildCartTotalRow(selectedPaperSize, cartItems, isFromLocalStorage, summaryStyle),
-            // Summary Section
-            _buildPdfSummary(
-              summaryStyle,
-              netTotalStyle,
-              updatedSettings,
-              formattedTotal,
-              savedTotal,
-              discountAmount,
-              cartItems.length,
-              billDocumentConfig,
-            ),
-            // Amount in Words
-            if (updatedSettings?['showAmountInWords']?.visible == true)
-              pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(vertical: 5),
-                child: pw.Text(
-                  'Amount in words: ${AmountHelper().convertNumberToWords(double.tryParse(formattedTotal) ?? 0.0)}',
-                  style: bodyStyle,
-                ),
-              ),
-            // Items Count
-            if (updatedSettings?['showItemsCount']?.visible == true)
-              pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(vertical: 5),
-                child: pw.Text(
-                  'Total Items: ${cartItems.length}',
-                  style: bodyStyle,
-                ),
-              ),
-            // Terms & Conditions
-            if (updatedSettings?['showTermsConditions']?.visible == true &&
-                _hasTermsData(updatedSettings, billDocumentConfig))
-              _buildTermsConditionsBoxPDF(
-                selectedPaperSize,
-                updatedSettings,
-                billDocumentConfig,
-              ),
-            // Order Barcode
-            _buildOrderBarcodePDF(selectedPaperSize, orderNumber),
           ],
         ),
       );
