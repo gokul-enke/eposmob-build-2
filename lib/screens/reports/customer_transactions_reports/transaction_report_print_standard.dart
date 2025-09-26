@@ -581,9 +581,9 @@ class TransactionReportStandardPrinter {
       // Update running balance and format amounts
       String formattedAmount = amount.toStringAsFixed(2);
       String debitAmount =
-          (type.toLowerCase() == 'debit') ? formattedAmount : '0.00';
+          (type.toLowerCase() == 'debit') ? formattedAmount : '-';
       String creditAmount =
-          (type.toLowerCase() == 'credit') ? formattedAmount : '0.00';
+          (type.toLowerCase() == 'credit') ? formattedAmount : '-';
 
       if (type.toLowerCase() == 'debit') {
         runningBalance -= amount;

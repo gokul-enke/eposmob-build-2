@@ -22,6 +22,10 @@ import 'package:intl/intl.dart';
 import 'package:pos_machine/screens/reports/customer_transactions_reports/transaction_report_print.dart';
 // Add this import for the CustomerAutocomplete widget
 import 'package:pos_machine/screens/transactions/widgets/customer_auto_complete.dart';
+// Add this import for CalendarPickerTableCell component
+import 'package:pos_machine/components/build_calendar_selection.dart';
+// Add this import for the CustomBackButton component
+import 'package:pos_machine/components/build_back_button.dart';
 // Add this import for Timer
 import 'dart:async';
 
@@ -293,27 +297,6 @@ class _SimpleTransactionDetailsScreenState
     });
   }
 
-  Future<void> _selectDate(BuildContext context, bool isFromDate) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-    if (picked != null) {
-      final formattedDate = DateFormat('yyyy-MM-dd').format(picked);
-      setState(() {
-        if (isFromDate) {
-          _fromDateController.text = formattedDate;
-        } else {
-          _toDateController.text = formattedDate;
-        }
-      });
-      // Apply filters immediately after date selection
-      _applyFilters();
-    }
-  }
-
   Widget _buildDropdownField(String label, TextEditingController controller,
       List<String> options, Function(String) onFilterChanged) {
     return Padding(
@@ -419,43 +402,27 @@ class _SimpleTransactionDetailsScreenState
             height: 45,
             width: double.infinity,
             circleRadius: 7,
-            child: TextFormField(
-              controller: controller,
-              onTap: () => _selectDate(context, isFromDate),
-              readOnly: true,
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s10,
-                0.18,
-                ColorManager.textColor,
-              ),
-              decoration: decoration.copyWith(
-                hintText: "DD/MM/YYYY",
-                hintStyle: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s10,
-                  0.18,
-                  ColorManager.textColor,
-                ),
-                prefixIcon: Container(
-                  padding: const EdgeInsets.all(8),
-                  child: Icon(
-                    Icons.calendar_today,
-                    size: 16,
-                    color: ColorManager.kPrimaryColor,
-                  ),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                // Center the hint text vertically and horizontally with final adjustment
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
-                isDense: true,
-                alignLabelWithHint: true,
-              ),
-              textAlignVertical: TextAlignVertical.center,
+            child: CalendarPickerTableCell(
+              onDateSelected: (DateTime selectedDate) {
+                final formattedDate =
+                    DateFormat('yyyy-MM-dd').format(selectedDate);
+                setState(() {
+                  if (isFromDate) {
+                    _fromDateController.text = formattedDate;
+                  } else {
+                    _toDateController.text = formattedDate;
+                  }
+                });
+                // Apply filters immediately after date selection
+                _applyFilters();
+              },
+              initialDate: controller.text.isNotEmpty
+                  ? DateFormat('yyyy-MM-dd').parse(controller.text)
+                  : null,
+              firstDate: DateTime(2000),
+              lastDate: DateTime(2101),
+              hintText: "Select Date",
+              isAllowEdit: true,
             ),
           ),
         ],
@@ -976,26 +943,34 @@ class _SimpleTransactionDetailsScreenState
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          "Transaction Details",
-          style: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s20,
-            0.30,
-            ColorManager.textColor,
-          ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CustomBackButton(
+              onPressed: () {
+                sideBarController.index.value =
+                    65; // Navigate back to Customer Transactions Report
+              },
+              text: 'All Customers',
+            ),
+            Text(
+              "Transaction Details",
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s20,
+                0.30,
+                ColorManager.textColor,
+              ),
+            ),
+          ],
         ),
         CustomRoundButton(
-          title: "Back",
-          boxColor: Colors.white,
-          textColor: ColorManager.kPrimaryColor,
-          borderColor: ColorManager.kPrimaryColor,
-          fct: () {
-            sideBarController.index.value =
-                65; // Navigate back to Customer Transactions Report
-          },
+          title: "Print",
+          boxColor: ColorManager.kPrimaryColor,
+          textColor: Colors.white,
+          fct: _printReport,
           height: 40,
-          width: 80,
+          width: 120,
           fontSize: FontSize.s12,
         ),
       ],
@@ -1003,132 +978,117 @@ class _SimpleTransactionDetailsScreenState
   }
 
   Widget _buildFilters() {
-    return BuildBoxShadowContainer(
-      circleRadius: 10,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Filters",
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s16,
-              0.25,
-              ColorManager.textColor,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Text(
+        //   "Filters",
+        //   style: buildCustomStyle(
+        //     FontWeightManager.semiBold,
+        //     FontSize.s16,
+        //     0.25,
+        //     ColorManager.textColor,
+        //   ),
+        // ),
+        const SizedBox(height: 15),
+        // First row of filters (4 filters)
+        SizedBox(
+          height: 90,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 1,
+                child: _buildCustomerAutocompleteField(),
+              ),
+              Expanded(
+                flex: 1,
+                child: _buildDropdownField(
+                  "Transaction Type",
+                  _transactionTypeController,
+                  transactionTypes,
+                  (value) {
+                    setState(() {
+                      searchTransactionType = value;
+                    });
+                    _applyFilters();
+                  },
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: _buildDropdownField(
+                  "Status",
+                  _statusController,
+                  statuses,
+                  (value) {
+                    setState(() {
+                      searchStatus = value;
+                    });
+                    _applyFilters();
+                  },
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: _buildDropdownField(
+                  "Type",
+                  _typeController,
+                  types,
+                  (value) {
+                    setState(() {
+                      searchType = value;
+                    });
+                    _applyFilters();
+                  },
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 15),
-          // First row of filters (4 filters)
-          SizedBox(
-            height: 90,
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 1,
-                  child: _buildCustomerAutocompleteField(),
+        ),
+        // Second row of filters (2 date filters + reset button)
+        SizedBox(
+          height: 90,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 1,
+                child: _buildDateField(
+                  "From Date",
+                  _fromDateController,
+                  true,
                 ),
-                Expanded(
-                  flex: 1,
-                  child: _buildDropdownField(
-                    "Transaction Type",
-                    _transactionTypeController,
-                    transactionTypes,
-                    (value) {
-                      setState(() {
-                        searchTransactionType = value;
-                      });
-                      _applyFilters();
-                    },
+              ),
+              Expanded(
+                flex: 1,
+                child: _buildDateField(
+                  "To Date",
+                  _toDateController,
+                  false,
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Container(), // Empty space to maintain 4-field layout
+              ),
+              Expanded(
+                flex: 1,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 42, left: 10),
+                  child: CustomRoundButton(
+                    title: "Reset",
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    fct: _resetFilters,
+                    height: 45,
+                    width: double.infinity,
+                    fontSize: FontSize.s12,
                   ),
                 ),
-                Expanded(
-                  flex: 1,
-                  child: _buildDropdownField(
-                    "Status",
-                    _statusController,
-                    statuses,
-                    (value) {
-                      setState(() {
-                        searchStatus = value;
-                      });
-                      _applyFilters();
-                    },
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: _buildDropdownField(
-                    "Type",
-                    _typeController,
-                    types,
-                    (value) {
-                      setState(() {
-                        searchType = value;
-                      });
-                      _applyFilters();
-                    },
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          // Second row of filters (2 date filters + print button + reset button)
-          SizedBox(
-            height: 90,
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 1,
-                  child: _buildDateField(
-                    "From Date",
-                    _fromDateController,
-                    true,
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: _buildDateField(
-                    "To Date",
-                    _toDateController,
-                    false,
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 30, left: 10),
-                    child: CustomRoundButton(
-                      title: "Print",
-                      boxColor: ColorManager.kPrimaryColor,
-                      textColor: Colors.white,
-                      fct: _printReport,
-                      height: 45,
-                      width: double.infinity,
-                      fontSize: FontSize.s12,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 30, left: 10),
-                    child: CustomRoundButton(
-                      title: "Reset",
-                      boxColor: Colors.white,
-                      textColor: ColorManager.kPrimaryColor,
-                      fct: _resetFilters,
-                      height: 45,
-                      width: double.infinity,
-                      fontSize: FontSize.s12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
