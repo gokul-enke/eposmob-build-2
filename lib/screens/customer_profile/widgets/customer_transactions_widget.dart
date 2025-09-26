@@ -615,7 +615,7 @@ class _CustomerTransactionsWidgetState
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           leading: _buildTransactionIcon(transaction.type),
           title: Text(
-            transaction.reference ?? 'No Reference',
+            transaction.referenceId ?? 'No Reference',
             style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s15, 0,
                 ColorManager.kTitleTextColor),
           ),
@@ -697,6 +697,8 @@ class _CustomerTransactionsWidgetState
         children: [
           _buildDetailRow(
               'Transaction ID', transaction.id?.toString() ?? 'N/A'),
+          _buildDetailRow(
+              'Reference', transaction.reference ?? 'N/A'),
           _buildDetailRow('Type', transaction.type ?? 'N/A'),
           _buildDetailRow('Payment Method', transaction.paymentMethod ?? 'N/A'),
           if (transaction.transactionComment != null)

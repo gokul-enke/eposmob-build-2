@@ -89,16 +89,18 @@ class TransactionReportStandardPrinter {
           "billDocumentConfig Updated At: ${billDocumentConfig.updatedAt}");
       debugPrint(
           "billDocumentConfig Has Display Config: ${billDocumentConfig.displayConfiguration != null}");
-      
+
       // Additional debugging for display configuration
       if (billDocumentConfig.displayConfiguration != null) {
         debugPrint("Display Configuration object exists");
-        debugPrint("Display Configuration options: ${billDocumentConfig.displayConfiguration!.options}");
-        debugPrint("Display Configuration options type: ${billDocumentConfig.displayConfiguration!.options.runtimeType}");
+        debugPrint(
+            "Display Configuration options: ${billDocumentConfig.displayConfiguration!.options}");
+        debugPrint(
+            "Display Configuration options type: ${billDocumentConfig.displayConfiguration!.options.runtimeType}");
       } else {
         debugPrint("❌ Display Configuration object is NULL");
       }
-      
+
       debugPrint("Display Config Options Count: ${displayConfig?.length ?? 0}");
       if (displayConfig != null) {
         debugPrint("Display Config Keys: ${displayConfig.keys.toList()}");
@@ -116,9 +118,11 @@ class TransactionReportStandardPrinter {
       // Create fallback display configuration if null
       Map<String, DisplayOption>? updatedSettings = displayConfig;
       if (updatedSettings == null) {
-        debugPrint("⚠️ Display configuration is null, creating fallback configuration");
+        debugPrint(
+            "⚠️ Display configuration is null, creating fallback configuration");
         updatedSettings = _createFallbackDisplayConfig();
-        debugPrint("✅ Created fallback configuration with ${updatedSettings.length} options");
+        debugPrint(
+            "✅ Created fallback configuration with ${updatedSettings.length} options");
       }
 
       if (context.mounted) {
@@ -235,7 +239,7 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     (updatedSettings?['showFooter']?.value as String?) ??
                         'This is a computer-generated document. No signature is required.',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                       fontSize: 8,
                       color: PdfColors.grey600,
                     ),
@@ -738,7 +742,8 @@ class TransactionReportStandardPrinter {
         // Header row with dark styling to match screenshot
         pw.TableRow(
           decoration: pw.BoxDecoration(
-            color: PdfColor.fromHex('#4a5568'), // Dark grey-blue like screenshot
+            color:
+                PdfColor.fromHex('#4a5568'), // Dark grey-blue like screenshot
           ),
           children: tableHeaders
               .map((header) => pw.Padding(
@@ -1334,9 +1339,11 @@ class TransactionReportStandardPrinter {
       // Create fallback display configuration if null
       Map<String, DisplayOption>? updatedSettings = displayConfig;
       if (updatedSettings == null) {
-        debugPrint("⚠️ Display configuration is null in sharing method, creating fallback configuration");
+        debugPrint(
+            "⚠️ Display configuration is null in sharing method, creating fallback configuration");
         updatedSettings = _createFallbackDisplayConfig();
-        debugPrint("✅ Created fallback configuration for sharing with ${updatedSettings.length} options");
+        debugPrint(
+            "✅ Created fallback configuration for sharing with ${updatedSettings.length} options");
       }
 
       // Create a PDF document
@@ -1423,7 +1430,7 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     (updatedSettings?['showFooter']?.value as String?) ??
                         'This is a computer-generated document. No signature is required.',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                       fontSize: 8,
                       color: PdfColors.grey600,
                     ),
