@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/supplier.dart';
@@ -10,11 +11,14 @@ import 'package:pos_machine/providers/supplier_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/components/build_text_fields.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
 
 // Import date filtering components
 import 'package:pos_machine/components/build_calendar_selection.dart';
+// Import print functionality
+import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_report_print.dart';
 import 'dart:async';
 
 class SupplierTransactionDetailsScreen extends StatefulWidget {
@@ -301,16 +305,30 @@ class _SupplierTransactionDetailsScreenState
             ],
           ),
         ),
-        CustomRoundButton(
-          title: "Back to Report",
-          boxColor: Colors.white,
-          textColor: ColorManager.kPrimaryColor,
-          fct: () {
-            sideBarController.index.value = 67; // Back to Supplier Transaction Report
-          },
-          height: 40,
-          width: 120,
-          fontSize: FontSize.s12,
+        Row(
+          children: [
+            CustomRoundButton(
+              title: "Print",
+              boxColor: ColorManager.kPrimaryColor,
+              textColor: Colors.white,
+              fct: _printReport,
+              height: 40,
+              width: 80,
+              fontSize: FontSize.s12,
+            ),
+            const SizedBox(width: 10),
+            CustomRoundButton(
+              title: "Back to Report",
+              boxColor: Colors.white,
+              textColor: ColorManager.kPrimaryColor,
+              fct: () {
+                sideBarController.index.value = 67; // Back to Supplier Transaction Report
+              },
+              height: 40,
+              width: 120,
+              fontSize: FontSize.s12,
+            ),
+          ],
         ),
       ],
     );
@@ -545,44 +563,53 @@ class _SupplierTransactionDetailsScreenState
           ),
           const SizedBox(height: 8),
           BuildBoxShadowContainer(
-            circleRadius: 7,
-            alignment: Alignment.centerLeft,
-            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-            padding: const EdgeInsets.only(left: 15),
             height: 45,
             width: double.infinity,
-            child: DropdownButton<String>(
-              isExpanded: true,
-              value: selectedValue,
-              hint: Text(
-                "Select $label",
-                style: buildCustomStyle(
-                  FontWeightManager.regular,
-                  FontSize.s12,
-                  0.27,
-                  ColorManager.textColor.withOpacity(.5),
+            circleRadius: 7,
+            child: DropdownButtonFormField<String>(
+              value: selectedValue == 'All' ? null : selectedValue,
+              decoration: decoration.copyWith(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                hintText: "All $label",
+                hintStyle: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s10,
+                  0.18,
+                  ColorManager.textColor,
                 ),
+                filled: true,
+                fillColor: Colors.white,
               ),
-              items: options.map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
+              dropdownColor: Colors.white,
+              items: [
+                const DropdownMenuItem(
+                  value: null,
                   child: Text(
-                    value,
-                    style: buildCustomStyle(
-                      FontWeightManager.regular,
-                      FontSize.s12,
-                      0.27,
-                      ColorManager.textColor,
+                    "All",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
                     ),
                   ),
-                );
-              }).toList(),
-              onChanged: onChanged,
-              underline: Container(),
-              icon: const Icon(
-                Icons.keyboard_arrow_down,
-                color: ColorManager.kPrimaryColor,
-              ),
+                ),
+                ...options.where((option) => option != 'All').map((String option) {
+                  return DropdownMenuItem<String>(
+                    value: option,
+                    child: Text(
+                      option,
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s10,
+                        0.18,
+                        ColorManager.textColor,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ],
+              onChanged: (String? value) {
+                onChanged(value ?? 'All');
+              },
             ),
           ),
         ],
@@ -784,64 +811,236 @@ class _SupplierTransactionDetailsScreenState
       children: [
         _buildTableCell(transaction.date),
         _buildTableCell(transaction.reference),
-        _buildTableCell(
-          transaction.type,
-          isType: true,
-          type: transaction.type,
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10.0),
+            child: Center(child: _buildTypeCell(transaction.type)),
+          ),
         ),
         _buildTableCell(transaction.transactionType),
         _buildTableCell(
           "${transaction.currency} ${double.tryParse(transaction.amount)?.toStringAsFixed(2) ?? transaction.amount}",
         ),
         _buildTableCell(transaction.paymentMethod),
-        _buildTableCell(
-          transaction.status,
-          isStatus: true,
-          status: transaction.status,
-        ),
+        _buildStatusChip(transaction.status),
       ],
     );
   }
 
-  Widget _buildTableCell(String content,
-      {bool isType = false,
-      String? type,
-      bool isStatus = false,
-      String? status}) {
-    Color textColor = Colors.black;
-    
-    if (isType && type != null) {
-      textColor = type.toLowerCase() == 'credit' ? Colors.green : Colors.red;
-    } else if (isStatus && status != null) {
-      switch (status.toLowerCase()) {
-        case 'completed':
-        case 'success':
-          textColor = Colors.green;
-          break;
-        case 'pending':
-          textColor = Colors.orange;
-          break;
-        case 'failed':
-        case 'cancelled':
-          textColor = Colors.red;
-          break;
-        default:
-          textColor = Colors.black;
-      }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Text(
-        content,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s9,
-          0.13,
-          textColor,
+  Widget _buildTableCell(String content) {
+    return TableCell(
+      verticalAlignment: TableCellVerticalAlignment.middle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+        child: Text(
+          content,
+          textAlign: TextAlign.center,
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s9,
+            0.13,
+            Colors.black,
+          ),
         ),
       ),
     );
+  }
+
+  Widget _buildStatusChip(String status) {
+    // Match styling to _buildTypeCell: radius 8, opacity 0.1, bold, fontSize 12
+    Color bg;
+    Color fg;
+    String label;
+
+    switch (status.toUpperCase()) {
+      case 'SUCC':
+      case 'SUCCESS':
+      case 'COMPLETED':
+        bg = Colors.green.withOpacity(0.1);
+        fg = Colors.green;
+        label = 'Success';
+        break;
+      case 'INIT':
+      case 'INITIATED':
+      case 'PENDING':
+        bg = Colors.orange.withOpacity(0.1);
+        fg = Colors.orange;
+        label = 'Pending';
+        break;
+      case 'FAIL':
+      case 'FAILED':
+      case 'CANCELLED':
+        bg = Colors.red.withOpacity(0.1);
+        fg = Colors.red;
+        label = 'Failed';
+        break;
+      default:
+        bg = Colors.grey.withOpacity(0.1);
+        fg = Colors.grey;
+        label = status.isEmpty ? 'N/A' : status;
+    }
+
+    return TableCell(
+      verticalAlignment: TableCellVerticalAlignment.middle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10.0),
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: fg,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypeCell(String type) {
+    final isCredit = type.toLowerCase() == 'credit';
+    final color = isCredit ? Colors.green : Colors.red;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        type,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  void _printReport() async {
+    // Show loading indicator
+    if (mounted) {
+      showScaffold(
+        context: context,
+        message: "Preparing supplier transaction report...",
+      );
+    }
+
+    // Show loading state
+    setState(() {
+      initLoading = true;
+    });
+
+    // Fetch supplier details
+    String supplierName = selectedSupplierName;
+    String supplierPhone = "";
+    String supplierEmail = "";
+    String supplierAddress = "";
+
+    if (supplierName.isNotEmpty) {
+      try {
+        String? accessToken =
+            Provider.of<AuthModel>(context, listen: false).token;
+        if (accessToken != null) {
+          final supplierProvider =
+              Provider.of<SupplierProvider>(context, listen: false);
+
+          // Find supplier by name
+          debugPrint("Attempting to fetch supplier details for: $supplierName");
+          final supplier = supplierProvider.supplierList?.firstWhere(
+            (s) => s.name == supplierName,
+            orElse: () => Supplier(
+              id: 0,
+              name: '',
+              email: '',
+              phone: '',
+              productCategories: '',
+              address: '',
+              balance: 0.0,
+              paymentType: '',
+              companyId: 0,
+              currentBalance: 0.0,
+              balanceStatus: '',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+              userId: 0,
+              transactions: [],
+              purchases: [],
+            ),
+          );
+
+          if (supplier != null && supplier.name.isNotEmpty) {
+            supplierPhone = supplier.phone ?? "";
+            supplierEmail = supplier.email ?? "";
+            supplierAddress = supplier.address ?? "";
+
+            debugPrint("Supplier details found:");
+            debugPrint("  Name: $supplierName");
+            debugPrint("  Phone: $supplierPhone");
+            debugPrint("  Email: $supplierEmail");
+            debugPrint("  Address: $supplierAddress");
+          } else {
+            debugPrint("Supplier not found in provider list");
+          }
+        } else {
+          debugPrint("Access token is null, cannot fetch supplier details");
+        }
+      } catch (e, stackTrace) {
+        debugPrint("Error fetching supplier details: $e");
+        debugPrint("Stack trace: $stackTrace");
+        // Continue with just the name if we can't fetch details
+      }
+    } else {
+      debugPrint("Supplier name is empty, skipping supplier details fetch");
+    }
+
+    // Hide loading state
+    setState(() {
+      initLoading = false;
+    });
+
+    // Create a list of cart items from the filtered transactions
+    List<SupplierTransaction> cartItems = filteredTransactions;
+
+    // Calculate total amount
+    double totalAmount = 0.0;
+    for (var transaction in cartItems) {
+      double amount = double.tryParse(transaction.amount) ?? 0.0;
+      totalAmount += amount;
+    }
+
+    String formattedTotal = totalAmount.toStringAsFixed(2);
+
+    // Navigate to print screen
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SupplierTransactionReportPrint(
+            cartItems: cartItems,
+            formattedTotal: formattedTotal,
+            savedTotal: formattedTotal,
+            orderDate: DateTime.now().toIso8601String(),
+            orderNumber: "SUPP-${DateTime.now().millisecondsSinceEpoch}",
+            isFromLocalStorage: false,
+            supplierName: supplierName,
+            supplierPhone: supplierPhone,
+            supplierEmail: supplierEmail,
+            supplierAddress: supplierAddress,
+            fromDate: _fromDateController.text,
+            toDate: _toDateController.text,
+          ),
+        ),
+      );
+    }
   }
 }

@@ -60,9 +60,9 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
 
   Widget _buildHeader() {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: ColorManager.kPrimaryWithOpacity10,
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           topLeft: Radius.circular(12),
           topRight: Radius.circular(12),
         ),

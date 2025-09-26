@@ -21,10 +21,10 @@ class CustomerTransactionsWidget extends StatefulWidget {
   final CustomerListModelData customer;
 
   const CustomerTransactionsWidget({
-    Key? key,
+    super.key,
     required this.size,
     required this.customer,
-  }) : super(key: key);
+  });
 
   @override
   State<CustomerTransactionsWidget> createState() =>
@@ -169,7 +169,7 @@ class _CustomerTransactionsWidgetState
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Preparing transaction report..."),
+          content: const Text("Preparing transaction report..."),
           backgroundColor: Theme.of(context).primaryColor,
         ),
       );
@@ -279,7 +279,7 @@ class _CustomerTransactionsWidgetState
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Preparing transaction report for printing..."),
+          content: const Text("Preparing transaction report for printing..."),
           backgroundColor: Theme.of(context).primaryColor,
         ),
       );
@@ -326,9 +326,9 @@ class _CustomerTransactionsWidgetState
 
   Widget _buildHeader() {
     return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withOpacity(0.1),
-        borderRadius: const BorderRadius.only(
+      decoration: const BoxDecoration(
+        color: ColorManager.kPrimaryWithOpacity10,
+        borderRadius: BorderRadius.only(
           topLeft: Radius.circular(12),
           topRight: Radius.circular(12),
         ),
@@ -344,10 +344,10 @@ class _CustomerTransactionsWidgetState
               const SizedBox(width: 12),
               Text(
                 'Transactions (${filteredTransactions.length})',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF2C3E50),
+                  color: Color(0xFF2C3E50),
                 ),
               ),
             ],

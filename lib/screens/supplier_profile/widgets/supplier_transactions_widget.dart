@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/supplier.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/supplier_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_report_print.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import 'package:pos_machine/components/build_calendar_selection.dart';
 
 class SupplierTransactionsWidget extends StatefulWidget {
   final Size size;
@@ -22,6 +29,143 @@ class SupplierTransactionsWidget extends StatefulWidget {
 
 class _SupplierTransactionsWidgetState
     extends State<SupplierTransactionsWidget> {
+  late List<SupplierTransaction> transactions;
+  late List<SupplierTransaction> filteredTransactions;
+
+  // Controllers for filters
+  final TextEditingController _referenceController = TextEditingController();
+  final TextEditingController _fromDateController = TextEditingController();
+  final TextEditingController _toDateController = TextEditingController();
+
+  // Filter values
+  String? _filterReference;
+  DateTime? _filterFromDate;
+  DateTime? _filterToDate;
+  String? _filterType; // Credit/Debit filter
+
+  // For dropdown options
+  List<String> transactionTypes = ['Credit', 'Debit'];
+
+  // Filter panel visibility
+  bool _isFilterPanelVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    transactions = widget.supplier.transactions;
+    filteredTransactions = List.from(transactions);
+    _applyFilters(); // Apply initial filters
+  }
+
+  // Helper method to determine if transaction is credit or debit
+  bool _isCreditTransaction(SupplierTransaction transaction) {
+    return transaction.type?.toLowerCase() == 'credit';
+  }
+
+  // Apply filters to the transactions
+  void _applyFilters() {
+    setState(() {
+      filteredTransactions = transactions.where((transaction) {
+        // Reference filter
+        if (_filterReference != null && _filterReference!.isNotEmpty) {
+          if (transaction.reference == null ||
+              !transaction.reference
+                  .toLowerCase()
+                  .contains(_filterReference!.toLowerCase())) {
+            return false;
+          }
+        }
+
+        // Date range filter
+        if (_filterFromDate != null || _filterToDate != null) {
+          if (transaction.date == null || transaction.date.isEmpty) return false;
+
+          try {
+            final transactionDate =
+                DateFormat('yyyy-MM-dd').parse(transaction.date);
+
+            // If from date is set, check that transaction date is not before it
+            if (_filterFromDate != null &&
+                transactionDate.isBefore(_filterFromDate!)) {
+              return false;
+            }
+
+            // If to date is set, check that transaction date is not after it
+            if (_filterToDate != null &&
+                transactionDate.isAfter(_filterToDate!)) {
+              return false;
+            }
+          } catch (e) {
+            debugPrint('Date parsing error for transaction: $e');
+            return false;
+          }
+        }
+
+        // Type filter (Credit/Debit)
+        if (_filterType != null && _filterType!.isNotEmpty) {
+          bool isCredit = _isCreditTransaction(transaction);
+          if (_filterType == 'Credit' && !isCredit) {
+            return false;
+          }
+          if (_filterType == 'Debit' && isCredit) {
+            return false;
+          }
+        }
+
+        return true;
+      }).toList();
+    });
+  }
+
+  // Reset all filters
+  void _resetFilters() {
+    _referenceController.clear();
+    _fromDateController.clear();
+    _toDateController.clear();
+
+    setState(() {
+      _filterReference = null;
+      _filterFromDate = null;
+      _filterToDate = null;
+      _filterType = null;
+      filteredTransactions = List.from(transactions);
+      _isFilterPanelVisible = false;
+    });
+  }
+
+  // Toggle filter panel visibility
+  void _toggleFilterPanel() {
+    setState(() {
+      _isFilterPanelVisible = !_isFilterPanelVisible;
+      // Set initial values for the controllers when panel opens
+      if (_isFilterPanelVisible) {
+        _referenceController.text = _filterReference ?? '';
+        _fromDateController.text = _filterFromDate != null
+            ? DateFormat('yyyy-MM-dd').format(_filterFromDate!)
+            : '';
+        _toDateController.text = _filterToDate != null
+            ? DateFormat('yyyy-MM-dd').format(_filterToDate!)
+            : '';
+      }
+    });
+  }
+
+  // Apply filters and close panel
+  void _applyFiltersAndClose() {
+    _applyFilters();
+    setState(() {
+      _isFilterPanelVisible = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _referenceController.dispose();
+    _fromDateController.dispose();
+    _toDateController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Expanded(
@@ -34,8 +178,10 @@ class _SupplierTransactionsWidgetState
         child: Column(
           children: [
             _buildHeader(),
+            // Filter panel that shows/hides below header
+            if (_isFilterPanelVisible) _buildFilterPanel(),
             Expanded(
-              child: widget.supplier.transactions.isEmpty
+              child: filteredTransactions.isEmpty
                   ? _buildEmptyState()
                   : _buildTransactionsList(),
             ),
@@ -64,7 +210,7 @@ class _SupplierTransactionsWidgetState
                   color: Color(0xFF3C92F5), size: 28),
               const SizedBox(width: 12),
               Text(
-                'Transactions (${widget.supplier.transactions.length})',
+                'Transactions (${filteredTransactions.length})',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -77,17 +223,19 @@ class _SupplierTransactionsWidgetState
             children: [
               IconButton(
                 icon: const Icon(Icons.print),
-                onPressed: () {
-                  // Add print functionality
-                },
+                onPressed: _printTransactions,
                 color: const Color(0xFF7F8C8D),
                 tooltip: 'Print transactions',
               ),
               IconButton(
-                icon: const Icon(Icons.filter_list_alt),
-                onPressed: () {},
+                icon: Icon(_isFilterPanelVisible
+                    ? Icons.filter_list_off
+                    : Icons.filter_list_alt),
+                onPressed: _toggleFilterPanel,
                 color: const Color(0xFF7F8C8D),
-                tooltip: 'Filter transactions',
+                tooltip: _isFilterPanelVisible
+                    ? 'Close filters'
+                    : 'Filter transactions',
               ),
             ],
           ),
@@ -99,9 +247,9 @@ class _SupplierTransactionsWidgetState
   Widget _buildTransactionsList() {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: widget.supplier.transactions.length,
+      itemCount: filteredTransactions.length,
       itemBuilder: (context, index) =>
-          _buildTransactionCard(context, widget.supplier.transactions[index]),
+          _buildTransactionCard(context, filteredTransactions[index]),
     );
   }
 
@@ -263,6 +411,192 @@ class _SupplierTransactionsWidgetState
     }
   }
 
+  Widget _buildFilterPanel() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade300),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Reference Number',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _referenceController,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter reference number',
+                        border: OutlineInputBorder(),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _filterReference = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Transaction Type',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: _filterType,
+                      decoration: const InputDecoration(
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        hintText: "Select Type",
+                        border: OutlineInputBorder(),
+                      ),
+                      dropdownColor: Colors.white,
+                      items: [
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text("All Types"),
+                        ),
+                        ...transactionTypes.map((String type) {
+                          return DropdownMenuItem<String>(
+                            value: type,
+                            child: Text(type),
+                          );
+                        }).toList(),
+                      ],
+                      onChanged: (String? value) {
+                        setState(() {
+                          _filterType = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'From Date',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    BuildBoxShadowContainer(
+                      height: 45,
+                      width: double.infinity,
+                      circleRadius: 7,
+                      child: CalendarPickerTableCell(
+                        onDateSelected: (DateTime selectedDate) {
+                          setState(() {
+                            _filterFromDate = selectedDate;
+                            _fromDateController.text =
+                                DateFormat('yyyy-MM-dd').format(selectedDate);
+                          });
+                        },
+                        initialDate: _filterFromDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2101),
+                        hintText: "Select From Date",
+                        isAllowEdit: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'To Date',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    BuildBoxShadowContainer(
+                      height: 45,
+                      width: double.infinity,
+                      circleRadius: 7,
+                      child: CalendarPickerTableCell(
+                        onDateSelected: (DateTime selectedDate) {
+                          setState(() {
+                            _filterToDate = selectedDate;
+                            _toDateController.text =
+                                DateFormat('yyyy-MM-dd').format(selectedDate);
+                          });
+                        },
+                        initialDate: _filterToDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2101),
+                        hintText: "Select To Date",
+                        isAllowEdit: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: _resetFilters,
+                child: const Text('Reset'),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: _applyFiltersAndClose,
+                child: const Text('Apply Filters'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -276,7 +610,9 @@ class _SupplierTransactionsWidgetState
                   0, ColorManager.kTitleTextColor)),
           const SizedBox(height: 8),
           Text(
-            'Transaction data is not available for this supplier.',
+            transactions.isEmpty 
+                ? 'Transaction data is not available for this supplier.'
+                : 'No transactions match your current filters.',
             textAlign: TextAlign.center,
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0,
                 ColorManager.kGreyColor),
@@ -284,5 +620,98 @@ class _SupplierTransactionsWidgetState
         ],
       ),
     );
+  }
+
+  void _printTransactions() async {
+    if (widget.supplier.transactions.isEmpty) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: "No transactions available to print",
+        );
+      }
+      return;
+    }
+
+    // Show loading indicator
+    if (mounted) {
+      showScaffold(
+        context: context,
+        message: "Preparing supplier transaction report...",
+      );
+    }
+
+    try {
+      // Get supplier details
+      String supplierName = widget.supplier.name ?? '';
+      String supplierPhone = widget.supplier.phone ?? '';
+      String supplierEmail = widget.supplier.email ?? '';
+      String supplierAddress = widget.supplier.address ?? '';
+
+      // Calculate total amount
+      double totalAmount = 0.0;
+      for (var transaction in widget.supplier.transactions) {
+        double amount = double.tryParse(transaction.amount) ?? 0.0;
+        totalAmount += amount;
+      }
+
+      String formattedTotal = totalAmount.toStringAsFixed(2);
+
+      // Set date range to cover all transactions
+      String? fromDate;
+      String? toDate;
+      
+      if (widget.supplier.transactions.isNotEmpty) {
+        // Get the earliest and latest transaction dates
+        List<DateTime> dates = [];
+        for (var transaction in widget.supplier.transactions) {
+          try {
+            if (transaction.date != null && transaction.date.isNotEmpty) {
+              DateTime date = DateFormat('yyyy-MM-dd').parse(transaction.date);
+              dates.add(date);
+            }
+          } catch (e) {
+            debugPrint('Error parsing date: ${transaction.date}');
+          }
+        }
+        
+        if (dates.isNotEmpty) {
+          dates.sort();
+          fromDate = DateFormat('yyyy-MM-dd').format(dates.first);
+          toDate = DateFormat('yyyy-MM-dd').format(dates.last);
+        }
+      }
+
+      // Navigate to print screen
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SupplierTransactionReportPrint(
+              cartItems: widget.supplier.transactions,
+              formattedTotal: formattedTotal,
+              savedTotal: formattedTotal,
+              orderDate: DateTime.now().toIso8601String(),
+              orderNumber: "SUPP-${DateTime.now().millisecondsSinceEpoch}",
+              isFromLocalStorage: false,
+              supplierName: supplierName,
+              supplierPhone: supplierPhone,
+              supplierEmail: supplierEmail,
+              supplierAddress: supplierAddress,
+              fromDate: fromDate,
+              toDate: toDate,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error preparing print: $e');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: "Error preparing print: $e",
+        );
+      }
+    }
   }
 }
