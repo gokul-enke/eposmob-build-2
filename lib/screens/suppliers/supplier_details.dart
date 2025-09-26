@@ -213,7 +213,7 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
                   : 'N/A'),
           const SizedBox(height: 8),
           _buildDetailRow('Balance',
-              supplier!.balance.isNotEmpty ? supplier!.balance : 'N/A'),
+              supplier!.balance > 0 ? supplier!.balance.toStringAsFixed(2) : 'N/A'),
           const SizedBox(height: 8),
           _buildDetailRowWithColor(
               'Current Balance',

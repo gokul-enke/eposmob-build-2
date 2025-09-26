@@ -12,6 +12,7 @@ class SupplierProvider with ChangeNotifier {
   List<Supplier>? _allSuppliers = []; // Store all suppliers for local filtering
   bool _isLoading = false;
   Supplier? _selectedSupplier;
+  String? _selectedSupplierName; // For supplier transaction report
 
   // Pagination properties
   int _currentPage = 1;
@@ -23,8 +24,10 @@ class SupplierProvider with ChangeNotifier {
   String? _filterBalance;
 
   List<Supplier>? get supplierList => _supplierList;
+  List<Supplier>? get allSuppliers => _allSuppliers; // Getter for all suppliers
   bool get isLoading => _isLoading;
   Supplier? get selectedSupplier => _selectedSupplier;
+  String? get selectedSupplierName => _selectedSupplierName;
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
   int get itemsPerPage => _itemsPerPage;
@@ -44,6 +47,18 @@ class SupplierProvider with ChangeNotifier {
   // Clear selected supplier
   void clearSelectedSupplier() {
     _selectedSupplier = null;
+    notifyListeners();
+  }
+
+  // Set selected supplier name for transaction report
+  void setSelectedSupplierName(String supplierName) {
+    _selectedSupplierName = supplierName;
+    notifyListeners();
+  }
+
+  // Clear selected supplier name
+  void clearSelectedSupplierName() {
+    _selectedSupplierName = null;
     notifyListeners();
   }
 

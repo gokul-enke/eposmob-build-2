@@ -163,7 +163,7 @@ class _SupplierInformationViewWidgetState
                           _buildInfoRow(
                             icon: Icons.account_balance,
                             label: "Balance",
-                            value: widget.supplier?.balance ?? "0",
+                            value: widget.supplier?.balance.toStringAsFixed(2) ?? "0",
                             valueColor: ColorManager.kSuccessColor,
                           ),
                           const SizedBox(height: 16),
@@ -179,6 +179,17 @@ class _SupplierInformationViewWidgetState
                             icon: Icons.payment,
                             label: "Payment Type",
                             value: widget.supplier?.paymentType ?? "N/A",
+                          ),
+                          const SizedBox(height: 16),
+                          _buildInfoRow(
+                            icon: Icons.info_outline,
+                            label: "Balance Status",
+                            value: widget.supplier?.balanceStatus ?? "N/A",
+                            valueColor: widget.supplier?.paymentType == 'to_pay' 
+                                ? Colors.red 
+                                : widget.supplier?.paymentType == 'to_receive' 
+                                    ? Colors.green 
+                                    : ColorManager.textColor,
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
@@ -224,26 +235,53 @@ class _SupplierInformationViewWidgetState
     required IconData icon,
     required List<Widget> children,
   }) {
-    return BuildBoxShadowContainer(
-      margin: const EdgeInsets.only(bottom: 0),
-      padding: const EdgeInsets.all(20),
-      circleRadius: 12,
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: ColorManager.kSecondaryColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: ColorManager.kPrimaryWithOpacity10),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, color: ColorManager.kPrimaryColor, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: buildCustomStyle(FontWeightManager.semiBold,
-                    FontSize.s16, 0, ColorManager.kTitleTextColor),
+          // Card Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: ColorManager.kPrimaryWithOpacity10,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
               ),
-            ],
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 20,
+                  color: ColorManager.kPrimaryColor,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s16,
+                    0.30,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          ...children,
+          // Card Content
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: children,
+            ),
+          ),
         ],
       ),
     );
@@ -256,9 +294,20 @@ class _SupplierInformationViewWidgetState
     Color? valueColor,
   }) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: ColorManager.kGreyColor),
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: ColorManager.kPrimaryWithOpacity10,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: ColorManager.kPrimaryColor,
+          ),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -266,17 +315,21 @@ class _SupplierInformationViewWidgetState
             children: [
               Text(
                 label,
-                style: buildCustomStyle(FontWeightManager.medium, FontSize.s13,
-                    0, ColorManager.kGreyColor),
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.30,
+                  ColorManager.kGreyColor,
+                ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 value,
                 style: buildCustomStyle(
-                  FontWeightManager.regular,
+                  FontWeightManager.semiBold,
                   FontSize.s14,
-                  0,
-                  valueColor ?? ColorManager.kTitleTextColor,
+                  0.30,
+                  valueColor ?? ColorManager.textColor,
                 ),
               ),
             ],
@@ -287,62 +340,102 @@ class _SupplierInformationViewWidgetState
   }
 
   Widget _buildQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Quick Actions",
-          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s16, 0,
-              ColorManager.kTitleTextColor),
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _buildActionButton(
-              icon: Icons.edit,
-              label: "Edit Details",
-              onPressed: widget.onEditSupplier,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: ColorManager.kPrimaryWithOpacity10),
+        boxShadow: [
+          BoxShadow(
+            color: ColorManager.boxShadowColor.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Quick Actions",
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s16,
+              0.30,
+              ColorManager.textColor,
             ),
-            _buildActionButton(
-              icon: Icons.receipt_long,
-              label: "View Orders",
-              onPressed: widget.onViewOrders,
-            ),
-            _buildActionButton(
-              icon: Icons.message,
-              label: "Message",
-              onPressed: widget.onMessage,
-            ),
-          ],
-        ),
-      ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.edit_outlined,
+                  label: "Edit Supplier",
+                  color: ColorManager.kPrimaryColor,
+                  onTap: widget.onEditSupplier ?? () {},
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.history_outlined,
+                  label: "View Orders",
+                  color: ColorManager.kButtonGreen,
+                  onTap: widget.onViewOrders ?? () {},
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.business_outlined,
+                  label: "Contact",
+                  color: ColorManager.kButtonBlue,
+                  onTap: widget.onMessage ?? () {},
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildActionButton({
     required IconData icon,
     required String label,
-    VoidCallback? onPressed,
+    required Color color,
+    required VoidCallback onTap,
   }) {
-    return SizedBox(
-      width: 120,
-      height: 100,
-      child: BuildBoxShadowContainer(
-        margin: const EdgeInsets.all(0),
-        padding: const EdgeInsets.all(12),
-        circleRadius: 12,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: ColorManager.kPrimaryColor, size: 24),
-            const SizedBox(height: 8),
+            Icon(
+              icon,
+              size: 20,
+              color: color,
+            ),
+            const SizedBox(height: 4),
             Text(
               label,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s11,
+                0.30,
+                color,
+              ),
               textAlign: TextAlign.center,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12, 0,
-                  ColorManager.kTitleTextColor),
             ),
           ],
         ),

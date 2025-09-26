@@ -354,7 +354,7 @@ class _SideMenuState extends State<SideMenu> {
                 },
                 selected: sideBarController.index.value == 52 ||
                     sideBarController.index.value == 57 ||
-                    sideBarController.index.value == 67,
+                    sideBarController.index.value == 69,
               ),
             ),
           if (_hasRole('sales_executive'))
@@ -367,8 +367,12 @@ class _SideMenuState extends State<SideMenu> {
                   onTapTitle2: () {
                     sideBarController.index.value = 65;
                   },
+                  onTapTitle3: () {
+                    sideBarController.index.value = 67;
+                  },
                   listTitle1: "Sales Executive Reports",
                   listTitle2: "Customer Transactions Reports ",
+                  listTitle3: "Supplier Transactions Reports ",
                   iconPath: ImageAssets.transactionIcon,
                   title: 'Reports',
                   onTap: () {
@@ -377,7 +381,9 @@ class _SideMenuState extends State<SideMenu> {
                   },
                   selected: sideBarController.index.value == 58 ||
                       sideBarController.index.value == 65 ||
-                      sideBarController.index.value == 66),
+                      sideBarController.index.value == 66 ||
+                      sideBarController.index.value == 67 ||
+                      sideBarController.index.value == 68),
             ),
           if (_hasRole('sales_executive'))
             Obx(

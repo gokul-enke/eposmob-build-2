@@ -43,6 +43,7 @@ class _SupplierAddressViewWidgetState extends State<SupplierAddressViewWidget> {
 
   Widget _buildHeader() {
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: ColorManager.kPrimaryWithOpacity10,
         borderRadius: const BorderRadius.only(
@@ -50,16 +51,70 @@ class _SupplierAddressViewWidgetState extends State<SupplierAddressViewWidget> {
           topRight: Radius.circular(12),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
       child: Row(
         children: [
-          const Icon(Icons.location_on,
-              color: ColorManager.kPrimaryColor, size: 28),
-          const SizedBox(width: 12),
-          Text(
-            'Supplier Address',
-            style: buildCustomStyle(FontWeightManager.bold, FontSize.s18, 0,
-                ColorManager.kTitleTextColor),
+          // Address Icon
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: ColorManager.kPrimaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(
+                  color: ColorManager.kPrimaryColor.withOpacity(0.2),
+                  width: 2),
+            ),
+            child: const Icon(
+              Icons.location_on,
+              size: 32,
+              color: ColorManager.kPrimaryColor,
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Address Header Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Address Information",
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s20,
+                    0,
+                    ColorManager.kTitleTextColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Supplier: ${widget.supplier.name ?? "N/A"}",
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s14,
+                    0,
+                    ColorManager.kGreyColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Address Type Badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: ColorManager.kButtonBlue,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              "Business",
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.30,
+                Colors.white,
+              ),
+            ),
           ),
         ],
       ),
@@ -69,89 +124,119 @@ class _SupplierAddressViewWidgetState extends State<SupplierAddressViewWidget> {
   Widget _buildAddressContent() {
     return Padding(
       padding: const EdgeInsets.all(24),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Address Information Card
+            _buildInfoCard(
+              title: "Address Details",
+              icon: Icons.location_on_outlined,
+              children: [
+                _buildInfoRow(
+                  icon: Icons.place_outlined,
+                  label: "Address",
+                  value: widget.supplier.address ?? "Not provided",
+                ),
+                const SizedBox(height: 16),
+                _buildInfoRow(
+                  icon: Icons.phone_outlined,
+                  label: "Phone",
+                  value: widget.supplier.phone ?? "Not provided",
+                ),
+                const SizedBox(height: 16),
+                _buildInfoRow(
+                  icon: Icons.email_outlined,
+                  label: "Email",
+                  value: widget.supplier.email ?? "Not provided",
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: ColorManager.kSecondaryColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: ColorManager.kPrimaryWithOpacity10),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildAddressCard(),
-          const SizedBox(height: 24),
-          _buildMapPlaceholder(),
+          // Card Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: ColorManager.kPrimaryWithOpacity10,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 20,
+                  color: ColorManager.kPrimaryColor,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s14,
+                    0.30,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Card Content
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: children,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildAddressCard() {
-    return BuildBoxShadowContainer(
-      margin: const EdgeInsets.all(0),
-      padding: const EdgeInsets.all(20),
-      circleRadius: 12,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.business,
-                    color: ColorManager.kPrimaryColor, size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.supplier.name ?? 'Supplier Name',
-                      style: buildCustomStyle(FontWeightManager.bold,
-                          FontSize.s18, 0, ColorManager.kTitleTextColor),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Registered Business Address',
-                      style: buildCustomStyle(FontWeightManager.regular,
-                          FontSize.s12, 0, ColorManager.kGreyColor),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _buildAddressDetail(
-            icon: Icons.location_on_outlined,
-            label: 'Address',
-            value: widget.supplier.address ?? 'No address provided',
-          ),
-          const SizedBox(height: 16),
-          _buildAddressDetail(
-            icon: Icons.phone_outlined,
-            label: 'Phone',
-            value: widget.supplier.phone ?? 'No phone provided',
-          ),
-          const SizedBox(height: 16),
-          _buildAddressDetail(
-            icon: Icons.email_outlined,
-            label: 'Email',
-            value: widget.supplier.email ?? 'No email provided',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAddressDetail({
+  Widget _buildInfoRow({
     required IconData icon,
     required String label,
     required String value,
+    Color? valueColor,
   }) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: ColorManager.kGreyColor),
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: ColorManager.kPrimaryWithOpacity10,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: ColorManager.kPrimaryColor,
+          ),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -159,77 +244,27 @@ class _SupplierAddressViewWidgetState extends State<SupplierAddressViewWidget> {
             children: [
               Text(
                 label,
-                style: buildCustomStyle(FontWeightManager.medium, FontSize.s13,
-                    0, ColorManager.kGreyColor),
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.30,
+                  ColorManager.kGreyColor,
+                ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 value,
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s14,
-                  0,
-                  ColorManager.kTitleTextColor,
+                  0.30,
+                  valueColor ?? ColorManager.textColor,
                 ),
               ),
             ],
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildMapPlaceholder() {
-    return Expanded(
-      child: Container(
-        width: double.infinity,
-        margin: const EdgeInsets.only(top: 24),
-        decoration: BoxDecoration(
-          color: ColorManager.kBgLightColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: ColorManager.kBgDarkColor),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.map_outlined,
-                size: 48, color: ColorManager.kGreyColor.withOpacity(0.5)),
-            const SizedBox(height: 16),
-            Text(
-              'Map View',
-              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s16,
-                  0, ColorManager.kTitleTextColor),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Location map would be displayed here',
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s12,
-                  0, ColorManager.kGreyColor),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                // Open in maps
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: ColorManager.kPrimaryColor,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text(
-                'Open in Maps',
-                style: buildCustomStyle(
-                    FontWeightManager.medium, FontSize.s14, 0, Colors.white),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

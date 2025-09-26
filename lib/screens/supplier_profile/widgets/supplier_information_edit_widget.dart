@@ -49,7 +49,7 @@ class _SupplierInformationEditWidgetState
     _phoneController = TextEditingController(text: widget.supplier.phone);
     _altPhoneController = TextEditingController(text: widget.supplier.altPhone);
     _addressController = TextEditingController(text: widget.supplier.address);
-    _balanceController = TextEditingController(text: widget.supplier.balance);
+    _balanceController = TextEditingController(text: widget.supplier.balance.toStringAsFixed(2));
     _currentBalanceController = TextEditingController(
         text: widget.supplier.currentBalance?.toStringAsFixed(2));
     _paymentTypeController =
@@ -107,7 +107,8 @@ class _SupplierInformationEditWidgetState
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
-          const Icon(Icons.edit, color: ColorManager.kPrimaryColor, size: 28),
+          const Icon(Icons.edit_note,
+              color: ColorManager.kPrimaryColor, size: 28),
           const SizedBox(width: 12),
           Text(
             'Edit Supplier Information',
@@ -126,72 +127,83 @@ class _SupplierInformationEditWidgetState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('Basic Information'),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _nameController,
-              label: 'Supplier Name',
-              hintText: 'Enter supplier name',
-              isRequired: true,
+            // Basic Information Section
+            _buildSectionCard(
+              title: 'Basic Information',
+              icon: Icons.business_outlined,
+              children: [
+                _buildTextField(
+                  controller: _nameController,
+                  label: 'Supplier Name',
+                  hintText: 'Enter supplier name',
+                  isRequired: true,
+                ),
+                const SizedBox(height: 20),
+                _buildTwoFieldRow(
+                  leftController: _emailController,
+                  leftLabel: 'Email Address',
+                  leftHint: 'Enter email address',
+                  leftKeyboardType: TextInputType.emailAddress,
+                  rightController: _phoneController,
+                  rightLabel: 'Phone Number',
+                  rightHint: 'Enter phone number',
+                  rightKeyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 20),
+                _buildTextField(
+                  controller: _altPhoneController,
+                  label: 'Alternative Phone',
+                  hintText: 'Enter alternative phone number',
+                  keyboardType: TextInputType.phone,
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _emailController,
-              label: 'Email Address',
-              hintText: 'Enter email address',
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _phoneController,
-              label: 'Phone Number',
-              hintText: 'Enter phone number',
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _altPhoneController,
-              label: 'Alternative Phone',
-              hintText: 'Enter alternative phone number',
-              keyboardType: TextInputType.phone,
-            ),
+            
             const SizedBox(height: 24),
-            _buildSectionTitle('Address Information'),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _addressController,
-              label: 'Address',
-              hintText: 'Enter full address',
-              maxLines: 3,
+            
+            // Address Information Section
+            _buildSectionCard(
+              title: 'Address Information',
+              icon: Icons.location_on_outlined,
+              children: [
+                _buildTextField(
+                  controller: _addressController,
+                  label: 'Business Address',
+                  hintText: 'Enter complete business address',
+                  maxLines: 3,
+                ),
+              ],
             ),
+            
             const SizedBox(height: 24),
-            _buildSectionTitle('Financial Information'),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _balanceController,
-              label: 'Balance',
-              hintText: 'Enter balance',
-              keyboardType: TextInputType.number,
+            
+            // Financial Information Section
+            _buildSectionCard(
+              title: 'Financial Information',
+              icon: Icons.account_balance_wallet_outlined,
+              children: [
+                _buildTwoFieldRow(
+                  leftController: _balanceController,
+                  leftLabel: 'Balance',
+                  leftHint: 'Enter balance amount',
+                  leftKeyboardType: TextInputType.number,
+                  rightController: _currentBalanceController,
+                  rightLabel: 'Current Balance',
+                  rightHint: 'Enter current balance',
+                  rightKeyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 20),
+                _buildTwoFieldRow(
+                  leftController: _paymentTypeController,
+                  leftLabel: 'Payment Type',
+                  leftHint: 'e.g., Credit, Cash, Bank Transfer',
+                  rightController: _productCategoriesController,
+                  rightLabel: 'Product Categories',
+                  rightHint: 'e.g., Electronics, Furniture',
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _currentBalanceController,
-              label: 'Current Balance',
-              hintText: 'Enter current balance',
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _paymentTypeController,
-              label: 'Payment Type',
-              hintText: 'Enter payment type',
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _productCategoriesController,
-              label: 'Product Categories',
-              hintText: 'Enter product categories',
-            ),
+            
             const SizedBox(height: 32),
             _buildActionButtons(),
           ],
@@ -200,11 +212,67 @@ class _SupplierInformationEditWidgetState
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s16, 0,
-          ColorManager.kTitleTextColor),
+  Widget _buildSectionCard({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: ColorManager.kPrimaryWithOpacity10),
+        boxShadow: [
+          BoxShadow(
+            color: ColorManager.boxShadowColor.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: ColorManager.kPrimaryWithOpacity10,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 20,
+                  color: ColorManager.kPrimaryColor,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s16,
+                    0.30,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Section Content
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: children,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -223,7 +291,7 @@ class _SupplierInformationEditWidgetState
           children: [
             if (isRequired)
               Text(
-                '*',
+                '* ',
                 style: buildCustomStyle(
                     FontWeightManager.bold, FontSize.s14, 0, ColorManager.kRed),
               ),
@@ -239,8 +307,52 @@ class _SupplierInformationEditWidgetState
           controller: controller,
           hintText: hintText,
           keyboardType: keyboardType,
-          // maxLines: maxLines,
           size: widget.size,
+          width: double.infinity,
+          validator: isRequired ? (value) {
+            if (value == null || value.isEmpty) {
+              return '$label is required';
+            }
+            return null;
+          } : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTwoFieldRow({
+    required TextEditingController leftController,
+    required String leftLabel,
+    required String leftHint,
+    TextInputType leftKeyboardType = TextInputType.text,
+    bool leftRequired = false,
+    required TextEditingController rightController,
+    required String rightLabel,
+    required String rightHint,
+    TextInputType rightKeyboardType = TextInputType.text,
+    bool rightRequired = false,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _buildTextField(
+            controller: leftController,
+            label: leftLabel,
+            hintText: leftHint,
+            keyboardType: leftKeyboardType,
+            isRequired: leftRequired,
+          ),
+        ),
+        const SizedBox(width: 20),
+        Expanded(
+          child: _buildTextField(
+            controller: rightController,
+            label: rightLabel,
+            hintText: rightHint,
+            keyboardType: rightKeyboardType,
+            isRequired: rightRequired,
+          ),
         ),
       ],
     );
@@ -248,29 +360,32 @@ class _SupplierInformationEditWidgetState
 
   Widget _buildActionButtons() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        CustomRoundButton(
-          title: "Cancel",
-          boxColor: Colors.white,
-          textColor: ColorManager.kPrimaryColor,
-          borderColor: ColorManager.kPrimaryColor,
-          fct: () {
-            // Cancel editing
-          },
-          height: 45,
-          width: 120,
-          fontSize: FontSize.s14,
+        Expanded(
+          child: CustomRoundButton(
+            radius: 10,
+            title: "Save Changes",
+            fct: _saveChanges,
+            height: 50,
+            width: 150,
+            fontSize: FontSize.s14,
+          ),
         ),
         const SizedBox(width: 16),
-        CustomRoundButton(
-          title: "Save Changes",
-          boxColor: ColorManager.kPrimaryColor,
-          textColor: Colors.white,
-          fct: _saveChanges,
-          height: 45,
-          width: 150,
-          fontSize: FontSize.s14,
+        Expanded(
+          child: CustomRoundButton(
+            radius: 10,
+            title: "Cancel",
+            fct: () {
+              // Cancel editing
+            },
+            height: 50,
+            width: 150,
+            fontSize: FontSize.s14,
+            boxColor: Colors.white,
+            textColor: ColorManager.kPrimaryColor,
+            borderColor: ColorManager.kPrimaryColor,
+          ),
         ),
       ],
     );
@@ -278,14 +393,39 @@ class _SupplierInformationEditWidgetState
 
   void _saveChanges() {
     if (_formKey.currentState!.validate()) {
-      // Save the changes
-      // This would typically involve calling an API to update the supplier information
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Supplier information updated successfully'),
-          backgroundColor: ColorManager.kSuccessColor,
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(
+            color: ColorManager.kPrimaryColor,
+          ),
         ),
       );
+
+      // Simulate API call
+      Future.delayed(const Duration(seconds: 1), () {
+        Navigator.pop(context); // Close loading dialog
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('Supplier information updated successfully'),
+              ],
+            ),
+            backgroundColor: ColorManager.kSuccessColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+      });
     }
   }
 }

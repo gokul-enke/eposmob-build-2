@@ -1,0 +1,847 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:provider/provider.dart';
+import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/models/supplier.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/resources/style_manager.dart';
+import 'dart:ui';
+import 'package:intl/intl.dart';
+
+// Import date filtering components
+import 'package:pos_machine/components/build_calendar_selection.dart';
+import 'dart:async';
+
+class SupplierTransactionDetailsScreen extends StatefulWidget {
+  const SupplierTransactionDetailsScreen({super.key});
+
+  @override
+  State<SupplierTransactionDetailsScreen> createState() =>
+      _SupplierTransactionDetailsScreenState();
+}
+
+class _SupplierTransactionDetailsScreenState
+    extends State<SupplierTransactionDetailsScreen> {
+  final SideBarController sideBarController = Get.put(SideBarController());
+  bool initLoading = false;
+  List<SupplierTransaction> filteredTransactions = [];
+  String selectedSupplierName = '';
+
+  // Controllers for filters
+  final TextEditingController _fromDateController = TextEditingController();
+  final TextEditingController _toDateController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+
+  // Filter variables
+  String selectedTransactionType = 'All';
+  String selectedPaymentMethod = 'All';
+  String searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    // Set default date values
+    _setInitialDateFilters();
+    loadInitData();
+  }
+
+  @override
+  void dispose() {
+    _fromDateController.dispose();
+    _toDateController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // Set default date values: 1 month before current date for from_date, current date for to_date
+  void _setInitialDateFilters() {
+    final now = DateTime.now();
+    final oneMonthAgo = DateTime(now.year, now.month - 1, now.day);
+
+    final formatter = DateFormat('yyyy-MM-dd');
+    final fromDateStr = formatter.format(oneMonthAgo);
+    final toDateStr = formatter.format(now);
+
+    setState(() {
+      _fromDateController.text = fromDateStr;
+      _toDateController.text = toDateStr;
+    });
+  }
+
+  Future<void> loadInitData() async {
+    setState(() {
+      initLoading = true;
+    });
+
+    try {
+      SupplierProvider supplierProvider =
+          Provider.of<SupplierProvider>(context, listen: false);
+      
+      selectedSupplierName = supplierProvider.selectedSupplierName ?? '';
+      
+      if (selectedSupplierName.isEmpty) {
+        // If no supplier selected, go back to report screen
+        sideBarController.index.value = 67; // Supplier Transaction Report
+        return;
+      }
+
+      // Find the supplier and get their transactions
+      final supplier = supplierProvider.supplierList?.firstWhere(
+        (s) => s.name == selectedSupplierName,
+        orElse: () => Supplier(
+          id: 0,
+          name: '',
+          email: '',
+          phone: '',
+          productCategories: '',
+          address: '',
+          balance: 0.0,
+          paymentType: '',
+          companyId: 0,
+          currentBalance: 0.0,
+          balanceStatus: '',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          userId: 0,
+          transactions: [],
+          purchases: [],
+        ),
+      );
+
+      if (supplier != null && supplier.name.isNotEmpty) {
+        // Apply initial filters
+        _applyFilters(supplier.transactions);
+      }
+    } catch (error) {
+      debugPrint('Error loading supplier transaction data: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error loading transaction data: $error"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        initLoading = false;
+      });
+    }
+  }
+
+  void _applyFilters(List<SupplierTransaction> allTransactions) {
+    List<SupplierTransaction> filtered = [...allTransactions];
+
+    // Date range filter
+    if (_fromDateController.text.isNotEmpty ||
+        _toDateController.text.isNotEmpty) {
+      try {
+        final formatter = DateFormat('yyyy-MM-dd');
+
+        filtered = filtered.where((transaction) {
+          if (transaction.date.isEmpty) return false;
+
+          try {
+            final transactionDate = formatter.parse(transaction.date);
+
+            // If from date is set, check that transaction date is not before it
+            if (_fromDateController.text.isNotEmpty) {
+              final fromDate = formatter.parse(_fromDateController.text);
+              if (transactionDate.isBefore(fromDate)) return false;
+            }
+
+            // If to date is set, check that transaction date is not after it
+            if (_toDateController.text.isNotEmpty) {
+              final toDate = formatter.parse(_toDateController.text);
+              if (transactionDate.isAfter(toDate)) return false;
+            }
+
+            return true;
+          } catch (e) {
+            debugPrint('Date parsing error for transaction: $e');
+            return false;
+          }
+        }).toList();
+      } catch (e) {
+        debugPrint('Date parsing error: $e');
+      }
+    }
+
+    // Transaction type filter
+    if (selectedTransactionType != 'All') {
+      filtered = filtered
+          .where((transaction) =>
+              transaction.type.toLowerCase() ==
+              selectedTransactionType.toLowerCase())
+          .toList();
+    }
+
+    // Payment method filter
+    if (selectedPaymentMethod != 'All') {
+      filtered = filtered
+          .where((transaction) =>
+              transaction.paymentMethod.toLowerCase() ==
+              selectedPaymentMethod.toLowerCase())
+          .toList();
+    }
+
+    // Search filter
+    if (searchQuery.isNotEmpty) {
+      filtered = filtered
+          .where((transaction) =>
+              transaction.reference
+                  .toLowerCase()
+                  .contains(searchQuery.toLowerCase()) ||
+              transaction.transactionType
+                  .toLowerCase()
+                  .contains(searchQuery.toLowerCase()) ||
+              transaction.amount
+                  .toLowerCase()
+                  .contains(searchQuery.toLowerCase()))
+          .toList();
+    }
+
+    setState(() {
+      filteredTransactions = filtered;
+    });
+  }
+
+  void _resetFilters() {
+    // Clear the text controllers
+    _fromDateController.clear();
+    _toDateController.clear();
+    _searchController.clear();
+
+    // Reset the filter variables
+    setState(() {
+      selectedTransactionType = 'All';
+      selectedPaymentMethod = 'All';
+      searchQuery = '';
+    });
+
+    // Set default date values
+    _setInitialDateFilters();
+
+    // Reload data
+    loadInitData();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Size size = MediaQuery.of(context).size;
+
+    return SafeArea(
+      child: RefreshIndicator(
+        onRefresh: () async => loadInitData(),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: const [
+              BoxShadow(
+                color: ColorManager.boxShadowColor,
+                blurRadius: 6,
+                offset: Offset(1, 1),
+              ),
+            ],
+            color: Colors.white,
+          ),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(size),
+                const SizedBox(height: 15),
+                _buildFilters(),
+                const SizedBox(height: 20),
+                _buildTransactionTable(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(Size size) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Supplier Transaction Details",
+                style: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  FontSize.s20,
+                  0.30,
+                  ColorManager.textColor,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                "Supplier: $selectedSupplierName",
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s14,
+                  0.27,
+                  ColorManager.kPrimaryColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+        CustomRoundButton(
+          title: "Back to Report",
+          boxColor: Colors.white,
+          textColor: ColorManager.kPrimaryColor,
+          fct: () {
+            sideBarController.index.value = 67; // Back to Supplier Transaction Report
+          },
+          height: 40,
+          width: 120,
+          fontSize: FontSize.s12,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilters() {
+    return Column(
+      children: [
+        // First row of filters
+        SizedBox(
+          height: 90,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 1,
+                child: _buildSearchField(),
+              ),
+              Expanded(
+                flex: 1,
+                child: _buildDateField(
+                  "From Date",
+                  _fromDateController,
+                  true,
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: _buildDateField(
+                  "To Date",
+                  _toDateController,
+                  false,
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: _buildDropdownField(
+                  "Transaction Type",
+                  selectedTransactionType,
+                  ['All', 'Credit', 'Debit'],
+                  (value) {
+                    setState(() {
+                      selectedTransactionType = value!;
+                    });
+                    _applyFiltersFromCurrentData();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Second row of filters
+        SizedBox(
+          height: 90,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 1,
+                child: _buildDropdownField(
+                  "Payment Method",
+                  selectedPaymentMethod,
+                  ['All', 'Cash', 'Card', 'Bank Transfer', 'Cheque', 'UPI'],
+                  (value) {
+                    setState(() {
+                      selectedPaymentMethod = value!;
+                    });
+                    _applyFiltersFromCurrentData();
+                  },
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Container(), // Empty space
+              ),
+              Expanded(
+                flex: 1,
+                child: Container(), // Empty space
+              ),
+              Expanded(
+                flex: 1,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 45, left: 10),
+                  child: CustomRoundButton(
+                    title: "Reset",
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    fct: _resetFilters,
+                    height: 45,
+                    width: double.infinity,
+                    fontSize: FontSize.s12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              "Search",
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.27,
+                Colors.black.withOpacity(0.6),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          BuildBoxShadowContainer(
+            height: 45,
+            width: double.infinity,
+            circleRadius: 7,
+            child: TextFormField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() {
+                  searchQuery = value;
+                });
+                _applyFiltersFromCurrentData();
+              },
+              decoration: InputDecoration(
+                hintText: "Search by reference, type, amount",
+                hintStyle: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.27,
+                  ColorManager.textColor.withOpacity(.5),
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 12,
+                ),
+                suffixIcon: const Icon(
+                  Icons.search,
+                  color: ColorManager.kPrimaryColor,
+                  size: 18,
+                ),
+              ),
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s12,
+                0.27,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateField(
+      String label, TextEditingController controller, bool isFromDate) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              label,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.27,
+                Colors.black.withOpacity(0.6),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          BuildBoxShadowContainer(
+            height: 45,
+            width: double.infinity,
+            circleRadius: 7,
+            child: CalendarPickerTableCell(
+              onDateSelected: (DateTime selectedDate) {
+                final formattedDate =
+                    DateFormat('yyyy-MM-dd').format(selectedDate);
+                setState(() {
+                  if (isFromDate) {
+                    _fromDateController.text = formattedDate;
+                  } else {
+                    _toDateController.text = formattedDate;
+                  }
+                });
+                _applyFiltersFromCurrentData();
+              },
+              initialDate: controller.text.isNotEmpty
+                  ? DateFormat('yyyy-MM-dd').parse(controller.text)
+                  : null,
+              firstDate: DateTime(2000),
+              lastDate: DateTime(2101),
+              hintText: "Select Date",
+              isAllowEdit: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdownField(String label, String selectedValue,
+      List<String> options, Function(String?) onChanged) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              label,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.27,
+                Colors.black.withOpacity(0.6),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          BuildBoxShadowContainer(
+            circleRadius: 7,
+            alignment: Alignment.centerLeft,
+            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+            padding: const EdgeInsets.only(left: 15),
+            height: 45,
+            width: double.infinity,
+            child: DropdownButton<String>(
+              isExpanded: true,
+              value: selectedValue,
+              hint: Text(
+                "Select $label",
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.27,
+                  ColorManager.textColor.withOpacity(.5),
+                ),
+              ),
+              items: options.map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(
+                    value,
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s12,
+                      0.27,
+                      ColorManager.textColor,
+                    ),
+                  ),
+                );
+              }).toList(),
+              onChanged: onChanged,
+              underline: Container(),
+              icon: const Icon(
+                Icons.keyboard_arrow_down,
+                color: ColorManager.kPrimaryColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _applyFiltersFromCurrentData() {
+    SupplierProvider supplierProvider =
+        Provider.of<SupplierProvider>(context, listen: false);
+    
+    final supplier = supplierProvider.supplierList?.firstWhere(
+      (s) => s.name == selectedSupplierName,
+      orElse: () => Supplier(
+        id: 0,
+        name: '',
+        email: '',
+        phone: '',
+        productCategories: '',
+        address: '',
+        balance: 0.0,
+        paymentType: '',
+        companyId: 0,
+        currentBalance: 0.0,
+        balanceStatus: '',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        userId: 0,
+        transactions: [],
+        purchases: [],
+      ),
+    );
+
+    if (supplier != null && supplier.name.isNotEmpty) {
+      _applyFilters(supplier.transactions);
+    }
+  }
+
+  Widget _buildTransactionTable() {
+    return Expanded(
+      child: initLoading
+          ? const Center(child: CircularProgressIndicator.adaptive())
+          : BuildBoxShadowContainer(
+              margin: const EdgeInsets.only(top: 5),
+              circleRadius: 7,
+              offsetValue: const Offset(2, 2),
+              blurRadius: 8.0,
+              color: Colors.white,
+              child: Column(
+                children: [
+                  // Fixed table header
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: ColorManager.tableBGColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          offset: Offset(0, 2),
+                          blurRadius: 2.0,
+                        ),
+                      ],
+                    ),
+                    child: Table(
+                      columnWidths: const {
+                        0: FlexColumnWidth(0.8), // Date
+                        1: FlexColumnWidth(1.2), // Reference
+                        2: FlexColumnWidth(1.0), // Type
+                        3: FlexColumnWidth(1.2), // Transaction Type
+                        4: FlexColumnWidth(1.0), // Amount
+                        5: FlexColumnWidth(1.2), // Payment Method
+                        6: FlexColumnWidth(0.8), // Status
+                      },
+                      border: null,
+                      defaultVerticalAlignment:
+                          TableCellVerticalAlignment.middle,
+                      children: [
+                        TableRow(
+                          children: [
+                            _buildTableHeader("Date"),
+                            _buildTableHeader("Reference"),
+                            _buildTableHeader("Type"),
+                            _buildTableHeader("Transaction Type"),
+                            _buildTableHeader("Amount"),
+                            _buildTableHeader("Payment Method"),
+                            _buildTableHeader("Status"),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Scrollable table body
+                  Expanded(
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.grab,
+                      child: ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.mouse,
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.stylus,
+                            PointerDeviceKind.trackpad,
+                          },
+                        ),
+                        child: filteredTransactions.isEmpty
+                            ? _buildNoDataFoundUI()
+                            : SingleChildScrollView(
+                                physics: const BouncingScrollPhysics(),
+                                scrollDirection: Axis.vertical,
+                                child: Table(
+                                  columnWidths: const {
+                                    0: FlexColumnWidth(0.8), // Date
+                                    1: FlexColumnWidth(1.2), // Reference
+                                    2: FlexColumnWidth(1.0), // Type
+                                    3: FlexColumnWidth(1.2), // Transaction Type
+                                    4: FlexColumnWidth(1.0), // Amount
+                                    5: FlexColumnWidth(1.2), // Payment Method
+                                    6: FlexColumnWidth(0.8), // Status
+                                  },
+                                  border: null,
+                                  defaultVerticalAlignment:
+                                      TableCellVerticalAlignment.middle,
+                                  children: filteredTransactions
+                                      .asMap()
+                                      .entries
+                                      .map((entry) => _buildTransactionRow(
+                                          entry.value, entry.key))
+                                      .toList(),
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildNoDataFoundUI() {
+    return Container(
+      height: double.infinity,
+      width: double.infinity,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.receipt_long,
+            size: 60,
+            color: ColorManager.kPrimaryColor.withOpacity(0.7),
+          ),
+          const SizedBox(height: 15),
+          Text(
+            'No transactions found',
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s18,
+              0.27,
+              ColorManager.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Try adjusting your filters',
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.20,
+              Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTableHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+      child: Text(
+        title,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s12,
+          0.18,
+          ColorManager.kPrimaryColor,
+        ),
+      ),
+    );
+  }
+
+  TableRow _buildTransactionRow(SupplierTransaction transaction, int index) {
+    return TableRow(
+      decoration: BoxDecoration(
+        color: index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.1),
+      ),
+      children: [
+        _buildTableCell(transaction.date),
+        _buildTableCell(transaction.reference),
+        _buildTableCell(
+          transaction.type,
+          isType: true,
+          type: transaction.type,
+        ),
+        _buildTableCell(transaction.transactionType),
+        _buildTableCell(
+          "${transaction.currency} ${double.tryParse(transaction.amount)?.toStringAsFixed(2) ?? transaction.amount}",
+        ),
+        _buildTableCell(transaction.paymentMethod),
+        _buildTableCell(
+          transaction.status,
+          isStatus: true,
+          status: transaction.status,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTableCell(String content,
+      {bool isType = false,
+      String? type,
+      bool isStatus = false,
+      String? status}) {
+    Color textColor = Colors.black;
+    
+    if (isType && type != null) {
+      textColor = type.toLowerCase() == 'credit' ? Colors.green : Colors.red;
+    } else if (isStatus && status != null) {
+      switch (status.toLowerCase()) {
+        case 'completed':
+        case 'success':
+          textColor = Colors.green;
+          break;
+        case 'pending':
+          textColor = Colors.orange;
+          break;
+        case 'failed':
+        case 'cancelled':
+          textColor = Colors.red;
+          break;
+        default:
+          textColor = Colors.black;
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Text(
+        content,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s9,
+          0.13,
+          textColor,
+        ),
+      ),
+    );
+  }
+}

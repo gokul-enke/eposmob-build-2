@@ -33,7 +33,10 @@ import 'package:pos_machine/screens/purchase/widgets/view_voucher.dart';
 import 'package:pos_machine/screens/reports/account_book/account_book.dart';
 import 'package:pos_machine/screens/reports/customer_transactions_reports/customer_tranctions_reports .dart';
 // Adding import for the new simple transaction details screen
-import 'package:pos_machine/screens/reports/customer_transactions_reports/simple_transaction_details_screen.dart';
+import 'package:pos_machine/screens/reports/customer_transactions_reports/customer_transaction_details_screen.dart';
+// Adding imports for supplier transaction report screens
+import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_report.dart';
+import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_details_screen.dart';
 import 'package:pos_machine/screens/reports/product_sales_report/product_sales_report.dart';
 import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
 import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
@@ -149,6 +152,8 @@ class SideBarController extends GetxController {
     CompanyInfoScreen(), // 64 Company Info
     CustomerTransactionsReportScreen(), // 65 Customer Transactions Report
     SimpleTransactionDetailsScreen(), // 66 Simple Transaction Details Screen
-    OpenSupplierProfileScreen(), // 67 Open Supplier Profile Screen
+    SupplierTransactionReportScreen(), // 67 Supplier Transaction Report
+    SupplierTransactionDetailsScreen(), // 68 Supplier Transaction Details Screen
+    OpenSupplierProfileScreen(), // 69 Open Supplier Profile Screen
   ];
 }
