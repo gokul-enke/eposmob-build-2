@@ -20,6 +20,8 @@ import 'simple_transaction_details_screen.dart';
 // Add imports for customer autocomplete and date filtering
 import 'package:pos_machine/screens/transactions/widgets/customer_auto_complete.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+// Import CalendarPickerTableCell component
+import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'dart:async';
 
 class CustomerTransactionsReportScreen extends StatefulWidget {
@@ -52,31 +54,6 @@ class _CustomerTransactionsReportScreenState
 
   // Timer for debouncing customer search
   Timer? _customerSearchTimer;
-
-  // For dropdown options - using the same values as in simple_transaction_details_screen.dart
-  List<String> transactionTypes = ['Receipt', 'Invoice', 'Voucher'];
-  List<String> statuses = [
-    'SUCC',
-    'FAIL',
-    'INIT',
-  ];
-  List<String> types = ['Credit', 'Debit'];
-
-  List<String> getCustomerSuggestions() {
-    if (allTransactions == null) return [];
-    final suggestions = allTransactions!
-        .map((t) => t.customerName ?? '')
-        .where((name) => name.isNotEmpty)
-        .toSet()
-        .toList();
-
-    // Limit to 100 suggestions for better performance
-    if (suggestions.length > 100) {
-      return suggestions.take(100).toList();
-    }
-
-    return suggestions;
-  }
 
   @override
   void initState() {
@@ -166,6 +143,22 @@ class _CustomerTransactionsReportScreenState
         initLoading = false;
       });
     }
+  }
+
+  List<String> getCustomerSuggestions() {
+    if (allTransactions == null) return [];
+    final suggestions = allTransactions!
+        .map((t) => t.customerName ?? '')
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList();
+
+    // Limit to 100 suggestions for better performance
+    if (suggestions.length > 100) {
+      return suggestions.take(100).toList();
+    }
+
+    return suggestions;
   }
 
   void _applyFilters() {
@@ -285,27 +278,6 @@ class _CustomerTransactionsReportScreenState
     loadInitData();
   }
 
-  Future<void> _selectDate(BuildContext context, bool isFromDate) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-    if (picked != null) {
-      final formattedDate = DateFormat('yyyy-MM-dd').format(picked);
-      setState(() {
-        if (isFromDate) {
-          _fromDateController.text = formattedDate;
-        } else {
-          _toDateController.text = formattedDate;
-        }
-      });
-      // Apply filters immediately after date selection
-      _applyFilters();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -334,7 +306,7 @@ class _CustomerTransactionsReportScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(size),
-                const SizedBox(height: 20),
+                const SizedBox(height: 15),
                 _buildFilters(),
                 const SizedBox(height: 20),
                 _buildReportTable(),
@@ -346,68 +318,70 @@ class _CustomerTransactionsReportScreenState
     );
   }
 
+  Widget _buildHeader(Size size) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          "Customer Transactions Report",
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s20,
+            0.30,
+            ColorManager.textColor,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildFilters() {
-    return BuildBoxShadowContainer(
-      circleRadius: 10,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Filters",
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s16,
-              0.25,
-              ColorManager.textColor,
-            ),
+    return Column(
+      children: [
+        // First row of filters
+        SizedBox(
+          height: 90,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 1,
+                child: _buildCustomerAutocompleteField(),
+              ),
+              Expanded(
+                flex: 1,
+                child: _buildDateField(
+                  "From Date",
+                  _fromDateController,
+                  true,
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: _buildDateField(
+                  "To Date",
+                  _toDateController,
+                  false,
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 45, left: 10),
+                  child: CustomRoundButton(
+                    title: "Reset",
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    fct: _resetFilters,
+                    height: 45,
+                    width: double.infinity,
+                    fontSize: FontSize.s12,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 15),
-          // First row of filters (2 filters)
-          SizedBox(
-            height: 90,
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 1,
-                  child: _buildCustomerAutocompleteField(),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: _buildDateField(
-                    "From Date",
-                    _fromDateController,
-                    true,
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: _buildDateField(
-                    "To Date",
-                    _toDateController,
-                    false,
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 45, left: 10),
-                    child: CustomRoundButton(
-                      title: "Reset",
-                      boxColor: Colors.white,
-                      textColor: ColorManager.kPrimaryColor,
-                      fct: _resetFilters,
-                      height: 45,
-                      width: double.infinity,
-                      fontSize: FontSize.s12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -473,77 +447,30 @@ class _CustomerTransactionsReportScreenState
             height: 45,
             width: double.infinity,
             circleRadius: 7,
-            child: TextFormField(
-              controller: controller,
-              onTap: () => _selectDate(context, isFromDate),
-              readOnly: true,
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s10,
-                0.18,
-                ColorManager.textColor,
-              ),
-              decoration: InputDecoration(
-                hintText: "DD/MM/YYYY",
-                hintStyle: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s10,
-                  0.18,
-                  ColorManager.textColor,
-                ),
-                prefixIcon: Container(
-                  padding: const EdgeInsets.all(8),
-                  child: Icon(
-                    Icons.calendar_today,
-                    size: 16,
-                    color: ColorManager.kPrimaryColor,
-                  ),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                border: InputBorder.none,
-                // Center the hint text vertically and horizontally with final adjustment
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
-                isDense: true,
-                alignLabelWithHint: true,
-              ),
-              textAlignVertical: TextAlignVertical.center,
+            child: CalendarPickerTableCell(
+              onDateSelected: (DateTime selectedDate) {
+                final formattedDate =
+                    DateFormat('yyyy-MM-dd').format(selectedDate);
+                setState(() {
+                  if (isFromDate) {
+                    _fromDateController.text = formattedDate;
+                  } else {
+                    _toDateController.text = formattedDate;
+                  }
+                });
+                _applyFilters();
+              },
+              initialDate: controller.text.isNotEmpty
+                  ? DateFormat('yyyy-MM-dd').parse(controller.text)
+                  : null,
+              firstDate: DateTime(2000),
+              lastDate: DateTime(2101),
+              hintText: "Select Date",
+              isAllowEdit: true,
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildHeader(Size size) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          "Customer Transactions Report",
-          style: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s20,
-            0.30,
-            ColorManager.textColor,
-          ),
-        ),
-        CustomRoundButton(
-          title: "Back",
-          boxColor: Colors.white,
-          textColor: ColorManager.kPrimaryColor,
-          borderColor: ColorManager.kPrimaryColor,
-          fct: () {
-            sideBarController.index.value = 62; // Navigate back to Settings
-          },
-          height: 40,
-          width: 80,
-          fontSize: FontSize.s12,
-        ),
-      ],
     );
   }
 

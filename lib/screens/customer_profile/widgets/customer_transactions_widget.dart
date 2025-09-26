@@ -5,6 +5,14 @@ import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:flutter/material.dart';
+import 'package:pos_machine/screens/reports/customer_transactions_reports/transaction_report_print.dart';
+import 'package:get/get.dart';
+import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/models/customer_list.dart';
+import 'package:intl/intl.dart';
 
 class CustomerTransactionsWidget extends StatefulWidget {
   final Size size;
@@ -44,6 +52,113 @@ class _CustomerTransactionsWidgetState
            (transaction.amount != null && transaction.amount!.contains('+'));
   }
 
+  // Print function similar to the one in simple_transaction_details_screen
+  void _printReport() async {
+    // Show loading indicator
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Preparing transaction report..."),
+          backgroundColor: Theme.of(context).primaryColor,
+        ),
+      );
+    }
+
+    // Fetch customer details
+    String customerName = widget.customer.name ?? "";
+    String customerPhone = widget.customer.phone ?? "";
+    String customerEmail = widget.customer.email ?? "";
+    
+    // Build complete address
+    List<String> addressParts = [];
+    if (widget.customer.address != null && widget.customer.address!.isNotEmpty) {
+      addressParts.add(widget.customer.address!);
+    }
+    if (widget.customer.city != null && widget.customer.city!.isNotEmpty) {
+      addressParts.add(widget.customer.city!);
+    }
+    if (widget.customer.state != null && widget.customer.state!.isNotEmpty) {
+      addressParts.add(widget.customer.state!);
+    }
+    if (widget.customer.pincode != null && widget.customer.pincode!.isNotEmpty) {
+      addressParts.add(widget.customer.pincode!);
+    }
+    if (widget.customer.country != null && widget.customer.country!.isNotEmpty) {
+      addressParts.add(widget.customer.country!);
+    }
+    
+    String customerAddress = addressParts.join(", ");
+
+    // Convert CustomerTransaction objects to the format expected by the print page
+    List<Map<String, dynamic>> cartItems = transactions.map((transaction) {
+      return {
+        'id': transaction.id,
+        'order_id': transaction.orderId,
+        'payment_method': transaction.paymentMethod,
+        'date': transaction.date,
+        'type': transaction.type,
+        'reference_id': transaction.referenceId,
+        'transaction_type': transaction.transactionType,
+        'amount': transaction.amount,
+        'currency': transaction.currency,
+        'reference': transaction.reference,
+        'transaction_comment': transaction.transactionComment,
+        'status': transaction.status,
+        // Add additional fields that might be needed
+        'orderNumber': transaction.reference ?? 'N/A',
+      };
+    }).toList();
+
+    // Calculate totals
+    double totalCredit = 0.0;
+    double totalDebit = 0.0;
+
+    for (var transaction in transactions) {
+      double amount = double.tryParse(transaction.amount?.replaceAll('+', '').replaceAll('-', '') ?? "0.00") ?? 0.0;
+      bool isCredit = _isCreditTransaction(transaction);
+
+      if (isCredit) {
+        totalCredit += amount;
+      } else {
+        totalDebit += amount;
+      }
+    }
+
+    // Calculate total amount (for backwards compatibility)
+    double totalAmount = totalCredit - totalDebit;
+
+    // Calculate saved amount (for this report, we'll set it to 0)
+    double savedAmount = 0.0;
+
+    // Get current date and time for the report
+    String orderDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+    String orderNumber = "TXN-REPORT-${DateTime.now().millisecondsSinceEpoch}";
+
+    // Navigate to the print page with the transaction data
+    Get.to(() => TransactionReportPrintPage(
+          cartItems: cartItems, // Pass the converted data
+          formattedTotal: totalAmount.toStringAsFixed(2),
+          savedTotal: savedAmount.toStringAsFixed(2),
+          orderDate: orderDate,
+          orderNumber: orderNumber,
+          customerName: customerName,
+          customerPhone: customerPhone,
+          customerEmail: customerEmail,
+          customerAddress: customerAddress,
+          isFromLocalStorage: false, // Set to false since we're converting to Map format
+        ));
+
+    // Show a message that the print process has started
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Preparing transaction report for printing..."),
+          backgroundColor: Theme.of(context).primaryColor,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Expanded(
@@ -75,7 +190,7 @@ class _CustomerTransactionsWidgetState
   Widget _buildHeader() {
     return Container(
       decoration: BoxDecoration(
-        color: ColorManager.kPrimaryWithOpacity10,
+        color: Theme.of(context).primaryColor.withOpacity(0.1),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(12),
           topRight: Radius.circular(12),
@@ -88,20 +203,33 @@ class _CustomerTransactionsWidgetState
           Row(
             children: [
               const Icon(Icons.receipt_long,
-                  color: ColorManager.kPrimaryColor, size: 28),
+                  color: Color(0xFF3C92F5), size: 28),
               const SizedBox(width: 12),
               Text(
                 'Transactions (${transactions.length})',
-                style: buildCustomStyle(FontWeightManager.bold, FontSize.s18, 0,
-                    ColorManager.kTitleTextColor),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF2C3E50),
+                ),
               ),
             ],
           ),
-          IconButton(
-            icon: const Icon(Icons.filter_list_alt),
-            onPressed: () {},
-            color: ColorManager.kGreyColor,
-            tooltip: 'Filter transactions',
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.print),
+                onPressed: _printReport,
+                color: const Color(0xFF7F8C8D),
+                tooltip: 'Print transactions',
+              ),
+              IconButton(
+                icon: const Icon(Icons.filter_list_alt),
+                onPressed: () {},
+                color: const Color(0xFF7F8C8D),
+                tooltip: 'Filter transactions',
+              ),
+            ],
           ),
         ],
       ),

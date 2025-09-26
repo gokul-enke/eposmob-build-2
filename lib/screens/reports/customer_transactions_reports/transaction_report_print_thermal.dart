@@ -454,6 +454,7 @@ class TransactionReportThermalPrinter {
             transactionType = 'N/A';
             type = 'N/A';
             amount = '0.00';
+            
             status = 'N/A';
             date = 'N/A';
           }
