@@ -240,6 +240,7 @@ class SupplierTransactionReportStandardPrinter {
                 if (updatedSettings?['showFooter']?.visible == true)
                   pw.Text(
                     (updatedSettings?['showFooter']?.value as String?) ??
+                        billDocumentConfig?.footer ??
                         'This is a computer-generated document. No signature is required.',
                     style: pw.TextStyle(
                       fontSize: 8,
@@ -263,6 +264,7 @@ class SupplierTransactionReportStandardPrinter {
                       if (updatedSettings?['showHeader']?.visible == true)
                         pw.Text(
                           (updatedSettings?['showHeader']?.value as String?) ??
+                              billDocumentConfig?.header ??
                               'EPosenke',
                           style: pw.TextStyle(
                             fontSize: selectedPaperSize == 'A5' ? 20.0 : 24.0,
@@ -276,6 +278,7 @@ class SupplierTransactionReportStandardPrinter {
                         pw.Text(
                           (updatedSettings?['showSubheader']?.value
                                   as String?) ??
+                              billDocumentConfig?.subheader ??
                               'Supplier Transaction Report',
                           style: pw.TextStyle(
                             fontSize: selectedPaperSize == 'A5' ? 14.0 : 18.0,
@@ -1015,9 +1018,9 @@ class SupplierTransactionReportStandardPrinter {
 
   Map<String, DisplayOption> _createFallbackDisplayConfig() {
     return {
-      'showHeader': DisplayOption(visible: true, value: 'EPosenke'),
-      'showSubheader': DisplayOption(visible: true, value: 'Supplier Transaction Report'),
-      'showFooter': DisplayOption(visible: true, value: 'This is a computer-generated document. No signature is required.'),
+      'showHeader': DisplayOption(visible: true, value: null),
+      'showSubheader': DisplayOption(visible: true, value: null),
+      'showFooter': DisplayOption(visible: true, value: null),
       'showDates': DisplayOption(visible: true, value: null),
       'showSupplierName': DisplayOption(visible: true, value: null),
       'showSupplierEmail': DisplayOption(visible: true, value: null),
@@ -1160,6 +1163,7 @@ class SupplierTransactionReportStandardPrinter {
                 if (updatedSettings?['showFooter']?.visible == true)
                   pw.Text(
                     (updatedSettings?['showFooter']?.value as String?) ??
+                        billDocumentConfig?.footer ??
                         'This is a computer-generated document. No signature is required.',
                     style: pw.TextStyle(
                       fontSize: 8,
@@ -1184,6 +1188,7 @@ class SupplierTransactionReportStandardPrinter {
                       if (updatedSettings?['showHeader']?.visible == true)
                         pw.Text(
                           (updatedSettings?['showHeader']?.value as String?) ??
+                              billDocumentConfig?.header ??
                               'EPosenke',
                           style: pw.TextStyle(
                             fontSize: selectedPaperSize == 'A5' ? 20.0 : 24.0,
@@ -1198,6 +1203,7 @@ class SupplierTransactionReportStandardPrinter {
                         pw.Text(
                           (updatedSettings?['showSubheader']?.value
                                   as String?) ??
+                              billDocumentConfig?.subheader ??
                               'Supplier Transaction Report',
                           style: pw.TextStyle(
                             fontSize: selectedPaperSize == 'A5' ? 14.0 : 18.0,

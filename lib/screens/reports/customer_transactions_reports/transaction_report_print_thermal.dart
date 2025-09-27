@@ -177,22 +177,21 @@ class TransactionReportThermalPrinter {
       //     generator, orderNumber, selectedPaperSize, selectedFontType);
       // debugPrint("Order barcode built successfully");
 
-      // Terms & Conditions
-      if (displayConfig?['showTermsConditions']?.visible == true) {
-        debugPrint("Building terms & conditions...");
+      // Terms & Conditions - use document config terms if available
+      if (billDocumentConfig?.terms != null && billDocumentConfig!.terms!.isNotEmpty) {
+        debugPrint("Building terms & conditions from document config...");
         bytes += _buildTermsConditions(generator, displayConfig,
             billDocumentConfig, selectedPaperSize, selectedFontType);
         debugPrint("Terms & conditions built successfully");
       } else {
-        debugPrint("Skipping Terms & Conditions, disabled in settings");
+        debugPrint("Skipping Terms & Conditions, no terms available in document config");
       }
 
-      // Thank You Message (moved to end after Terms & Conditions)
-      if (displayConfig?['showThankYouMessage']?.visible == true) {
-        debugPrint("Building thank you message...");
-        bytes +=
-            _buildThankYouMessage(generator, displayConfig, selectedFontType);
-        debugPrint("Thank you message built successfully");
+      // Footer message - use document config footer if available
+      if (displayConfig?['showFooter']?.visible == true) {
+        debugPrint("Building footer message...");
+        bytes += _buildFooterMessage(generator, displayConfig, billDocumentConfig, selectedFontType);
+        debugPrint("Footer message built successfully");
       }
 
       // Cut the receipt
@@ -238,22 +237,32 @@ class TransactionReportThermalPrinter {
         Provider.of<AppSettingsProvider>(context, listen: false);
     final appSettings = appSettingsProvider.appSettings;
 
-    // Store Name - Always show "EPosenke"
-    bytes += generator.text('EPosenke',
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.center,
-            bold: true,
-            width: textSizeMedium,
-            height: textSizeMedium));
+    // Show header if enabled - use display config or document config values
+    if (displayConfig?['showHeader']?.visible == true) {
+      String headerText = (displayConfig?['showHeader']?.value as String?) ??
+          docConfig?.header ??
+          'EPosenke';
+      bytes += generator.text(headerText,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: true,
+              width: textSizeMedium,
+              height: textSizeMedium));
+    }
 
-    // Description - Always show "Customer Transaction Report"
-    bytes += generator.text('Customer Transaction Report',
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.center,
-            bold: false,
-            height: textSizeSmall));
+    // Show subheader if enabled - use display config or document config values
+    if (displayConfig?['showSubheader']?.visible == true) {
+      String subheaderText = (displayConfig?['showSubheader']?.value as String?) ??
+          docConfig?.subheader ??
+          'Customer Transaction Report';
+      bytes += generator.text(subheaderText,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: false,
+              height: textSizeSmall));
+    }
 
     bytes += generator.emptyLines(1);
 
@@ -801,20 +810,11 @@ class TransactionReportThermalPrinter {
       DocumentConfig? billDocumentConfig,
       String selectedPaperSize,
       PosFontType fontType) {
-    if (displayConfig?['showTermsConditions']?.visible != true) {
-      debugPrint("Terms & Conditions disabled in settings, skipping");
-      return [];
-    }
-
-    // Get terms from displayConfig value first, then fallback to billDocumentConfig
-    String? terms = displayConfig?['showTermsConditions']?.value as String?;
-    if (terms == null || terms.trim().isEmpty) {
-      // Fallback to billDocumentConfig terms
-      terms = billDocumentConfig?.terms;
-    }
+    // Get terms from billDocumentConfig only (Customer Statement doesn't have showTermsConditions)
+    String? terms = billDocumentConfig?.terms;
 
     if (terms == null || terms.trim().isEmpty) {
-      debugPrint("No Terms & Conditions data available from API, skipping");
+      debugPrint("No Terms & Conditions data available from document config, skipping");
       return [];
     }
 
@@ -897,6 +897,29 @@ class TransactionReportThermalPrinter {
 
     // Add separator line after terms
     bytes += generator.hr();
+    return bytes;
+  }
+
+  List<int> _buildFooterMessage(Generator generator,
+      Map<String, DisplayOption>? displayConfig, DocumentConfig? billDocumentConfig, PosFontType fontType) {
+    List<int> bytes = [];
+
+    // Get footer from displayConfig value first, then fallback to billDocumentConfig
+    String? footer = displayConfig?['showFooter']?.value as String?;
+    if (footer == null || footer.trim().isEmpty) {
+      footer = billDocumentConfig?.footer;
+    }
+
+    if (footer != null && footer.trim().isNotEmpty) {
+      bytes += generator.hr();
+      bytes += generator.text(footer,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: false,
+              height: textSizeSmall));
+    }
+
     return bytes;
   }
 

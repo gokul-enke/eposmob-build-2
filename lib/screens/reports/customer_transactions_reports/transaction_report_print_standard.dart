@@ -113,6 +113,28 @@ class TransactionReportStandardPrinter {
       }
       debugPrint("===== END DOCUMENT CONFIG INFO =====");
 
+      // Verify we're using Customer Statement config
+      if (billDocumentConfig.type != "Customer Statement") {
+        debugPrint("⚠️ WARNING: Expected 'Customer Statement' but got '${billDocumentConfig.type}'");
+      }
+
+      // Validate Customer Statement display configuration fields
+      debugPrint("===== CUSTOMER STATEMENT FIELD VALIDATION =====");
+      final expectedFields = [
+        'showHeader', 'showSubheader', 'showFooter', 'showDates',
+        'showCustomerName', 'showCustomerEmail', 'showCustomerPhone', 'showCustomerAddress',
+        'showTotalCredit', 'showTotalDebit', 'showBalance', 'showOrderNumber', 'showStatus', 'showTax'
+      ];
+      
+      for (String field in expectedFields) {
+        if (displayConfig?.containsKey(field) == true) {
+          debugPrint("✅ $field: visible=${displayConfig![field]!.visible}, value=${displayConfig[field]!.value}");
+        } else {
+          debugPrint("❌ $field: NOT FOUND in display configuration");
+        }
+      }
+      debugPrint("===== END FIELD VALIDATION =====");
+
       _debugPrintTemplateSettings(displayConfig);
 
       // Create fallback display configuration if null
@@ -1523,10 +1545,11 @@ class TransactionReportStandardPrinter {
               children: [
                 pw.Divider(color: PdfColors.grey300),
                 pw.SizedBox(height: 5),
-                // Show footer if enabled
+                // Show footer if enabled - use billDocumentConfig values as fallback
                 if (updatedSettings?['showFooter']?.visible == true)
                   pw.Text(
                     (updatedSettings?['showFooter']?.value as String?) ??
+                        billDocumentConfig.footer ??
                         'This is a computer-generated document. No signature is required.',
                     style: const pw.TextStyle(
                       fontSize: 8,
@@ -1694,11 +1717,12 @@ class TransactionReportStandardPrinter {
   }
 
   // Create fallback display configuration when API config is null
+  // Based on Customer Statement API response structure
   Map<String, DisplayOption> _createFallbackDisplayConfig() {
     return {
-      'showHeader': DisplayOption(visible: true, value: null),
-      'showSubheader': DisplayOption(visible: true, value: null),
-      'showFooter': DisplayOption(visible: true, value: null),
+      'showHeader': DisplayOption(visible: true, value: 'EPosenke'),
+      'showSubheader': DisplayOption(visible: true, value: 'Customer Transaction Report'),
+      'showFooter': DisplayOption(visible: true, value: 'This is a computer-generated document. No signature is required.'),
       'showDates': DisplayOption(visible: true, value: null),
       'showCustomerName': DisplayOption(visible: true, value: null),
       'showCustomerEmail': DisplayOption(visible: true, value: null),
