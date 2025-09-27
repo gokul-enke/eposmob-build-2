@@ -467,7 +467,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                       .all(8.0),
                                                               child: Text(
                                                                 supplier
-                                                                    .balance,
+                                                                    .balance
+                                                                    .toStringAsFixed(2),
                                                                 textAlign:
                                                                     TextAlign
                                                                         .center,
@@ -549,7 +550,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                       Get.find<
                                                                               SideBarController>()
                                                                           .index
-                                                                          .value = 67; // Index for OpenSupplierProfileScreen
+                                                                          .value = 69; // Index for OpenSupplierProfileScreen
                                                                     },
                                                                     constraints:
                                                                         const BoxConstraints(
@@ -971,7 +972,7 @@ class SupplierDetailModal extends StatelessWidget {
                     _buildInfoRow(
                         "Product Categories", supplier.productCategories),
                     const SizedBox(height: 8),
-                    _buildInfoRow("Balance", supplier.balance),
+                    _buildInfoRow("Balance", supplier.balance.toStringAsFixed(2)),
                     const SizedBox(height: 8),
                     _buildInfoRowWithColor(
                         "Current Balance",

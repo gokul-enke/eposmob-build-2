@@ -4,56 +4,54 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
-import 'package:pos_machine/models/list_transaction.dart';
+import 'package:pos_machine/models/supplier.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/invoice_provider.dart';
-// Use TransactionProvider instead of CustomerTransactionProvider
-import 'package:pos_machine/providers/transaction_provider.dart';
+import 'package:pos_machine/providers/supplier_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
 
-// Import the new simple transaction details screen
-import 'customer_transaction_details_screen.dart';
-// Add imports for customer autocomplete and date filtering
-import 'package:pos_machine/screens/transactions/widgets/customer_auto_complete.dart';
+// Import the supplier autocomplete and date filtering components
+import 'package:pos_machine/screens/suppliers/widgets/supplier_auto_complete.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
-// Import CalendarPickerTableCell component
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'dart:async';
 
-class CustomerTransactionsReportScreen extends StatefulWidget {
-  const CustomerTransactionsReportScreen({super.key});
+// Import the supplier transaction details screen
+import 'supplier_transaction_details_screen.dart';
+
+class SupplierTransactionReportScreen extends StatefulWidget {
+  const SupplierTransactionReportScreen({super.key});
 
   @override
-  State<CustomerTransactionsReportScreen> createState() =>
-      _CustomerTransactionsReportScreenState();
+  State<SupplierTransactionReportScreen> createState() =>
+      _SupplierTransactionReportScreenState();
 }
 
-class _CustomerTransactionsReportScreenState
-    extends State<CustomerTransactionsReportScreen> {
+class _SupplierTransactionReportScreenState
+    extends State<SupplierTransactionReportScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
   bool initLoading = false;
-  List<ListTransaction>? allTransactions = [];
+  List<Supplier>? allSuppliers = [];
 
-  // For grouping customer transactions
-  Map<String, CustomerTransactionSummary> customerSummary = {};
+  // For grouping supplier transactions
+  Map<String, SupplierTransactionSummary> supplierSummary = {};
 
   // Controllers for filters
-  final TextEditingController _customerController = TextEditingController();
+  final TextEditingController _supplierController = TextEditingController();
   final TextEditingController _fromDateController = TextEditingController();
   final TextEditingController _toDateController = TextEditingController();
 
   // Filter variables
-  String searchCustomer = '';
+  String searchSupplier = '';
 
-  // Customer suggestions for autocomplete
-  List<String> customerSuggestions = [];
+  // Supplier suggestions for autocomplete
+  List<String> supplierSuggestions = [];
 
-  // Timer for debouncing customer search
-  Timer? _customerSearchTimer;
+  // Timer for debouncing supplier search
+  Timer? _supplierSearchTimer;
 
   @override
   void initState() {
@@ -65,10 +63,10 @@ class _CustomerTransactionsReportScreenState
 
   @override
   void dispose() {
-    _customerController.dispose();
+    _supplierController.dispose();
     _fromDateController.dispose();
     _toDateController.dispose();
-    _customerSearchTimer?.cancel();
+    _supplierSearchTimer?.cancel();
     super.dispose();
   }
 
@@ -95,45 +93,34 @@ class _CustomerTransactionsReportScreenState
     try {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      InvoiceProvider invoiceProvider =
-          Provider.of<InvoiceProvider>(context, listen: false);
+      SupplierProvider supplierProvider =
+          Provider.of<SupplierProvider>(context, listen: false);
 
-      final value = await invoiceProvider.listAllTransaction(
-        type: null,
+      // Fetch all suppliers with their transaction data
+      await supplierProvider.fetchSuppliers(
         accessToken: accessToken ?? "",
+        supplierName: null,
       );
 
-      if (value['status'] == 'success') {
-        ListTransactionModel listTransactionModel =
-            ListTransactionModel.fromJson(value);
-        allTransactions = listTransactionModel.data?.transactions ?? [];
+      // Get all suppliers from the provider's allSuppliers list (not the paginated supplierList)
+      allSuppliers = supplierProvider.allSuppliers ?? [];
 
-        // Populate customer suggestions
-        final suggestions = getCustomerSuggestions();
+      // Populate supplier suggestions
+      final suggestions = getSupplierSuggestions();
 
-        // Apply filters immediately
-        _applyFilters();
+      // Apply filters immediately
+      _applyFilters();
 
-        // Update the customer suggestions and trigger a rebuild
-        setState(() {
-          customerSuggestions = suggestions;
-        });
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Failed to load transaction data"),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
+      // Update the supplier suggestions and trigger a rebuild
+      setState(() {
+        supplierSuggestions = suggestions;
+      });
     } catch (error) {
-      debugPrint('Error loading transaction data: $error');
+      debugPrint('Error loading supplier data: $error');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Error loading transaction data: $error"),
+            content: Text("Error loading supplier data: $error"),
             backgroundColor: Colors.red,
           ),
         );
@@ -145,10 +132,10 @@ class _CustomerTransactionsReportScreenState
     }
   }
 
-  List<String> getCustomerSuggestions() {
-    if (allTransactions == null) return [];
-    final suggestions = allTransactions!
-        .map((t) => t.customerName ?? '')
+  List<String> getSupplierSuggestions() {
+    if (allSuppliers == null) return [];
+    final suggestions = allSuppliers!
+        .map((s) => s.name)
         .where((name) => name.isNotEmpty)
         .toSet()
         .toList();
@@ -162,113 +149,141 @@ class _CustomerTransactionsReportScreenState
   }
 
   void _applyFilters() {
-    if (allTransactions == null || allTransactions!.isEmpty) {
+    if (allSuppliers == null || allSuppliers!.isEmpty) {
       setState(() {
-        customerSummary.clear();
+        supplierSummary.clear();
       });
       return;
     }
 
     // Apply filters
-    List<ListTransaction> filteredList = [...allTransactions!];
+    List<Supplier> filteredList = [...allSuppliers!];
 
-    // Customer filter
-    if (searchCustomer.isNotEmpty) {
+    // Supplier filter
+    if (searchSupplier.isNotEmpty) {
       filteredList = filteredList
-          .where((transaction) => (transaction.customerName ?? '')
+          .where((supplier) => supplier.name
               .toLowerCase()
-              .contains(searchCustomer.toLowerCase()))
+              .contains(searchSupplier.toLowerCase()))
           .toList();
     }
 
-    // Date range filter
+    // Date range filter for transactions - similar to customer report logic
     if (_fromDateController.text.isNotEmpty ||
         _toDateController.text.isNotEmpty) {
       try {
         final formatter = DateFormat('yyyy-MM-dd');
 
-        filteredList = filteredList.where((transaction) {
-          if (transaction.date == null) return false;
+        filteredList = filteredList.map((supplier) {
+          // Filter transactions within date range
+          List<SupplierTransaction> filteredTransactions = supplier.transactions.where((transaction) {
+            if (transaction.date.isEmpty) return false;
 
-          try {
-            final transactionDate = formatter.parse(transaction.date!);
+            try {
+              final transactionDate = formatter.parse(transaction.date);
 
-            // If from date is set, check that transaction date is not before it
-            if (_fromDateController.text.isNotEmpty) {
-              final fromDate = formatter.parse(_fromDateController.text);
-              if (transactionDate.isBefore(fromDate)) return false;
+              // If from date is set, check that transaction date is not before it
+              if (_fromDateController.text.isNotEmpty) {
+                final fromDate = formatter.parse(_fromDateController.text);
+                if (transactionDate.isBefore(fromDate)) return false;
+              }
+
+              // If to date is set, check that transaction date is not after it
+              if (_toDateController.text.isNotEmpty) {
+                final toDate = formatter.parse(_toDateController.text);
+                // Include the to date by adding one day and checking if transaction date is before
+                if (transactionDate.isAfter(toDate)) return false;
+              }
+
+              return true;
+            } catch (e) {
+              debugPrint('Date parsing error for transaction: $e');
+              return false;
             }
+          }).toList();
 
-            // If to date is set, check that transaction date is not after it
-            if (_toDateController.text.isNotEmpty) {
-              final toDate = formatter.parse(_toDateController.text);
-              // Include the to date by adding one day and checking if transaction date is before
-              final toDatePlusOne = toDate.add(const Duration(days: 1));
-              if (transactionDate.isAfter(toDate)) return false;
-            }
-
-            return true;
-          } catch (e) {
-            debugPrint('Date parsing error for transaction: $e');
-            return false;
-          }
+          // Return supplier with filtered transactions
+          return Supplier(
+            id: supplier.id,
+            name: supplier.name,
+            email: supplier.email,
+            phone: supplier.phone,
+            altPhone: supplier.altPhone,
+            productCategories: supplier.productCategories,
+            address: supplier.address,
+            balance: supplier.balance,
+            paymentType: supplier.paymentType,
+            companyId: supplier.companyId,
+            currentBalance: supplier.currentBalance,
+            balanceStatus: supplier.balanceStatus,
+            createdAt: supplier.createdAt,
+            updatedAt: supplier.updatedAt,
+            userId: supplier.userId,
+            transactions: filteredTransactions,
+            purchases: supplier.purchases,
+          );
         }).toList();
       } catch (e) {
         debugPrint('Date parsing error: $e');
       }
     }
 
-    // Recalculate customer summary with filtered transactions
-    _calculateCustomerSummaryFromFilteredList(filteredList);
+    // Recalculate supplier summary with filtered suppliers
+    _calculateSupplierSummaryFromFilteredList(filteredList);
   }
 
-  void _calculateCustomerSummaryFromFilteredList(
-      List<ListTransaction> filteredList) {
-    Map<String, CustomerTransactionSummary> filteredCustomerSummary = {};
+  void _calculateSupplierSummaryFromFilteredList(List<Supplier> filteredList) {
+    Map<String, SupplierTransactionSummary> filteredSupplierSummary = {};
 
-    for (var transaction in filteredList) {
-      String customerName = transaction.customerName ?? 'Unknown Customer';
-      double amount = double.tryParse(transaction.amount ?? '0') ?? 0.0;
-      String type = transaction.type ?? 'unknown';
+    for (var supplier in filteredList) {
+      String supplierName = supplier.name;
+      double totalDebit = 0.0;
+      double totalCredit = 0.0;
 
-      if (!filteredCustomerSummary.containsKey(customerName)) {
-        filteredCustomerSummary[customerName] = CustomerTransactionSummary(
-          customerName: customerName,
-          totalDebit: 0.0,
-          totalCredit: 0.0,
-        );
+      // Calculate totals from filtered transactions (similar to customer report logic)
+      for (var transaction in supplier.transactions) {
+        double amount = double.tryParse(transaction.amount) ?? 0.0;
+
+        // Assuming "Credit" type increases balance and "Debit" type decreases balance
+        if (transaction.type.toLowerCase() == 'credit') {
+          totalCredit += amount;
+        } else if (transaction.type.toLowerCase() == 'debit') {
+          totalDebit += amount;
+        }
       }
 
-      // Assuming "Credit" type increases balance and "Debit" type decreases balance
-      if (transaction.type?.toLowerCase() == 'credit') {
-        filteredCustomerSummary[customerName]!.totalCredit += amount;
-      } else if (transaction.type?.toLowerCase() == 'debit') {
-        filteredCustomerSummary[customerName]!.totalDebit += amount;
+      // Calculate balance from transactions (similar to customer report)
+      double calculatedBalance = totalCredit - totalDebit;
+
+      // Only add suppliers that have transactions or non-zero balances
+      if (supplier.transactions.isNotEmpty || supplier.currentBalance != 0.0) {
+        filteredSupplierSummary[supplierName] = SupplierTransactionSummary(
+          supplierName: supplierName,
+          totalDebit: totalDebit,
+          totalCredit: totalCredit,
+          balance: calculatedBalance, // Use calculated balance from transactions
+          transactionCount: supplier.transactions.length,
+        );
       }
     }
 
-    // Calculate balance for each customer
-    filteredCustomerSummary.forEach((name, summary) {
-      summary.balance = summary.totalCredit - summary.totalDebit;
-    });
-
     setState(() {
-      customerSummary = filteredCustomerSummary;
+      supplierSummary = filteredSupplierSummary;
     });
   }
 
   void _resetFilters() {
     // Cancel any pending search
-    _customerSearchTimer?.cancel();
+    _supplierSearchTimer?.cancel();
 
     // Clear the text controllers
-    _customerController.clear();
+    _supplierController.clear();
     _fromDateController.clear();
     _toDateController.clear();
 
     // Reset the search variables
     setState(() {
-      searchCustomer = '';
+      searchSupplier = '';
     });
 
     // Set default date values
@@ -323,7 +338,7 @@ class _CustomerTransactionsReportScreenState
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Customer Transactions Report",
+          "Supplier Transactions Report",
           style: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s20,
@@ -345,7 +360,7 @@ class _CustomerTransactionsReportScreenState
             children: [
               Expanded(
                 flex: 1,
-                child: _buildCustomerAutocompleteField(),
+                child: _buildSupplierAutocompleteField(),
               ),
               Expanded(
                 flex: 1,
@@ -385,7 +400,7 @@ class _CustomerTransactionsReportScreenState
     );
   }
 
-  Widget _buildCustomerAutocompleteField() {
+  Widget _buildSupplierAutocompleteField() {
     return Padding(
       padding: const EdgeInsets.only(left: 10.0),
       child: Column(
@@ -394,7 +409,7 @@ class _CustomerTransactionsReportScreenState
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              "Customer",
+              "Supplier",
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,
@@ -404,16 +419,16 @@ class _CustomerTransactionsReportScreenState
             ),
           ),
           const SizedBox(height: 8),
-          CustomerAutocomplete(
+          SupplierAutocomplete(
             size: MediaQuery.of(context).size,
-            customerList: customerSuggestions, // This will now update properly
-            controller: _customerController,
-            onSelected: (String selectedCustomer) {
+            supplierList: supplierSuggestions, // This will now update properly
+            controller: _supplierController,
+            onSelected: (String selectedSupplier) {
               // Cancel any pending search
-              _customerSearchTimer?.cancel();
+              _supplierSearchTimer?.cancel();
 
               setState(() {
-                searchCustomer = selectedCustomer;
+                searchSupplier = selectedSupplier;
               });
               _applyFilters();
             },
@@ -500,11 +515,12 @@ class _CustomerTransactionsReportScreenState
                     ),
                     child: Table(
                       columnWidths: const {
-                        0: FlexColumnWidth(2.0), // Customer Name
+                        0: FlexColumnWidth(2.0), // Supplier Name
                         1: FlexColumnWidth(1.5), // Total Debit
                         2: FlexColumnWidth(1.5), // Total Credit
                         3: FlexColumnWidth(1.5), // Balance
-                        4: FlexColumnWidth(1.0), // Action
+                        4: FlexColumnWidth(1.2), // Transaction Count
+                        5: FlexColumnWidth(1.0), // Action
                       },
                       border: null,
                       defaultVerticalAlignment:
@@ -512,10 +528,11 @@ class _CustomerTransactionsReportScreenState
                       children: [
                         TableRow(
                           children: [
-                            _buildTableHeader("Customer Name"),
+                            _buildTableHeader("Supplier Name"),
                             _buildTableHeader("Total Debit"),
                             _buildTableHeader("Total Credit"),
                             _buildTableHeader("Balance"),
+                            _buildTableHeader("Transactions"),
                             _buildTableHeader("Action"),
                           ],
                         ),
@@ -535,24 +552,25 @@ class _CustomerTransactionsReportScreenState
                             PointerDeviceKind.trackpad,
                           },
                         ),
-                        child: customerSummary.isEmpty
+                        child: supplierSummary.isEmpty
                             ? _buildNoDataFoundUI()
                             : SingleChildScrollView(
                                 physics: const BouncingScrollPhysics(),
                                 scrollDirection: Axis.vertical,
                                 child: Table(
                                   columnWidths: const {
-                                    0: FlexColumnWidth(2.0), // Customer Name
+                                    0: FlexColumnWidth(2.0), // Supplier Name
                                     1: FlexColumnWidth(1.5), // Total Debit
                                     2: FlexColumnWidth(1.5), // Total Credit
                                     3: FlexColumnWidth(1.5), // Balance
-                                    4: FlexColumnWidth(1.0), // Action
+                                    4: FlexColumnWidth(1.2), // Transaction Count
+                                    5: FlexColumnWidth(1.0), // Action
                                   },
                                   border: null,
                                   defaultVerticalAlignment:
                                       TableCellVerticalAlignment.middle,
-                                  children: customerSummary.entries
-                                      .map((entry) => _buildCustomerRow(
+                                  children: supplierSummary.entries
+                                      .map((entry) => _buildSupplierRow(
                                           entry.value, context))
                                       .toList(),
                                 ),
@@ -576,13 +594,13 @@ class _CustomerTransactionsReportScreenState
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(
-            Icons.account_balance,
+            Icons.business,
             size: 60,
             color: ColorManager.kPrimaryColor.withOpacity(0.7),
           ),
           const SizedBox(height: 15),
           Text(
-            'No customer transactions available',
+            'No supplier transactions available',
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s18,
@@ -621,18 +639,18 @@ class _CustomerTransactionsReportScreenState
     );
   }
 
-  TableRow _buildCustomerRow(
-      CustomerTransactionSummary summary, BuildContext context) {
+  TableRow _buildSupplierRow(
+      SupplierTransactionSummary summary, BuildContext context) {
     // Alternate row colors for better readability
     final int index =
-        customerSummary.keys.toList().indexOf(summary.customerName);
+        supplierSummary.keys.toList().indexOf(summary.supplierName);
 
     return TableRow(
       decoration: BoxDecoration(
         color: index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.1),
       ),
       children: [
-        _buildTableCell(summary.customerName),
+        _buildTableCell(summary.supplierName),
         _buildTableCell(
           summary.totalDebit.toStringAsFixed(2),
         ),
@@ -643,6 +661,9 @@ class _CustomerTransactionsReportScreenState
           summary.balance.toStringAsFixed(2),
           isBalance: true,
           balance: summary.balance,
+        ),
+        _buildTableCell(
+          summary.transactionCount.toString(),
         ),
         Center(
           child: Padding(
@@ -657,11 +678,11 @@ class _CustomerTransactionsReportScreenState
                   color: ColorManager.kPrimaryColor.withOpacity(0.9),
                 ),
                 onPressed: () {
-                  // Use the TransactionProvider instead of the CustomerTransactionProvider
-                  Provider.of<TransactionProvider>(context, listen: false)
-                      .setCustomerName(summary.customerName);
+                  // Set the selected supplier and navigate to details
+                  Provider.of<SupplierProvider>(context, listen: false)
+                      .setSelectedSupplierName(summary.supplierName);
                   sideBarController.index.value =
-                      66; // Navigate to SimpleTransactionDetailsScreen
+                      68; // Navigate to SupplierTransactionDetailsScreen
                 },
                 constraints: const BoxConstraints(
                   minWidth: 36,
@@ -699,16 +720,18 @@ class _CustomerTransactionsReportScreenState
   }
 }
 
-class CustomerTransactionSummary {
-  final String customerName;
+class SupplierTransactionSummary {
+  final String supplierName;
   double totalDebit;
   double totalCredit;
   double balance;
+  int transactionCount;
 
-  CustomerTransactionSummary({
-    required this.customerName,
+  SupplierTransactionSummary({
+    required this.supplierName,
     required this.totalDebit,
     required this.totalCredit,
-    this.balance = 0.0,
+    required this.balance,
+    required this.transactionCount,
   });
 }

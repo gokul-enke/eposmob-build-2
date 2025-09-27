@@ -88,6 +88,35 @@ class DocumentConfigProvider extends ChangeNotifier {
     debugPrint("Is loading: $isLoading");
     
     if (_documentConfigurations != null) {
+      // Check for Customer Statement config (for transaction reports)
+      final customerStatementConfig = _documentConfigurations!.documentConfigurations?['Customer Statement'];
+      if (customerStatementConfig != null) {
+        debugPrint("\n📄 CURRENT CUSTOMER STATEMENT CONFIG:");
+        debugPrint("- ID: ${customerStatementConfig.id}");
+        debugPrint("- Updated At: ${customerStatementConfig.updatedAt}");
+        debugPrint("- Has Display Config: ${customerStatementConfig.displayConfiguration != null}");
+        
+        final displayConfig = customerStatementConfig.displayConfiguration?.options;
+        if (displayConfig != null) {
+          debugPrint("- Display Config Options Count: ${displayConfig.length}");
+          debugPrint("- Display Config Keys: ${displayConfig.keys.toList()}");
+          
+          // Show a few key options
+          ['showHeader', 'showSubheader', 'showFooter', 'showCustomerName'].forEach((key) {
+            if (displayConfig.containsKey(key)) {
+              final option = displayConfig[key];
+              debugPrint("  * $key: visible=${option?.visible}, value=${option?.value}");
+            }
+          });
+        } else {
+          debugPrint("❌ Display Config Options is NULL");
+        }
+      } else {
+        debugPrint("❌ Customer Statement config not found");
+        debugPrint("Available configs: ${_documentConfigurations!.documentConfigurations?.keys.toList()}");
+      }
+      
+      // Also check for Bill config (legacy)
       final billConfig = _documentConfigurations!.documentConfigurations?['Bill'];
       if (billConfig != null) {
         debugPrint("\n📄 CURRENT BILL CONFIG:");
@@ -112,5 +141,102 @@ class DocumentConfigProvider extends ChangeNotifier {
     clearConfiguration();
     await fetchDocumentConfigurations(accessToken: accessToken);
     debugCurrentConfiguration();
+  }
+
+  // Debug method to test parsing with raw JSON
+  void debugParseRawJson(String rawJson) {
+    debugPrint("🧪 Testing JSON parsing with raw data...");
+    try {
+      final jsonData = json.decode(rawJson);
+      debugPrint("✅ JSON decode successful");
+      
+      final model = DocumentConfigurationsModel.fromJson(jsonData);
+      debugPrint("✅ Model parsing successful");
+      
+      final customerStatement = model.documentConfigurations?['Customer Statement'];
+      if (customerStatement != null) {
+        debugPrint("✅ Customer Statement config found");
+        debugPrint("Display config exists: ${customerStatement.displayConfiguration != null}");
+        debugPrint("Display config options count: ${customerStatement.displayConfiguration?.options?.length ?? 0}");
+        
+        if (customerStatement.displayConfiguration?.options != null) {
+          customerStatement.displayConfiguration!.options!.forEach((key, value) {
+            debugPrint("  $key: visible=${value.visible}, value=${value.value}");
+          });
+        }
+      } else {
+        debugPrint("❌ Customer Statement config not found");
+      }
+    } catch (e) {
+      debugPrint("❌ Error parsing JSON: $e");
+    }
+  }
+
+  // Test method with the provided API response
+  void testWithProvidedApiResponse() {
+    const testJson = '''
+{
+  "status": "success",
+  "document_configurations": {
+    "Customer Statement": {
+      "id": 13,
+      "company_id": 1,
+      "type": "Customer Statement",
+      "logo": null,
+      "show_logo": 0,
+      "number_prefix": null,
+      "discount_method": null,
+      "header": "EPosenke",
+      "subheader": "Customer Transaction Report",
+      "terms": null,
+      "footer": null,
+      "accent_color": null,
+      "font": null,
+      "template": "customer_statement",
+      "item_name": null,
+      "tax_name": null,
+      "unit_name": null,
+      "price_name": null,
+      "amount_name": null,
+      "created_by": null,
+      "updated_by": null,
+      "created_at": "2025-09-16T11:15:46.000000Z",
+      "updated_at": "2025-09-26T14:40:06.000000Z",
+      "display_configuration": {
+        "showHeader": {"visible": true, "value": null},
+        "showSubheader": {"visible": true, "value": null},
+        "showFooter": {"visible": true, "value": null},
+        "showDates": {"visible": true, "value": null},
+        "showCustomerName": {"visible": true, "value": null},
+        "showCustomerEmail": {"visible": true, "value": null},
+        "showCustomerPhone": {"visible": true, "value": null},
+        "showCustomerAddress": {"visible": true, "value": null},
+        "showTotalCredit": {"visible": true, "value": null},
+        "showTotalDebit": {"visible": true, "value": null},
+        "showBalance": {"visible": true, "value": null},
+        "showOrderNumber": {"visible": true, "value": null},
+        "showStatus": {"visible": true, "value": null},
+        "showTax": {"visible": true, "value": null}
+      },
+      "resolved_labels": {
+        "item_name": "PRT",
+        "unit_name": "QTY",
+        "price_name": "Rate",
+        "tax_name": "Tax",
+        "amount_name": "AMT"
+      }
+    }
+  },
+  "options": {
+    "item_name_options": {"items": "Items", "products": "Products", "services": "Services", "other": "Other"},
+    "unit_name_options": {"quantity": "Quantity", "hours": "Hours", "other": "Other"},
+    "price_name_options": {"price": "Price", "rate": "Rate", "other": "Other"},
+    "tax_name_options": {"tax": "Tax", "GST": "GST", "VAT": "VAT", "tax (%)": "Tax (%)", "other": "Other"},
+    "amount_name_options": {"amount": "Amount", "total": "Total", "other": "Other"},
+    "template_options": {"default": "Default", "bill": "Bill", "receipt": "Receipt", "voucher": "Voucher", "payslip": "Payslip", "email": "Email", "supplier_invoice": "Supplier Invoice", "delivery_note": "Delivery Note", "customer_statement": "Customer Statement", "supplier_statement": "Supplier Statement"}
+  }
+}
+''';
+    debugParseRawJson(testJson);
   }
 }

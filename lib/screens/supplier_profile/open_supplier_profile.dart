@@ -105,7 +105,7 @@ class _OpenSupplierProfileScreenState extends State<OpenSupplierProfileScreen> {
           _buildSidebarButton(1, 'Edit Details', ImageAssets.lock),
           _buildSidebarButton(2, 'Transactions', ImageAssets.transactionIcon),
           _buildSidebarButton(3, 'All Orders', ImageAssets.saleIcon),
-          _buildSidebarButton(6, 'Supplier Address', ImageAssets.userIcon),
+          _buildSidebarButton(4, 'Supplier Address', ImageAssets.userIcon),
         ],
       ),
     );
@@ -125,8 +125,8 @@ class _OpenSupplierProfileScreenState extends State<OpenSupplierProfileScreen> {
         const SizedBox(height: 4),
         Text(
           'ID: ${supplier.id}',
-          style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0,
-              ColorManager.kGreyColor),
+          style: buildCustomStyle(
+              FontWeightManager.regular, FontSize.s14, 0, ColorManager.kGreyColor),
         ),
       ],
     );
@@ -147,8 +147,9 @@ class _OpenSupplierProfileScreenState extends State<OpenSupplierProfileScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color:
-                    isSelected ? Colors.transparent : ColorManager.kBgDarkColor,
+                color: isSelected
+                    ? Colors.transparent
+                    : ColorManager.kBgDarkColor,
               ),
             ),
             child: Row(
@@ -198,13 +199,8 @@ class _OpenSupplierProfileScreenState extends State<OpenSupplierProfileScreen> {
       SupplierInformationEditWidget(size: size, supplier: supplier),
       SupplierTransactionsWidget(size: size, supplier: supplier),
       SupplierOrdersWidget(size: size, supplier: supplier),
-      const SizedBox(), // Placeholder for index 4
-      const SizedBox(), // Placeholder for index 5
       SupplierAddressViewWidget(size: size, supplier: supplier),
     ];
-
-    // Ensure selectedIndex is within bounds
-    int index = selectedIndex < pages.length ? selectedIndex : 0;
-    return pages[index];
+    return pages[selectedIndex];
   }
 }

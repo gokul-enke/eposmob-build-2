@@ -197,13 +197,23 @@ class DisplayConfiguration {
     this.options,
   });
 
-  factory DisplayConfiguration.fromJson(Map<String, dynamic> json) =>
-      DisplayConfiguration(
-        options: json == null
-            ? null
-            : Map.from(json).map((k, v) =>
-                MapEntry<String, DisplayOption>(k, DisplayOption.fromJson(v))),
-      );
+  factory DisplayConfiguration.fromJson(Map<String, dynamic> json) {
+    // The API response has display_configuration as a direct map of DisplayOptions
+    // not nested under an "options" key
+    if (json.isEmpty) {
+      return DisplayConfiguration(options: null);
+    }
+    
+    try {
+      final options = Map.from(json).map((k, v) =>
+          MapEntry<String, DisplayOption>(k, DisplayOption.fromJson(v)));
+      
+      return DisplayConfiguration(options: options);
+    } catch (e) {
+      print("❌ DisplayConfiguration.fromJson - error parsing: $e");
+      return DisplayConfiguration(options: null);
+    }
+  }
 
   Map<String, dynamic> toJson() => {
         if (options != null)

@@ -89,13 +89,41 @@ class TransactionReportStandardPrinter {
           "billDocumentConfig Updated At: ${billDocumentConfig.updatedAt}");
       debugPrint(
           "billDocumentConfig Has Display Config: ${billDocumentConfig.displayConfiguration != null}");
+
+      // Additional debugging for display configuration
+      if (billDocumentConfig.displayConfiguration != null) {
+        debugPrint("Display Configuration object exists");
+        debugPrint(
+            "Display Configuration options: ${billDocumentConfig.displayConfiguration!.options}");
+        debugPrint(
+            "Display Configuration options type: ${billDocumentConfig.displayConfiguration!.options.runtimeType}");
+      } else {
+        debugPrint("❌ Display Configuration object is NULL");
+      }
+
       debugPrint("Display Config Options Count: ${displayConfig?.length ?? 0}");
       if (displayConfig != null) {
         debugPrint("Display Config Keys: ${displayConfig.keys.toList()}");
+        // Debug each option
+        displayConfig.forEach((key, value) {
+          debugPrint("  $key: visible=${value.visible}, value=${value.value}");
+        });
+      } else {
+        debugPrint("❌ Display Config Options is NULL");
       }
       debugPrint("===== END DOCUMENT CONFIG INFO =====");
 
       _debugPrintTemplateSettings(displayConfig);
+
+      // Create fallback display configuration if null
+      Map<String, DisplayOption>? updatedSettings = displayConfig;
+      if (updatedSettings == null) {
+        debugPrint(
+            "⚠️ Display configuration is null, creating fallback configuration");
+        updatedSettings = _createFallbackDisplayConfig();
+        debugPrint(
+            "✅ Created fallback configuration with ${updatedSettings.length} options");
+      }
 
       if (context.mounted) {
         showScaffold(
@@ -106,9 +134,6 @@ class TransactionReportStandardPrinter {
 
       // Create a PDF document
       final pdf = pw.Document();
-
-      // Get settings from the loaded display configuration
-      final updatedSettings = displayConfig;
 
       debugPrint("PDF Generation - Using user settings:");
       debugPrint("showHeader: ${updatedSettings?['showHeader']?.visible}");
@@ -159,49 +184,43 @@ class TransactionReportStandardPrinter {
       PdfPageFormat pageFormat =
           selectedPaperSize == 'A4' ? PdfPageFormat.a4 : PdfPageFormat.a5;
 
-      // Define styles to match PHP template with better readability
+      // Define styles to match the screenshot design
       final headerStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 16.0 : 20.0,
+        fontSize: selectedPaperSize == 'A5' ? 18.0 : 22.0,
         fontWeight: pw.FontWeight.bold,
-        color: PdfColor.fromHex('#2d3748'),
+        color: PdfColors.black,
       );
       final subheaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 12.0 : 16.0,
-        fontWeight: pw.FontWeight.bold,
-        color: PdfColor.fromHex('#2d3748'),
-      );
-      final bodyStyle = pw.TextStyle(
-        fontSize:
-            selectedPaperSize == 'A5' ? 8.0 : 10.0, // Increased from 6.0/8.0
+        fontSize: selectedPaperSize == 'A5' ? 14.0 : 16.0,
+        fontWeight: pw.FontWeight.normal,
         color: PdfColors.grey700,
       );
+      final bodyStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+        color: PdfColors.black,
+      );
       final smallStyle = pw.TextStyle(
-        fontSize:
-            selectedPaperSize == 'A5' ? 6.0 : 8.0, // Increased from 5.0/6.0
+        fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
         color: PdfColors.grey600,
       );
       final tableHeaderStyle = pw.TextStyle(
-        fontSize:
-            selectedPaperSize == 'A5' ? 9.0 : 11.0, // Increased from 7.0/9.0
+        fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.white,
       );
       final tableDataStyle = pw.TextStyle(
-        fontSize:
-            selectedPaperSize == 'A5' ? 8.0 : 10.0, // Increased from 6.0/8.0
-        color: PdfColors.grey700,
+        fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+        color: PdfColors.black,
       );
       final summaryStyle = pw.TextStyle(
-        fontSize:
-            selectedPaperSize == 'A5' ? 10.0 : 12.0, // Increased from 9.0/11.0
+        fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
         fontWeight: pw.FontWeight.normal,
-        color: PdfColor.fromHex('#2d3748'),
+        color: PdfColors.grey700,
       );
       final netTotalStyle = pw.TextStyle(
-        fontSize:
-            selectedPaperSize == 'A5' ? 10.0 : 12.0, // Increased from 9.0/11.0
+        fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
         fontWeight: pw.FontWeight.bold,
-        color: PdfColor.fromHex('#2d3748'),
+        color: PdfColors.black,
       );
 
       // Add content to a multi-page PDF with styling to match PHP template
@@ -220,7 +239,7 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     (updatedSettings?['showFooter']?.value as String?) ??
                         'This is a computer-generated document. No signature is required.',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                       fontSize: 8,
                       color: PdfColors.grey600,
                     ),
@@ -712,39 +731,38 @@ class TransactionReportStandardPrinter {
 
     return pw.Table(
       border: const pw.TableBorder(
-        top: pw.BorderSide(color: PdfColors.grey300, width: 1),
-        bottom: pw.BorderSide(color: PdfColors.grey300, width: 1),
-        left: pw.BorderSide(color: PdfColors.grey300, width: 1),
-        right: pw.BorderSide(color: PdfColors.grey300, width: 1),
-        horizontalInside: pw.BorderSide(color: PdfColors.grey300, width: 1),
-        verticalInside: pw.BorderSide(color: PdfColors.grey300, width: 1),
+        top: pw.BorderSide(color: PdfColors.grey400, width: 1),
+        bottom: pw.BorderSide(color: PdfColors.grey400, width: 1),
+        left: pw.BorderSide(color: PdfColors.grey400, width: 1),
+        right: pw.BorderSide(color: PdfColors.grey400, width: 1),
+        horizontalInside: pw.BorderSide(color: PdfColors.grey400, width: 1),
+        verticalInside: pw.BorderSide(color: PdfColors.grey400, width: 1),
       ),
       children: [
-        // Header row with styling to match PHP template
+        // Header row with dark styling to match screenshot
         pw.TableRow(
-          decoration: const pw.BoxDecoration(
-            color: PdfColors.grey800,
+          decoration: pw.BoxDecoration(
+            color:
+                PdfColor.fromHex('#4a5568'), // Dark grey-blue like screenshot
           ),
           children: tableHeaders
               .map((header) => pw.Padding(
-                    padding: const pw.EdgeInsets.all(
-                        12), // Increased padding for larger header height
+                    padding: const pw.EdgeInsets.all(10),
                     child: header,
                   ))
               .toList(),
         ),
-        // Data rows with alternating colors to match PHP template and increased height
+        // Data rows with clean white background
         ...tableData.asMap().entries.map((entry) {
           final int index = entry.key;
           final List<pw.Widget> row = entry.value;
           return pw.TableRow(
-            decoration: pw.BoxDecoration(
-              color: index % 2 == 0 ? PdfColors.white : PdfColors.grey100,
+            decoration: const pw.BoxDecoration(
+              color: PdfColors.white,
             ),
             children: row
                 .map((cell) => pw.Padding(
-                      padding: const pw.EdgeInsets.all(
-                          10), // Increased padding for larger row height
+                      padding: const pw.EdgeInsets.all(8),
                       child: cell,
                     ))
                 .toList(),
@@ -1018,7 +1036,7 @@ class TransactionReportStandardPrinter {
     debugPrint("===== END DISPLAY CONFIGURATION DEBUG =====");
   }
 
-  // Customer Details Section for PDF - compact design with increased font size
+  // Customer Details Section for PDF - matching screenshot design
   pw.Widget _buildCustomerDetailsPDF(
     String selectedPaperSize,
     String? customerName,
@@ -1030,17 +1048,17 @@ class TransactionReportStandardPrinter {
     String? fromDate,
     String? toDate,
   ) {
-    // Create styles to match PHP template
+    // Create styles to match screenshot
     final customerDetailStyle = pw.TextStyle(
-      fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0, // Increased font size
-      color: PdfColor.fromHex('#2d3748'),
+      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+      color: PdfColors.black,
     );
 
     // Create a style for customer information header
     final customerInfoHeaderStyle = pw.TextStyle(
-      fontSize: selectedPaperSize == 'A5' ? 12.0 : 14.0, // Increased font size
+      fontSize: selectedPaperSize == 'A5' ? 12.0 : 14.0,
       fontWeight: pw.FontWeight.bold,
-      color: PdfColor.fromHex('#2d3748'),
+      color: PdfColors.grey700,
     );
 
     debugPrint("===== PDF CUSTOMER DETAILS DEBUG =====");
@@ -1062,14 +1080,12 @@ class TransactionReportStandardPrinter {
     debugPrint("===== END PDF CUSTOMER DETAILS DEBUG =====");
 
     return pw.Container(
-      padding: const pw.EdgeInsets.all(15), // Increased padding
-      margin: const pw.EdgeInsets.only(bottom: 20), // Increased margin
+      padding: const pw.EdgeInsets.all(15),
+      margin: const pw.EdgeInsets.only(bottom: 20),
       decoration: pw.BoxDecoration(
-        border:
-            pw.Border.all(color: PdfColors.grey300, width: 1), // Thicker border
-        borderRadius:
-            const pw.BorderRadius.all(pw.Radius.circular(5)), // Larger radius
-        color: PdfColors.grey100,
+        border: pw.Border.all(color: PdfColors.grey400, width: 1),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+        color: PdfColors.grey50,
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1079,12 +1095,12 @@ class TransactionReportStandardPrinter {
             'Customer Information',
             style: customerInfoHeaderStyle,
           ),
-          pw.SizedBox(height: 10),
+          pw.SizedBox(height: 8),
           pw.Container(
             height: 1,
-            color: PdfColors.grey300,
+            color: PdfColors.grey400,
           ),
-          pw.SizedBox(height: 10),
+          pw.SizedBox(height: 12),
           pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
@@ -1092,108 +1108,37 @@ class TransactionReportStandardPrinter {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    if (customerName != null && customerName.isNotEmpty)
+                    // Display customer information as simple text lines like in screenshot
+                    if (customerPhone != null && customerPhone.isNotEmpty)
                       pw.Padding(
-                        padding: const pw.EdgeInsets.only(bottom: 8),
-                        child: pw.Row(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Text(
-                              'Name: ',
-                              style: pw.TextStyle(
-                                fontSize: selectedPaperSize == 'A5'
-                                    ? 8.0
-                                    : 10.0, // Match customer detail style
-                                fontWeight: pw.FontWeight
-                                    .normal, // Removed bold as requested
-                                color: PdfColor.fromHex('#2d3748'),
-                              ),
-                            ),
-                            pw.Expanded(
-                              child: pw.Text(
-                                customerName,
-                                style: customerDetailStyle,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    if (customerEmail != null && customerEmail.isNotEmpty)
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.only(bottom: 8),
-                        child: pw.Row(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Text(
-                              'Email: ',
-                              style: pw.TextStyle(
-                                fontSize: selectedPaperSize == 'A5'
-                                    ? 8.0
-                                    : 10.0, // Match customer detail style
-                                fontWeight: pw.FontWeight
-                                    .normal, // Removed bold as requested
-                                color: PdfColor.fromHex('#2d3748'),
-                              ),
-                            ),
-                            pw.Expanded(
-                              child: pw.Text(
-                                customerEmail,
-                                style: customerDetailStyle,
-                              ),
-                            ),
-                          ],
+                        padding: const pw.EdgeInsets.only(bottom: 4),
+                        child: pw.Text(
+                          customerPhone,
+                          style: customerDetailStyle,
                         ),
                       ),
                     if (customerPhone != null && customerPhone.isNotEmpty)
                       pw.Padding(
-                        padding: const pw.EdgeInsets.only(bottom: 8),
-                        child: pw.Row(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Text(
-                              'Phone: ',
-                              style: pw.TextStyle(
-                                fontSize: selectedPaperSize == 'A5'
-                                    ? 8.0
-                                    : 10.0, // Match customer detail style
-                                fontWeight: pw.FontWeight
-                                    .normal, // Removed bold as requested
-                                color: PdfColor.fromHex('#2d3748'),
-                              ),
-                            ),
-                            pw.Expanded(
-                              child: pw.Text(
-                                customerPhone,
-                                style: customerDetailStyle,
-                              ),
-                            ),
-                          ],
+                        padding: const pw.EdgeInsets.only(bottom: 4),
+                        child: pw.Text(
+                          customerPhone,
+                          style: customerDetailStyle,
                         ),
                       ),
                     if (customerAddress != null && customerAddress.isNotEmpty)
                       pw.Padding(
-                        padding: const pw.EdgeInsets.only(bottom: 8),
-                        child: pw.Row(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Text(
-                              'Address: ',
-                              style: pw.TextStyle(
-                                fontSize: selectedPaperSize == 'A5'
-                                    ? 8.0
-                                    : 10.0, // Match customer detail style
-                                fontWeight: pw.FontWeight
-                                    .normal, // Removed bold as requested
-                                color: PdfColor.fromHex('#2d3748'),
-                              ),
-                            ),
-                            pw.Expanded(
-                              child: pw.Text(
-                                customerAddress,
-                                style: customerDetailStyle,
-                              ),
-                            ),
-                          ],
+                        padding: const pw.EdgeInsets.only(bottom: 4),
+                        child: pw.Text(
+                          customerAddress,
+                          style: customerDetailStyle,
+                        ),
+                      )
+                    else
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.only(bottom: 4),
+                        child: pw.Text(
+                          'N/A',
+                          style: customerDetailStyle,
                         ),
                       ),
                   ],
@@ -1288,116 +1233,73 @@ class TransactionReportStandardPrinter {
     double balance = totalCredit - totalDebit;
 
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(
-          vertical: 10, horizontal: 0), // Reduced vertical padding
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.end,
+      padding: const pw.EdgeInsets.symmetric(vertical: 15, horizontal: 0),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.end,
         children: [
-          pw.Container(
-            padding: const pw.EdgeInsets.all(8), // Reduced padding
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColors.grey300, width: 1),
-              borderRadius: const pw.BorderRadius.all(
-                  pw.Radius.circular(4)), // Slightly reduced radius
-              color: PdfColors.grey100,
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.end,
-              children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.only(
-                          right: 15), // Reduced padding
-                      child: pw.Text(
-                        'Total Credit:',
-                        style: pw.TextStyle(
-                          fontSize: selectedPaperSize == 'A5'
-                              ? 9.0
-                              : 11.0, // Slightly reduced font size
-                          fontWeight: pw.FontWeight.normal, // Removed bold
-                          color: PdfColor.fromHex('#2d3748'),
-                        ),
-                      ),
-                    ),
-                    pw.Text(
-                      'Rs. ${totalCredit.toStringAsFixed(2)}',
-                      style: pw.TextStyle(
-                        fontSize: selectedPaperSize == 'A5'
-                            ? 9.0
-                            : 11.0, // Slightly reduced font size
-                        fontWeight: pw.FontWeight.normal, // Removed bold
-                        color: PdfColors.green800,
-                      ),
-                    ),
-                  ],
+          // Total Credit
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.end,
+            children: [
+              pw.Text(
+                'Total Credit: ',
+                style: pw.TextStyle(
+                  fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                  color: PdfColors.grey700,
                 ),
-                pw.SizedBox(height: 6), // Reduced height
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.only(
-                          right: 15), // Reduced padding
-                      child: pw.Text(
-                        'Total Debit:',
-                        style: pw.TextStyle(
-                          fontSize: selectedPaperSize == 'A5'
-                              ? 9.0
-                              : 11.0, // Slightly reduced font size
-                          fontWeight: pw.FontWeight.normal, // Removed bold
-                          color: PdfColor.fromHex('#2d3748'),
-                        ),
-                      ),
-                    ),
-                    pw.Text(
-                      'Rs. ${totalDebit.toStringAsFixed(2)}',
-                      style: pw.TextStyle(
-                        fontSize: selectedPaperSize == 'A5'
-                            ? 9.0
-                            : 11.0, // Slightly reduced font size
-                        fontWeight: pw.FontWeight.normal, // Removed bold
-                        color: PdfColors.red800,
-                      ),
-                    ),
-                  ],
+              ),
+              pw.Text(
+                '${totalCredit.toStringAsFixed(2)}',
+                style: pw.TextStyle(
+                  fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                  color: PdfColors.grey700,
                 ),
-                pw.Divider(color: PdfColors.grey300, thickness: 1),
-                pw.SizedBox(height: 6), // Reduced height
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.only(
-                          right: 15), // Reduced padding
-                      child: pw.Text(
-                        'Balance:',
-                        style: pw.TextStyle(
-                          fontSize: selectedPaperSize == 'A5'
-                              ? 10.0
-                              : 12.0, // Slightly reduced font size
-                          fontWeight: pw.FontWeight.normal, // Removed bold
-                          color: PdfColors.grey800,
-                        ),
-                      ),
-                    ),
-                    pw.Text(
-                      'Rs. ${balance.abs().toStringAsFixed(2)}',
-                      style: pw.TextStyle(
-                        fontSize: selectedPaperSize == 'A5'
-                            ? 10.0
-                            : 12.0, // Slightly reduced font size
-                        fontWeight: pw.FontWeight.normal, // Removed bold
-                        color: balance >= 0
-                            ? PdfColors.green800
-                            : PdfColors.red800,
-                      ),
-                    ),
-                  ],
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 4),
+          // Total Debit
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.end,
+            children: [
+              pw.Text(
+                'Total Debit: ',
+                style: pw.TextStyle(
+                  fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                  color: PdfColors.grey700,
                 ),
-              ],
-            ),
+              ),
+              pw.Text(
+                '${totalDebit.toStringAsFixed(2)}',
+                style: pw.TextStyle(
+                  fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                  color: PdfColors.grey700,
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 8),
+          // Balance
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.end,
+            children: [
+              pw.Text(
+                'Balance: ',
+                style: pw.TextStyle(
+                  fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.black,
+                ),
+              ),
+              pw.Text(
+                '${balance.toStringAsFixed(2)}',
+                style: pw.TextStyle(
+                  fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.black,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1434,11 +1336,18 @@ class TransactionReportStandardPrinter {
       final displayConfig = billDocumentConfig.displayConfiguration?.options;
       _debugPrintTemplateSettings(displayConfig);
 
+      // Create fallback display configuration if null
+      Map<String, DisplayOption>? updatedSettings = displayConfig;
+      if (updatedSettings == null) {
+        debugPrint(
+            "⚠️ Display configuration is null in sharing method, creating fallback configuration");
+        updatedSettings = _createFallbackDisplayConfig();
+        debugPrint(
+            "✅ Created fallback configuration for sharing with ${updatedSettings.length} options");
+      }
+
       // Create a PDF document
       final pdf = pw.Document();
-
-      // Get settings from the loaded display configuration
-      final updatedSettings = displayConfig;
 
       // Access Payment Gateways Provider for QR code link
       final paymentGatewaysProvider =
@@ -1466,49 +1375,43 @@ class TransactionReportStandardPrinter {
       PdfPageFormat pageFormat =
           selectedPaperSize == 'A4' ? PdfPageFormat.a4 : PdfPageFormat.a5;
 
-      // Define styles to match PHP template with better readability
+      // Define styles to match the screenshot design
       final headerStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 16.0 : 20.0,
+        fontSize: selectedPaperSize == 'A5' ? 18.0 : 22.0,
         fontWeight: pw.FontWeight.bold,
-        color: PdfColors.grey800,
+        color: PdfColors.black,
       );
       final subheaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 12.0 : 16.0,
-        fontWeight: pw.FontWeight.bold,
-        color: PdfColors.grey800,
-      );
-      final bodyStyle = pw.TextStyle(
-        fontSize:
-            selectedPaperSize == 'A5' ? 8.0 : 10.0, // Increased from 6.0/8.0
+        fontSize: selectedPaperSize == 'A5' ? 14.0 : 16.0,
+        fontWeight: pw.FontWeight.normal,
         color: PdfColors.grey700,
       );
+      final bodyStyle = pw.TextStyle(
+        fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+        color: PdfColors.black,
+      );
       final smallStyle = pw.TextStyle(
-        fontSize:
-            selectedPaperSize == 'A5' ? 6.0 : 8.0, // Increased from 5.0/6.0
+        fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
         color: PdfColors.grey600,
       );
       final tableHeaderStyle = pw.TextStyle(
-        fontSize:
-            selectedPaperSize == 'A5' ? 9.0 : 11.0, // Increased from 7.0/9.0
+        fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.white,
       );
       final tableDataStyle = pw.TextStyle(
-        fontSize:
-            selectedPaperSize == 'A5' ? 8.0 : 10.0, // Increased from 6.0/8.0
-        color: PdfColors.grey700,
+        fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+        color: PdfColors.black,
       );
       final summaryStyle = pw.TextStyle(
-        fontSize:
-            selectedPaperSize == 'A5' ? 10.0 : 12.0, // Increased from 9.0/11.0
+        fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
         fontWeight: pw.FontWeight.normal,
-        color: PdfColors.grey800,
+        color: PdfColors.grey700,
       );
       final netTotalStyle = pw.TextStyle(
-        fontSize:
-            selectedPaperSize == 'A5' ? 10.0 : 12.0, // Increased from 9.0/11.0
+        fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
         fontWeight: pw.FontWeight.bold,
-        color: PdfColors.grey800,
+        color: PdfColors.black,
       );
 
       // Add content to a multi-page PDF with minimal margins and optimized spacing
@@ -1527,7 +1430,7 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     (updatedSettings?['showFooter']?.value as String?) ??
                         'This is a computer-generated document. No signature is required.',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                       fontSize: 8,
                       color: PdfColors.grey600,
                     ),
@@ -1688,5 +1591,25 @@ class TransactionReportStandardPrinter {
       debugPrint("Error generating PDF for sharing: ${e.toString()}");
       return null;
     }
+  }
+
+  // Create fallback display configuration when API config is null
+  Map<String, DisplayOption> _createFallbackDisplayConfig() {
+    return {
+      'showHeader': DisplayOption(visible: true, value: null),
+      'showSubheader': DisplayOption(visible: true, value: null),
+      'showFooter': DisplayOption(visible: true, value: null),
+      'showDates': DisplayOption(visible: true, value: null),
+      'showCustomerName': DisplayOption(visible: true, value: null),
+      'showCustomerEmail': DisplayOption(visible: true, value: null),
+      'showCustomerPhone': DisplayOption(visible: true, value: null),
+      'showCustomerAddress': DisplayOption(visible: true, value: null),
+      'showTotalCredit': DisplayOption(visible: true, value: null),
+      'showTotalDebit': DisplayOption(visible: true, value: null),
+      'showBalance': DisplayOption(visible: true, value: null),
+      'showOrderNumber': DisplayOption(visible: true, value: null),
+      'showStatus': DisplayOption(visible: true, value: null),
+      'showTax': DisplayOption(visible: true, value: null),
+    };
   }
 }
