@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:get/get.dart';
@@ -17,6 +18,7 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/supplier.dart';
 import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_report_print_thermal.dart';
 import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_report_print_standard.dart';
+import 'package:share_plus/share_plus.dart';
 
 class SupplierTransactionReportPrint extends StatefulWidget {
   final List<SupplierTransaction> cartItems;
@@ -389,6 +391,69 @@ class _SupplierTransactionReportPrintState
     );
   }
 
+  Future<void> _handleSharing(
+      String customerCareNumber, String customerCareEmail) async {
+    if (_supplierStatementDocumentConfig == null) {
+      debugPrint(
+          "ERROR: Supplier Statement document configuration not loaded yet.");
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: "Document configuration not loaded. Please try again.",
+        );
+      }
+      return;
+    }
+
+    final standardPrinter = SupplierTransactionReportStandardPrinter(context);
+
+    final File? pdfFile =
+        await standardPrinter.generateSupplierTransactionReportPDFForSharing(
+      cartItems: widget.cartItems,
+      formattedTotal: widget.formattedTotal,
+      savedTotal: widget.savedTotal,
+      orderDate: widget.orderDate,
+      orderNumber: widget.orderNumber,
+      isFromLocalStorage: widget.isFromLocalStorage,
+      selectedPaperSize: selectedPaperSize,
+      billDocumentConfig: _supplierStatementDocumentConfig,
+      customerCareNumber: customerCareNumber,
+      customerCareEmail: customerCareEmail,
+      supplierName: widget.supplierName,
+      supplierPhone: widget.supplierPhone,
+      supplierEmail: widget.supplierEmail,
+      supplierAddress: widget.supplierAddress,
+      fromDate: widget.fromDate,
+      toDate: widget.toDate,
+    );
+
+    if (pdfFile != null && await pdfFile.exists()) {
+      try {
+        await Share.shareXFiles(
+          [XFile(pdfFile.path)],
+          subject: 'Supplier Transaction Report #${widget.orderNumber}',
+          text: 'Please find the attached supplier transaction report.',
+        );
+      } catch (e) {
+        debugPrint("Error sharing PDF: ${e.toString()}");
+        if (mounted) {
+          showScaffoldError(
+            context: context,
+            message: "Error sharing PDF: ${e.toString()}",
+          );
+        }
+      }
+    } else {
+      debugPrint("Error: PDF file was not generated properly");
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: "Error generating PDF for sharing",
+        );
+      }
+    }
+  }
+
   Future<void> _loadDefaultPaperSize() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -725,6 +790,38 @@ class _SupplierTransactionReportPrintState
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () async {
+                if (_supplierStatementDocumentConfig == null) {
+                  showScaffoldError(
+                    context: context,
+                    message:
+                        "Document configuration not loaded. Please wait or try again.",
+                  );
+                  return;
+                }
+                _handleSharing(appSettings!.customerCarePhone,
+                    appSettings.customerCareEmail);
+              },
+              icon: const Icon(Icons.share),
+              label: const Text(
+                'Share Supplier Transaction Report',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey[600],
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: 3,

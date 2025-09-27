@@ -189,38 +189,46 @@ class TransactionReportStandardPrinter {
         fontSize: selectedPaperSize == 'A5' ? 18.0 : 22.0,
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.black,
+        height: 2, // Add line height for better spacing between lines
       );
       final subheaderStyle = pw.TextStyle(
         fontSize: selectedPaperSize == 'A5' ? 14.0 : 16.0,
         fontWeight: pw.FontWeight.normal,
         color: PdfColors.grey700,
+        height: 2, // Add line height for better spacing between lines
       );
       final bodyStyle = pw.TextStyle(
         fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
         color: PdfColors.black,
+        height: 2, // Add line height for better spacing between lines
       );
       final smallStyle = pw.TextStyle(
         fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
         color: PdfColors.grey600,
+        height: 2, // Add line height for better spacing between lines
       );
       final tableHeaderStyle = pw.TextStyle(
         fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.white,
+        height: 2, // Add line height for better spacing between lines
       );
       final tableDataStyle = pw.TextStyle(
         fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
         color: PdfColors.black,
+        height: 2, // Add line height for better spacing between lines
       );
       final summaryStyle = pw.TextStyle(
         fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
         fontWeight: pw.FontWeight.normal,
         color: PdfColors.grey700,
+        height: 2, // Add line height for better spacing between lines
       );
       final netTotalStyle = pw.TextStyle(
         fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.black,
+        height: 2, // Add line height for better spacing between lines
       );
 
       // Add content to a multi-page PDF with styling to match PHP template
@@ -321,16 +329,20 @@ class TransactionReportStandardPrinter {
                           pw.Text(
                             'From: ${fromDate ?? 'N/A'}',
                             style: pw.TextStyle(
-                              fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                              color: PdfColor.fromHex('#2d3748'),
-                            ),
+                                fontSize:
+                                    selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                                color: PdfColor.fromHex('#2d3748'),
+                                fontWeight: pw.FontWeight.bold),
                           ),
+                          pw.SizedBox(
+                              height: 6), // Add spacing between date lines
                           pw.Text(
                             'To: ${toDate ?? 'N/A'}',
                             style: pw.TextStyle(
-                              fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                              color: PdfColor.fromHex('#2d3748'),
-                            ),
+                                fontSize:
+                                    selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                                color: PdfColor.fromHex('#2d3748'),
+                                fontWeight: pw.FontWeight.bold),
                           ),
                         ],
                       ),
@@ -638,16 +650,18 @@ class TransactionReportStandardPrinter {
       // Add Debit column with red color for debit amounts
       rowData.add(pw.Text(debitAmount,
           style: pw.TextStyle(
-            color: PdfColors.red800,
-            fontSize: contentStyle.fontSize,
-          )));
+              color: PdfColors.red800,
+              fontSize: contentStyle.fontSize,
+              fontWeight: pw.FontWeight.bold,
+              height: contentStyle.height))); // Inherit line height
 
       // Add Credit column with green color for credit amounts
       rowData.add(pw.Text(creditAmount,
           style: pw.TextStyle(
-            color: PdfColors.green800,
-            fontSize: contentStyle.fontSize,
-          )));
+              color: PdfColors.green800,
+              fontSize: contentStyle.fontSize,
+              fontWeight: pw.FontWeight.bold,
+              height: contentStyle.height))); // Inherit line height
 
       // Add Tax if enabled
       if (displayConfig?['showTax']?.visible == true) {
@@ -657,13 +671,13 @@ class TransactionReportStandardPrinter {
       // Add Balance
       rowData.add(pw.Text(runningBalance.toStringAsFixed(2),
           style: pw.TextStyle(
-            color: runningBalance < 0
-                ? PdfColors.red800
-                : runningBalance > 0
-                    ? PdfColors.green800
-                    : contentStyle.color,
-            fontSize: contentStyle.fontSize,
-          )));
+              color: runningBalance < 0
+                  ? PdfColors.red800
+                  : runningBalance > 0
+                      ? PdfColors.green800
+                      : contentStyle.color,
+              fontSize: contentStyle.fontSize,
+              height: contentStyle.height))); // Inherit line height
 
       // Add Status if enabled
       if (displayConfig?['showStatus']?.visible == true) {
@@ -679,17 +693,18 @@ class TransactionReportStandardPrinter {
 
         rowData.add(pw.Text(displayStatus,
             style: pw.TextStyle(
-              color: status == 'SUCC'
-                  ? PdfColors.green800
-                  : status == 'FAIL'
-                      ? PdfColors.red800
-                      : status == 'INIT'
-                          ? PdfColors.grey700
-                          : contentStyle.color,
-              fontWeight:
-                  status == 'SUCC' ? pw.FontWeight.bold : pw.FontWeight.normal,
-              fontSize: contentStyle.fontSize,
-            )));
+                color: status == 'SUCC'
+                    ? PdfColors.green800
+                    : status == 'FAIL'
+                        ? PdfColors.red800
+                        : status == 'INIT'
+                            ? PdfColors.grey700
+                            : contentStyle.color,
+                fontWeight: status == 'SUCC'
+                    ? pw.FontWeight.bold
+                    : pw.FontWeight.normal,
+                fontSize: contentStyle.fontSize,
+                height: contentStyle.height))); // Inherit line height
       }
 
       tableData.add(rowData);
@@ -729,6 +744,48 @@ class TransactionReportStandardPrinter {
       tableHeaders.add(pw.Text('Status', style: headerStyle));
     }
 
+    // Define column widths - adjust these values to change column widths
+    final Map<int, pw.TableColumnWidth> columnWidths = {
+      // Sl.No column - narrow
+      0: const pw.FixedColumnWidth(60),
+      // Date column - medium
+      1: const pw.FixedColumnWidth(100),
+      // Order Number column - wide
+      2: const pw.FixedColumnWidth(100),
+      // Transaction Type column - medium
+      3: const pw.FixedColumnWidth(110),
+      // Debit column - narrow
+      4: const pw.FixedColumnWidth(70),
+      // Credit column - narrow
+      5: const pw.FixedColumnWidth(70),
+      // Tax column (if enabled) - narrow
+      6: const pw.FixedColumnWidth(50),
+      // Balance column - medium
+      7: const pw.FixedColumnWidth(80),
+      // Status column (if enabled) - medium
+      8: const pw.FixedColumnWidth(70),
+    };
+
+    // Adjust column indices if Tax or Status columns are not visible
+    int taxColumnIndex = displayConfig?['showTax']?.visible == true ? 6 : -1;
+    int statusColumnIndex = displayConfig?['showStatus']?.visible == true
+        ? (displayConfig?['showTax']?.visible == true ? 8 : 7)
+        : -1;
+
+    // Remove Tax column width if not visible
+    if (taxColumnIndex == -1) {
+      columnWidths.remove(6);
+      // Adjust Status column index if needed
+      if (statusColumnIndex != -1) {
+        columnWidths.remove(8);
+        columnWidths[7] =
+            const pw.FixedColumnWidth(80); // Move Status to index 7
+      }
+    } else if (statusColumnIndex == -1) {
+      // Remove Status column width if not visible
+      columnWidths.remove(8);
+    }
+
     return pw.Table(
       border: const pw.TableBorder(
         top: pw.BorderSide(color: PdfColors.grey400, width: 1),
@@ -738,6 +795,7 @@ class TransactionReportStandardPrinter {
         horizontalInside: pw.BorderSide(color: PdfColors.grey400, width: 1),
         verticalInside: pw.BorderSide(color: PdfColors.grey400, width: 1),
       ),
+      columnWidths: columnWidths, // Add column widths to the table
       children: [
         // Header row with dark styling to match screenshot
         pw.TableRow(
@@ -747,12 +805,18 @@ class TransactionReportStandardPrinter {
           ),
           children: tableHeaders
               .map((header) => pw.Padding(
-                    padding: const pw.EdgeInsets.all(10),
-                    child: header,
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical:
+                          12, // Increased vertical padding for better line spacing
+                    ),
+                    child: pw.Center(
+                      child: header,
+                    ),
                   ))
               .toList(),
         ),
-        // Data rows with clean white background
+        // Data rows with clean white background and better spacing
         ...tableData.asMap().entries.map((entry) {
           final int index = entry.key;
           final List<pw.Widget> row = entry.value;
@@ -762,8 +826,14 @@ class TransactionReportStandardPrinter {
             ),
             children: row
                 .map((cell) => pw.Padding(
-                      padding: const pw.EdgeInsets.all(8),
-                      child: cell,
+                      padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical:
+                            12, // Increased vertical padding for better line spacing
+                      ),
+                      child: pw.Center(
+                        child: cell,
+                      ),
                     ))
                 .toList(),
           );
@@ -1083,10 +1153,11 @@ class TransactionReportStandardPrinter {
       padding: const pw.EdgeInsets.all(15),
       margin: const pw.EdgeInsets.only(bottom: 20),
       decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey400, width: 1),
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-        color: PdfColors.grey50,
-      ),
+          border: pw.Border.all(
+              color: PdfColors.grey400, width: 0.5), // Slightly thicker border
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+          color: PdfColors.grey50 // blueGrey100 with 30% opacity
+          ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
@@ -1097,7 +1168,7 @@ class TransactionReportStandardPrinter {
           ),
           pw.SizedBox(height: 8),
           pw.Container(
-            height: 1,
+            height: 0.3,
             color: PdfColors.grey400,
           ),
           pw.SizedBox(height: 12),
@@ -1108,34 +1179,47 @@ class TransactionReportStandardPrinter {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    // Display customer information as simple text lines like in screenshot
-                    if (customerPhone != null && customerPhone.isNotEmpty)
+                    // Display customer information with better spacing
+                    if (customerName != null && customerName.isNotEmpty)
                       pw.Padding(
-                        padding: const pw.EdgeInsets.only(bottom: 4),
+                        padding: const pw.EdgeInsets.only(
+                            bottom: 8), // Increased spacing
                         child: pw.Text(
-                          customerPhone,
+                          customerName,
                           style: customerDetailStyle,
                         ),
                       ),
                     if (customerPhone != null && customerPhone.isNotEmpty)
                       pw.Padding(
-                        padding: const pw.EdgeInsets.only(bottom: 4),
+                        padding: const pw.EdgeInsets.only(
+                            bottom: 8), // Increased spacing
                         child: pw.Text(
                           customerPhone,
+                          style: customerDetailStyle,
+                        ),
+                      ),
+                    if (customerEmail != null && customerEmail.isNotEmpty)
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.only(
+                            bottom: 8), // Increased spacing
+                        child: pw.Text(
+                          customerEmail,
                           style: customerDetailStyle,
                         ),
                       ),
                     if (customerAddress != null && customerAddress.isNotEmpty)
                       pw.Padding(
-                        padding: const pw.EdgeInsets.only(bottom: 4),
+                        padding: const pw.EdgeInsets.only(
+                            bottom: 8), // Increased spacing
                         child: pw.Text(
                           customerAddress,
                           style: customerDetailStyle,
                         ),
                       )
-                    else
+                    else if (customerName == null || customerName.isEmpty)
                       pw.Padding(
-                        padding: const pw.EdgeInsets.only(bottom: 4),
+                        padding: const pw.EdgeInsets.only(
+                            bottom: 8), // Increased spacing
                         child: pw.Text(
                           'N/A',
                           style: customerDetailStyle,
@@ -1232,77 +1316,91 @@ class TransactionReportStandardPrinter {
 
     double balance = totalCredit - totalDebit;
 
-    return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(vertical: 15, horizontal: 0),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.end,
-        children: [
-          // Total Credit
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.end,
+    // Wrap the cart total in a card with limited width and centered alignment
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.end,
+      children: [
+        pw.Container(
+          width: 130, // Set a fixed width for the card
+          padding: const pw.EdgeInsets.all(15),
+          margin: const pw.EdgeInsets.only(bottom: 20),
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+            color: PdfColors
+                .grey50, // Light grey background similar to customer details
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
-              pw.Text(
-                'Total Credit: ',
-                style: pw.TextStyle(
-                  fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
-                  color: PdfColors.grey700,
-                ),
+              // Total Credit
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                  pw.Text(
+                    'Total Credit: ',
+                    style: pw.TextStyle(
+                      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                  pw.Text(
+                    '${totalCredit.toStringAsFixed(2)}',
+                    style: pw.TextStyle(
+                      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                ],
               ),
-              pw.Text(
-                '${totalCredit.toStringAsFixed(2)}',
-                style: pw.TextStyle(
-                  fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
-                  color: PdfColors.grey700,
-                ),
+              pw.SizedBox(height: 4),
+              // Total Debit
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                  pw.Text(
+                    'Total Debit: ',
+                    style: pw.TextStyle(
+                      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                  pw.Text(
+                    '${totalDebit.toStringAsFixed(2)}',
+                    style: pw.TextStyle(
+                      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 8),
+              // Balance
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                  pw.Text(
+                    'Balance: ',
+                    style: pw.TextStyle(
+                      fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.black,
+                    ),
+                  ),
+                  pw.Text(
+                    '${balance.toStringAsFixed(2)}',
+                    style: pw.TextStyle(
+                      fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.black,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          pw.SizedBox(height: 4),
-          // Total Debit
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.end,
-            children: [
-              pw.Text(
-                'Total Debit: ',
-                style: pw.TextStyle(
-                  fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
-                  color: PdfColors.grey700,
-                ),
-              ),
-              pw.Text(
-                '${totalDebit.toStringAsFixed(2)}',
-                style: pw.TextStyle(
-                  fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
-                  color: PdfColors.grey700,
-                ),
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 8),
-          // Balance
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.end,
-            children: [
-              pw.Text(
-                'Balance: ',
-                style: pw.TextStyle(
-                  fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.black,
-                ),
-              ),
-              pw.Text(
-                '${balance.toStringAsFixed(2)}',
-                style: pw.TextStyle(
-                  fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.black,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1516,6 +1614,8 @@ class TransactionReportStandardPrinter {
                               color: PdfColor.fromHex('#2d3748'),
                             ),
                           ),
+                          pw.SizedBox(
+                              height: 6), // Add spacing between date lines
                           pw.Text(
                             'To: ${toDate ?? 'N/A'}',
                             style: pw.TextStyle(
