@@ -470,9 +470,19 @@ class TransactionReportThermalPrinter {
         }
       }
 
+      // Format date to show only date (no time)
+      String formattedDate = date;
+      try {
+        // Try to parse and format the date if it's in a standard format
+        formattedDate = DateHelper.formatISODate(date);
+      } catch (e) {
+        // Keep original date if parsing fails
+        formattedDate = date;
+      }
+
       String slNumber = (i + 1).toString();
       debugPrint(
-          "Item $i: Order: $orderNumber, Type: $transactionType, Amount: $amount, Status: $status, Date: $date");
+          "Item $i: Order: $orderNumber, Type: $transactionType, Amount: $amount, Status: $status, Date: $formattedDate");
 
       // Create row with all transaction details
       List<PosColumn> itemRow = [
@@ -533,7 +543,7 @@ class TransactionReportThermalPrinter {
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)),
         PosColumn(
-            text: date,
+            text: formattedDate,
             width: 2,
             styles: PosStyles(
                 fontType: fontType,
@@ -677,30 +687,21 @@ class TransactionReportThermalPrinter {
     // Add top divider line
     // bytes += generator.hr();
 
-    // Add date and time row with smaller text size
-    debugPrint("Creating date/time row with 6+6 column layout");
+    // Add date row with smaller text size
+    debugPrint("Creating date row with centered layout");
     List<PosColumn> dateTimeColumns = [
       PosColumn(
-          text: DateHelper.formatISODate(orderDate),
-          width: 6,
+          text: 'Date: ${DateHelper.formatISODate(orderDate)}',
+          width: 12,
           styles: PosStyles(
               fontType: fontType,
-              align: PosAlign.left,
-              bold: true,
-              height: textSizeSmall,
-              width: textSizeSmall)),
-      PosColumn(
-          text: DateHelper.formatISODateToIST(orderDate),
-          width: 6,
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.right,
+              align: PosAlign.center,
               bold: true,
               height: textSizeSmall,
               width: textSizeSmall)),
     ];
 
-    int dateTimeRowWidth = 6 + 6;
+    int dateTimeRowWidth = 12;
     debugPrint("Date/time row total width: $dateTimeRowWidth");
     if (dateTimeRowWidth != 12) {
       debugPrint(

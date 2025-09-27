@@ -395,9 +395,9 @@ class SupplierTransactionReportThermalPrinter {
     totalHeaderWidth += 1;
     debugPrint("Added SL column with width 1, total width: $totalHeaderWidth");
 
-    // Add Reference column
+    // Add Date column
     headerColumns.add(PosColumn(
-        text: 'Reference',
+        text: 'Date',
         width: 2,
         styles: PosStyles(
             fontType: fontType,
@@ -405,8 +405,20 @@ class SupplierTransactionReportThermalPrinter {
             bold: true,
             height: is58mm ? textSizeSmall : textSizeSmall)));
     totalHeaderWidth += 2;
+    debugPrint("Added Date column with width 2, total width: $totalHeaderWidth");
+
+    // Add Reference column
+    headerColumns.add(PosColumn(
+        text: 'Reference',
+        width: 1,
+        styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.left,
+            bold: true,
+            height: is58mm ? textSizeSmall : textSizeSmall)));
+    totalHeaderWidth += 1;
     debugPrint(
-        "Added Reference column with width 2, total width: $totalHeaderWidth");
+        "Added Reference column with width 1, total width: $totalHeaderWidth");
 
     // Add Transaction Type column
     headerColumns.add(PosColumn(
@@ -450,15 +462,15 @@ class SupplierTransactionReportThermalPrinter {
     // Add Payment Method column
     headerColumns.add(PosColumn(
         text: 'Payment',
-        width: 2,
+        width: 1,
         styles: PosStyles(
             fontType: fontType,
             align: PosAlign.left,
             bold: true,
             height: is58mm ? textSizeSmall : textSizeSmall)));
-    totalHeaderWidth += 2;
+    totalHeaderWidth += 1;
     debugPrint(
-        "Added Payment Method column with width 2, total width: $totalHeaderWidth");
+        "Added Payment Method column with width 1, total width: $totalHeaderWidth");
 
     // Add Status column if enabled
     if (displayConfig?['showStatus']?.visible == true) {
@@ -501,8 +513,19 @@ class SupplierTransactionReportThermalPrinter {
       String paymentMethod = item.paymentMethod;
 
       String slNumber = (i + 1).toString();
+      
+      // Format date to show only date (not time)
+      String formattedDate = date;
+      try {
+        // Try to parse and format the date if it's in a standard format
+        formattedDate = DateHelper.formatISODate(date);
+      } catch (e) {
+        // Keep original date if parsing fails
+        formattedDate = date;
+      }
+      
       debugPrint(
-          "Item $i: Reference: $reference, Type: $transactionType, Amount: $amount, Status: $status, Date: $date");
+          "Item $i: Reference: $reference, Type: $transactionType, Amount: $amount, Status: $status, Date: $formattedDate");
 
       // Create row with all transaction details
       List<PosColumn> itemRow = [
@@ -515,8 +538,16 @@ class SupplierTransactionReportThermalPrinter {
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)),
         PosColumn(
-            text: reference,
+            text: formattedDate,
             width: 2,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: false,
+                height: is58mm ? textSizeSmall : textSizeSmall)),
+        PosColumn(
+            text: reference,
+            width: 1,
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,
@@ -548,7 +579,7 @@ class SupplierTransactionReportThermalPrinter {
                 height: is58mm ? textSizeSmall : textSizeSmall)),
         PosColumn(
             text: paymentMethod,
-            width: 2,
+            width: 1,
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,
@@ -568,7 +599,7 @@ class SupplierTransactionReportThermalPrinter {
                 height: is58mm ? textSizeSmall : textSizeSmall)));
       }
 
-      int itemRowWidth = 1 + 2 + 2 + 1 + 2 + 2 + (displayConfig?['showStatus']?.visible == true ? 2 : 0);
+      int itemRowWidth = 1 + 2 + 1 + 2 + 1 + 2 + 1 + (displayConfig?['showStatus']?.visible == true ? 2 : 0);
       debugPrint("Item row total width: $itemRowWidth");
       if (itemRowWidth != 12) {
         debugPrint(

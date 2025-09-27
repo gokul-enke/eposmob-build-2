@@ -644,11 +644,11 @@ class TransactionReportStandardPrinter {
         runningBalance += amount;
       }
 
-      // Format date to match PHP template (d M Y, h:i A)
+      // Format date to show only date (no time)
       String formattedDate = date;
       try {
         // Try to parse and format the date if it's in a standard format
-        formattedDate = DateHelper.formatISODateToIST(date);
+        formattedDate = DateHelper.formatISODate(date);
       } catch (e) {
         // Keep original date if parsing fails
         formattedDate = date;
@@ -962,18 +962,10 @@ class TransactionReportStandardPrinter {
       padding: const pw.EdgeInsets.symmetric(
           vertical: 0, horizontal: 8), // Reduced padding
       child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: pw.MainAxisAlignment.center,
         children: [
           pw.Text(
             'Date: ${DateHelper.formatISODate(orderDate)}',
-            style: pw.TextStyle(
-              fontSize:
-                  selectedPaperSize == 'A5' ? 7.0 : 9.0, // Reduced font size
-              fontWeight: pw.FontWeight.bold,
-            ),
-          ),
-          pw.Text(
-            'Time: ${DateHelper.formatISODateToIST(orderDate)}',
             style: pw.TextStyle(
               fontSize:
                   selectedPaperSize == 'A5' ? 7.0 : 9.0, // Reduced font size

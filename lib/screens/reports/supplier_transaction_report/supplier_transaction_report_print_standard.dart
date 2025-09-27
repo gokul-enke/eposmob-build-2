@@ -682,11 +682,11 @@ class SupplierTransactionReportStandardPrinter {
         runningBalance += amount;
       }
 
-      // Format date to match PHP template (d M Y, h:i A)
+      // Format date to show only date (not time)
       String formattedDate = date;
       try {
         // Try to parse and format the date if it's in a standard format
-        formattedDate = DateHelper.formatISODateToIST(date);
+        formattedDate = DateHelper.formatISODate(date);
       } catch (e) {
         // Keep original date if parsing fails
         formattedDate = date;
