@@ -313,106 +313,112 @@ class StockProvider extends ChangeNotifier {
     List<Map<String, dynamic>> failedItems = [];
     
     try {
+      // Extract common fields from first item (all items share these)
+      final firstItem = _pendingStockItems.first;
+      final supplierId = firstItem['supplierId'];
+      final storeId = firstItem['storeId'];
+      final purchaseDate = firstItem['purchaseDate'];
+      
+      // Build products array
+      List<Map<String, dynamic>> products = [];
       for (int i = 0; i < _pendingStockItems.length; i++) {
         final stockItem = _pendingStockItems[i];
-        final localId = stockItem['localId'];
         
-        debugPrint('📦 PROCESSING ITEM ${i + 1}/${_pendingStockItems.length} (ID: $localId)');
+        products.add({
+          'product_id': int.parse(stockItem['productId'].toString()),
+          'category_id': int.parse(stockItem['categoryId'].toString()),
+          'quantity': double.parse(stockItem['quantity'].toString()),
+          'retail_price': double.parse(stockItem['retailPrice'].toString()),
+          'purchase_rate': double.parse(stockItem['purchaseRate'].toString()),
+          'mrp': stockItem['mrp'] != null && stockItem['mrp'].toString().isNotEmpty
+              ? double.parse(stockItem['mrp'].toString())
+              : double.parse(stockItem['retailPrice'].toString()),
+          'wholesale_price': stockItem['wholesalePrice'] != null && stockItem['wholesalePrice'].toString().isNotEmpty
+              ? double.parse(stockItem['wholesalePrice'].toString())
+              : double.parse(stockItem['retailPrice'].toString()),
+          'unit': stockItem['unit'].toString(),
+          'expiry_date': stockItem['expiryDate'].toString(),
+          'barcode': stockItem['barcode']?.toString() ?? '',
+          'batch_number': stockItem['batchNumber']?.toString() ?? '',
+          'date': stockItem['date'].toString(),
+          'wholesale_min_unit': stockItem['wholesaleMinUnit'] != null && stockItem['wholesaleMinUnit'].toString().isNotEmpty
+              ? int.parse(stockItem['wholesaleMinUnit'].toString())
+              : 1,
+          'tax_include': stockItem['taxInclude'] ?? false,
+          'rack': stockItem['rack']?.toString() ?? '',
+          'tax_amount_retail': stockItem['taxAmountRetail']?.toString(),
+          'tax_amount_wholesale': stockItem['taxAmountWholesale']?.toString(),
+          'initial_retail_price': stockItem['initialRetailPrice'] != null && stockItem['initialRetailPrice'].toString().isNotEmpty
+              ? double.parse(stockItem['initialRetailPrice'].toString())
+              : double.parse(stockItem['retailPrice'].toString()),
+          'initial_wholesale_price': stockItem['initialWholesalePrice'] != null && stockItem['initialWholesalePrice'].toString().isNotEmpty
+              ? double.parse(stockItem['initialWholesalePrice'].toString())
+              : double.parse(stockItem['retailPrice'].toString()),
+          'retail_price_tax': stockItem['retailPriceTax']?.toString(),
+          'wholesale_price_tax': stockItem['wholesalePriceTax']?.toString(),
+        });
+      }
+      
+      debugPrint('📦 CALLING BULK STOCK API WITH ${products.length} PRODUCTS');
+      
+      // Call bulk API
+      final result = await addBulkProductStockAPI(
+        accessToken: accessToken,
+        products: products,
+        supplierId: supplierId.toString(),
+        storeId: storeId.toString(),
+        purchaseDate: purchaseDate.toString(),
+      );
+      
+      if (result is Map<String, dynamic> && result['status'] == 'success') {
+        debugPrint('✅ BULK API CALL SUCCESSFUL');
         
-        // Update status to processing
-        stockItem['status'] = 'processing';
-        notifyListeners();
-        
-        try {
-          // Call the existing addProductStockAPI method
-          final result = await addProductStockAPI(
-            accessToken: accessToken,
-            productId: stockItem['productId'].toString(),
-            categoryId: stockItem['categoryId'].toString(),
-            quantity: stockItem['quantity'].toString(),
-            retailPrice: stockItem['retailPrice'].toString(),
-            purchaseRate: stockItem['purchaseRate'].toString(),
-            mrp: stockItem['mrp']?.toString() ?? stockItem['retailPrice'].toString(),
-            wholesalePrice: stockItem['wholesalePrice']?.toString() ?? stockItem['retailPrice'].toString(),
-            unit: stockItem['unit'].toString(),
-            supplierId: stockItem['supplierId'].toString(),
-            storeId: stockItem['storeId'].toString(),
-            expiryDate: stockItem['expiryDate'].toString(),
-            userId: stockItem['userId']?.toString() ?? '1',
-            purchaseVoucherId: stockItem['purchaseVoucherId']?.toString(),
-            purchaseId: stockItem['purchaseId']?.toString(),
-            taxAmountRetail: stockItem['taxAmountRetail']?.toString(),
-            taxAmountWholesale: stockItem['taxAmountWholesale']?.toString(),
-            wholesaleMinUnit: stockItem['wholesaleMinUnit']?.toString() ?? '1',
-            rack: stockItem['rack']?.toString() ?? '',
-            barcode: stockItem['barcode']?.toString() ?? '',
-            batchNumber: stockItem['batchNumber']?.toString() ?? '',
-            date: stockItem['date'].toString(),
-            purchaseDate: stockItem['purchaseDate'].toString(),
-            purchaseNumber: stockItem['purchaseNumber']?.toString(),
-            taxInclude: stockItem['taxInclude'] ?? false,
-            initialRetailPrice: stockItem['initialRetailPrice']?.toString() ?? stockItem['retailPrice'].toString(),
-            initialWholesalePrice: stockItem['initialWholesalePrice']?.toString() ?? stockItem['retailPrice'].toString(),
-            retailPriceTax: stockItem['retailPriceTax']?.toString(),
-            wholesalePriceTax: stockItem['wholesalePriceTax']?.toString(),
-          );
+        // Mark all items as successful
+        for (int i = 0; i < _pendingStockItems.length; i++) {
+          final stockItem = _pendingStockItems[i];
+          final localId = stockItem['localId'];
           
-          if (result is Map<String, dynamic> && result['status'] == 'success') {
-            stockItem['status'] = 'success';
-            stockItem['apiResponse'] = result;
-            successfulItems.add(stockItem);
-            
-            results.add({
-              'localId': localId,
-              'status': 'success',
-              'message': 'Stock item added successfully',
-              'data': result['data'],
-              'itemIndex': i + 1,
-            });
-            
-            debugPrint('✅ ITEM ${i + 1} PROCESSED SUCCESSFULLY');
-          } else {
-            stockItem['status'] = 'failed';
-            stockItem['apiResponse'] = result;
-            failedItems.add(stockItem);
-            
-            String errorMessage = 'Failed to add stock item';
-            if (result is Map<String, dynamic> && result['message'] != null) {
-              errorMessage = result['message'].toString();
-            }
-            
-            results.add({
-              'localId': localId,
-              'status': 'failed',
-              'message': errorMessage,
-              'error': result,
-              'itemIndex': i + 1,
-            });
-            
-            debugPrint('❌ ITEM ${i + 1} FAILED: $errorMessage');
-          }
-        } catch (e) {
+          stockItem['status'] = 'success';
+          stockItem['apiResponse'] = result;
+          successfulItems.add(stockItem);
+          
+          results.add({
+            'localId': localId,
+            'status': 'success',
+            'message': 'Stock item added successfully',
+            'data': result['data'],
+            'itemIndex': i + 1,
+          });
+        }
+        
+        debugPrint('✅ ALL ${successfulItems.length} ITEMS MARKED AS SUCCESSFUL');
+      } else {
+        debugPrint('❌ BULK API CALL FAILED');
+        
+        // Mark all items as failed
+        String errorMessage = 'Failed to add stock items';
+        if (result is Map<String, dynamic> && result['message'] != null) {
+          errorMessage = result['message'].toString();
+        }
+        
+        for (int i = 0; i < _pendingStockItems.length; i++) {
+          final stockItem = _pendingStockItems[i];
+          final localId = stockItem['localId'];
+          
           stockItem['status'] = 'failed';
-          stockItem['error'] = e.toString();
+          stockItem['apiResponse'] = result;
           failedItems.add(stockItem);
           
           results.add({
             'localId': localId,
             'status': 'failed',
-            'message': 'Exception occurred: ${e.toString()}',
-            'error': e.toString(),
+            'message': errorMessage,
+            'error': result,
             'itemIndex': i + 1,
           });
-          
-          debugPrint('💥 ITEM ${i + 1} EXCEPTION: $e');
         }
         
-        notifyListeners();
-        
-        // Small delay between API calls to prevent overwhelming the server
-        if (i < _pendingStockItems.length - 1) {
-          await Future.delayed(const Duration(milliseconds: 200));
-        }
+        debugPrint('❌ ALL ${failedItems.length} ITEMS MARKED AS FAILED: $errorMessage');
       }
       
       // Move only successful items to processed list, keep failed items in pending
@@ -467,6 +473,61 @@ class StockProvider extends ChangeNotifier {
     } finally {
       _batchProcessingLoading = false;
       notifyListeners();
+    }
+  }
+
+  /// *********************** ADD BULK STOCK API ***************************************************
+
+  Future<dynamic> addBulkProductStockAPI({
+    required String accessToken,
+    required List<Map<String, dynamic>> products,
+    required String supplierId,
+    required String storeId,
+    required String purchaseDate,
+  }) async {
+    final Map<String, dynamic> apiBodyData = {
+      'products': products,
+      'supplier_id': int.parse(supplierId),
+      'store_id': int.parse(storeId),
+      'purchase_date': purchaseDate,
+    };
+
+    debugPrint('📦 ADD BULK STOCK API REQUEST BODY: ${json.encode(apiBodyData)}');
+
+    final url = Uri.parse(APPUrl.addBulkStock);
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+    try {
+      final response =
+          await http.post(url, body: json.encode(apiBodyData), headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      });
+
+      if (response.statusCode == 200) {
+        final result = json.decode(response.body);
+
+        // Note: Local stock will be updated via sync functionality
+        // This ensures data consistency with the server
+        debugPrint("✅ Bulk stock added successfully - will be synced via SyncProvider");
+
+        return result;
+      } else {
+        // Capture the response body even on non-200 status for debugging
+        debugPrint(
+            '❌ ADD BULK PRODUCT STOCK API FAILED (Status: ${response.statusCode})');
+        debugPrint('   - Response Body: ${response.body}');
+        return {'status': 'failed', 'message': response.body};
+      }
+    } catch (e) {
+      debugPrint("Error in addBulkProductStockAPI: $e");
+      return {'status': 'failed', 'message': 'Error: ${e.toString()}'};
     }
   }
 

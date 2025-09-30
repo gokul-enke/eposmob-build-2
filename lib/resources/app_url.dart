@@ -5,8 +5,8 @@ class APPUrl {
   // static String baseURL = "https://kmstoys.enke.in";
   //  static String baseURL = "https://stagingepos.enke.ae";
   // static String baseURL = "https://tenant.hypersouq.in";
-  //  static String baseURL = "https://eposdemo.hypersouq.in";
-  static String baseURL = "https://epos.hypersouq.in";
+  static String baseURL = "https://eposdemo.hypersouq.in";
+  // static String baseURL = "https://epos.hypersouq.in";
   // static String baseURL = "https://epos.yougoit.in";
   // static String baseURL = "https://open-poems-sneeze.loca.lt";
   // static String baseURL = "http://localhost:8000";
@@ -96,6 +96,7 @@ class APPUrl {
   static String finishPurchaseOrder =
       '$baseURL/api/v1/product/complete-purchase';
   static String addToStock = '$baseURL/api/v1/product/add-stock';
+  static String addBulkStock = '$baseURL/api/v1/product/add-stock';
   static String getTaxtDetails = '$baseURL/api/v1/tax/get-category-tax';
   static String addPurchaseStock = '$baseURL/api/v1/purchases/add-stock';
   static String listStock = '$baseURL/api/v1/product/list-stocks';
