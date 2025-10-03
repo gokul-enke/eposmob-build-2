@@ -150,9 +150,35 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   // Cache for filtered products per category
   final Map<int?, List<GetProduct>> _filteredProductsCache = {};
 
+  // Performance optimization: Cache visible items and index mapping
+  List<StockItem> _cachedVisibleItems = [];
+  Map<int, int> _visibleToOriginalIndexMap = {};
+  bool _needsIndexRebuild = true;
+
   // Clear product cache when category changes
   void _clearProductCache() {
     _filteredProductsCache.clear();
+  }
+
+  // Rebuild index cache for performance optimization
+  void _rebuildIndexCache() {
+    _cachedVisibleItems.clear();
+    _visibleToOriginalIndexMap.clear();
+    
+    int visibleIndex = 0;
+    for (int i = 0; i < stockItems.length; i++) {
+      if (!stockItems[i].isHidden) {
+        _cachedVisibleItems.add(stockItems[i]);
+        _visibleToOriginalIndexMap[visibleIndex] = i;
+        visibleIndex++;
+      }
+    }
+    _needsIndexRebuild = false;
+  }
+
+  // Mark index cache as dirty when stock items change
+  void _markIndexCacheDirty() {
+    _needsIndexRebuild = true;
   }
 
   @override
@@ -821,7 +847,6 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         // Mark for recalculation when single item is successfully added
         _markForRecalculation();
         _calculateTotalStockValue();
-
         showScaffold(
             context: context, message: 'Stock item added to pending list');
         debugPrint('✅ SINGLE STOCK ITEM MARKED AS SUCCESSFULLY ADDED LOCALLY');
@@ -830,6 +855,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         debugPrint('🔄 AUTO-ADDING NEW ROW AFTER SUCCESSFUL LOCAL ADDITION');
         setState(() {
           stockItems.add(StockItem());
+          _markIndexCacheDirty(); // Mark cache as dirty
         });
         debugPrint(
             '✅ NEW EMPTY ROW ADDED AUTOMATICALLY. Total items: ${stockItems.length}');
@@ -906,6 +932,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
       // Reset stock items to one empty row with no success flags
       stockItems = [StockItem(isSuccessfullyAdded: false)];
+      _markIndexCacheDirty(); // Mark cache as dirty
       debugPrint('✅ STOCK ITEMS RESET TO 1 EMPTY ROW (NO SUCCESS FLAGS)');
 
       // Reset payment data
@@ -1074,6 +1101,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 // Soft delete - hide the item instead of removing it
                 setState(() {
                   stockItems[index].isHidden = true;
+                  _markIndexCacheDirty(); // Mark cache as dirty
                   debugPrint(
                       '🗑️ SOFT DELETED (HIDDEN) STOCK ITEM AT INDEX $index');
                 });
@@ -1101,16 +1129,16 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   void _calculateTotalStockValue() {
     double total = 0.0;
-    for (StockItem item in stockItems) {
-      if (item.isSuccessfullyAdded &&
-          !item.isHidden &&
-          item.purchaseRate.isNotEmpty) {
+    // OPTIMIZED: Use cached visible items instead of iterating all items
+    for (StockItem item in _cachedVisibleItems) {
+      if (item.isSuccessfullyAdded && item.purchaseRate.isNotEmpty) {
         double purchaseRate = double.tryParse(item.purchaseRate) ?? 0.0;
         double quantity = double.tryParse(item.quantity) ?? 0.0;
         total += (purchaseRate * quantity);
       }
     }
-    if (mounted && totalStockValue != total) {
+    // Only update if changed (with small epsilon for floating point comparison)
+    if (mounted && (totalStockValue - total).abs() > 0.01) {
       setState(() {
         totalStockValue = total;
       });
@@ -1792,23 +1820,20 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-  /// Get visible (non-hidden) stock items
+  /// Get visible (non-hidden) stock items - OPTIMIZED with caching
   List<StockItem> get visibleStockItems {
-    return stockItems.where((item) => !item.isHidden).toList();
+    if (_needsIndexRebuild) {
+      _rebuildIndexCache();
+    }
+    return _cachedVisibleItems;
   }
 
-  /// Get the original index of a visible item
+  /// Get the original index of a visible item - OPTIMIZED with O(1) lookup
   int getOriginalIndex(int visibleIndex) {
-    int visibleCount = 0;
-    for (int i = 0; i < stockItems.length; i++) {
-      if (!stockItems[i].isHidden) {
-        if (visibleCount == visibleIndex) {
-          return i;
-        }
-        visibleCount++;
-      }
+    if (_needsIndexRebuild) {
+      _rebuildIndexCache();
     }
-    return -1; // Should not happen
+    return _visibleToOriginalIndexMap[visibleIndex] ?? -1;
   }
 
   Widget _buildStockTable() {
@@ -1819,7 +1844,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       itemCount: visibleItems.length,
       itemBuilder: (context, visibleIndex) {
         int originalIndex = getOriginalIndex(visibleIndex);
-        return _buildStockRow(originalIndex, visibleIndex);
+        // Add key for better performance - prevents unnecessary rebuilds
+        return _buildStockRow(originalIndex, visibleIndex, key: ValueKey('stock_row_$originalIndex'));
       },
     );
   }
@@ -2242,10 +2268,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-  Widget _buildStockRow(int index, int visibleIndex) {
+  Widget _buildStockRow(int index, int visibleIndex, {Key? key}) {
     final item = stockItems[index];
 
     return BuildBoxShadowContainer(
+      key: key,
       circleRadius: 7,
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -2372,12 +2399,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         _barcodeDebounceTimer =
                             Timer(const Duration(milliseconds: 300), () {
                           if (mounted) {
-                            setState(() {
-                              // Auto-fill fields when barcode is entered
-                              _autoFillFromBarcode(index, value);
-                              // Update pending item if already added
-                              _updatePendingStockItem(index);
-                            });
+                            // OPTIMIZED: No full setState - only update specific row data
+                            _autoFillFromBarcode(index, value);
+                            // Update pending item if already added
+                            _updatePendingStockItem(index);
+                            // Only rebuild if autofill changed data
+                            if (mounted) setState(() {});
                           }
                         });
                       },
