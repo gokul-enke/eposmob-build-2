@@ -45,7 +45,6 @@ class StockItem {
   String rack;
   DateTime expDate;
 
-  // Additional details for modal
   String batchNumber;
   String supplier;
   int supplierId;
@@ -53,16 +52,18 @@ class StockItem {
   Category? categoryData;
   Supplier? supplierData;
   bool isExpanded; // Add this field for expandable functionality
+  bool isEditing; // Add this field to toggle edit mode for already-added rows
   String? selectedUnit; // Add selected unit for dropdown
   String? selectedRack; // Add selected rack for dropdown
   bool isSuccessfullyAdded; // Add this field to track successful addition
   Map<String, dynamic>? apiResponse; // Add this field to store API response
   bool taxInclude; // Add this field for tax inclusion toggle
+
   String retailPriceTax; // Add this for retail price with tax
   String wholesalePriceTax; // Add this for wholesale price with tax
   Map<String, dynamic>? calculatedTaxData; // Store calculated tax data
   bool isHidden; // Add this field to track if item is hidden (soft delete)
-
+  
   StockItem({
     this.barcode = '',
     this.category = '',
@@ -81,16 +82,17 @@ class StockItem {
     this.productData,
     this.categoryData,
     this.supplierData,
-    this.isExpanded = false, // Initialize as collapsed
-    this.selectedUnit, // Initialize selected unit
-    this.selectedRack, // Initialize selected rack
-    this.isSuccessfullyAdded = false, // Initialize as not added
-    this.apiResponse, // Initialize apiResponse
-    this.taxInclude = false, // Initialize as false
-    this.retailPriceTax = '0.00', // Initialize as 0.00
-    this.wholesalePriceTax = '0.00', // Initialize as 0.00
-    this.calculatedTaxData, // Initialize
-    this.isHidden = false, // Initialize as not hidden
+    this.isExpanded = false,
+    this.isEditing = false,
+    this.selectedUnit,
+    this.selectedRack,
+    this.isSuccessfullyAdded = false,
+    this.apiResponse,
+    this.taxInclude = false,
+    this.retailPriceTax = '0.00',
+    this.wholesalePriceTax = '0.00',
+    this.calculatedTaxData,
+    this.isHidden = false,
   }) : expDate = expDate ?? DateTime.now().add(const Duration(days: 365));
 }
 
