@@ -123,6 +123,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   final Map<int, TextEditingController> mrpControllers = {};
   final Map<int, TextEditingController> wholesaleControllers = {};
   final Map<int, TextEditingController> batchNumberControllers = {};
+  // Search controllers for expanded dropdowns
+  final Map<int, TextEditingController> unitSearchControllers = {};
+  final Map<int, TextEditingController> rackSearchControllers = {};
 
   // Focus nodes for barcode and quantity fields
   final Map<int, FocusNode> barcodeFocusNodes = {};
@@ -160,6 +163,65 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   // Clear product cache when category changes
   void _clearProductCache() {
     _filteredProductsCache.clear();
+  }
+
+  // Dispose and remove all controllers and focus nodes associated with a row index
+  void _disposeRowResources(int index) {
+    // Text controllers
+    if (categorySearchControllers.containsKey(index)) {
+      try { categorySearchControllers[index]!.dispose(); } catch (_) {}
+      categorySearchControllers.remove(index);
+    }
+    if (productSearchControllers.containsKey(index)) {
+      try { productSearchControllers[index]!.dispose(); } catch (_) {}
+      productSearchControllers.remove(index);
+    }
+    if (barcodeControllers.containsKey(index)) {
+      try { barcodeControllers[index]!.dispose(); } catch (_) {}
+      barcodeControllers.remove(index);
+    }
+    if (quantityControllers.containsKey(index)) {
+      try { quantityControllers[index]!.dispose(); } catch (_) {}
+      quantityControllers.remove(index);
+    }
+    if (purchaseRateControllers.containsKey(index)) {
+      try { purchaseRateControllers[index]!.dispose(); } catch (_) {}
+      purchaseRateControllers.remove(index);
+    }
+    if (retailPriceControllers.containsKey(index)) {
+      try { retailPriceControllers[index]!.dispose(); } catch (_) {}
+      retailPriceControllers.remove(index);
+    }
+    if (mrpControllers.containsKey(index)) {
+      try { mrpControllers[index]!.dispose(); } catch (_) {}
+      mrpControllers.remove(index);
+    }
+    if (wholesaleControllers.containsKey(index)) {
+      try { wholesaleControllers[index]!.dispose(); } catch (_) {}
+      wholesaleControllers.remove(index);
+    }
+    if (batchNumberControllers.containsKey(index)) {
+      try { batchNumberControllers[index]!.dispose(); } catch (_) {}
+      batchNumberControllers.remove(index);
+    }
+    if (unitSearchControllers.containsKey(index)) {
+      try { unitSearchControllers[index]!.dispose(); } catch (_) {}
+      unitSearchControllers.remove(index);
+    }
+    if (rackSearchControllers.containsKey(index)) {
+      try { rackSearchControllers[index]!.dispose(); } catch (_) {}
+      rackSearchControllers.remove(index);
+    }
+
+    // Focus nodes
+    if (barcodeFocusNodes.containsKey(index)) {
+      try { barcodeFocusNodes[index]!.dispose(); } catch (_) {}
+      barcodeFocusNodes.remove(index);
+    }
+    if (quantityFocusNodes.containsKey(index)) {
+      try { quantityFocusNodes[index]!.dispose(); } catch (_) {}
+      quantityFocusNodes.remove(index);
+    }
   }
 
   // Rebuild index cache for performance optimization
