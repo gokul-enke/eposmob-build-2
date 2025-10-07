@@ -46,7 +46,6 @@ class _AddStockScreenState extends State<AddStockScreen> {
   ListStockModelData? selectedStock;
   bool initLoading = false;
   bool isInitialized = false;
-  bool showFilters = false; // Toggle filter visibility
   List<String> categories = ["All Categories"]; // Default category option
   List<String> stores = ["All Stores"]; // Default store option
 
@@ -75,13 +74,15 @@ class _AddStockScreenState extends State<AddStockScreen> {
       }
 
       // Load categories from CategoryProvider with caching (same as sidebar)
-      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+      final categoryProvider =
+          Provider.of<CategoryProvider>(context, listen: false);
       if (!categoryProvider.isCategoriesLoaded) {
         debugPrint("📥 Loading categories from API...");
         await categoryProvider.listAllCategory();
         debugPrint("✅ Categories loaded and cached");
       } else {
-        debugPrint("📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
+        debugPrint(
+            "📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
       }
 
       // Load all stocks for local pagination
@@ -108,7 +109,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
 
   void _extractCategoriesAndStores() {
     final stockProvider = Provider.of<StockProvider>(context, listen: false);
-    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+    final categoryProvider =
+        Provider.of<CategoryProvider>(context, listen: false);
     final allStocks = stockProvider.allStocks;
 
     // Get categories from CategoryProvider (same as sidebar)
@@ -692,7 +694,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     final SideBarController sideBarController = Get.put(SideBarController());
-    // final bool isSmallScreen = size.width < 600; // no longer needed
+    final bool isSmallScreen = size.width < 600;
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
@@ -715,24 +717,10 @@ class _AddStockScreenState extends State<AddStockScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Text(
-                      "Product Stock List",
-                      style: buildCustomStyle(FontWeightManager.semiBold,
-                          FontSize.s20, 0.30, ColorManager.textColor),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
-                      color: ColorManager.kPrimaryColor,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        showFilters = !showFilters;
-                      });
-                    },
-                    tooltip: 'Filters',
+                  Text(
+                    "Product Stock List",
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s20, 0.30, ColorManager.textColor),
                   ),
                   CustomRoundButton(
                     title: "Add Stock",
@@ -745,276 +733,313 @@ class _AddStockScreenState extends State<AddStockScreen> {
                   ),
                 ],
               ),
-              if (showFilters) const SizedBox(height: 15),
-              if (showFilters)
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final bool isNarrow = constraints.maxWidth < 900;
-                    final int perRow = isNarrow ? 2 : 4;
-                    final double itemWidth =
-                        (constraints.maxWidth - (15 * (perRow - 1))) / perRow;
-
-                    Widget stockNameField() => SizedBox(
-                          width: itemWidth,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Stock Name",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                alignment: Alignment.centerLeft,
-                                padding: const EdgeInsets.only(left: 15),
-                                height: 45,
-                                child: TextField(
-                                  controller: stockNameController,
-                                  onChanged: (value) => searchStocks(),
-                                  decoration: InputDecoration(
-                                    hintText: 'Stock Name',
-                                    hintStyle: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s12,
-                                      0.27,
-                                      ColorManager.textColor.withOpacity(.5),
-                                    ),
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.27,
-                                    ColorManager.textColor.withOpacity(.5),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-
-                    Widget categoryField() => SizedBox(
-                          width: itemWidth,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Category",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              BuildDropDownWithSearch<String>(
-                                title: null,
-                                showName: false,
-                                hintText: 'Please Select',
-                                value: categoryController.text == "All Categories"
-                                    ? null
-                                    : categoryController.text,
-                                items: categories
-                                    .where((category) => category != "All Categories")
-                                    .toList(),
-                                onChanged: (String? newValue) {
-                                  setState(() {
-                                    categoryController.text = newValue ?? "All Categories";
-                                  });
-                                  searchStocks();
-                                },
-                                displayText: (category) => category,
-                                searchController: categorySearchController,
-                                height: 45,
-                                margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-                              ),
-                            ],
-                          ),
-                        );
-
-                    Widget barcodeField() => SizedBox(
-                          width: itemWidth,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Barcode",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                alignment: Alignment.centerLeft,
-                                padding: const EdgeInsets.only(left: 15),
-                                height: 45,
-                                child: TextField(
-                                  controller: barcodeController,
-                                  onChanged: (value) => searchStocks(),
-                                  decoration: InputDecoration(
-                                    hintText: 'Barcode',
-                                    hintStyle: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s12,
-                                      0.27,
-                                      ColorManager.textColor.withOpacity(.5),
-                                    ),
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.27,
-                                    ColorManager.textColor.withOpacity(.5),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-
-                    Widget rackField() => SizedBox(
-                          width: itemWidth,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Rack Search",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                alignment: Alignment.centerLeft,
-                                padding: const EdgeInsets.only(left: 15),
-                                height: 45,
-                                child: TextField(
-                                  controller: rackController,
-                                  onChanged: (value) => searchStocks(),
-                                  decoration: InputDecoration(
-                                    hintText: 'Rack Number',
-                                    hintStyle: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s12,
-                                      0.27,
-                                      ColorManager.textColor.withOpacity(.5),
-                                    ),
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.27,
-                                    ColorManager.textColor.withOpacity(.5),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-
-                    Widget storeField() => SizedBox(
-                          width: itemWidth,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Store Filter",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              BuildDropDownWithSearch<String>(
-                                title: null,
-                                showName: false,
-                                hintText: 'Select Store',
-                                value:
-                                    storeController.text == "All Stores" ? null : storeController.text,
-                                items: stores.where((store) => store != "All Stores").toList(),
-                                onChanged: (String? newValue) {
-                                  setState(() {
-                                    storeController.text = newValue ?? "All Stores";
-                                  });
-                                  searchStocks();
-                                },
-                                displayText: (store) => store,
-                                searchController: storeSearchController,
-                                height: 45,
-                                margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-                              ),
-                            ],
-                          ),
-                        );
-
-                    Widget resetButton() => SizedBox(
-                          width: itemWidth,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 35),
-                              CustomRoundButton(
-                                title: "Reset",
-                                boxColor: Colors.white,
-                                textColor: ColorManager.kPrimaryColor,
-                                borderColor: ColorManager.kPrimaryColor,
-                                fct: resetSearch,
-                                height: 45,
-                                width: double.infinity,
-                                fontSize: FontSize.s12,
-                              ),
-                            ],
-                          ),
-                        );
-
-                    return Column(
-                      children: [
-                        Wrap(
-                          spacing: 15,
-                          runSpacing: 15,
-                          children: [
-                            stockNameField(),
-                            categoryField(),
-                            barcodeField(),
-                            rackField(),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        Wrap(
-                          spacing: 15,
-                          runSpacing: 15,
-                          children: [
-                            storeField(),
-                            resetButton(),
-                          ],
-                        ),
-                      ],
-                    );
-                  },
-                ),
               const SizedBox(height: 15),
+              Column(
+                children: [
+                  // First row with 4 fields
+                  Row(
+                    children: [
+                      // Stock Name field
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Stock Name",
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s14,
+                                0.27,
+                                Colors.black.withOpacity(0.6),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            BuildBoxShadowContainer(
+                              circleRadius: 7,
+                              alignment: Alignment.centerLeft,
+                              padding: const EdgeInsets.only(left: 15),
+                              height: 45,
+                              child: TextField(
+                                controller: stockNameController,
+                                onChanged: (value) {
+                                  searchStocks();
+                                },
+                                decoration: InputDecoration(
+                                  hintText: 'Stock Name',
+                                  hintStyle: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s12,
+                                    0.27,
+                                    ColorManager.textColor.withOpacity(.5),
+                                  ),
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.27,
+                                  ColorManager.textColor.withOpacity(.5),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(width: 15),
+
+                      // Category dropdown
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Category",
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s14,
+                                0.27,
+                                Colors.black.withOpacity(0.6),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            BuildDropDownWithSearch<String>(
+                              title: null,
+                              showName: false,
+                              hintText: 'Please Select',
+                              value: categoryController.text == "All Categories"
+                                  ? null
+                                  : categoryController.text,
+                              items: categories
+                                  .where((category) =>
+                                      category != "All Categories")
+                                  .toList(),
+                              onChanged: (String? newValue) {
+                                setState(() {
+                                  categoryController.text =
+                                      newValue ?? "All Categories";
+                                });
+                                searchStocks();
+                              },
+                              displayText: (category) => category,
+                              searchController: categorySearchController,
+                              height: 45,
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 0, vertical: 0),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(width: 15),
+
+                      // Barcode field
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Barcode",
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s14,
+                                0.27,
+                                Colors.black.withOpacity(0.6),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            BuildBoxShadowContainer(
+                              circleRadius: 7,
+                              alignment: Alignment.centerLeft,
+                              padding: const EdgeInsets.only(left: 15),
+                              height: 45,
+                              child: TextField(
+                                controller: barcodeController,
+                                onChanged: (value) {
+                                  searchStocks();
+                                },
+                                decoration: InputDecoration(
+                                  hintText: 'Barcode',
+                                  hintStyle: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s12,
+                                    0.27,
+                                    ColorManager.textColor.withOpacity(.5),
+                                  ),
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.27,
+                                  ColorManager.textColor.withOpacity(.5),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(width: 15),
+
+                      // Rack Search field
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Rack Search",
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s14,
+                                0.27,
+                                Colors.black.withOpacity(0.6),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            BuildBoxShadowContainer(
+                              circleRadius: 7,
+                              alignment: Alignment.centerLeft,
+                              padding: const EdgeInsets.only(left: 15),
+                              height: 45,
+                              child: TextField(
+                                controller: rackController,
+                                onChanged: (value) {
+                                  searchStocks();
+                                },
+                                decoration: InputDecoration(
+                                  hintText: 'Rack Number',
+                                  hintStyle: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s12,
+                                    0.27,
+                                    ColorManager.textColor.withOpacity(.5),
+                                  ),
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.27,
+                                  ColorManager.textColor.withOpacity(.5),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Second row with 4 fields
+                  Row(
+                    children: [
+                      // Store Filter dropdown
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Store Filter",
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s14,
+                                0.27,
+                                Colors.black.withOpacity(0.6),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            BuildDropDownWithSearch<String>(
+                              title: null,
+                              showName: false,
+                              hintText: 'Select Store',
+                              value: storeController.text == "All Stores"
+                                  ? null
+                                  : storeController.text,
+                              items: stores
+                                  .where((store) => store != "All Stores")
+                                  .toList(),
+                              onChanged: (String? newValue) {
+                                setState(() {
+                                  storeController.text =
+                                      newValue ?? "All Stores";
+                                });
+                                searchStocks();
+                              },
+                              displayText: (store) => store,
+                              searchController: storeSearchController,
+                              height: 45,
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 0, vertical: 0),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(width: 15),
+
+                      // Empty space to maintain layout
+                      Expanded(child: Container()),
+
+                      const SizedBox(width: 15),
+
+                      // Empty space to maintain layout
+                      Expanded(child: Container()),
+
+                      const SizedBox(width: 15), // // Search button
+                      // Expanded(
+                      //   child: Column(
+                      //     crossAxisAlignment: CrossAxisAlignment.start,
+                      //     children: [
+                      //       const SizedBox(
+                      //           height: 35), // Space to align with other fields
+                      //       CustomRoundButton(
+                      //         title: "Search",
+                      //         fct: () => {searchStocks()},
+                      //         height: 45,
+                      //         width:
+                      //             double.infinity, // Take full available width
+                      //         fontSize: FontSize.s12,
+                      //         boxColor: ColorManager.kPrimaryColor,
+                      //         textColor: Colors.white,
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
+
+                      const SizedBox(width: 15),
+
+                      // Reset button
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(
+                                height: 35), // Space to align with other fields
+                            CustomRoundButton(
+                              title: "Reset",
+                              boxColor: Colors.white,
+                              textColor: ColorManager.kPrimaryColor,
+                              borderColor: ColorManager.kPrimaryColor,
+                              fct: resetSearch,
+                              height: 45,
+                              width:
+                                  double.infinity, // Take full available width
+                              fontSize: FontSize.s12,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
               Expanded(
                 child: Column(
                   children: [
@@ -1036,8 +1061,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                       child: Text("No stock data available"));
                                 }
 
-                                // Build the table content once
-                                final Widget tableContent = BuildBoxShadowContainer(
+                                return BuildBoxShadowContainer(
                                   margin: const EdgeInsets.only(top: 5),
                                   circleRadius: 7,
                                   offsetValue: const Offset(2, 2),
@@ -1061,25 +1085,31 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                           columnWidths: const {
                                             0: FlexColumnWidth(2.0), // Product
                                             1: FlexColumnWidth(1.5), // Barcode
-                                            2: FlexColumnWidth(1.2), // Retail Price
+                                            2: FlexColumnWidth(
+                                                1.2), // Retail Price
                                             3: FlexColumnWidth(1.2), // MRP
-                                            4: FlexColumnWidth(1.2), // Purchase Price
+                                            4: FlexColumnWidth(
+                                                1.2), // Purchase Price
                                             5: FlexColumnWidth(0.8), // Quantity
                                             6: FlexColumnWidth(0.8), // Unit
                                             7: FlexColumnWidth(1.0), // Rack
-                                            8: FlexColumnWidth(1.5), // Order Date
+                                            8: FlexColumnWidth(
+                                                1.5), // Order Date
                                             9: FlexColumnWidth(1.5), // Action
                                           },
                                           border: null,
-                                          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                          defaultVerticalAlignment:
+                                              TableCellVerticalAlignment.middle,
                                           children: [
                                             TableRow(
                                               children: [
                                                 _buildTableHeader('Product'),
                                                 _buildTableHeader('Barcode'),
-                                                _buildTableHeader('Retail Price'),
+                                                _buildTableHeader(
+                                                    'Retail Price'),
                                                 _buildTableHeader('MRP'),
-                                                _buildTableHeader('Purchase Price'),
+                                                _buildTableHeader(
+                                                    'Purchase Price'),
                                                 _buildTableHeader('Quantity'),
                                                 _buildTableHeader('Unit'),
                                                 _buildTableHeader('Rack'),
@@ -1090,12 +1120,14 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                           ],
                                         ),
                                       ),
-                                      // Scrollable table body (vertical)
+                                      // Scrollable table body
                                       Expanded(
                                         child: MouseRegion(
                                           cursor: SystemMouseCursors.grab,
                                           child: ScrollConfiguration(
-                                            behavior: ScrollConfiguration.of(context).copyWith(
+                                            behavior:
+                                                ScrollConfiguration.of(context)
+                                                    .copyWith(
                                               dragDevices: {
                                                 PointerDeviceKind.mouse,
                                                 PointerDeviceKind.touch,
@@ -1104,23 +1136,36 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                               },
                                             ),
                                             child: SingleChildScrollView(
-                                              physics: const BouncingScrollPhysics(),
+                                              physics:
+                                                  const BouncingScrollPhysics(),
                                               scrollDirection: Axis.vertical,
                                               child: Table(
                                                 columnWidths: const {
-                                                  0: FlexColumnWidth(2.0), // Product
-                                                  1: FlexColumnWidth(1.5), // Barcode
-                                                  2: FlexColumnWidth(1.2), // Retail Price
-                                                  3: FlexColumnWidth(1.2), // MRP
-                                                  4: FlexColumnWidth(1.2), // Purchase Price
-                                                  5: FlexColumnWidth(0.8), // Quantity
-                                                  6: FlexColumnWidth(0.8), // Unit
-                                                  7: FlexColumnWidth(1.0), // Rack
-                                                  8: FlexColumnWidth(1.5), // Order Date
-                                                  9: FlexColumnWidth(1.5), // Action
+                                                  0: FlexColumnWidth(
+                                                      2.0), // Product
+                                                  1: FlexColumnWidth(
+                                                      1.5), // Barcode
+                                                  2: FlexColumnWidth(
+                                                      1.2), // Retail Price
+                                                  3: FlexColumnWidth(
+                                                      1.2), // MRP
+                                                  4: FlexColumnWidth(
+                                                      1.2), // Purchase Price
+                                                  5: FlexColumnWidth(
+                                                      0.8), // Quantity
+                                                  6: FlexColumnWidth(
+                                                      0.8), // Unit
+                                                  7: FlexColumnWidth(
+                                                      1.0), // Rack
+                                                  8: FlexColumnWidth(
+                                                      1.5), // Order Date
+                                                  9: FlexColumnWidth(
+                                                      1.5), // Action
                                                 },
                                                 border: null,
-                                                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                                defaultVerticalAlignment:
+                                                    TableCellVerticalAlignment
+                                                        .middle,
                                                 children: [
                                                   // Table Rows
                                                   ...listStockModelDataList
@@ -1133,55 +1178,110 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                       decoration: BoxDecoration(
                                                         color: index % 2 == 0
                                                             ? Colors.white
-                                                            : Colors.grey.withOpacity(0.1),
+                                                            : Colors.grey
+                                                                .withOpacity(
+                                                                    0.1),
                                                       ),
                                                       children: [
-                                                        _buildTableCell('${stock.productName}'),
+                                                        _buildTableCell(
+                                                            '${stock.productName}'),
                                                         _buildTableCell(() {
-                                                          final barcode = stock.barCode ?? 'N/A';
-                                                          debugPrint('🔍 DISPLAY BARCODE: "${barcode}" for product: ${stock.productName}');
+                                                          final barcode =
+                                                              stock.barCode ??
+                                                                  'N/A';
+                                                          debugPrint(
+                                                              '🔍 DISPLAY BARCODE: "${barcode}" for product: ${stock.productName}');
                                                           return barcode;
                                                         }()), // Updated to show actual barcode
-                                                        _buildTableCell('${stock.retailPrice}'),
-                                                        _buildTableCell(stock.mrp ?? "N/A"),
-                                                        _buildTableCell(stock.purchaseRate ?? "N/A"),
-                                                        _buildTableCell('${stock.qty}'),
-                                                        _buildTableCell('${stock.unit}'),
-                                                        _buildTableCell(stock.rack ?? "N/A"),
-                                                        _buildTableCell(DateHelper.formatISODate(stock.orderDate ?? "")), // Order Date
+                                                        _buildTableCell(
+                                                            '${stock.retailPrice}'),
+                                                        _buildTableCell(
+                                                            stock.mrp ?? "N/A"),
+                                                        _buildTableCell(stock
+                                                                .purchaseRate ??
+                                                            "N/A"),
+                                                        _buildTableCell(
+                                                            '${stock.qty}'),
+                                                        _buildTableCell(
+                                                            '${stock.unit}'),
+                                                        _buildTableCell(
+                                                            stock.rack ??
+                                                                "N/A"),
+                                                        _buildTableCell(DateHelper
+                                                            .formatISODate(stock
+                                                                    .orderDate ??
+                                                                "")), // Order Date
                                                         Center(
                                                           child: Row(
                                                             children: [
                                                               BuildBoxShadowContainer(
-                                                                margin: const EdgeInsets.only(left: 5, right: 5),
-                                                                color: ColorManager.kPrimaryColor.withOpacity(0.9),
-                                                                circleRadius: 5,
-                                                                child: IconButton(
-                                                                  icon: const Icon(
-                                                                    Icons.edit,
-                                                                    size: 18,
-                                                                    color: Colors.white,
-                                                                  ),
-                                                                  onPressed: () => _showEditStockModal(stock),
-                                                                ),
-                                                              ),
-                                                              Padding(
-                                                                padding: const EdgeInsets.all(8.0),
-                                                                child: BuildBoxShadowContainer(
-                                                                  margin: const EdgeInsets.only(left: 5, right: 5),
-                                                                  circleRadius: 5,
-                                                                  child: IconButton(
-                                                                    icon: Icon(
-                                                                      Icons.visibility,
+                                                                  margin:
+                                                                      const EdgeInsets
+                                                                          .only(
+                                                                          left:
+                                                                              5,
+                                                                          right:
+                                                                              5),
+                                                                  color: ColorManager
+                                                                      .kPrimaryColor
+                                                                      .withOpacity(
+                                                                          0.9),
+                                                                  circleRadius:
+                                                                      5,
+                                                                  child:
+                                                                      IconButton(
+                                                                    icon:
+                                                                        const Icon(
+                                                                      Icons
+                                                                          .edit,
                                                                       size: 18,
-                                                                      color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                                                                      color: Colors
+                                                                          .white,
                                                                     ),
-                                                                    onPressed: () => _showStockDetails(stock),
-                                                                    constraints: const BoxConstraints(
-                                                                      minWidth: 36,
-                                                                      minHeight: 36,
+                                                                    onPressed: () =>
+                                                                        _showEditStockModal(
+                                                                            stock),
+                                                                  )),
+                                                              Padding(
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                        .all(
+                                                                        8.0),
+                                                                child:
+                                                                    BuildBoxShadowContainer(
+                                                                  margin:
+                                                                      const EdgeInsets
+                                                                          .only(
+                                                                          left:
+                                                                              5,
+                                                                          right:
+                                                                              5),
+                                                                  circleRadius:
+                                                                      5,
+                                                                  child:
+                                                                      IconButton(
+                                                                    icon: Icon(
+                                                                      Icons
+                                                                          .visibility,
+                                                                      size: 18,
+                                                                      color: ColorManager
+                                                                          .kPrimaryColor
+                                                                          .withOpacity(
+                                                                              0.9),
                                                                     ),
-                                                                    padding: EdgeInsets.zero,
+                                                                    onPressed: () =>
+                                                                        _showStockDetails(
+                                                                            stock),
+                                                                    constraints:
+                                                                        const BoxConstraints(
+                                                                      minWidth:
+                                                                          36,
+                                                                      minHeight:
+                                                                          36,
+                                                                    ),
+                                                                    padding:
+                                                                        EdgeInsets
+                                                                            .zero,
                                                                   ),
                                                                 ),
                                                               ),
@@ -1198,34 +1298,6 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                         ),
                                       ),
                                     ],
-                                  ),
-                                );
-
-                                // Always allow horizontal scrolling (shows only when needed)
-                                return ScrollConfiguration(
-                                  behavior: ScrollConfiguration.of(context).copyWith(
-                                    dragDevices: {
-                                      PointerDeviceKind.mouse,
-                                      PointerDeviceKind.touch,
-                                      PointerDeviceKind.stylus,
-                                      PointerDeviceKind.trackpad,
-                                    },
-                                  ),
-                                  child: Scrollbar(
-                                    thumbVisibility: true,
-                                    notificationPredicate: (_) => true,
-                                    controller: null,
-                                    child: SingleChildScrollView(
-                                      scrollDirection: Axis.horizontal,
-                                      physics: const BouncingScrollPhysics(),
-                                      child: ConstrainedBox(
-                                        constraints: const BoxConstraints(minWidth: 1100),
-                                        child: SizedBox(
-                                          width: 1100,
-                                          child: tableContent,
-                                        ),
-                                      ),
-                                    ),
                                   ),
                                 );
                               },

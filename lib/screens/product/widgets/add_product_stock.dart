@@ -148,8 +148,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   bool _needsRecalculation =
       false; // Flag to track if total needs recalculation
 
-  // Debounce timers for text input
-  Timer? _barcodeDebounceTimer;
+  // Debounce timer for quantity input
   Timer? _quantityDebounceTimer;
 
   // Cache for filtered products per category
@@ -293,8 +292,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   @override
   void dispose() {
     // Dispose timers
-    _barcodeTimer?.cancel();
-    _barcodeDebounceTimer?.cancel();
+    
     _quantityDebounceTimer?.cancel();
 
     // Dispose all search controllers safely
@@ -2454,23 +2452,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                               _getBarcodeController(index).text.length,
                         );
                       },
-                      onChanged: (value) {
-                        // Update the value immediately for responsive UI
+                      onFieldSubmitted: (value) {
+                        // Update and auto-fill only on submit
                         stockItems[index].barcode = value;
-
-                        // Debounce the heavy operations
-                        _barcodeDebounceTimer?.cancel();
-                        _barcodeDebounceTimer =
-                            Timer(const Duration(milliseconds: 300), () {
-                          if (mounted) {
-                            // OPTIMIZED: No full setState - only update specific row data
-                            _autoFillFromBarcode(index, value);
-                            // Update pending item if already added
-                            _updatePendingStockItem(index);
-                            // Only rebuild if autofill changed data
-                            if (mounted) setState(() {});
-                          }
-                        });
+                        _autoFillFromBarcode(index, value);
+                        _updatePendingStockItem(index);
+                        if (mounted) setState(() {});
                       },
                     ),
                   ),
@@ -2787,9 +2774,6 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-  // Auto-fill method for barcode scanning
-  Timer? _barcodeTimer;
-
   void _autoFillFromBarcode(int index, String barcode) {
     debugPrint('🔍 BARCODE AUTO-FILL TRIGGERED');
     debugPrint('   - Row index: $index');
@@ -2800,13 +2784,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       return;
     }
 
-    // Cancel previous timer to debounce rapid barcode inputs
-    _barcodeTimer?.cancel();
-
-    // Add delay to prevent multiple rapid API calls during barcode scanning
-    _barcodeTimer = Timer(const Duration(milliseconds: 500), () {
-      _performBarcodeAutoFill(index, barcode);
-    });
+    // Directly perform auto-fill on submit
+    _performBarcodeAutoFill(index, barcode);
   }
 
   Future<void> _performBarcodeAutoFill(int index, String barcode) async {
