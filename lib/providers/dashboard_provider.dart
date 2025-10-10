@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../resources/app_url.dart';
+import '../models/dashboard_api.dart';
 
 class DashboardProvider {
   //                 *********************** DASHBOARD API ***************************************************
@@ -50,6 +51,9 @@ class DashboardProvider {
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
+
+    debugPrint('Fetching graph data from: $url');
+
     try {
       final response = await http.get(
         url,
@@ -60,57 +64,271 @@ class DashboardProvider {
         },
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
+      debugPrint('Graph data response status: ${response.statusCode}');
+      // debugPrint('Graph data response body: ${response.body}');
 
-        if (responseData['status'] == 'success') {
-          final dynamic data = responseData['data'];
-          if (data is List) {
-            return data.map((item) => GraphData.fromJson(item)).toList();
+      if (response.statusCode == 200) {
+        // Check if response is JSON
+        final contentType = response.headers['content-type'];
+        if (contentType != null && contentType.contains('application/json')) {
+          final Map<String, dynamic> responseData = json.decode(response.body);
+
+          if (responseData['status'] == 'success') {
+            final dynamic data = responseData['data'];
+            if (data is List) {
+              return data.map((item) => GraphData.fromJson(item)).toList();
+            } else {
+              throw const FormatException('Expected data to be a list');
+            }
           } else {
-            throw const FormatException('Expected data to be a list');
+            throw HttpException(
+                responseData['message'] ?? 'Failed to load graph data');
           }
         } else {
-          throw HttpException(
-              responseData['message'] ?? 'Failed to load graph data');
+          // HTML response or other non-JSON content
+          debugPrint('Graph data endpoint returned non-JSON content');
+          return [];
         }
+      } else if (response.statusCode == 404) {
+        // Handle 404 by returning empty list instead of throwing error
+        debugPrint('Graph data endpoint not found (404), returning empty list');
+        return [];
       } else {
         throw HttpException(
             'Failed to load graph data. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      // debugPrint('Error fetching graph data: $error');
-      rethrow;
+      debugPrint('Error fetching graph data: $error');
+      // Return empty list instead of rethrowing to prevent app crash
+      return [];
     }
   }
 
-  // Dummy Graph Data
-  // Future<List<GraphData>> fetchGraphData(String accessToken) async {
-  //   // Simulate sample data for testing
-  //   final List<GraphData> sampleData = _generateSampleData();
+  // New API methods for dashboard data
+  Future<DashboardOverview> fetchDashboardOverview(
+      String accessToken, String startDate, String endDate) async {
+    final url = Uri.parse(
+        '${APPUrl.companyOverview}?start_date=$startDate&end_date=$endDate');
 
-  //   // Return the sample data directly without making an actual HTTP request
-  //   return sampleData;
-  // }
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
 
-  // List<GraphData> _generateSampleData() {
-  //   final now = DateTime.now();
-  //   final List<GraphData> data = [];
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
 
-  //   for (int i = 0; i < 10; i++) {
-  //     final date = now.subtract(Duration(days: i));
-  //     final formattedDate = DateFormat('yyyy-MM-dd').format(date);
-  //     final count =
-  //         i + Random().nextInt(10); // Sample count, you can adjust this
+    debugPrint('Fetching dashboard overview from: $url');
 
-  //     data.add(GraphData(
-  //       date: DateTime.parse(formattedDate),
-  //       count: count,
-  //     ));
-  //   }
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+    );
 
-  //   return data;
-  // }
+    debugPrint('Dashboard overview response status: ${response.statusCode}');
+    debugPrint('Dashboard overview response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = json.decode(response.body);
+
+      // Check if response has the expected structure
+      if (responseData['status'] == 'success' && responseData['data'] != null) {
+        final data = responseData['data'];
+        debugPrint('Dashboard overview data: $data');
+        return DashboardOverview.fromJson(data as Map<String, dynamic>);
+      } else {
+        throw HttpException(
+            'Invalid response format: ${responseData['message'] ?? 'Unknown error'}');
+      }
+    } else {
+      throw HttpException(
+          'Failed to load dashboard overview. Status code: ${response.statusCode}');
+    }
+  }
+
+  Future<OrdersPerMonth> fetchOrdersPerMonth(
+      String accessToken, int year) async {
+    final url = Uri.parse('${APPUrl.ordersGraph}?year=$year');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    debugPrint('Fetching orders per month from: $url');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+    );
+
+    debugPrint('Orders per month response status: ${response.statusCode}');
+    debugPrint('Orders per month response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = json.decode(response.body);
+
+      // Check if response has the expected structure
+      if (responseData['status'] == 'success' && responseData['data'] != null) {
+        final data = responseData['data'];
+        debugPrint('Orders per month data: $data');
+        return OrdersPerMonth.fromJson(data as Map<String, dynamic>);
+      } else {
+        throw HttpException(
+            'Invalid response format: ${responseData['message'] ?? 'Unknown error'}');
+      }
+    } else {
+      throw HttpException(
+          'Failed to load orders per month. Status code: ${response.statusCode}');
+    }
+  }
+
+  Future<CustomersPerMonth> fetchCustomersPerMonth(
+      String accessToken, int year) async {
+    final url = Uri.parse('${APPUrl.customersGraph}?year=$year');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    debugPrint('Fetching customers per month from: $url');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+    );
+
+    debugPrint('Customers per month response status: ${response.statusCode}');
+    debugPrint('Customers per month response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = json.decode(response.body);
+
+      // Check if response has the expected structure
+      if (responseData['status'] == 'success' && responseData['data'] != null) {
+        final data = responseData['data'];
+        debugPrint('Customers per month data: $data');
+        return CustomersPerMonth.fromJson(data as Map<String, dynamic>);
+      } else {
+        throw HttpException(
+            'Invalid response format: ${responseData['message'] ?? 'Unknown error'}');
+      }
+    } else {
+      throw HttpException(
+          'Failed to load customers per month. Status code: ${response.statusCode}');
+    }
+  }
+
+  Future<ExecutivesOverview> fetchExecutivesOverview(
+      String accessToken, String startDate, String endDate) async {
+    final url = Uri.parse(
+        '${APPUrl.executivesOverview}?start_date=$startDate&end_date=$endDate');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    debugPrint('Fetching executives overview from: $url');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+    );
+
+    debugPrint('Executives overview response status: ${response.statusCode}');
+    debugPrint('Executives overview response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = json.decode(response.body);
+
+      // Check if response has the expected structure
+      if (responseData['status'] == 'success' && responseData['data'] != null) {
+        final data = responseData['data'];
+        debugPrint('Executives overview data: $data');
+        return ExecutivesOverview.fromJson(data as Map<String, dynamic>);
+      } else {
+        throw HttpException(
+            'Invalid response format: ${responseData['message'] ?? 'Unknown error'}');
+      }
+    } else {
+      throw HttpException(
+          'Failed to load executives overview. Status code: ${response.statusCode}');
+    }
+  }
+
+  Future<SalesGraph> fetchExecutiveSalesGraph(String accessToken, String period,
+      String startDate, String endDate) async {
+    String urlStr;
+    if (period == 'today' || period == 'week') {
+      urlStr = '${APPUrl.salesGraph}?period=$period';
+    } else {
+      urlStr =
+          '${APPUrl.salesGraph}?period=$period&start_date=$startDate&end_date=$endDate';
+    }
+
+    final url = Uri.parse(urlStr);
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    debugPrint('Fetching executive sales graph from: $url');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+    );
+
+    debugPrint('Executive sales graph response status: ${response.statusCode}');
+    debugPrint('Executive sales graph response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = json.decode(response.body);
+
+      // Check if response has the expected structure
+      if (responseData['status'] == 'success' && responseData['data'] != null) {
+        final data = responseData['data'];
+        debugPrint('Executive sales graph data: $data');
+        return SalesGraph.fromJson(data as Map<String, dynamic>);
+      } else {
+        throw HttpException(
+            'Invalid response format: ${responseData['message'] ?? 'Unknown error'}');
+      }
+    } else {
+      throw HttpException(
+          'Failed to load executive sales graph. Status code: ${response.statusCode}');
+    }
+  }
 
   Future<Map<String, dynamic>> listCartItnes(BuildContext context) async {
     // debugPrint("dashbaord");
@@ -128,7 +346,7 @@ class DashboardProvider {
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer 8|bTQHp0upEnGCgNEwbYo0bdhLLEg3CKBSvU6QPJe5',
         'Content-Type': 'application/json',
-        'X-Tenant': apiKey,  
+        'X-Tenant': apiKey,
       });
 
       // debugPrint('inside ${response.statusCode}');

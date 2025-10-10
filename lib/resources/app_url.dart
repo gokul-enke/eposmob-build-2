@@ -169,4 +169,18 @@ class APPUrl {
       '$baseURL/api/v1/sales-executive-report';
   static String getCompanyaccounts =
       '$baseURL/api/v1/accounts/company-accounts';
+
+
+
+  static String companyOverview =
+      '$baseURL/api/v1/dashboard/company-overview';   
+  static String ordersGraph =
+      '$baseURL/api/v1/dashboard/orders-graph'; 
+  static String customersGraph =
+      '$baseURL/api/v1/dashboard/customers-graph';      
+  static String executivesOverview =
+      '$baseURL/api/v1/dashboard/executives-overview';
+  static String salesGraph =
+      '$baseURL/api/v1/dashboard/executive-sales-graph';    
+
 }
