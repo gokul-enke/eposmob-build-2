@@ -11,7 +11,9 @@ import 'package:pos_machine/screens/customer_profile/open_customer_profile.dart'
 import 'package:pos_machine/screens/customers/add_customers.dart';
 import 'package:pos_machine/screens/cart/cart_list.dart';
 import 'package:pos_machine/screens/customers/customers.dart';
-import 'package:pos_machine/screens/dashboard/dashboard.dart';
+import 'package:pos_machine/screens/dashboard/company_admin.dart';
+import 'package:pos_machine/screens/dashboard/dashboard_ui_only.dart';
+import 'package:pos_machine/screens/dashboard/sales_exicutive_dahsboard.dart';
 import 'package:pos_machine/screens/edit_order/edit_order.dart';
 import 'package:pos_machine/screens/homenew/home_new.dart';
 
@@ -86,7 +88,7 @@ class SideBarController extends GetxController {
 
   var screens = const [
     HomeNew(), //0
-    DashboardScreen(), //1
+    DashboardUIScreen(), //1 - Using the role-based dashboard
     SalesScreen(), //2
     CartScreen(), //3
     TransactionScreen(), //4
