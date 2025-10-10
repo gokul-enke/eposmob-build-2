@@ -31,6 +31,8 @@ class TransactionReportPrintPage extends StatefulWidget {
   // Add date range parameters
   final String? fromDate;
   final String? toDate;
+  // If true, simply pop back to the previous route instead of forcing sidebar navigation
+  final bool returnToPreviousRoute;
 
   const TransactionReportPrintPage({
     Key? key,
@@ -46,6 +48,7 @@ class TransactionReportPrintPage extends StatefulWidget {
     required this.orderNumber,
     this.fromDate,
     this.toDate,
+    this.returnToPreviousRoute = false,
   }) : super(key: key);
 
   @override
@@ -208,8 +211,12 @@ class _TransactionReportPrintPageState
             Provider.of<AppSettingsProvider>(context, listen: false);
         final appSettings = appSettingsProvider.appSettings;
         if (appSettings != null) {
-          _handlePrinting(
+          await _handlePrinting(
               appSettings.customerCarePhone, appSettings.customerCareEmail);
+          // Auto return after printing when requested
+          if (mounted && widget.returnToPreviousRoute) {
+            Navigator.pop(context);
+          }
         }
       }
     } else {
@@ -447,10 +454,13 @@ class _TransactionReportPrintPageState
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
+            // Always pop back to the previous screen
             Navigator.pop(context);
-            SideBarController sideBarController = Get.put(SideBarController());
-            sideBarController.index.value =
-                65; // Navigate back to Transaction Report
+            // Only force sidebar navigation when explicitly desired
+            if (!widget.returnToPreviousRoute) {
+              SideBarController sideBarController = Get.put(SideBarController());
+              sideBarController.index.value = 65; // Navigate back to Transaction Report
+            }
           },
         ),
         elevation: 0,
@@ -712,8 +722,17 @@ class _TransactionReportPrintPageState
                   );
                   return;
                 }
-                _handlePrinting(appSettings!.customerCarePhone,
-                    appSettings.customerCareEmail);
+                () async {
+                  try {
+                    await _handlePrinting(appSettings!.customerCarePhone,
+                        appSettings.customerCareEmail);
+                    if (mounted && widget.returnToPreviousRoute) {
+                      Navigator.pop(context);
+                    }
+                  } catch (_) {
+                    // Do not navigate on error; errors are already surfaced via toasts/snackbars
+                  }
+                }();
               },
               icon: const Icon(Icons.receipt_long),
               label: const Text(

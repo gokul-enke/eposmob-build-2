@@ -273,6 +273,8 @@ class _CustomerTransactionsWidgetState
           toDate: toDate,
           isFromLocalStorage:
               false, // Set to false since we're converting to Map format
+          // Ensure we return to the previous route (Customer Profile > Transactions)
+          returnToPreviousRoute: true,
         ));
 
     // Show a message that the print process has started
