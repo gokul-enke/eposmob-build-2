@@ -611,19 +611,20 @@ class LocalProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Fetches products from the API (similar to GridSelectionProvider) and stores them locally.
+  /// Fetches products from the API with batched concurrent requests (10 pages at a time).
   Future<void> fetchProductsFromAPI(
       {int? categoryId, String? filterName}) async {
     List<GetProduct> allProducts = [];
     int currentPage = 1;
-    // const int itemsPerPage = 500; // Assuming 500 items per page
+    const int batchSize = 10; // Fetch 10 pages concurrently
 
     isLoading = true;
     notifyListeners();
 
     try {
       final swTotal = Stopwatch()..start();
-      debugPrint("🌐 [API] Starting full product fetch...");
+      debugPrint("🌐 [API] Starting batched product fetch (batch size: $batchSize)...");
+      
       // Get API key from SharedPreferences
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
@@ -633,63 +634,82 @@ class LocalProductProvider extends ChangeNotifier {
             "API key not found. Please restart the app.");
       }
 
-      while (true) {
-        final queryParams = <String, String>{
-          // if (filterName != null) 'name': filterName,
-          // if (categoryId != null && categoryId != 0)
-          // 'category_id': categoryId.toString(),
-          'page': currentPage.toString(),
-          // 'items_per_page': itemsPerPage.toString(),
-        };
+      bool hasMorePages = true;
 
-        final url = Uri.parse(APPUrl.getProductUrl)
-            .replace(queryParameters: queryParams);
+      while (hasMorePages) {
+        // Create batch of page requests
+        final batchStartPage = currentPage;
+        final batchEndPage = currentPage + batchSize - 1;
+        
+        debugPrint("🚀 [API] Fetching batch: pages $batchStartPage-$batchEndPage concurrently...");
+        final swBatch = Stopwatch()..start();
 
-        debugPrint("➡️ [API] GET $url | headers={Content-Type: application/json, X-Tenant: ${apiKey.substring(0, apiKey.length > 6 ? 6 : apiKey.length)}***}");
-        final swPage = Stopwatch()..start();
-        final response = await http.get(url, headers: {
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        });
-        swPage.stop();
-        debugPrint(
-            '📥 [API] Page $currentPage received in ${swPage.elapsedMilliseconds}ms | Status: ${response.statusCode} | BodyLen: ${response.body.length}');
+        // Create list of futures for concurrent requests
+        final futures = <Future<http.Response>>[];
+        for (int page = batchStartPage; page <= batchEndPage; page++) {
+          final queryParams = <String, String>{
+            'page': page.toString(),
+          };
 
-        if (response.statusCode == 200) {
-          dynamic jsonData;
-          try {
-            jsonData = json.decode(response.body);
-          } catch (e) {
-            debugPrint('❌ [API] JSON decode failed for page $currentPage: $e');
-            debugPrint('🧾 [API] Response snippet: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
-            break;
+          final url = Uri.parse(APPUrl.getProductUrl)
+              .replace(queryParameters: queryParams);
+
+          futures.add(http.get(url, headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant': apiKey,
+          }));
+        }
+
+        // Wait for all requests in batch to complete
+        final responses = await Future.wait(futures);
+        swBatch.stop();
+        debugPrint("📦 [API] Batch completed in ${swBatch.elapsedMilliseconds}ms");
+
+        // Process responses
+        int emptyPageCount = 0;
+        for (int i = 0; i < responses.length; i++) {
+          final response = responses[i];
+          final pageNum = batchStartPage + i;
+
+          if (response.statusCode == 200) {
+            dynamic jsonData;
+            try {
+              jsonData = json.decode(response.body);
+            } catch (e) {
+              debugPrint('❌ [API] JSON decode failed for page $pageNum: $e');
+              continue;
+            }
+
+            GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
+
+            if (getProductModel.product == null ||
+                getProductModel.product!.isEmpty) {
+              emptyPageCount++;
+              debugPrint('📭 [API] Page $pageNum is empty');
+              continue;
+            }
+
+            allProducts.addAll(getProductModel.product!);
+            debugPrint(
+                '✅ [API] Page $pageNum: ${getProductModel.product!.length} products (Total: ${allProducts.length})');
+          } else {
+            debugPrint('❌ [API] Page $pageNum failed: Status ${response.statusCode}');
+            emptyPageCount++;
           }
-          GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
+        }
 
-          if (getProductModel.product == null ||
-              getProductModel.product!.isEmpty) {
-            debugPrint('No more products to load. Breaking loop.');
-            break; // No more products
-          }
-
-          allProducts.addAll(getProductModel.product!);
-          debugPrint(
-              'Fetched ${getProductModel.product!.length} products on page $currentPage. Total products fetched so far: ${allProducts.length}');
-          currentPage++;
+        // If all pages in batch were empty, stop fetching
+        if (emptyPageCount == batchSize) {
+          debugPrint('🛑 [API] All pages in batch were empty. Stopping fetch.');
+          hasMorePages = false;
         } else {
-          debugPrint('❌ [API] Error fetching products: Status ${response.statusCode}');
-          debugPrint('🔗 Failed URL: $url');
-          final snippet = response.body.substring(0, response.body.length > 500 ? 500 : response.body.length);
-          debugPrint('🧾 Error body (first 500 chars): $snippet');
-          // Optionally handle non-200 status codes, e.g., throw an exception
-          break; // Exit loop on error
+          currentPage += batchSize;
         }
       }
 
       _products = allProducts;
-      _filteredProducts = List.from(
-          _products); // Initialize filtered list with all loaded products
-      _updatePagination(); // Update pagination info based on loaded products
+      _filteredProducts = List.from(_products);
+      _updatePagination();
       _saveProductsToHive();
       swTotal.stop();
       debugPrint(
@@ -700,7 +720,6 @@ class LocalProductProvider extends ChangeNotifier {
       } catch (_) {}
     } catch (e) {
       debugPrint("❌ [API] Error fetching all products from API: $e");
-      // Handle error appropriately, maybe clear products or show an error message
     } finally {
       isLoading = false;
       notifyListeners();

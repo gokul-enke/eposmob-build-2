@@ -78,11 +78,9 @@ class ProductEntryHeader extends StatelessWidget {
                                         controller: barcodeController,
                                         focusNode: billingProvider.barcodeNode,
                                         readOnly: billingProvider.selectedProductNameController.text.isNotEmpty,
-                                        onchanged: (query) {
+                                        onSubmitted: (query) {
                                           if (query != null && query.isNotEmpty) {
-                                            billingProvider.processBarcodeWithDebounce(query, () {
-                                              onProcessBarcode(query);
-                                            });
+                                            onProcessBarcode(query);
                                           }
                                         },
                                         size: size,
@@ -350,11 +348,9 @@ class ProductEntryHeader extends StatelessWidget {
                                     controller: barcodeController,
                                     focusNode: billingProvider.barcodeNode,
                                     readOnly: billingProvider.selectedProductNameController.text.isNotEmpty,
-                                    onchanged: (query) {
+                                    onSubmitted: (query) {
                                       if (query != null && query.isNotEmpty) {
-                                        billingProvider.processBarcodeWithDebounce(query, () {
-                                          onProcessBarcode(query);
-                                        });
+                                        onProcessBarcode(query);
                                       }
                                     },
                                     size: size,

@@ -801,9 +801,6 @@ Thank you for your purchase!
 📅 Date: ${DateTime.now().toString().split(' ')[0]}
 
 Please find your invoice attached.
-
-We appreciate your business!
-
 ---
 Powered by CloudPOS''',
         showSuccessMessage: false, // Handle success message ourselves

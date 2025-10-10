@@ -142,7 +142,7 @@ class BillingPageState extends State<BillingPage>
   int _selectedSidebarTab =
       1; // 0 for products, 1 for orders/categories - default to orders tab
 
-  Timer? _debounce;
+  
   Timer? _debounceTimer;
 
   // Add these variables for keyboard navigation in customer list
@@ -307,7 +307,7 @@ class BillingPageState extends State<BillingPage>
     _upiAmountFocusNode.dispose();
     _debitAmountFocusNode.dispose();
 
-    _debounce?.cancel();
+    
     _debounceTimer?.cancel();
     _customerTextFieldFocus.dispose();
     _customerScrollController.dispose();
@@ -1445,18 +1445,10 @@ class BillingPageState extends State<BillingPage>
                               focusNode: _barcodeNode,
                               readOnly:
                                   selectedProductNameController.text.isNotEmpty,
-                              onchanged: (query) {
-                                if (_debounce?.isActive ?? false) {
-                                  _debounce!.cancel();
+                              onSubmitted: (query) {
+                                if (query != null && query.isNotEmpty) {
+                                  processBarcode(query);
                                 }
-                                _debounce = Timer(
-                                  const Duration(milliseconds: 500),
-                                  () {
-                                    if (query != null && query.isNotEmpty) {
-                                      processBarcode(query);
-                                    }
-                                  },
-                                );
                               },
                               size: size,
                               hintText: 'Barcode',

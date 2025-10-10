@@ -113,6 +113,28 @@ class TransactionReportStandardPrinter {
       }
       debugPrint("===== END DOCUMENT CONFIG INFO =====");
 
+      // Verify we're using Customer Statement config
+      if (billDocumentConfig.type != "Customer Statement") {
+        debugPrint("⚠️ WARNING: Expected 'Customer Statement' but got '${billDocumentConfig.type}'");
+      }
+
+      // Validate Customer Statement display configuration fields
+      debugPrint("===== CUSTOMER STATEMENT FIELD VALIDATION =====");
+      final expectedFields = [
+        'showHeader', 'showSubheader', 'showFooter', 'showDates',
+        'showCustomerName', 'showCustomerEmail', 'showCustomerPhone', 'showCustomerAddress',
+        'showTotalCredit', 'showTotalDebit', 'showBalance', 'showOrderNumber', 'showStatus', 'showTax'
+      ];
+      
+      for (String field in expectedFields) {
+        if (displayConfig?.containsKey(field) == true) {
+          debugPrint("✅ $field: visible=${displayConfig![field]!.visible}, value=${displayConfig[field]!.value}");
+        } else {
+          debugPrint("❌ $field: NOT FOUND in display configuration");
+        }
+      }
+      debugPrint("===== END FIELD VALIDATION =====");
+
       _debugPrintTemplateSettings(displayConfig);
 
       // Create fallback display configuration if null
@@ -208,15 +230,15 @@ class TransactionReportStandardPrinter {
         height: 2, // Add line height for better spacing between lines
       );
       final tableHeaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+        fontSize: selectedPaperSize == 'A5' ? 7.0 : 12.0,
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.white,
-        height: 2, // Add line height for better spacing between lines
+        height: 1.5, // Reduced line height for A5
       );
       final tableDataStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+        fontSize: selectedPaperSize == 'A5' ? 6.5 : 11.0,
         color: PdfColors.black,
-        height: 2, // Add line height for better spacing between lines
+        height: 1.5, // Reduced line height for A5
       );
       final summaryStyle = pw.TextStyle(
         fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
@@ -622,11 +644,11 @@ class TransactionReportStandardPrinter {
         runningBalance += amount;
       }
 
-      // Format date to match PHP template (d M Y, h:i A)
+      // Format date to show only date (no time)
       String formattedDate = date;
       try {
         // Try to parse and format the date if it's in a standard format
-        formattedDate = DateHelper.formatISODateToIST(date);
+        formattedDate = DateHelper.formatISODate(date);
       } catch (e) {
         // Keep original date if parsing fails
         formattedDate = date;
@@ -744,26 +766,27 @@ class TransactionReportStandardPrinter {
       tableHeaders.add(pw.Text('Status', style: headerStyle));
     }
 
-    // Define column widths - adjust these values to change column widths
+    // Define column widths - adjust based on paper size
+    final bool isA5 = contentStyle.fontSize! <= 7.0; // Detect A5 by font size
     final Map<int, pw.TableColumnWidth> columnWidths = {
       // Sl.No column - narrow
-      0: const pw.FixedColumnWidth(60),
+      0: pw.FixedColumnWidth(isA5 ? 30 : 60),
       // Date column - medium
-      1: const pw.FixedColumnWidth(100),
+      1: pw.FixedColumnWidth(isA5 ? 60 : 100),
       // Order Number column - wide
-      2: const pw.FixedColumnWidth(100),
+      2: pw.FixedColumnWidth(isA5 ? 65 : 100),
       // Transaction Type column - medium
-      3: const pw.FixedColumnWidth(110),
+      3: pw.FixedColumnWidth(isA5 ? 70 : 110),
       // Debit column - narrow
-      4: const pw.FixedColumnWidth(70),
+      4: pw.FixedColumnWidth(isA5 ? 45 : 70),
       // Credit column - narrow
-      5: const pw.FixedColumnWidth(70),
+      5: pw.FixedColumnWidth(isA5 ? 45 : 70),
       // Tax column (if enabled) - narrow
-      6: const pw.FixedColumnWidth(50),
+      6: pw.FixedColumnWidth(isA5 ? 30 : 50),
       // Balance column - medium
-      7: const pw.FixedColumnWidth(80),
+      7: pw.FixedColumnWidth(isA5 ? 50 : 80),
       // Status column (if enabled) - medium
-      8: const pw.FixedColumnWidth(70),
+      8: pw.FixedColumnWidth(isA5 ? 45 : 70),
     };
 
     // Adjust column indices if Tax or Status columns are not visible
@@ -805,10 +828,9 @@ class TransactionReportStandardPrinter {
           ),
           children: tableHeaders
               .map((header) => pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical:
-                          12, // Increased vertical padding for better line spacing
+                    padding: pw.EdgeInsets.symmetric(
+                      horizontal: isA5 ? 4 : 8,
+                      vertical: isA5 ? 6 : 12, // Reduced padding for A5
                     ),
                     child: pw.Center(
                       child: header,
@@ -826,10 +848,9 @@ class TransactionReportStandardPrinter {
             ),
             children: row
                 .map((cell) => pw.Padding(
-                      padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical:
-                            12, // Increased vertical padding for better line spacing
+                      padding: pw.EdgeInsets.symmetric(
+                        horizontal: isA5 ? 4 : 8,
+                        vertical: isA5 ? 6 : 12, // Reduced padding for A5
                       ),
                       child: pw.Center(
                         child: cell,
@@ -940,18 +961,10 @@ class TransactionReportStandardPrinter {
       padding: const pw.EdgeInsets.symmetric(
           vertical: 0, horizontal: 8), // Reduced padding
       child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: pw.MainAxisAlignment.center,
         children: [
           pw.Text(
             'Date: ${DateHelper.formatISODate(orderDate)}',
-            style: pw.TextStyle(
-              fontSize:
-                  selectedPaperSize == 'A5' ? 7.0 : 9.0, // Reduced font size
-              fontWeight: pw.FontWeight.bold,
-            ),
-          ),
-          pw.Text(
-            'Time: ${DateHelper.formatISODateToIST(orderDate)}',
             style: pw.TextStyle(
               fontSize:
                   selectedPaperSize == 'A5' ? 7.0 : 9.0, // Reduced font size
@@ -1120,13 +1133,13 @@ class TransactionReportStandardPrinter {
   ) {
     // Create styles to match screenshot
     final customerDetailStyle = pw.TextStyle(
-      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
       color: PdfColors.black,
     );
 
     // Create a style for customer information header
     final customerInfoHeaderStyle = pw.TextStyle(
-      fontSize: selectedPaperSize == 'A5' ? 12.0 : 14.0,
+      fontSize: selectedPaperSize == 'A5' ? 9.0 : 14.0,
       fontWeight: pw.FontWeight.bold,
       color: PdfColors.grey700,
     );
@@ -1340,14 +1353,14 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     'Total Credit: ',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
                       color: PdfColors.grey700,
                     ),
                   ),
                   pw.Text(
                     '${totalCredit.toStringAsFixed(2)}',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
                       color: PdfColors.grey700,
                     ),
                   ),
@@ -1361,14 +1374,14 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     'Total Debit: ',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
                       color: PdfColors.grey700,
                     ),
                   ),
                   pw.Text(
                     '${totalDebit.toStringAsFixed(2)}',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                      fontSize: selectedPaperSize == 'A5' ? 8.0 : 12.0,
                       color: PdfColors.grey700,
                     ),
                   ),
@@ -1382,7 +1395,7 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     'Balance: ',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
+                      fontSize: selectedPaperSize == 'A5' ? 9.0 : 13.0,
                       fontWeight: pw.FontWeight.bold,
                       color: PdfColors.black,
                     ),
@@ -1390,7 +1403,7 @@ class TransactionReportStandardPrinter {
                   pw.Text(
                     '${balance.toStringAsFixed(2)}',
                     style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
+                      fontSize: selectedPaperSize == 'A5' ? 9.0 : 13.0,
                       fontWeight: pw.FontWeight.bold,
                       color: PdfColors.black,
                     ),
@@ -1493,12 +1506,12 @@ class TransactionReportStandardPrinter {
         color: PdfColors.grey600,
       );
       final tableHeaderStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+        fontSize: selectedPaperSize == 'A5' ? 7.0 : 12.0,
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.white,
       );
       final tableDataStyle = pw.TextStyle(
-        fontSize: selectedPaperSize == 'A5' ? 9.0 : 11.0,
+        fontSize: selectedPaperSize == 'A5' ? 6.5 : 11.0,
         color: PdfColors.black,
       );
       final summaryStyle = pw.TextStyle(
@@ -1523,10 +1536,11 @@ class TransactionReportStandardPrinter {
               children: [
                 pw.Divider(color: PdfColors.grey300),
                 pw.SizedBox(height: 5),
-                // Show footer if enabled
+                // Show footer if enabled - use billDocumentConfig values as fallback
                 if (updatedSettings?['showFooter']?.visible == true)
                   pw.Text(
                     (updatedSettings?['showFooter']?.value as String?) ??
+                        billDocumentConfig.footer ??
                         'This is a computer-generated document. No signature is required.',
                     style: const pw.TextStyle(
                       fontSize: 8,
@@ -1610,8 +1624,9 @@ class TransactionReportStandardPrinter {
                           pw.Text(
                             'From: ${fromDate ?? 'N/A'}',
                             style: pw.TextStyle(
-                              fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                              fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
                               color: PdfColor.fromHex('#2d3748'),
+                              fontWeight: pw.FontWeight.bold,
                             ),
                           ),
                           pw.SizedBox(
@@ -1619,8 +1634,9 @@ class TransactionReportStandardPrinter {
                           pw.Text(
                             'To: ${toDate ?? 'N/A'}',
                             style: pw.TextStyle(
-                              fontSize: selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                              fontSize: selectedPaperSize == 'A5' ? 7.0 : 10.0,
                               color: PdfColor.fromHex('#2d3748'),
+                              fontWeight: pw.FontWeight.bold,
                             ),
                           ),
                         ],
@@ -1694,11 +1710,12 @@ class TransactionReportStandardPrinter {
   }
 
   // Create fallback display configuration when API config is null
+  // Based on Customer Statement API response structure
   Map<String, DisplayOption> _createFallbackDisplayConfig() {
     return {
-      'showHeader': DisplayOption(visible: true, value: null),
-      'showSubheader': DisplayOption(visible: true, value: null),
-      'showFooter': DisplayOption(visible: true, value: null),
+      'showHeader': DisplayOption(visible: true, value: 'EPosenke'),
+      'showSubheader': DisplayOption(visible: true, value: 'Customer Transaction Report'),
+      'showFooter': DisplayOption(visible: true, value: 'This is a computer-generated document. No signature is required.'),
       'showDates': DisplayOption(visible: true, value: null),
       'showCustomerName': DisplayOption(visible: true, value: null),
       'showCustomerEmail': DisplayOption(visible: true, value: null),

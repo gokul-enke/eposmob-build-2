@@ -74,13 +74,15 @@ class _AddStockScreenState extends State<AddStockScreen> {
       }
 
       // Load categories from CategoryProvider with caching (same as sidebar)
-      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+      final categoryProvider =
+          Provider.of<CategoryProvider>(context, listen: false);
       if (!categoryProvider.isCategoriesLoaded) {
         debugPrint("📥 Loading categories from API...");
         await categoryProvider.listAllCategory();
         debugPrint("✅ Categories loaded and cached");
       } else {
-        debugPrint("📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
+        debugPrint(
+            "📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
       }
 
       // Load all stocks for local pagination
@@ -107,7 +109,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
 
   void _extractCategoriesAndStores() {
     final stockProvider = Provider.of<StockProvider>(context, listen: false);
-    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+    final categoryProvider =
+        Provider.of<CategoryProvider>(context, listen: false);
     final allStocks = stockProvider.allStocks;
 
     // Get categories from CategoryProvider (same as sidebar)
@@ -1183,8 +1186,11 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                         _buildTableCell(
                                                             '${stock.productName}'),
                                                         _buildTableCell(() {
-                                                          final barcode = stock.barCode ?? 'N/A';
-                                                          debugPrint('🔍 DISPLAY BARCODE: "${barcode}" for product: ${stock.productName}');
+                                                          final barcode =
+                                                              stock.barCode ??
+                                                                  'N/A';
+                                                          debugPrint(
+                                                              '🔍 DISPLAY BARCODE: "${barcode}" for product: ${stock.productName}');
                                                           return barcode;
                                                         }()), // Updated to show actual barcode
                                                         _buildTableCell(

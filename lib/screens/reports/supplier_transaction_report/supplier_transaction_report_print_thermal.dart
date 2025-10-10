@@ -172,22 +172,14 @@ class SupplierTransactionReportThermalPrinter {
       bytes += _buildDateTimeRow(generator, orderDate, selectedFontType);
       debugPrint("Date/time row built successfully");
 
-      // Terms & Conditions
-      if (displayConfig?['showTermsConditions']?.visible == true) {
-        debugPrint("Building terms & conditions...");
-        bytes += _buildTermsConditions(generator, displayConfig,
-            billDocumentConfig, selectedPaperSize, selectedFontType);
-        debugPrint("Terms & conditions built successfully");
-      } else {
-        debugPrint("Skipping Terms & Conditions, disabled in settings");
-      }
+      // Note: Terms & Conditions and Thank You Message are not available in Supplier Statement template
+      // These fields are only available in Bill template, not Supplier Statement template
 
-      // Thank You Message (moved to end after Terms & Conditions)
-      if (displayConfig?['showThankYouMessage']?.visible == true) {
-        debugPrint("Building thank you message...");
-        bytes +=
-            _buildThankYouMessage(generator, displayConfig, selectedFontType);
-        debugPrint("Thank you message built successfully");
+      // Footer
+      if (displayConfig?['showFooter']?.visible == true) {
+        debugPrint("Building footer...");
+        bytes += _buildFooter(generator, displayConfig, billDocumentConfig, selectedFontType);
+        debugPrint("Footer built successfully");
       }
 
       // Cut the receipt
@@ -233,22 +225,32 @@ class SupplierTransactionReportThermalPrinter {
         Provider.of<AppSettingsProvider>(context, listen: false);
     final appSettings = appSettingsProvider.appSettings;
 
-    // Store Name - Always show "EPosenke"
-    bytes += generator.text('EPosenke',
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.center,
-            bold: true,
-            width: textSizeMedium,
-            height: textSizeMedium));
+    // Show header if enabled
+    if (displayConfig?['showHeader']?.visible == true) {
+      String headerText = (displayConfig?['showHeader']?.value as String?) ??
+          docConfig?.header ??
+          'EPosenke';
+      bytes += generator.text(headerText,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: true,
+              width: textSizeMedium,
+              height: textSizeMedium));
+    }
 
-    // Description - Always show "Supplier Transaction Report"
-    bytes += generator.text('Supplier Transaction Report',
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.center,
-            bold: false,
-            height: textSizeSmall));
+    // Show subheader if enabled
+    if (displayConfig?['showSubheader']?.visible == true) {
+      String subheaderText = (displayConfig?['showSubheader']?.value as String?) ??
+          docConfig?.subheader ??
+          'Supplier Transaction Report';
+      bytes += generator.text(subheaderText,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.center,
+              bold: false,
+              height: textSizeSmall));
+    }
 
     bytes += generator.emptyLines(1);
 
@@ -393,9 +395,9 @@ class SupplierTransactionReportThermalPrinter {
     totalHeaderWidth += 1;
     debugPrint("Added SL column with width 1, total width: $totalHeaderWidth");
 
-    // Add Reference column
+    // Add Date column
     headerColumns.add(PosColumn(
-        text: 'Reference',
+        text: 'Date',
         width: 2,
         styles: PosStyles(
             fontType: fontType,
@@ -403,8 +405,20 @@ class SupplierTransactionReportThermalPrinter {
             bold: true,
             height: is58mm ? textSizeSmall : textSizeSmall)));
     totalHeaderWidth += 2;
+    debugPrint("Added Date column with width 2, total width: $totalHeaderWidth");
+
+    // Add Reference column
+    headerColumns.add(PosColumn(
+        text: 'Reference',
+        width: 1,
+        styles: PosStyles(
+            fontType: fontType,
+            align: PosAlign.left,
+            bold: true,
+            height: is58mm ? textSizeSmall : textSizeSmall)));
+    totalHeaderWidth += 1;
     debugPrint(
-        "Added Reference column with width 2, total width: $totalHeaderWidth");
+        "Added Reference column with width 1, total width: $totalHeaderWidth");
 
     // Add Transaction Type column
     headerColumns.add(PosColumn(
@@ -448,15 +462,15 @@ class SupplierTransactionReportThermalPrinter {
     // Add Payment Method column
     headerColumns.add(PosColumn(
         text: 'Payment',
-        width: 2,
+        width: 1,
         styles: PosStyles(
             fontType: fontType,
             align: PosAlign.left,
             bold: true,
             height: is58mm ? textSizeSmall : textSizeSmall)));
-    totalHeaderWidth += 2;
+    totalHeaderWidth += 1;
     debugPrint(
-        "Added Payment Method column with width 2, total width: $totalHeaderWidth");
+        "Added Payment Method column with width 1, total width: $totalHeaderWidth");
 
     // Add Status column if enabled
     if (displayConfig?['showStatus']?.visible == true) {
@@ -499,8 +513,19 @@ class SupplierTransactionReportThermalPrinter {
       String paymentMethod = item.paymentMethod;
 
       String slNumber = (i + 1).toString();
+      
+      // Format date to show only date (not time)
+      String formattedDate = date;
+      try {
+        // Try to parse and format the date if it's in a standard format
+        formattedDate = DateHelper.formatISODate(date);
+      } catch (e) {
+        // Keep original date if parsing fails
+        formattedDate = date;
+      }
+      
       debugPrint(
-          "Item $i: Reference: $reference, Type: $transactionType, Amount: $amount, Status: $status, Date: $date");
+          "Item $i: Reference: $reference, Type: $transactionType, Amount: $amount, Status: $status, Date: $formattedDate");
 
       // Create row with all transaction details
       List<PosColumn> itemRow = [
@@ -513,8 +538,16 @@ class SupplierTransactionReportThermalPrinter {
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)),
         PosColumn(
-            text: reference,
+            text: formattedDate,
             width: 2,
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                bold: false,
+                height: is58mm ? textSizeSmall : textSizeSmall)),
+        PosColumn(
+            text: reference,
+            width: 1,
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,
@@ -546,7 +579,7 @@ class SupplierTransactionReportThermalPrinter {
                 height: is58mm ? textSizeSmall : textSizeSmall)),
         PosColumn(
             text: paymentMethod,
-            width: 2,
+            width: 1,
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,
@@ -566,7 +599,7 @@ class SupplierTransactionReportThermalPrinter {
                 height: is58mm ? textSizeSmall : textSizeSmall)));
       }
 
-      int itemRowWidth = 1 + 2 + 2 + 1 + 2 + 2 + (displayConfig?['showStatus']?.visible == true ? 2 : 0);
+      int itemRowWidth = 1 + 2 + 1 + 2 + 1 + 2 + 1 + (displayConfig?['showStatus']?.visible == true ? 2 : 0);
       debugPrint("Item row total width: $itemRowWidth");
       if (itemRowWidth != 12) {
         debugPrint(
@@ -658,21 +691,25 @@ class SupplierTransactionReportThermalPrinter {
     return bytes;
   }
 
-  List<int> _buildThankYouMessage(Generator generator,
-      Map<String, DisplayOption>? displayConfig, PosFontType fontType) {
+
+
+  List<int> _buildFooter(Generator generator,
+      Map<String, DisplayOption>? displayConfig, DocumentConfig? billDocumentConfig, PosFontType fontType) {
     List<int> bytes = [];
 
-    if (displayConfig?['showThankYouMessage']?.visible == true) {
-      final message = displayConfig?['showThankYouMessage']?.value as String? ??
-          'Thank You... Visit Again';
+    if (displayConfig?['showFooter']?.visible == true) {
+      final footerText = (displayConfig?['showFooter']?.value as String?) ??
+          billDocumentConfig?.footer ??
+          'This is a computer-generated document. No signature is required.';
+      
+      bytes += generator.hr();
       bytes += generator.text(
-          message.isNotEmpty ? message : 'Thank You... Visit Again',
+          footerText,
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall,
-              width: textSizeSmall));
+              bold: false,
+              height: textSizeSmall));
     }
 
     return bytes;
@@ -721,109 +758,7 @@ class SupplierTransactionReportThermalPrinter {
     return bytes;
   }
 
-  List<int> _buildTermsConditions(
-      Generator generator,
-      Map<String, DisplayOption>? displayConfig,
-      DocumentConfig? billDocumentConfig,
-      String selectedPaperSize,
-      PosFontType fontType) {
-    if (displayConfig?['showTermsConditions']?.visible != true) {
-      debugPrint("Terms & Conditions disabled in settings, skipping");
-      return [];
-    }
 
-    // Get terms from displayConfig value first, then fallback to billDocumentConfig
-    String? terms = displayConfig?['showTermsConditions']?.value as String?;
-    if (terms == null || terms.trim().isEmpty) {
-      // Fallback to billDocumentConfig terms
-      terms = billDocumentConfig?.terms;
-    }
-
-    if (terms == null || terms.trim().isEmpty) {
-      debugPrint("No Terms & Conditions data available from API, skipping");
-      return [];
-    }
-
-    debugPrint(
-        "Generating Terms & Conditions (enabled in settings with data): $terms");
-
-    List<int> bytes = [];
-
-    // Add separator line before terms
-    bytes += generator.hr();
-
-    // Use the terms from displayConfig or DocumentConfig
-    List<String> termsList = terms.split('\n');
-
-    for (var term in termsList) {
-      if (term.trim().isNotEmpty) {
-        String termText = term.trim();
-
-        // Calculate character limit based on 48-character printer width
-        int maxCharsPerLine =
-            48; // Based on your printer's actual character width
-
-        if (termText.length <= maxCharsPerLine) {
-          // Text fits in one line
-          bytes += generator.row([
-            PosColumn(
-                text: termText,
-                width: 12,
-                styles: PosStyles(
-                    fontType: fontType,
-                    align: PosAlign.left,
-                    bold: false,
-                    height: textSizeSmall)),
-          ]);
-        } else {
-          // Text needs to be wrapped
-          List<String> wrappedLines = _wrapText(termText, maxCharsPerLine);
-          for (var line in wrappedLines) {
-            bytes += generator.row([
-              PosColumn(
-                  text: line,
-                  width: 12,
-                  styles: PosStyles(
-                      fontType: fontType,
-                      align: PosAlign.left,
-                      bold: false,
-                      height: textSizeSmall)),
-            ]);
-          }
-        }
-      }
-    }
-
-    return bytes;
-  }
-
-  // Helper method to wrap text to fit within character limits
-  List<String> _wrapText(String text, int maxCharsPerLine) {
-    List<String> lines = [];
-    List<String> words = text.split(' ');
-    String currentLine = '';
-
-    for (String word in words) {
-      if ((currentLine + word).length <= maxCharsPerLine) {
-        currentLine += (currentLine.isEmpty ? '' : ' ') + word;
-      } else {
-        if (currentLine.isNotEmpty) {
-          lines.add(currentLine);
-          currentLine = word;
-        } else {
-          // Word is longer than max chars, split it
-          lines.add(word.substring(0, maxCharsPerLine));
-          currentLine = word.substring(maxCharsPerLine);
-        }
-      }
-    }
-
-    if (currentLine.isNotEmpty) {
-      lines.add(currentLine);
-    }
-
-    return lines;
-  }
 
   Future<void> _connectToPrinter(BluetoothPrinter printer) async {
     switch (printer.typePrinter) {
