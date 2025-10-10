@@ -45,7 +45,6 @@ class StockItem {
   String rack;
   DateTime expDate;
 
-  // Additional details for modal
   String batchNumber;
   String supplier;
   int supplierId;
@@ -53,16 +52,18 @@ class StockItem {
   Category? categoryData;
   Supplier? supplierData;
   bool isExpanded; // Add this field for expandable functionality
+  bool isEditing; // Add this field to toggle edit mode for already-added rows
   String? selectedUnit; // Add selected unit for dropdown
   String? selectedRack; // Add selected rack for dropdown
   bool isSuccessfullyAdded; // Add this field to track successful addition
   Map<String, dynamic>? apiResponse; // Add this field to store API response
   bool taxInclude; // Add this field for tax inclusion toggle
+
   String retailPriceTax; // Add this for retail price with tax
   String wholesalePriceTax; // Add this for wholesale price with tax
   Map<String, dynamic>? calculatedTaxData; // Store calculated tax data
   bool isHidden; // Add this field to track if item is hidden (soft delete)
-
+  
   StockItem({
     this.barcode = '',
     this.category = '',
@@ -81,16 +82,17 @@ class StockItem {
     this.productData,
     this.categoryData,
     this.supplierData,
-    this.isExpanded = false, // Initialize as collapsed
-    this.selectedUnit, // Initialize selected unit
-    this.selectedRack, // Initialize selected rack
-    this.isSuccessfullyAdded = false, // Initialize as not added
-    this.apiResponse, // Initialize apiResponse
-    this.taxInclude = false, // Initialize as false
-    this.retailPriceTax = '0.00', // Initialize as 0.00
-    this.wholesalePriceTax = '0.00', // Initialize as 0.00
-    this.calculatedTaxData, // Initialize
-    this.isHidden = false, // Initialize as not hidden
+    this.isExpanded = false,
+    this.isEditing = false,
+    this.selectedUnit,
+    this.selectedRack,
+    this.isSuccessfullyAdded = false,
+    this.apiResponse,
+    this.taxInclude = false,
+    this.retailPriceTax = '0.00',
+    this.wholesalePriceTax = '0.00',
+    this.calculatedTaxData,
+    this.isHidden = false,
   }) : expDate = expDate ?? DateTime.now().add(const Duration(days: 365));
 }
 
@@ -121,6 +123,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   final Map<int, TextEditingController> mrpControllers = {};
   final Map<int, TextEditingController> wholesaleControllers = {};
   final Map<int, TextEditingController> batchNumberControllers = {};
+  // Search controllers for expanded dropdowns
+  final Map<int, TextEditingController> unitSearchControllers = {};
+  final Map<int, TextEditingController> rackSearchControllers = {};
 
   // Focus nodes for barcode and quantity fields
   final Map<int, FocusNode> barcodeFocusNodes = {};
@@ -140,30 +145,103 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   // Payment method state
   RestrictedPaymentData paymentData = RestrictedPaymentData();
   double totalStockValue = 0.0;
+  bool _needsRecalculation =
+      false; // Flag to track if total needs recalculation
 
-  // Debug logging throttles for dropdown rebuild spam control
-  final Map<int, int> _lastDropdownProductCount = {}; // row index -> count
-  final Map<int, int?> _lastDropdownCategoryId = {}; // row index -> categoryId
-  final Map<int, DateTime> _lastDropdownLogTime = {}; // row index -> last log time
+  // Debounce timer for quantity input
+  Timer? _quantityDebounceTimer;
 
-  bool _shouldLogProductDropdown(int index, int productCount, int? categoryId) {
-    final now = DateTime.now();
-    final lastCount = _lastDropdownProductCount[index];
-    final lastCat = _lastDropdownCategoryId[index];
-    final lastTime = _lastDropdownLogTime[index];
+  // Cache for filtered products per category
+  final Map<int?, List<GetProduct>> _filteredProductsCache = {};
 
-    final changed = lastCount != productCount || lastCat != categoryId;
-    final elapsed = lastTime == null
-        ? true
-        : now.difference(lastTime).inMilliseconds > 2000; // 2s throttle
+  // Performance optimization: Cache visible items and index mapping
+  List<StockItem> _cachedVisibleItems = [];
+  Map<int, int> _visibleToOriginalIndexMap = {};
+  bool _needsIndexRebuild = true;
 
-    if (changed || elapsed) {
-      _lastDropdownProductCount[index] = productCount;
-      _lastDropdownCategoryId[index] = categoryId;
-      _lastDropdownLogTime[index] = now;
-      return true;
+  // Clear product cache when category changes
+  void _clearProductCache() {
+    _filteredProductsCache.clear();
+  }
+
+  // Dispose and remove all controllers and focus nodes associated with a row index
+  void _disposeRowResources(int index) {
+    // Text controllers
+    if (categorySearchControllers.containsKey(index)) {
+      try { categorySearchControllers[index]!.dispose(); } catch (_) {}
+      categorySearchControllers.remove(index);
     }
-    return false;
+    if (productSearchControllers.containsKey(index)) {
+      try { productSearchControllers[index]!.dispose(); } catch (_) {}
+      productSearchControllers.remove(index);
+    }
+    if (barcodeControllers.containsKey(index)) {
+      try { barcodeControllers[index]!.dispose(); } catch (_) {}
+      barcodeControllers.remove(index);
+    }
+    if (quantityControllers.containsKey(index)) {
+      try { quantityControllers[index]!.dispose(); } catch (_) {}
+      quantityControllers.remove(index);
+    }
+    if (purchaseRateControllers.containsKey(index)) {
+      try { purchaseRateControllers[index]!.dispose(); } catch (_) {}
+      purchaseRateControllers.remove(index);
+    }
+    if (retailPriceControllers.containsKey(index)) {
+      try { retailPriceControllers[index]!.dispose(); } catch (_) {}
+      retailPriceControllers.remove(index);
+    }
+    if (mrpControllers.containsKey(index)) {
+      try { mrpControllers[index]!.dispose(); } catch (_) {}
+      mrpControllers.remove(index);
+    }
+    if (wholesaleControllers.containsKey(index)) {
+      try { wholesaleControllers[index]!.dispose(); } catch (_) {}
+      wholesaleControllers.remove(index);
+    }
+    if (batchNumberControllers.containsKey(index)) {
+      try { batchNumberControllers[index]!.dispose(); } catch (_) {}
+      batchNumberControllers.remove(index);
+    }
+    if (unitSearchControllers.containsKey(index)) {
+      try { unitSearchControllers[index]!.dispose(); } catch (_) {}
+      unitSearchControllers.remove(index);
+    }
+    if (rackSearchControllers.containsKey(index)) {
+      try { rackSearchControllers[index]!.dispose(); } catch (_) {}
+      rackSearchControllers.remove(index);
+    }
+
+    // Focus nodes
+    if (barcodeFocusNodes.containsKey(index)) {
+      try { barcodeFocusNodes[index]!.dispose(); } catch (_) {}
+      barcodeFocusNodes.remove(index);
+    }
+    if (quantityFocusNodes.containsKey(index)) {
+      try { quantityFocusNodes[index]!.dispose(); } catch (_) {}
+      quantityFocusNodes.remove(index);
+    }
+  }
+
+  // Rebuild index cache for performance optimization
+  void _rebuildIndexCache() {
+    _cachedVisibleItems.clear();
+    _visibleToOriginalIndexMap.clear();
+    
+    int visibleIndex = 0;
+    for (int i = 0; i < stockItems.length; i++) {
+      if (!stockItems[i].isHidden) {
+        _cachedVisibleItems.add(stockItems[i]);
+        _visibleToOriginalIndexMap[visibleIndex] = i;
+        visibleIndex++;
+      }
+    }
+    _needsIndexRebuild = false;
+  }
+
+  // Mark index cache as dirty when stock items change
+  void _markIndexCacheDirty() {
+    _needsIndexRebuild = true;
   }
 
   @override
@@ -213,8 +291,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   @override
   void dispose() {
-    // Dispose timer
-    _barcodeTimer?.cancel();
+    // Dispose timers
+    
+    _quantityDebounceTimer?.cancel();
 
     // Dispose all search controllers safely
     categorySearchControllers.values.forEach((controller) {
@@ -433,7 +512,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         await categoryProvider.listAllCategory();
         debugPrint("✅ Categories loaded and cached");
       } else {
-        debugPrint("📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
+        debugPrint(
+            "📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
       }
     } catch (e) {
       debugPrint('Error loading categories: $e');
@@ -623,23 +703,23 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         // 1) Try by ID
         if (categoryId != null) {
           try {
-            matchingCategory = categoryList.firstWhere(
-                (c) => c.categoryId == categoryId);
+            matchingCategory =
+                categoryList.firstWhere((c) => c.categoryId == categoryId);
           } catch (_) {}
         }
         // 2) Try by slug
         if (matchingCategory == null && categorySlug != null) {
           try {
-            matchingCategory = categoryList.firstWhere(
-                (c) => (c.categorySlug ?? '') == categorySlug);
+            matchingCategory = categoryList
+                .firstWhere((c) => (c.categorySlug ?? '') == categorySlug);
           } catch (_) {}
         }
         // 3) Try by name (case-insensitive)
         if (matchingCategory == null && categoryName != null) {
           final target = categoryName.trim().toLowerCase();
           try {
-            matchingCategory = categoryList.firstWhere((c) =>
-                (c.categoryName ?? '').trim().toLowerCase() == target);
+            matchingCategory = categoryList.firstWhere(
+                (c) => (c.categoryName ?? '').trim().toLowerCase() == target);
           } catch (_) {}
         }
         // 4) Fallback to first non-ALL
@@ -770,7 +850,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'mrp': item.mrp.isNotEmpty ? item.mrp : item.salePrice,
         // Do not fallback wholesale to retail; save as empty string if not provided
         'wholesalePrice': item.wholesale.isNotEmpty ? item.wholesale : '',
-        'unit': item.selectedUnit, // Changed to send unit ID instead of unit name
+        'unit':
+            item.selectedUnit, // Changed to send unit ID instead of unit name
         'supplierId': selectedSupplier!.id,
         'storeId': selectedStore!.id,
         'expiryDate': DateFormat('yyyy-MM-dd').format(item.expDate),
@@ -825,9 +906,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           };
         });
 
-        // Recalculate total stock value when single item is successfully added
+        // Mark for recalculation when single item is successfully added
+        _markForRecalculation();
         _calculateTotalStockValue();
-
         showScaffold(
             context: context, message: 'Stock item added to pending list');
         debugPrint('✅ SINGLE STOCK ITEM MARKED AS SUCCESSFULLY ADDED LOCALLY');
@@ -836,6 +917,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         debugPrint('🔄 AUTO-ADDING NEW ROW AFTER SUCCESSFUL LOCAL ADDITION');
         setState(() {
           stockItems.add(StockItem());
+          _markIndexCacheDirty(); // Mark cache as dirty
         });
         debugPrint(
             '✅ NEW EMPTY ROW ADDED AUTOMATICALLY. Total items: ${stockItems.length}');
@@ -912,6 +994,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
       // Reset stock items to one empty row with no success flags
       stockItems = [StockItem(isSuccessfullyAdded: false)];
+      _markIndexCacheDirty(); // Mark cache as dirty
       debugPrint('✅ STOCK ITEMS RESET TO 1 EMPTY ROW (NO SUCCESS FLAGS)');
 
       // Reset payment data
@@ -1080,6 +1163,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 // Soft delete - hide the item instead of removing it
                 setState(() {
                   stockItems[index].isHidden = true;
+                  _markIndexCacheDirty(); // Mark cache as dirty
                   debugPrint(
                       '🗑️ SOFT DELETED (HIDDEN) STOCK ITEM AT INDEX $index');
                 });
@@ -1107,20 +1191,24 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   void _calculateTotalStockValue() {
     double total = 0.0;
-    for (StockItem item in stockItems) {
-      if (item.isSuccessfullyAdded &&
-          !item.isHidden &&
-          item.purchaseRate.isNotEmpty) {
+    // OPTIMIZED: Use cached visible items instead of iterating all items
+    for (StockItem item in _cachedVisibleItems) {
+      if (item.isSuccessfullyAdded && item.purchaseRate.isNotEmpty) {
         double purchaseRate = double.tryParse(item.purchaseRate) ?? 0.0;
         double quantity = double.tryParse(item.quantity) ?? 0.0;
         total += (purchaseRate * quantity);
       }
     }
-    if (mounted) {
+    // Only update if changed (with small epsilon for floating point comparison)
+    if (mounted && (totalStockValue - total).abs() > 0.01) {
       setState(() {
         totalStockValue = total;
       });
     }
+  }
+
+  void _markForRecalculation() {
+    _needsRecalculation = true;
   }
 
   /// Convert RestrictedPaymentData to API format
@@ -1479,10 +1567,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
 
-    // Calculate total stock value outside of any Consumer build method
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _calculateTotalStockValue();
-    });
+    // Calculate total stock value only when needed
+    if (_needsRecalculation) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _calculateTotalStockValue();
+        _needsRecalculation = false;
+      });
+    }
 
     return SafeArea(
       child: Container(
@@ -1667,13 +1758,15 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   child: InkWell(
                     onTap: () async {
                       debugPrint("ADD NEW SUPPLIER BUTTON PRESSED");
-                      final result = await showAddSupplierModal(context, MediaQuery.of(context).size, showCreateAnother: false);
+                      final result = await showAddSupplierModal(
+                          context, MediaQuery.of(context).size,
+                          showCreateAnother: false);
                       if (result != null &&
                           result is Map &&
                           result['status'] == 'success') {
                         final createdPhone = (result['phone'] ?? '').toString();
                         final createdName = (result['name'] ?? '').toString();
-                        
+
                         // Try to fetch the newly created supplier by phone and auto-select
                         try {
                           String? accessToken =
@@ -1681,21 +1774,27 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                   .token;
                           if (accessToken != null) {
                             // Refresh supplier list to include the new supplier
-                            await Provider.of<SupplierProvider>(context, listen: false)
+                            await Provider.of<SupplierProvider>(context,
+                                    listen: false)
                                 .fetchSuppliers(accessToken: accessToken);
-                            
+
                             // Find the newly created supplier in the updated list
-                            final updatedSupplierList = Provider.of<SupplierProvider>(context, listen: false).supplierList ?? [];
+                            final updatedSupplierList =
+                                Provider.of<SupplierProvider>(context,
+                                            listen: false)
+                                        .supplierList ??
+                                    [];
                             final newSupplier = updatedSupplierList.firstWhere(
                               (supplier) => supplier.phone == createdPhone,
                               orElse: () => updatedSupplierList.first,
                             );
-                            
+
                             setState(() {
                               selectedSupplier = newSupplier;
                             });
-                            
-                            debugPrint("✅ NEW SUPPLIER AUTO-SELECTED: ${newSupplier.name}");
+
+                            debugPrint(
+                                "✅ NEW SUPPLIER AUTO-SELECTED: ${newSupplier.name}");
                           }
                         } catch (e) {
                           debugPrint("❌ ERROR AUTO-SELECTING NEW SUPPLIER: $e");
@@ -1705,11 +1804,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                 Provider.of<AuthModel>(context, listen: false)
                                     .token;
                             if (accessToken != null) {
-                              await Provider.of<SupplierProvider>(context, listen: false)
+                              await Provider.of<SupplierProvider>(context,
+                                      listen: false)
                                   .fetchSuppliers(accessToken: accessToken);
                             }
                           } catch (refreshError) {
-                            debugPrint("❌ ERROR REFRESHING SUPPLIER LIST: $refreshError");
+                            debugPrint(
+                                "❌ ERROR REFRESHING SUPPLIER LIST: $refreshError");
                           }
                         }
                       }
@@ -1781,31 +1882,33 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-  /// Get visible (non-hidden) stock items
+  /// Get visible (non-hidden) stock items - OPTIMIZED with caching
   List<StockItem> get visibleStockItems {
-    return stockItems.where((item) => !item.isHidden).toList();
+    if (_needsIndexRebuild) {
+      _rebuildIndexCache();
+    }
+    return _cachedVisibleItems;
   }
 
-  /// Get the original index of a visible item
+  /// Get the original index of a visible item - OPTIMIZED with O(1) lookup
   int getOriginalIndex(int visibleIndex) {
-    int visibleCount = 0;
-    for (int i = 0; i < stockItems.length; i++) {
-      if (!stockItems[i].isHidden) {
-        if (visibleCount == visibleIndex) {
-          return i;
-        }
-        visibleCount++;
-      }
+    if (_needsIndexRebuild) {
+      _rebuildIndexCache();
     }
-    return -1; // Should not happen
+    return _visibleToOriginalIndexMap[visibleIndex] ?? -1;
   }
 
   Widget _buildStockTable() {
-    return Column(
-      children: List.generate(visibleStockItems.length, (visibleIndex) {
+    final visibleItems = visibleStockItems;
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: visibleItems.length,
+      itemBuilder: (context, visibleIndex) {
         int originalIndex = getOriginalIndex(visibleIndex);
-        return _buildStockRow(originalIndex, visibleIndex);
-      }),
+        // Add key for better performance - prevents unnecessary rebuilds
+        return _buildStockRow(originalIndex, visibleIndex, key: ValueKey('stock_row_$originalIndex'));
+      },
     );
   }
 
@@ -2227,10 +2330,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-  Widget _buildStockRow(int index, int visibleIndex) {
+  Widget _buildStockRow(int index, int visibleIndex, {Key? key}) {
     final item = stockItems[index];
 
     return BuildBoxShadowContainer(
+      key: key,
       circleRadius: 7,
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -2348,14 +2452,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                               _getBarcodeController(index).text.length,
                         );
                       },
-                      onChanged: (value) {
-                        setState(() {
-                          stockItems[index].barcode = value;
-                        });
-                        // Auto-fill fields when barcode is entered
+                      onFieldSubmitted: (value) {
+                        // Update and auto-fill only on submit
+                        stockItems[index].barcode = value;
                         _autoFillFromBarcode(index, value);
-                        // Update pending item if already added
                         _updatePendingStockItem(index);
+                        if (mounted) setState(() {});
                       },
                     ),
                   ),
@@ -2411,11 +2513,22 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         );
                       },
                       onChanged: (value) {
-                        setState(() {
-                          stockItems[index].quantity = value;
+                        // Update the value immediately for responsive UI
+                        stockItems[index].quantity = value;
+
+                        // Debounce the heavy operations
+                        _quantityDebounceTimer?.cancel();
+                        _quantityDebounceTimer =
+                            Timer(const Duration(milliseconds: 300), () {
+                          if (mounted) {
+                            setState(() {
+                              // Update pending item if already added
+                              _updatePendingStockItem(index);
+                              // Mark for recalculation
+                              _markForRecalculation();
+                            });
+                          }
                         });
-                        // Update pending item if already added
-                        _updatePendingStockItem(index);
                       },
                     ),
                   ),
@@ -2661,9 +2774,6 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-  // Auto-fill method for barcode scanning
-  Timer? _barcodeTimer;
-
   void _autoFillFromBarcode(int index, String barcode) {
     debugPrint('🔍 BARCODE AUTO-FILL TRIGGERED');
     debugPrint('   - Row index: $index');
@@ -2674,13 +2784,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       return;
     }
 
-    // Cancel previous timer to debounce rapid barcode inputs
-    _barcodeTimer?.cancel();
-
-    // Add delay to prevent multiple rapid API calls during barcode scanning
-    _barcodeTimer = Timer(const Duration(milliseconds: 500), () {
-      _performBarcodeAutoFill(index, barcode);
-    });
+    // Directly perform auto-fill on submit
+    _performBarcodeAutoFill(index, barcode);
   }
 
   Future<void> _performBarcodeAutoFill(int index, String barcode) async {
@@ -2729,7 +2834,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           }
           if (categoryList != null && categoryList.isNotEmpty) {
             // Debug print all loaded categories for visibility
-            debugPrint('📚 Loaded categories for matching (${categoryList.length}):');
+            debugPrint(
+                '📚 Loaded categories for matching (${categoryList.length}):');
             for (final cat in categoryList) {
               debugPrint(
                   '   - ID: ${cat.categoryId}, Name: ${cat.categoryName}, Slug: ${cat.categorySlug}');
@@ -2739,20 +2845,24 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             // 1) Try match by product.categoryId first
             if (localProduct.categoryId != null) {
               try {
-                matchingCategory = categoryList.firstWhere(
-                    (c) => c.categoryId == localProduct.categoryId);
+                matchingCategory = categoryList
+                    .firstWhere((c) => c.categoryId == localProduct.categoryId);
               } catch (_) {}
             }
             // 2) Try by slug
-            if (matchingCategory == null && localProduct.category?.slug != null) {
+            if (matchingCategory == null &&
+                localProduct.category?.slug != null) {
               try {
                 matchingCategory = categoryList.firstWhere((c) =>
-                    (c.categorySlug ?? '') == (localProduct.category!.slug ?? ''));
+                    (c.categorySlug ?? '') ==
+                    (localProduct.category!.slug ?? ''));
               } catch (_) {}
             }
             // 3) Try by name (case-insensitive)
-            if (matchingCategory == null && localProduct.category?.name != null) {
-              final target = (localProduct.category!.name ?? '').trim().toLowerCase();
+            if (matchingCategory == null &&
+                localProduct.category?.name != null) {
+              final target =
+                  (localProduct.category!.name ?? '').trim().toLowerCase();
               try {
                 matchingCategory = categoryList.firstWhere((c) =>
                     (c.categoryName ?? '').trim().toLowerCase() == target);
@@ -2771,7 +2881,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             final mc = matchingCategory ?? categoryList.first;
             stockItems[index].categoryData = mc;
             stockItems[index].category = mc.categoryName ?? '';
-            if (localProduct.categoryId != null && mc.categoryId != localProduct.categoryId) {
+            if (localProduct.categoryId != null &&
+                mc.categoryId != localProduct.categoryId) {
               debugPrint(
                   '⚠️ Category mismatch: product.categoryId=${localProduct.categoryId} but matched categoryId=${mc.categoryId}. This may filter out the product from dropdown.');
             }
@@ -2823,31 +2934,37 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
         // Auto-fill purchase rate: use only product-level purchasePrice; do not fall back to stock entries
         final String? computedPurchasePrice = localProduct.purchasePrice;
-        if (computedPurchasePrice != null && computedPurchasePrice.toString().isNotEmpty) {
+        if (computedPurchasePrice != null &&
+            computedPurchasePrice.toString().isNotEmpty) {
           stockItems[index].purchaseRate = computedPurchasePrice.toString();
-          debugPrint('   - Purchase Rate (from product): ${stockItems[index].purchaseRate}');
+          debugPrint(
+              '   - Purchase Rate (from product): ${stockItems[index].purchaseRate}');
         } else {
-          debugPrint('   - Purchase Rate: not available on product, leaving empty');
+          debugPrint(
+              '   - Purchase Rate: not available on product, leaving empty');
         }
 
         // Do not set wholesale price by default; only set if you have a meaningful value in your model
         // Currently no explicit wholesale field in GetProduct; leave as-is to avoid defaults
         if (stockItems[index].wholesale.isNotEmpty) {
-          debugPrint('   - Wholesale Price (pre-existing): ${stockItems[index].wholesale}');
+          debugPrint(
+              '   - Wholesale Price (pre-existing): ${stockItems[index].wholesale}');
         } else {
           debugPrint('   - Wholesale Price: not available, leaving empty');
         }
 
         // Do not set minimum units for wholesale by default; leave as-is
         if (stockItems[index].batchNumber.isNotEmpty) {
-          debugPrint('   - Batch Number (pre-existing): ${stockItems[index].batchNumber}');
+          debugPrint(
+              '   - Batch Number (pre-existing): ${stockItems[index].batchNumber}');
         } else {
           debugPrint('   - Batch Number: not available, leaving empty');
         }
 
         // Update controllers with new values only when non-empty
         if (stockItems[index].purchaseRate.isNotEmpty) {
-          _getPurchaseRateController(index).text = stockItems[index].purchaseRate;
+          _getPurchaseRateController(index).text =
+              stockItems[index].purchaseRate;
         }
         if (stockItems[index].wholesale.isNotEmpty) {
           _getWholesaleController(index).text = stockItems[index].wholesale;
@@ -2930,11 +3047,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           }
 
           final String newBarcode = createdProduct.barcode ?? barcode;
-          debugPrint('🔄 PRODUCT CREATED FROM MODAL. RETRYING AUTO-FILL WITH BARCODE: $newBarcode');
+          debugPrint(
+              '🔄 PRODUCT CREATED FROM MODAL. RETRYING AUTO-FILL WITH BARCODE: $newBarcode');
           // Re-run the autofill with the new/confirmed barcode
           await _performBarcodeAutoFill(index, newBarcode);
         } catch (e) {
-          debugPrint('⚠️ Could not parse returned product. Retrying with original barcode. Error: $e');
+          debugPrint(
+              '⚠️ Could not parse returned product. Retrying with original barcode. Error: $e');
           await _performBarcodeAutoFill(index, barcode);
         }
       }
@@ -3186,18 +3305,20 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Widget _buildCategoryDropdown(int index) {
-    return Consumer<CategoryProvider>(
-      builder: (context, categoryProvider, child) {
-        List<Category>? categoryList = categoryProvider.category;
+    return Selector<CategoryProvider, List<Category>?>(
+      selector: (context, provider) => provider.category,
+      shouldRebuild: (previous, current) => previous?.length != current?.length,
+      builder: (context, categoryList, child) {
+        final filteredCategories = categoryList
+                ?.where((category) => category.categoryName != "ALL")
+                .toList() ??
+            [];
 
         return BuildDropDownWithSearch<Category>(
           title: null,
           hintText: "Select category",
           value: stockItems[index].categoryData,
-          items: categoryList
-                  ?.where((category) => category.categoryName != "ALL")
-                  .toList() ??
-              [],
+          items: filteredCategories,
           onChanged: (category) {
             setState(() {
               stockItems[index].categoryData = category;
@@ -3205,6 +3326,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               // Clear product when category changes
               stockItems[index].productData = null;
               stockItems[index].product = '';
+              // Clear product cache to force refresh
+              _clearProductCache();
             });
             if (category != null) {
               Provider.of<GridSelectionProvider>(context, listen: false)
@@ -3225,46 +3348,41 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Widget _buildProductDropdown(int index) {
-    return Consumer<LocalProductProvider>(
-      builder: (context, localProductProvider, child) {
-        List<GetProduct> allProducts = localProductProvider.products;
-        // Throttle logs to avoid spam on rebuilds
-        bool logHeader = _shouldLogProductDropdown(
-            index, allProducts.length, stockItems[index].categoryData?.categoryId);
-        if (logHeader) {
-          debugPrint('🧠 Product dropdown build for row $index');
-          debugPrint('   - Total products before filter: ${allProducts.length}');
-        }
-        // Filter products by the selected category for this row, if any
+    return Selector<LocalProductProvider, List<GetProduct>>(
+      selector: (context, provider) => provider.products,
+      shouldRebuild: (previous, current) => previous.length != current.length,
+      builder: (context, allProducts, child) {
+        // Use cached filtered products to avoid repeated filtering
         final selectedCategoryId = stockItems[index].categoryData?.categoryId;
-        if (selectedCategoryId != null) {
-          allProducts = allProducts
-              .where((p) => p.categoryId == selectedCategoryId)
-              .toList();
-          if (logHeader) {
-            debugPrint('   - Selected categoryId: $selectedCategoryId');
-            debugPrint('   - Products after category filter: ${allProducts.length}');
-          }
-        } else {
-          if (logHeader) {
-            debugPrint('   - No category selected; no filter applied.');
-          }
-        }
-        List<GetProduct> uniqueProducts = [];
-        Map<int, GetProduct> productMap = {};
+        final cacheKey = selectedCategoryId;
 
-        if (allProducts.isNotEmpty) {
-          for (var product in allProducts) {
+        List<GetProduct> filteredProducts;
+        if (_filteredProductsCache.containsKey(cacheKey)) {
+          filteredProducts = _filteredProductsCache[cacheKey]!;
+        } else {
+          // Filter and cache the results
+          if (selectedCategoryId != null) {
+            filteredProducts = allProducts
+                .where((p) => p.categoryId == selectedCategoryId)
+                .toList();
+          } else {
+            filteredProducts = allProducts;
+          }
+
+          // De-duplicate by productId
+          final Map<int, GetProduct> productMap = {};
+          for (var product in filteredProducts) {
             if (product.productId != null) {
-              // Use productId as key to ensure uniqueness
               productMap[product.productId!] = product;
             }
           }
-          uniqueProducts = productMap.values.toList();
+          filteredProducts = productMap.values.toList();
+
+          // Cache the result
+          _filteredProductsCache[cacheKey] = filteredProducts;
         }
-        if (logHeader) {
-          debugPrint('   - Unique products after de-dup: ${uniqueProducts.length}');
-        }
+
+        List<GetProduct> uniqueProducts = filteredProducts;
 
         // Ensure the selected value exists in the items list
         GetProduct? selectedProduct = stockItems[index].productData;
@@ -3274,21 +3392,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             final matched = uniqueProducts.firstWhere(
               (product) => product.productId == selectedProduct!.productId,
             );
-            if (logHeader) {
-              debugPrint('   - Selected product present in filtered list: ${matched.productName} (ID: ${matched.productId})');
-            }
             selectedProduct = matched;
           } catch (e) {
-            if (logHeader) {
-              debugPrint('⚠️ Selected product (ID: ${selectedProduct!.productId}) NOT found in filtered list.');
-              debugPrint('   - Possible reason: category filter mismatch. selectedCategoryId=$selectedCategoryId product.categoryId=${stockItems[index].productData?.categoryId}');
-            }
             // If missing due to category mismatch, keep null to avoid dropdown error
             selectedProduct = null;
-          }
-        } else {
-          if (logHeader) {
-            debugPrint('   - No pre-selected product to reconcile in dropdown.');
           }
         }
 
@@ -3340,7 +3447,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   }
                   if (categoryList != null && categoryList.isNotEmpty) {
                     // Debug print all loaded categories for visibility
-                    debugPrint('📚 Loaded categories (${categoryList.length}):');
+                    debugPrint(
+                        '📚 Loaded categories (${categoryList.length}):');
                     for (final cat in categoryList) {
                       debugPrint(
                           '   - ID: ${cat.categoryId}, Name: ${cat.categoryName}, Slug: ${cat.categorySlug}');
@@ -3369,9 +3477,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           (product.category!.name ?? '').trim().toLowerCase();
                       try {
                         matchingCategory = categoryList.firstWhere((cat) =>
-                            (cat.categoryName ?? '')
-                                .trim()
-                                .toLowerCase() ==
+                            (cat.categoryName ?? '').trim().toLowerCase() ==
                             targetName);
                       } catch (_) {}
                     }
@@ -3435,25 +3541,34 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 }
 
                 // Auto-fill purchase rate: use only product-level purchasePrice; do not fall back to stock entries
-                if (product.purchasePrice != null && product.purchasePrice!.toString().isNotEmpty) {
-                  stockItems[index].purchaseRate = product.purchasePrice!.toString();
-                  debugPrint('   - Purchase Rate (from product): ${stockItems[index].purchaseRate}');
+                if (product.purchasePrice != null &&
+                    product.purchasePrice!.toString().isNotEmpty) {
+                  stockItems[index].purchaseRate =
+                      product.purchasePrice!.toString();
+                  debugPrint(
+                      '   - Purchase Rate (from product): ${stockItems[index].purchaseRate}');
                 } else {
-                  debugPrint('   - Purchase Rate: not available on product, leaving empty');
+                  debugPrint(
+                      '   - Purchase Rate: not available on product, leaving empty');
                 }
 
                 // Auto-fill wholesale price: leave empty as no wholesale price field exists on product
                 stockItems[index].wholesale = '';
-                debugPrint('   - Wholesale Price: not available on product, leaving empty');
+                debugPrint(
+                    '   - Wholesale Price: not available on product, leaving empty');
 
                 // Auto-fill Minimum Units for Wholesale: leave empty as no wholesale min unit field exists on product
                 stockItems[index].batchNumber = '';
-                debugPrint('   - Batch Number: not available on product, leaving empty');
+                debugPrint(
+                    '   - Batch Number: not available on product, leaving empty');
 
                 // Update controllers with new values
-                _getPurchaseRateController(index).text = stockItems[index].purchaseRate;
-                _getWholesaleController(index).text = stockItems[index].wholesale;
-                _getBatchNumberController(index).text = stockItems[index].batchNumber;
+                _getPurchaseRateController(index).text =
+                    stockItems[index].purchaseRate;
+                _getWholesaleController(index).text =
+                    stockItems[index].wholesale;
+                _getBatchNumberController(index).text =
+                    stockItems[index].batchNumber;
               });
 
               // Trigger tax calculation for both retail and wholesale prices after product selection
@@ -3496,9 +3611,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Widget _buildExpandedUnitDropdown(int index) {
-    return Consumer<PurchaseProvider>(
-      builder: (context, purchaseProvider, child) {
-        Map<String, String>? unitList = purchaseProvider.getUnitList;
+    return Selector<PurchaseProvider, Map<String, String>?>(
+      selector: (context, provider) => provider.getUnitList,
+      shouldRebuild: (previous, current) => previous?.length != current?.length,
+      builder: (context, unitList, child) {
         List<String> unitKeys = unitList?.keys.toList() ?? [];
 
         return Column(
@@ -3541,7 +3657,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 _updatePendingStockItem(index);
               },
               displayText: (unitKey) => unitList?[unitKey] ?? unitKey,
-              searchController: TextEditingController(),
+              searchController:
+                  TextEditingController(), // Consider reusing controllers
               isRequired: false,
               height: 40,
               searchHintText: "Search unit...",
@@ -3553,9 +3670,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   }
 
   Widget _buildExpandedRackDropdown(int index) {
-    return Consumer<PurchaseProvider>(
-      builder: (context, purchaseProvider, child) {
-        Map<String, String>? rackList = purchaseProvider.getMasterDataValues;
+    return Selector<PurchaseProvider, Map<String, String>?>(
+      selector: (context, provider) => provider.getMasterDataValues,
+      shouldRebuild: (previous, current) => previous?.length != current?.length,
+      builder: (context, rackList, child) {
         List<String> rackKeys = rackList?.keys.toList() ?? [];
 
         return Column(
@@ -3588,7 +3706,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 _updatePendingStockItem(index);
               },
               displayText: (rackKey) => rackList?[rackKey] ?? rackKey,
-              searchController: TextEditingController(),
+              searchController:
+                  TextEditingController(), // Consider reusing controllers
               isRequired: false,
               height: 40,
               searchHintText: "Search rack...",
