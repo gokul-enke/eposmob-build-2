@@ -165,6 +165,11 @@ class _CustomerTransactionsWidgetState
 
   // Print function similar to the one in simple_transaction_details_screen
   void _printReport() async {
+    debugPrint("===== CUSTOMER TRANSACTIONS WIDGET - PRINT REPORT DEBUG =====");
+    debugPrint("Starting print report generation...");
+    debugPrint("Total transactions: ${transactions.length}");
+    debugPrint("Filtered transactions: ${filteredTransactions.length}");
+    
     // Show loading indicator
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -179,6 +184,11 @@ class _CustomerTransactionsWidgetState
     String customerName = widget.customer.name ?? "";
     String customerPhone = widget.customer.phone ?? "";
     String customerEmail = widget.customer.email ?? "";
+    
+    debugPrint("\n--- Customer Details ---");
+    debugPrint("Customer Name: '$customerName'");
+    debugPrint("Customer Phone: '$customerPhone'");
+    debugPrint("Customer Email: '$customerEmail'");
 
     // Build complete address
     List<String> addressParts = [];
@@ -202,13 +212,29 @@ class _CustomerTransactionsWidgetState
     }
 
     String customerAddress = addressParts.join(", ");
+    debugPrint("Customer Address: '$customerAddress'");
 
     // Convert CustomerTransaction objects to the format expected by the print page
+    debugPrint("\n--- Converting Transactions to Map Format ---");
     List<Map<String, dynamic>> cartItems =
-        filteredTransactions.map((transaction) {
+        filteredTransactions.asMap().entries.map((entry) {
+      int index = entry.key;
+      var transaction = entry.value;
+      
+      debugPrint("Transaction $index:");
+      debugPrint("  - ID: ${transaction.id}");
+      debugPrint("  - Order ID: ${transaction.orderId}");
+      debugPrint("  - Order Number: '${transaction.orderNumber}'");
+      debugPrint("  - Date: ${transaction.date}");
+      debugPrint("  - Type: ${transaction.type}");
+      debugPrint("  - Transaction Type: ${transaction.transactionType}");
+      debugPrint("  - Amount: ${transaction.amount}");
+      debugPrint("  - Status: ${transaction.status}");
+      
       return {
         'id': transaction.id,
         'order_id': transaction.orderId,
+        'order_number': transaction.orderNumber,
         'payment_method': transaction.paymentMethod,
         'date': transaction.date,
         'type': transaction.type,
@@ -219,12 +245,11 @@ class _CustomerTransactionsWidgetState
         'reference': transaction.reference,
         'transaction_comment': transaction.transactionComment,
         'status': transaction.status,
-        // Add additional fields that might be needed
-        'orderNumber': transaction.reference ?? 'N/A',
       };
     }).toList();
 
     // Calculate totals
+    debugPrint("\n--- Calculating Totals ---");
     double totalCredit = 0.0;
     double totalDebit = 0.0;
 
@@ -244,6 +269,10 @@ class _CustomerTransactionsWidgetState
 
     // Calculate total amount (for backwards compatibility)
     double totalAmount = totalCredit - totalDebit;
+    
+    debugPrint("Total Credit: ${totalCredit.toStringAsFixed(2)}");
+    debugPrint("Total Debit: ${totalDebit.toStringAsFixed(2)}");
+    debugPrint("Balance: ${totalAmount.toStringAsFixed(2)}");
 
     // Calculate saved amount (for this report, we'll set it to 0)
     double savedAmount = 0.0;
@@ -257,6 +286,16 @@ class _CustomerTransactionsWidgetState
         _fromDateController.text.isNotEmpty ? _fromDateController.text : null;
     String? toDate =
         _toDateController.text.isNotEmpty ? _toDateController.text : null;
+    
+    debugPrint("\n--- Date Range ---");
+    debugPrint("From Date: ${fromDate ?? 'Not set'}");
+    debugPrint("To Date: ${toDate ?? 'Not set'}");
+    
+    debugPrint("\n--- Navigating to Print Page ---");
+    debugPrint("Cart Items Count: ${cartItems.length}");
+    debugPrint("Total Amount: ${totalAmount.toStringAsFixed(2)}");
+    debugPrint("Order Number: $orderNumber");
+    debugPrint("===== END CUSTOMER TRANSACTIONS WIDGET DEBUG =====\n");
 
     // Navigate to the print page with the transaction data
     Get.to(() => TransactionReportPrintPage(

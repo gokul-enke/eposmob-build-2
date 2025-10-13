@@ -6,6 +6,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:provider/provider.dart';
@@ -80,7 +81,7 @@ class SupplierTransactionReportStandardPrinter {
         return;
       }
 
-      final displayConfig = billDocumentConfig.displayConfiguration?.options;
+      final apiDisplayConfig = billDocumentConfig.displayConfiguration?.options;
 
       // Debug the document configuration being used
       debugPrint("===== DOCUMENT CONFIG BEING USED FOR PRINTING =====");
@@ -88,6 +89,7 @@ class SupplierTransactionReportStandardPrinter {
       debugPrint("billDocumentConfig Type: ${billDocumentConfig.type}");
       debugPrint(
           "billDocumentConfig Updated At: ${billDocumentConfig.updatedAt}");
+
       debugPrint(
           "billDocumentConfig Has Display Config: ${billDocumentConfig.displayConfiguration != null}");
       
@@ -100,11 +102,11 @@ class SupplierTransactionReportStandardPrinter {
         debugPrint("❌ Display Configuration object is NULL");
       }
       
-      debugPrint("Display Config Options Count: ${displayConfig?.length ?? 0}");
-      if (displayConfig != null) {
-        debugPrint("Display Config Keys: ${displayConfig.keys.toList()}");
+      debugPrint("Display Config Options Count: ${apiDisplayConfig?.length ?? 0}");
+      if (apiDisplayConfig != null) {
+        debugPrint("Display Config Keys: ${apiDisplayConfig.keys.toList()}");
         // Debug each option
-        displayConfig.forEach((key, value) {
+        apiDisplayConfig.forEach((key, value) {
           debugPrint("  $key: visible=${value.visible}, value=${value.value}");
         });
       } else {
@@ -112,15 +114,10 @@ class SupplierTransactionReportStandardPrinter {
       }
       debugPrint("===== END DOCUMENT CONFIG INFO =====");
 
-      _debugPrintTemplateSettings(displayConfig);
+      _debugPrintTemplateSettings(apiDisplayConfig);
 
-      // Create fallback display configuration if null
-      Map<String, DisplayOption>? updatedSettings = displayConfig;
-      if (updatedSettings == null) {
-        debugPrint("⚠️ Display configuration is null, creating fallback configuration");
-        updatedSettings = _createFallbackDisplayConfig();
-        debugPrint("✅ Created fallback configuration with ${updatedSettings.length} options");
-      }
+      // Ensure complete display configuration by merging API config with fallback
+      final updatedSettings = _ensureCompleteDisplayConfig(apiDisplayConfig);
 
       if (context.mounted) {
         showScaffold(
@@ -601,7 +598,7 @@ class SupplierTransactionReportStandardPrinter {
                         padding: const pw.EdgeInsets.only(
                             bottom: 8), // Increased spacing
                         child: pw.Text(
-                          supplierPhone,
+                          StringHelper.maskStringShowLast4(supplierPhone),
                           style: supplierDetailStyle,
                         ),
                       ),
@@ -653,34 +650,23 @@ class SupplierTransactionReportStandardPrinter {
       List<SupplierTransaction> cartItems,
       bool isFromLocalStorage,
       DocumentConfig? billDocumentConfig) {
-    // Calculate running balance
-    double runningBalance = 0.0;
-
     // Create table data based on visibility with smart product name handling
     List<List<pw.Widget>> tableData = [];
     for (var i = 0; i < cartItems.length; i++) {
       var item = cartItems[i];
 
-      String reference = item.reference;
-      String transactionType = item.transactionType;
       String type = item.type;
+      String transactionType = item.transactionType;
       double amount = double.tryParse(item.amount) ?? 0.0;
       String status = item.status;
       String date = item.date;
-      String paymentMethod = item.paymentMethod;
 
-      // Update running balance and format amounts
+      // Format amounts for Debit/Credit columns
       String formattedAmount = amount.toStringAsFixed(2);
       String debitAmount =
           (type.toLowerCase() == 'debit') ? formattedAmount : '-';
       String creditAmount =
           (type.toLowerCase() == 'credit') ? formattedAmount : '-';
-
-      if (type.toLowerCase() == 'debit') {
-        runningBalance -= amount;
-      } else if (type.toLowerCase() == 'credit') {
-        runningBalance += amount;
-      }
 
       // Format date to show only date (not time)
       String formattedDate = date;
@@ -691,8 +677,18 @@ class SupplierTransactionReportStandardPrinter {
         // Keep original date if parsing fails
         formattedDate = date;
       }
+      
+      // Format status to match image
+      String displayStatus = status;
+      if (status == 'SUCC') {
+        displayStatus = 'Paid';
+      } else if (status == 'FAIL') {
+        displayStatus = 'Pending';
+      } else if (status == 'INIT') {
+        displayStatus = 'Initiated';
+      }
 
-      // Build row data
+      // Build row data - 6 columns: SL, Date, Type, Debit, Credit, Status
       List<pw.Widget> rowData = [];
 
       // Add Sl.No
@@ -701,54 +697,27 @@ class SupplierTransactionReportStandardPrinter {
       // Add Date
       rowData.add(pw.Text(formattedDate, style: contentStyle));
 
-      // Add Reference
-      rowData.add(pw.Text(reference, style: contentStyle));
-
-      // Add Transaction Type
+      // Add Type column (transaction type)
       rowData.add(pw.Text(transactionType, style: contentStyle));
 
       // Add Debit column with red color for debit amounts
       rowData.add(pw.Text(debitAmount,
           style: pw.TextStyle(
-              color: PdfColors.red800,
+              color: debitAmount != '-' ? PdfColors.red800 : contentStyle.color,
               fontSize: contentStyle.fontSize,
-              fontWeight: pw.FontWeight.bold,
-              height: contentStyle.height))); // Inherit line height
+              fontWeight: debitAmount != '-' ? pw.FontWeight.bold : pw.FontWeight.normal,
+              height: contentStyle.height)));
 
       // Add Credit column with green color for credit amounts
       rowData.add(pw.Text(creditAmount,
           style: pw.TextStyle(
-              color: PdfColors.green800,
+              color: creditAmount != '-' ? PdfColors.green800 : contentStyle.color,
               fontSize: contentStyle.fontSize,
-              fontWeight: pw.FontWeight.bold,
-              height: contentStyle.height))); // Inherit line height
-
-      // Add Payment Method
-      rowData.add(pw.Text(paymentMethod, style: contentStyle));
-
-      // Add Balance
-      rowData.add(pw.Text(runningBalance.toStringAsFixed(2),
-          style: pw.TextStyle(
-              color: runningBalance < 0
-                  ? PdfColors.red800
-                  : runningBalance > 0
-                      ? PdfColors.green800
-                      : contentStyle.color,
-              fontSize: contentStyle.fontSize,
-              height: contentStyle.height))); // Inherit line height
+              fontWeight: creditAmount != '-' ? pw.FontWeight.bold : pw.FontWeight.normal,
+              height: contentStyle.height)));
 
       // Add Status if enabled
       if (displayConfig?['showStatus']?.visible == true) {
-        // Format status to match PHP template
-        String displayStatus = status;
-        if (status == 'SUCC') {
-          displayStatus = 'Paid';
-        } else if (status == 'FAIL') {
-          displayStatus = 'Pending';
-        } else if (status == 'INIT') {
-          displayStatus = 'Initiated';
-        }
-
         rowData.add(pw.Text(displayStatus,
             style: pw.TextStyle(
                 color: status == 'SUCC'
@@ -762,26 +731,23 @@ class SupplierTransactionReportStandardPrinter {
                     ? pw.FontWeight.bold
                     : pw.FontWeight.normal,
                 fontSize: contentStyle.fontSize,
-                height: contentStyle.height))); // Inherit line height
+                height: contentStyle.height)));
       }
 
       tableData.add(rowData);
     }
 
-    // Create headers for the table based on visibility and resolved labels
+    // Create headers for the table - matching image: SL, Date, Type, Debit, Credit, Status
     final List<pw.Widget> tableHeaders = [];
 
-    // Add Sl.No column
-    tableHeaders.add(pw.Text('Sl No', style: headerStyle));
+    // Add SL column
+    tableHeaders.add(pw.Text('SL', style: headerStyle));
 
     // Add Date column
     tableHeaders.add(pw.Text('Date', style: headerStyle));
 
-    // Add Reference column
-    tableHeaders.add(pw.Text('Reference', style: headerStyle));
-
-    // Add Transaction Type column
-    tableHeaders.add(pw.Text('Transaction Type', style: headerStyle));
+    // Add Type column
+    tableHeaders.add(pw.Text('Type', style: headerStyle));
 
     // Add Debit column
     tableHeaders.add(pw.Text('Debit', style: headerStyle));
@@ -789,45 +755,30 @@ class SupplierTransactionReportStandardPrinter {
     // Add Credit column
     tableHeaders.add(pw.Text('Credit', style: headerStyle));
 
-    // Add Payment Method column
-    tableHeaders.add(pw.Text('Payment Method', style: headerStyle));
-
-    // Add Balance column
-    tableHeaders.add(pw.Text('Balance', style: headerStyle));
-
     // Add Status column (if enabled)
     if (displayConfig?['showStatus']?.visible == true) {
       tableHeaders.add(pw.Text('Status', style: headerStyle));
     }
 
-    // Define column widths - adjust these values to change column widths
+    // Define column widths - 6 columns: SL, Date, Type, Debit, Credit, Status
     final Map<int, pw.TableColumnWidth> columnWidths = {
-      // Sl.No column - narrow
-      0: const pw.FixedColumnWidth(60),
+      // SL column - narrow
+      0: const pw.FixedColumnWidth(40),
       // Date column - medium
-      1: const pw.FixedColumnWidth(100),
-      // Reference column - wide
-      2: const pw.FixedColumnWidth(100),
-      // Transaction Type column - medium
-      3: const pw.FixedColumnWidth(110),
-      // Debit column - narrow
-      4: const pw.FixedColumnWidth(70),
-      // Credit column - narrow
-      5: const pw.FixedColumnWidth(70),
-      // Payment Method column - medium
-      6: const pw.FixedColumnWidth(100),
-      // Balance column - medium
-      7: const pw.FixedColumnWidth(80),
+      1: const pw.FixedColumnWidth(90),
+      // Type column - medium
+      2: const pw.FixedColumnWidth(90),
+      // Debit column - medium
+      3: const pw.FixedColumnWidth(80),
+      // Credit column - medium
+      4: const pw.FixedColumnWidth(80),
       // Status column (if enabled) - medium
-      8: const pw.FixedColumnWidth(70),
+      5: const pw.FixedColumnWidth(90),
     };
 
-    // Adjust column indices if Status column is not visible
-    int statusColumnIndex = displayConfig?['showStatus']?.visible == true ? 8 : -1;
-
     // Remove Status column width if not visible
-    if (statusColumnIndex == -1) {
-      columnWidths.remove(8);
+    if (displayConfig?['showStatus']?.visible != true) {
+      columnWidths.remove(5);
     }
 
     return pw.Table(
@@ -1017,20 +968,55 @@ class SupplierTransactionReportStandardPrinter {
   }
 
   Map<String, DisplayOption> _createFallbackDisplayConfig() {
+    debugPrint("⚠️ Creating fallback display configuration for Supplier Statement");
     return {
+      // Header/Footer settings
       'showHeader': DisplayOption(visible: true, value: null),
       'showSubheader': DisplayOption(visible: true, value: null),
       'showFooter': DisplayOption(visible: true, value: null),
       'showDates': DisplayOption(visible: true, value: null),
+      
+      // Supplier details
       'showSupplierName': DisplayOption(visible: true, value: null),
       'showSupplierEmail': DisplayOption(visible: true, value: null),
       'showSupplierPhone': DisplayOption(visible: true, value: null),
       'showSupplierAddress': DisplayOption(visible: true, value: null),
+      
+      // Table column visibility - matching your image (SL, Date, Debit, Credit, Status)
+      'showSlNumber': DisplayOption(visible: true, value: null),
+      'showDate': DisplayOption(visible: true, value: null),
+      'showReference': DisplayOption(visible: false, value: null), // HIDDEN
+      'showTransactionType': DisplayOption(visible: false, value: null), // HIDDEN
+      'showDebit': DisplayOption(visible: true, value: null),
+      'showCredit': DisplayOption(visible: true, value: null),
+      'showPaymentMethod': DisplayOption(visible: false, value: null), // HIDDEN
+      'showBalanceColumn': DisplayOption(visible: false, value: null), // HIDDEN from table
+      
+      // Summary totals (shown at bottom, not in table)
       'showTotalCredit': DisplayOption(visible: true, value: null),
       'showTotalDebit': DisplayOption(visible: true, value: null),
       'showBalance': DisplayOption(visible: true, value: null),
       'showStatus': DisplayOption(visible: true, value: null),
     };
+  }
+
+  // Merge API config with fallback to ensure all required keys exist
+  Map<String, DisplayOption> _ensureCompleteDisplayConfig(Map<String, DisplayOption>? apiConfig) {
+    final fallback = _createFallbackDisplayConfig();
+    
+    if (apiConfig == null || apiConfig.isEmpty) {
+      debugPrint("⚠️ API config is null/empty, using complete fallback");
+      return fallback;
+    }
+    
+    // Merge: API config takes precedence, but fallback fills in missing keys
+    final merged = Map<String, DisplayOption>.from(fallback);
+    apiConfig.forEach((key, value) {
+      merged[key] = value;
+    });
+    
+    debugPrint("✅ Merged display config with ${merged.length} total options");
+    return merged;
   }
 
   Future<File?> generateSupplierTransactionReportPDFForSharing({
@@ -1059,18 +1045,11 @@ class SupplierTransactionReportStandardPrinter {
         return null;
       }
 
-      final displayConfig = billDocumentConfig.displayConfiguration?.options;
-      _debugPrintTemplateSettings(displayConfig);
+      final apiDisplayConfig = billDocumentConfig.displayConfiguration?.options;
+      _debugPrintTemplateSettings(apiDisplayConfig);
 
-      // Create fallback display configuration if null
-      Map<String, DisplayOption>? updatedSettings = displayConfig;
-      if (updatedSettings == null) {
-        debugPrint(
-            "⚠️ Display configuration is null in sharing method, creating fallback configuration");
-        updatedSettings = _createFallbackDisplayConfig();
-        debugPrint(
-            "✅ Created fallback configuration for sharing with ${updatedSettings.length} options");
-      }
+      // Ensure complete display configuration by merging API config with fallback
+      final updatedSettings = _ensureCompleteDisplayConfig(apiDisplayConfig);
 
       // Create a PDF document
       final pdf = pw.Document();

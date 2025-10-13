@@ -258,31 +258,55 @@ class _TransactionReportPrintPageState
       final docConfigProvider =
           Provider.of<DocumentConfigProvider>(context, listen: false);
 
+      debugPrint("===== LOADING DOCUMENT CONFIGURATIONS =====");
       debugPrint("Loading document configurations from provider...");
       _customerStatementDocumentConfig =
           docConfigProvider.getDocumentConfig("Customer Statement");
 
       if (_customerStatementDocumentConfig == null) {
         debugPrint(
-            "WARNING: Customer Statement document configuration not found in provider, may need to load manually");
+            "⚠️ WARNING: Customer Statement document configuration not found in provider");
         // Fallback: try to load if not available
         String? accessToken =
             Provider.of<AuthModel>(context, listen: false).token;
         if (accessToken != null) {
-          debugPrint("Fetching document configurations from API...");
+          debugPrint("🔄 Fetching document configurations from API...");
           await _loadDocumentConfigurations(accessToken);
           return;
         }
       } else {
         debugPrint(
-            "SUCCESS: Customer Statement document configuration loaded from provider");
+            "✅ SUCCESS: Customer Statement document configuration loaded from provider");
+        debugPrint("Document Config ID: ${_customerStatementDocumentConfig!.id}");
+        debugPrint("Document Config Type: ${_customerStatementDocumentConfig!.type}");
+        debugPrint("Has Display Config: ${_customerStatementDocumentConfig!.displayConfiguration != null}");
+        
+        final displayConfig = _customerStatementDocumentConfig!.displayConfiguration?.options;
+        if (displayConfig != null) {
+          debugPrint("\n📋 DISPLAY CONFIGURATION OPTIONS:");
+          debugPrint("Total options: ${displayConfig.length}");
+          debugPrint("Available keys: ${displayConfig.keys.toList()}");
+          
+          // Log specific important options
+          ['showHeader', 'showSubheader', 'showFooter', 'showTax', 'showStatus', 'showOrderNumber'].forEach((key) {
+            if (displayConfig.containsKey(key)) {
+              final option = displayConfig[key];
+              debugPrint("  • $key: visible=${option?.visible}, value=${option?.value}");
+            } else {
+              debugPrint("  ⚠️ $key: NOT FOUND");
+            }
+          });
+        } else {
+          debugPrint("❌ Display Configuration options is NULL!");
+        }
       }
+      debugPrint("===== END LOADING DOCUMENT CONFIGURATIONS =====\n");
 
       setState(() {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint("ERROR getting document configurations from provider: $e");
+      debugPrint("❌ ERROR getting document configurations from provider: $e");
       setState(() {
         _isLoading = false;
       });
@@ -327,9 +351,14 @@ class _TransactionReportPrintPageState
 
   Future<void> _handlePrinting(
       String customerCareNumber, String customerCareEmail) async {
+    debugPrint("\n===== HANDLE PRINTING =====");
+    debugPrint("Selected Paper Size: $selectedPaperSize");
+    debugPrint("Customer Care Number: $customerCareNumber");
+    debugPrint("Customer Care Email: $customerCareEmail");
+    
     if (_customerStatementDocumentConfig == null) {
       debugPrint(
-          "ERROR: Customer Statement document configuration not loaded yet.");
+          "❌ ERROR: Customer Statement document configuration not loaded yet.");
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -338,6 +367,10 @@ class _TransactionReportPrintPageState
       }
       return;
     }
+
+    debugPrint("✅ Document configuration is available");
+    debugPrint("Routing to ${selectedPaperSize == '80mm' || selectedPaperSize == '58mm' ? 'THERMAL' : 'PDF'} printer...");
+    debugPrint("===== END HANDLE PRINTING =====\n");
 
     if (selectedPaperSize == '80mm' || selectedPaperSize == '58mm') {
       await _printThermalReceipt(customerCareNumber, customerCareEmail);

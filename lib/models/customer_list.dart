@@ -200,6 +200,7 @@ class CustomerListModelData {
 class CustomerTransaction {
   final int? id;
   final int? orderId;
+  final String? orderNumber;
   final String? paymentMethod;
   final String? date;
   final String? type;
@@ -214,6 +215,7 @@ class CustomerTransaction {
   CustomerTransaction({
     this.id,
     this.orderId,
+    this.orderNumber,
     this.paymentMethod,
     this.date,
     this.type,
@@ -243,6 +245,7 @@ class CustomerTransaction {
     return CustomerTransaction(
       id: json["id"],
       orderId: json["order_id"],
+      orderNumber: json["order_number"],
       paymentMethod: paymentMethod,
       date: json["date"],
       type: json["type"],
@@ -259,6 +262,7 @@ class CustomerTransaction {
   Map<String, dynamic> toJson() => {
         "id": id,
         "order_id": orderId,
+        "order_number": orderNumber,
         "payment_method": paymentMethod,
         "date": date,
         "type": type,
