@@ -390,15 +390,15 @@ class TransactionReportThermalPrinter {
     // Add Reference column (combined Order Number + Transaction Type)
     headerColumns.add(PosColumn(
         text: referenceLabel,
-        width: 4,
+        width: 6, // Increased from 4 to 6 (added Tax+Status widths)
         styles: PosStyles(
             fontType: fontType,
             align: PosAlign.left,
             bold: true,
             height: is58mm ? textSizeSmall : textSizeSmall)));
-    totalHeaderWidth += 4;
+    totalHeaderWidth += 6;
     debugPrint(
-        "Added $referenceLabel column with width 4, total width: $totalHeaderWidth");
+        "Added $referenceLabel column with width 6, total width: $totalHeaderWidth");
 
     // Add Debit column
     headerColumns.add(PosColumn(
@@ -426,18 +426,18 @@ class TransactionReportThermalPrinter {
     debugPrint(
         "Added $creditLabel column with width 1, total width: $totalHeaderWidth");
 
-    // Add Tax column
-    headerColumns.add(PosColumn(
-        text: taxLabel,
-        width: 1,
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.right,
-            bold: true,
-            height: is58mm ? textSizeSmall : textSizeSmall)));
-    totalHeaderWidth += 1;
-    debugPrint(
-        "Added $taxLabel column with width 1, total width: $totalHeaderWidth");
+    // Add Tax column - COMMENTED OUT TO SAVE SPACE
+    // headerColumns.add(PosColumn(
+    //     text: taxLabel,
+    //     width: 1,
+    //     styles: PosStyles(
+    //         fontType: fontType,
+    //         align: PosAlign.right,
+    //         bold: true,
+    //         height: is58mm ? textSizeSmall : textSizeSmall)));
+    // totalHeaderWidth += 1;
+    // debugPrint(
+    //     "Added $taxLabel column with width 1, total width: $totalHeaderWidth");
 
     // Add Balance column
     headerColumns.add(PosColumn(
@@ -452,18 +452,18 @@ class TransactionReportThermalPrinter {
     debugPrint(
         "Added $balanceLabel column with width 1, total width: $totalHeaderWidth");
 
-    // Add Status column
-    headerColumns.add(PosColumn(
-        text: statusLabel,
-        width: 1,
-        styles: PosStyles(
-            fontType: fontType,
-            align: PosAlign.left,
-            bold: true,
-            height: is58mm ? textSizeSmall : textSizeSmall)));
-    totalHeaderWidth += 1;
-    debugPrint(
-        "Added $statusLabel column with width 1, total width: $totalHeaderWidth");
+    // Add Status column - COMMENTED OUT TO SAVE SPACE
+    // headerColumns.add(PosColumn(
+    //     text: statusLabel,
+    //     width: 1,
+    //     styles: PosStyles(
+    //         fontType: fontType,
+    //         align: PosAlign.left,
+    //         bold: true,
+    //         height: is58mm ? textSizeSmall : textSizeSmall)));
+    // totalHeaderWidth += 1;
+    // debugPrint(
+    //     "Added $statusLabel column with width 1, total width: $totalHeaderWidth");
 
     debugPrint("Final header total width: $totalHeaderWidth");
     if (totalHeaderWidth != 12) {
@@ -489,8 +489,8 @@ class TransactionReportThermalPrinter {
       String transactionType = '';
       String type = '';
       double amount = 0.0;
-      String tax = '10'; // Default tax value as shown in example
-      String status = '';
+      // String tax = '10'; // Default tax value - COMMENTED OUT (Tax column hidden)
+      // String status = ''; // COMMENTED OUT (Status column hidden)
       String date = '';
 
       if (isFromLocalStorage) {
@@ -499,7 +499,7 @@ class TransactionReportThermalPrinter {
         transactionType = item['transactionType'] ?? 'N/A';
         type = item['type'] ?? 'N/A';
         amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
-        status = item['status'] ?? 'N/A';
+        // status = item['status'] ?? 'N/A'; // COMMENTED OUT (Status column hidden)
         date = item['date'] ?? 'N/A';
       } else {
         // Handle different object types - check if it's a Map or an object
@@ -515,7 +515,7 @@ class TransactionReportThermalPrinter {
               'N/A';
           type = item['type']?.toString() ?? 'N/A';
           amount = double.tryParse(item['amount']?.toString() ?? '0') ?? 0.0;
-          status = item['status']?.toString() ?? 'N/A';
+          // status = item['status']?.toString() ?? 'N/A'; // COMMENTED OUT (Status column hidden)
           date = item['date']?.toString() ?? 'N/A';
         } else {
           // Handle object case (ListTransaction or similar)
@@ -543,7 +543,7 @@ class TransactionReportThermalPrinter {
             transactionType = item.transactionType?.toString() ?? 'N/A';
             type = item.type?.toString() ?? 'N/A';
             amount = double.tryParse(item.amount?.toString() ?? '0') ?? 0.0;
-            status = item.status?.toString() ?? 'N/A';
+            // status = item.status?.toString() ?? 'N/A'; // COMMENTED OUT (Status column hidden)
             date = item.date?.toString() ?? 'N/A';
 
             debugPrint('Final orderNumber value: $orderNumber');
@@ -557,7 +557,7 @@ class TransactionReportThermalPrinter {
             transactionType = 'N/A';
             type = 'N/A';
             amount = 0.0;
-            status = 'N/A';
+            // status = 'N/A'; // COMMENTED OUT (Status column hidden)
             date = 'N/A';
           }
         }
@@ -573,15 +573,15 @@ class TransactionReportThermalPrinter {
         displayTransactionType = 'Voucher';
       }
 
-      // Format status to match PHP template
-      String displayStatus = status;
-      if (status == 'SUCC') {
-        displayStatus = 'Paid';
-      } else if (status == 'FAIL') {
-        displayStatus = 'Pending';
-      } else if (status == 'INIT') {
-        displayStatus = 'Initiated';
-      }
+      // Format status to match PHP template - COMMENTED OUT (Status column hidden)
+      // String displayStatus = status;
+      // if (status == 'SUCC') {
+      //   displayStatus = 'Paid';
+      // } else if (status == 'FAIL') {
+      //   displayStatus = 'Pending';
+      // } else if (status == 'INIT') {
+      //   displayStatus = 'Initiated';
+      // }
 
       // Calculate debit and credit amounts
       String formattedAmount = amount.toStringAsFixed(2);
@@ -613,7 +613,7 @@ class TransactionReportThermalPrinter {
       String reference = '$displayTransactionType - $orderNumber';
       
       debugPrint(
-          "Item $i: Reference: $reference, Debit: $debitAmount, Credit: $creditAmount, Balance: ${runningBalance.toStringAsFixed(2)}, Status: $displayStatus, Date: $formattedDate");
+          "Item $i: Reference: $reference, Debit: $debitAmount, Credit: $creditAmount, Balance: ${runningBalance.toStringAsFixed(2)}, Date: $formattedDate");
 
       // Create row with all transaction details
       List<PosColumn> itemRow = [
@@ -635,7 +635,7 @@ class TransactionReportThermalPrinter {
                 height: is58mm ? textSizeSmall : textSizeSmall)),
         PosColumn(
             text: reference,
-            width: 4,
+            width: 6, // Increased from 4 to 6 (added Tax+Status widths)
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,
@@ -657,14 +657,15 @@ class TransactionReportThermalPrinter {
                 align: PosAlign.right,
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)),
-        PosColumn(
-            text: tax,
-            width: 1,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: false,
-                height: is58mm ? textSizeSmall : textSizeSmall)),
+        // Tax column - COMMENTED OUT TO SAVE SPACE
+        // PosColumn(
+        //     text: tax,
+        //     width: 1,
+        //     styles: PosStyles(
+        //         fontType: fontType,
+        //         align: PosAlign.right,
+        //         bold: false,
+        //         height: is58mm ? textSizeSmall : textSizeSmall)),
         PosColumn(
             text: runningBalance.toStringAsFixed(2),
             width: 1,
@@ -673,17 +674,18 @@ class TransactionReportThermalPrinter {
                 align: PosAlign.right,
                 bold: false,
                 height: is58mm ? textSizeSmall : textSizeSmall)),
-        PosColumn(
-            text: displayStatus,
-            width: 1,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: is58mm ? textSizeSmall : textSizeSmall)),
+        // Status column - COMMENTED OUT TO SAVE SPACE
+        // PosColumn(
+        //     text: displayStatus,
+        //     width: 1,
+        //     styles: PosStyles(
+        //         fontType: fontType,
+        //         align: PosAlign.left,
+        //         bold: false,
+        //         height: is58mm ? textSizeSmall : textSizeSmall)),
       ];
 
-      int itemRowWidth = 1 + 2 + 4 + 1 + 1 + 1 + 1 + 1;
+      int itemRowWidth = 1 + 2 + 6 + 1 + 1 + 1; // Reference=6 (redistributed Tax+Status widths)
       debugPrint("Item row total width: $itemRowWidth");
       if (itemRowWidth != 12) {
         debugPrint(

@@ -342,7 +342,7 @@ class TransactionReportStandardPrinter {
                       // Show header if enabled
                       if (updatedSettings?['showHeader']?.visible == true)
                         pw.Text(
-                          billDocumentConfig.header ?? 'EPosenkeee',
+                          billDocumentConfig.header ?? 'EPosenke',
                           style: pw.TextStyle(
                             fontSize: selectedPaperSize == 'A5' ? 20.0 : 24.0,
                             fontWeight: pw.FontWeight.bold,
@@ -354,7 +354,7 @@ class TransactionReportStandardPrinter {
                       if (updatedSettings?['showSubheader']?.visible == true)
                         pw.Text(
                           billDocumentConfig.subheader ??
-                              'Customer Statementsss',
+                              'Customer Statement',
                           style: pw.TextStyle(
                             fontSize: selectedPaperSize == 'A5' ? 14.0 : 18.0,
                             fontWeight: pw.FontWeight.bold,
