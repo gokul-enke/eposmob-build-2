@@ -6,7 +6,6 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
-import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:provider/provider.dart';
@@ -23,6 +22,29 @@ class SupplierTransactionReportStandardPrinter {
   final BuildContext context;
 
   SupplierTransactionReportStandardPrinter(this.context);
+
+  // Helper method to get label from resolved labels with fallback
+  String _getLabel(DocumentConfig? config, String field, String fallback) {
+    final resolvedLabels = config?.resolvedLabels;
+    if (resolvedLabels == null) return fallback;
+    
+    switch (field) {
+      case 'sl_number':
+        return resolvedLabels.slNumber ?? fallback;
+      case 'date':
+        return resolvedLabels.date ?? fallback;
+      case 'item':
+        return resolvedLabels.item ?? fallback;
+      case 'debit':
+        return resolvedLabels.debit ?? fallback;
+      case 'credit':
+        return resolvedLabels.credit ?? fallback;
+      case 'status':
+        return resolvedLabels.status ?? fallback;
+      default:
+        return fallback;
+    }
+  }
 
   // Helper method to get or create the epos directory
   Future<Directory> _getEposDirectory() async {
@@ -598,7 +620,7 @@ class SupplierTransactionReportStandardPrinter {
                         padding: const pw.EdgeInsets.only(
                             bottom: 8), // Increased spacing
                         child: pw.Text(
-                          StringHelper.maskStringShowLast4(supplierPhone),
+                          supplierPhone,
                           style: supplierDetailStyle,
                         ),
                       ),
@@ -740,24 +762,24 @@ class SupplierTransactionReportStandardPrinter {
     // Create headers for the table - matching image: SL, Date, Type, Debit, Credit, Status
     final List<pw.Widget> tableHeaders = [];
 
-    // Add SL column
-    tableHeaders.add(pw.Text('SL', style: headerStyle));
+    // Add SL column - use resolved label
+    tableHeaders.add(pw.Text(_getLabel(billDocumentConfig, 'sl_number', 'SL'), style: headerStyle));
 
-    // Add Date column
-    tableHeaders.add(pw.Text('Date', style: headerStyle));
+    // Add Date column - use resolved label
+    tableHeaders.add(pw.Text(_getLabel(billDocumentConfig, 'date', 'Date'), style: headerStyle));
 
-    // Add Type column
-    tableHeaders.add(pw.Text('Type', style: headerStyle));
+    // Add Type column - use resolved label (item)
+    tableHeaders.add(pw.Text(_getLabel(billDocumentConfig, 'item', 'Type'), style: headerStyle));
 
-    // Add Debit column
-    tableHeaders.add(pw.Text('Debit', style: headerStyle));
+    // Add Debit column - use resolved label
+    tableHeaders.add(pw.Text(_getLabel(billDocumentConfig, 'debit', 'Debit'), style: headerStyle));
 
-    // Add Credit column
-    tableHeaders.add(pw.Text('Credit', style: headerStyle));
+    // Add Credit column - use resolved label
+    tableHeaders.add(pw.Text(_getLabel(billDocumentConfig, 'credit', 'Credit'), style: headerStyle));
 
-    // Add Status column (if enabled)
+    // Add Status column (if enabled) - use resolved label
     if (displayConfig?['showStatus']?.visible == true) {
-      tableHeaders.add(pw.Text('Status', style: headerStyle));
+      tableHeaders.add(pw.Text(_getLabel(billDocumentConfig, 'status', 'Status'), style: headerStyle));
     }
 
     // Define column widths - 6 columns: SL, Date, Type, Debit, Credit, Status
@@ -861,6 +883,99 @@ class SupplierTransactionReportStandardPrinter {
 
     double balance = totalCredit - totalDebit;
 
+    // Build list of visible summary items
+    List<pw.Widget> summaryItems = [];
+
+    // Total Credit - check visibility
+    if (displayConfig?['showTotalCredit']?.visible == true) {
+      summaryItems.add(
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.end,
+          children: [
+            pw.Text(
+              'Total Credit: ',
+              style: pw.TextStyle(
+                fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                color: PdfColors.grey700,
+                height: 2,
+              ),
+            ),
+            pw.Text(
+              '${totalCredit.toStringAsFixed(2)}',
+              style: pw.TextStyle(
+                fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                color: PdfColors.grey700,
+                height: 2,
+              ),
+            ),
+          ],
+        ),
+      );
+      summaryItems.add(pw.SizedBox(height: 4));
+    }
+
+    // Total Debit - check visibility
+    if (displayConfig?['showTotalDebit']?.visible == true) {
+      summaryItems.add(
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.end,
+          children: [
+            pw.Text(
+              'Total Debit: ',
+              style: pw.TextStyle(
+                fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                color: PdfColors.grey700,
+                height: 2,
+              ),
+            ),
+            pw.Text(
+              '${totalDebit.toStringAsFixed(2)}',
+              style: pw.TextStyle(
+                fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
+                color: PdfColors.grey700,
+                height: 2,
+              ),
+            ),
+          ],
+        ),
+      );
+      summaryItems.add(pw.SizedBox(height: 8));
+    }
+
+    // Balance - check visibility
+    if (displayConfig?['showBalance']?.visible == true) {
+      summaryItems.add(
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.end,
+          children: [
+            pw.Text(
+              'Balance: ',
+              style: pw.TextStyle(
+                fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.black,
+                height: 2,
+              ),
+            ),
+            pw.Text(
+              '${balance.toStringAsFixed(2)}',
+              style: pw.TextStyle(
+                fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.black,
+                height: 2,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Only show the container if at least one summary item is visible
+    if (summaryItems.isEmpty) {
+      return pw.SizedBox.shrink();
+    }
+
     // Wrap the cart total in a card with limited width and centered alignment
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.end,
@@ -877,78 +992,7 @@ class SupplierTransactionReportStandardPrinter {
           ),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.end,
-            children: [
-              // Total Credit
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.end,
-                children: [
-                  pw.Text(
-                    'Total Credit: ',
-                    style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
-                      color: PdfColors.grey700,
-                      height: 2, // Add line height for better spacing
-                    ),
-                  ),
-                  pw.Text(
-                    '${totalCredit.toStringAsFixed(2)}',
-                    style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
-                      color: PdfColors.grey700,
-                      height: 2, // Add line height for better spacing
-                    ),
-                  ),
-                ],
-              ),
-              pw.SizedBox(height: 4),
-              // Total Debit
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.end,
-                children: [
-                  pw.Text(
-                    'Total Debit: ',
-                    style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
-                      color: PdfColors.grey700,
-                      height: 2, // Add line height for better spacing
-                    ),
-                  ),
-                  pw.Text(
-                    '${totalDebit.toStringAsFixed(2)}',
-                    style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 10.0 : 12.0,
-                      color: PdfColors.grey700,
-                      height: 2, // Add line height for better spacing
-                    ),
-                  ),
-                ],
-              ),
-              pw.SizedBox(height: 8),
-              // Balance
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.end,
-                children: [
-                  pw.Text(
-                    'Balance: ',
-                    style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.black,
-                      height: 2, // Add line height for better spacing
-                    ),
-                  ),
-                  pw.Text(
-                    '${balance.toStringAsFixed(2)}',
-                    style: pw.TextStyle(
-                      fontSize: selectedPaperSize == 'A5' ? 11.0 : 13.0,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.black,
-                      height: 2, // Add line height for better spacing
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            children: summaryItems,
           ),
         ),
       ],

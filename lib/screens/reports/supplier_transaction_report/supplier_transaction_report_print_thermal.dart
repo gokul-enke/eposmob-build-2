@@ -6,7 +6,6 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
-import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
@@ -28,6 +27,29 @@ class SupplierTransactionReportThermalPrinter {
   static const PosTextSize textSizeSmall = PosTextSize.size1;
 
   SupplierTransactionReportThermalPrinter(this.context);
+
+  // Helper method to get label from resolved labels with fallback
+  String _getLabel(DocumentConfig? config, String field, String fallback) {
+    final resolvedLabels = config?.resolvedLabels;
+    if (resolvedLabels == null) return fallback;
+    
+    switch (field) {
+      case 'sl_number':
+        return resolvedLabels.slNumber ?? fallback;
+      case 'date':
+        return resolvedLabels.date ?? fallback;
+      case 'item':
+        return resolvedLabels.item ?? fallback;
+      case 'debit':
+        return resolvedLabels.debit ?? fallback;
+      case 'credit':
+        return resolvedLabels.credit ?? fallback;
+      case 'status':
+        return resolvedLabels.status ?? fallback;
+      default:
+        return fallback;
+    }
+  }
 
   // Load font type from SharedPreferences
   Future<PosFontType> _loadFontType() async {
@@ -302,9 +324,7 @@ class SupplierTransactionReportThermalPrinter {
     if (displayConfig?['showSupplierPhone']?.visible == true &&
         supplierPhone != null &&
         supplierPhone.isNotEmpty) {
-      // Mask phone number to show only last 4 digits
-      String maskedPhone = StringHelper.maskStringShowLast4(supplierPhone);
-      bytes += generator.text('Phone: $maskedPhone',
+      bytes += generator.text('Phone: $supplierPhone',
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.left,
@@ -386,9 +406,9 @@ class SupplierTransactionReportThermalPrinter {
 
     debugPrint("Building header columns...");
 
-    // Add Sl.No column
+    // Add Sl.No column - use resolved label
     headerColumns.add(PosColumn(
-        text: 'SL',
+        text: _getLabel(billDocumentConfig, 'sl_number', 'SL'),
         width: 1,
         styles: PosStyles(
             fontType: fontType,
@@ -398,9 +418,9 @@ class SupplierTransactionReportThermalPrinter {
     totalHeaderWidth += 1;
     debugPrint("Added SL column with width 1, total width: $totalHeaderWidth");
 
-    // Add Date column
+    // Add Date column - use resolved label
     headerColumns.add(PosColumn(
-        text: 'Date',
+        text: _getLabel(billDocumentConfig, 'date', 'Date'),
         width: 2,
         styles: PosStyles(
             fontType: fontType,
@@ -410,9 +430,9 @@ class SupplierTransactionReportThermalPrinter {
     totalHeaderWidth += 2;
     debugPrint("Added Date column with width 2, total width: $totalHeaderWidth");
 
-    // Add Type column (transaction type)
+    // Add Type column (transaction type) - use resolved label (item)
     headerColumns.add(PosColumn(
-        text: 'Type',
+        text: _getLabel(billDocumentConfig, 'item', 'Type'),
         width: 2,
         styles: PosStyles(
             fontType: fontType,
@@ -423,9 +443,9 @@ class SupplierTransactionReportThermalPrinter {
     debugPrint(
         "Added Type column with width 2, total width: $totalHeaderWidth");
 
-    // Add Debit column
+    // Add Debit column - use resolved label
     headerColumns.add(PosColumn(
-        text: 'Debit',
+        text: _getLabel(billDocumentConfig, 'debit', 'Debit'),
         width: 2,
         styles: PosStyles(
             fontType: fontType,
@@ -436,9 +456,9 @@ class SupplierTransactionReportThermalPrinter {
     debugPrint(
         "Added Debit column with width 2, total width: $totalHeaderWidth");
 
-    // Add Credit column
+    // Add Credit column - use resolved label
     headerColumns.add(PosColumn(
-        text: 'Credit',
+        text: _getLabel(billDocumentConfig, 'credit', 'Credit'),
         width: 2,
         styles: PosStyles(
             fontType: fontType,
@@ -449,10 +469,10 @@ class SupplierTransactionReportThermalPrinter {
     debugPrint(
         "Added Credit column with width 2, total width: $totalHeaderWidth");
 
-    // Add Status column if enabled
+    // Add Status column if enabled - use resolved label
     if (displayConfig?['showStatus']?.visible == true) {
       headerColumns.add(PosColumn(
-          text: 'Status',
+          text: _getLabel(billDocumentConfig, 'status', 'Status'),
           width: 3,
           styles: PosStyles(
               fontType: fontType,

@@ -804,7 +804,7 @@ class TransactionReportStandardPrinter {
     final String slNumberLabel = resolvedLabels?.slNumber ?? 'Sl No';
     final String dateLabel = resolvedLabels?.date ?? 'Date';
     final String referenceLabel =
-        'Reference'; // Combined Order Number + Transaction Type
+        resolvedLabels?.orderNumber ?? 'Reference'; // Combined Order Number + Transaction Type
     final String debitLabel = resolvedLabels?.debit ?? 'Debit';
     final String creditLabel = resolvedLabels?.credit ?? 'Credit';
     final String taxLabel = resolvedLabels?.tax ?? 'Tax';

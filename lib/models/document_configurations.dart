@@ -257,6 +257,8 @@ class ResolvedLabels {
   final String? balance;
   final String? status;
   final String? tax;
+  // Supplier Statement specific fields (aliased from 'item' in API)
+  final String? item;
 
   ResolvedLabels({
     this.itemName,
@@ -273,6 +275,7 @@ class ResolvedLabels {
     this.balance,
     this.status,
     this.tax,
+    this.item,
   });
 
   factory ResolvedLabels.fromJson(Map<String, dynamic> json) => ResolvedLabels(
@@ -290,6 +293,7 @@ class ResolvedLabels {
         balance: json["balance"],
         status: json["status"],
         tax: json["tax"],
+        item: json["item"], // Supplier Statement uses 'item' instead of 'item_name'
       );
 
   Map<String, dynamic> toJson() => {
@@ -307,6 +311,7 @@ class ResolvedLabels {
         "balance": balance,
         "status": status,
         "tax": tax,
+        "item": item,
       };
 }
 
