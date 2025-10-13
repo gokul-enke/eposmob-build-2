@@ -2,9 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
-import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -69,15 +67,15 @@ class TransactionReportThermalPrinter {
     debugPrint("===== END THERMAL PRINTER DEBUG INFO =====");
 
     // Calculate date range from cart items if not provided
-    if ((fromDate == null || fromDate.isEmpty) && 
-        (toDate == null || toDate.isEmpty) && 
+    if ((fromDate == null || fromDate.isEmpty) &&
+        (toDate == null || toDate.isEmpty) &&
         cartItems.isNotEmpty) {
       debugPrint("Thermal: Calculating date range from cart items...");
-      
+
       List<String> dates = [];
       for (var item in cartItems) {
         String? itemDate;
-        
+
         if (isFromLocalStorage) {
           itemDate = item['date']?.toString();
         } else if (item is Map<String, dynamic>) {
@@ -89,12 +87,12 @@ class TransactionReportThermalPrinter {
             debugPrint('Error accessing date: $e');
           }
         }
-        
+
         if (itemDate != null && itemDate.isNotEmpty && itemDate != 'N/A') {
           dates.add(itemDate);
         }
       }
-      
+
       if (dates.isNotEmpty) {
         // Sort dates to get first and last
         dates.sort();
@@ -255,9 +253,7 @@ class TransactionReportThermalPrinter {
 
       if (context.mounted) {
         showScaffold(context: context, message: "Print job sent successfully");
-        Navigator.pop(context);
-        SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 65; // Back to transaction report
+        // Navigation is handled by the parent TransactionReportPrintPage
       }
     } catch (e) {
       debugPrint("ERROR printing transaction report: ${e.toString()}");
@@ -301,8 +297,7 @@ class TransactionReportThermalPrinter {
 
     // Show subheader if enabled - use document config subheader field
     if (displayConfig?['showSubheader']?.visible == true) {
-      String subheaderText =
-          docConfig?.subheader ?? 'Customer Statement';
+      String subheaderText = docConfig?.subheader ?? 'Customer Statement';
       bytes += generator.text(subheaderText,
           styles: PosStyles(
               fontType: fontType,
@@ -338,7 +333,8 @@ class TransactionReportThermalPrinter {
     final resolvedLabels = billDocumentConfig?.resolvedLabels;
     final String slNumberLabel = resolvedLabels?.slNumber ?? 'Sl.No';
     final String dateLabel = resolvedLabels?.date ?? 'Date';
-    final String referenceLabel = resolvedLabels?.orderNumber ?? 'Reference'; // Combined Order Number + Transaction Type
+    final String referenceLabel = resolvedLabels?.orderNumber ??
+        'Reference'; // Combined Order Number + Transaction Type
     final String debitLabel = resolvedLabels?.debit ?? 'Debit';
     final String creditLabel = resolvedLabels?.credit ?? 'Credit';
     final String taxLabel = resolvedLabels?.tax ?? 'Tax';
@@ -608,10 +604,10 @@ class TransactionReportThermalPrinter {
       }
 
       String slNumber = (i + 1).toString();
-      
+
       // Combine transaction type and order number into reference
       String reference = '$displayTransactionType - $orderNumber';
-      
+
       debugPrint(
           "Item $i: Reference: $reference, Debit: $debitAmount, Credit: $creditAmount, Balance: ${runningBalance.toStringAsFixed(2)}, Date: $formattedDate");
 
@@ -685,7 +681,12 @@ class TransactionReportThermalPrinter {
         //         height: is58mm ? textSizeSmall : textSizeSmall)),
       ];
 
-      int itemRowWidth = 1 + 2 + 6 + 1 + 1 + 1; // Reference=6 (redistributed Tax+Status widths)
+      int itemRowWidth = 1 +
+          2 +
+          6 +
+          1 +
+          1 +
+          1; // Reference=6 (redistributed Tax+Status widths)
       debugPrint("Item row total width: $itemRowWidth");
       if (itemRowWidth != 12) {
         debugPrint(

@@ -1,10 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
-import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
@@ -423,9 +420,6 @@ class SupplierTransactionReportStandardPrinter {
                 showScaffold(
                     context: context, message: "PDF created successfully");
                 Navigator.pop(context);
-                SideBarController sideBarController = Get.put(SideBarController());
-                sideBarController.index.value =
-                    67; // Back to supplier transaction report
               }
             }
           } else {
@@ -433,8 +427,6 @@ class SupplierTransactionReportStandardPrinter {
               showScaffold(
                   context: context, message: "PDF opened for printing");
               Navigator.pop(context);
-              SideBarController sideBarController = Get.put(SideBarController());
-              sideBarController.index.value = 67; // Back to supplier transaction report
             }
           }
         } catch (e) {
@@ -446,8 +438,6 @@ class SupplierTransactionReportStandardPrinter {
               showScaffold(
                   context: context, message: "PDF created successfully");
               Navigator.pop(context);
-              SideBarController sideBarController = Get.put(SideBarController());
-              sideBarController.index.value = 67; // Back to supplier transaction report
             }
           }
         }
@@ -473,8 +463,6 @@ class SupplierTransactionReportStandardPrinter {
       if (context.mounted) {
         showScaffold(context: context, message: "PDF created successfully");
         Navigator.pop(context);
-        SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 67; // Back to supplier transaction report
       }
     } catch (e) {
       debugPrint("Windows PDF handling error: $e");
@@ -482,8 +470,6 @@ class SupplierTransactionReportStandardPrinter {
       if (context.mounted) {
         showScaffold(context: context, message: "PDF created successfully");
         Navigator.pop(context);
-        SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 67; // Back to supplier transaction report
       }
     }
   }
@@ -505,8 +491,6 @@ class SupplierTransactionReportStandardPrinter {
           showScaffold(
               context: context, message: "PDF shared. Please open it to print");
           Navigator.pop(context);
-          SideBarController sideBarController = Get.put(SideBarController());
-          sideBarController.index.value = 67; // Back to supplier transaction report
         }
       } else {
         // For Windows, show the file location
@@ -534,8 +518,6 @@ class SupplierTransactionReportStandardPrinter {
     if (context.mounted) {
       // Just close the page instead of showing dialog
       Navigator.pop(context);
-      SideBarController sideBarController = Get.put(SideBarController());
-      sideBarController.index.value = 67; // Back to supplier transaction report
     }
   }
 

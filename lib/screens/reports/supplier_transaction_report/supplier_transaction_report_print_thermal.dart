@@ -2,9 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
-import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
@@ -217,8 +215,6 @@ class SupplierTransactionReportThermalPrinter {
       if (context.mounted) {
         showScaffold(context: context, message: "Print job sent successfully");
         Navigator.pop(context);
-        SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 67; // Back to supplier transaction report
       }
     } catch (e) {
       debugPrint("ERROR printing supplier transaction report: ${e.toString()}");

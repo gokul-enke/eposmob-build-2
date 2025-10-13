@@ -1,9 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
@@ -484,21 +482,14 @@ class TransactionReportStandardPrinter {
               if (context.mounted) {
                 showScaffold(
                     context: context, message: "PDF created successfully");
-                Navigator.pop(context);
-                SideBarController sideBarController =
-                    Get.put(SideBarController());
-                sideBarController.index.value =
-                    65; // Back to transaction report
+                // Navigation is handled by the parent TransactionReportPrintPage
               }
             }
           } else {
             if (context.mounted) {
               showScaffold(
                   context: context, message: "PDF opened for printing");
-              Navigator.pop(context);
-              SideBarController sideBarController =
-                  Get.put(SideBarController());
-              sideBarController.index.value = 65; // Back to transaction report
+              // Navigation is handled by the parent TransactionReportPrintPage
             }
           }
         } catch (e) {
@@ -509,10 +500,7 @@ class TransactionReportStandardPrinter {
             if (context.mounted) {
               showScaffold(
                   context: context, message: "PDF created successfully");
-              Navigator.pop(context);
-              SideBarController sideBarController =
-                  Get.put(SideBarController());
-              sideBarController.index.value = 65; // Back to transaction report
+              // Navigation is handled by the parent TransactionReportPrintPage
             }
           }
         }
@@ -534,21 +522,17 @@ class TransactionReportStandardPrinter {
       // First try to open with the default Windows PDF viewer
       final result = await OpenFile.open(file.path);
 
-      // Always close the page on Windows, regardless of result
+      // Always show success message on Windows, regardless of result
       if (context.mounted) {
         showScaffold(context: context, message: "PDF created successfully");
-        Navigator.pop(context);
-        SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 65; // Back to transaction report
+        // Navigation is handled by the parent TransactionReportPrintPage
       }
     } catch (e) {
       debugPrint("Windows PDF handling error: $e");
-      // Still close the page on error
+      // Still show success message on error
       if (context.mounted) {
         showScaffold(context: context, message: "PDF created successfully");
-        Navigator.pop(context);
-        SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 65; // Back to transaction report
+        // Navigation is handled by the parent TransactionReportPrintPage
       }
     }
   }
@@ -556,10 +540,8 @@ class TransactionReportStandardPrinter {
   // Show information about file location (for Windows) - Now unused but kept for reference
   void _showFileLocationInfo(File file) {
     if (context.mounted) {
-      // Just close the page instead of showing dialog
-      Navigator.pop(context);
-      SideBarController sideBarController = Get.put(SideBarController());
-      sideBarController.index.value = 65; // Back to transaction report
+      // Navigation is handled by the parent TransactionReportPrintPage
+      showScaffold(context: context, message: "PDF created successfully");
     }
   }
 
@@ -579,9 +561,7 @@ class TransactionReportStandardPrinter {
         if (context.mounted) {
           showScaffold(
               context: context, message: "PDF shared. Please open it to print");
-          Navigator.pop(context);
-          SideBarController sideBarController = Get.put(SideBarController());
-          sideBarController.index.value = 65; // Back to transaction report
+          // Navigation is handled by the parent TransactionReportPrintPage
         }
       } else {
         // For Windows, show the file location
