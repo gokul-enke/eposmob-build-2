@@ -250,9 +250,7 @@ class SupplierTransactionReportThermalPrinter {
 
     // Show header if enabled
     if (displayConfig?['showHeader']?.visible == true) {
-      String headerText = (displayConfig?['showHeader']?.value as String?) ??
-          docConfig?.header ??
-          'EPosenke';
+      String headerText = docConfig?.header ?? 'EPosenke';
       bytes += generator.text(headerText,
           styles: PosStyles(
               fontType: fontType,
@@ -264,9 +262,7 @@ class SupplierTransactionReportThermalPrinter {
 
     // Show subheader if enabled
     if (displayConfig?['showSubheader']?.visible == true) {
-      String subheaderText = (displayConfig?['showSubheader']?.value as String?) ??
-          docConfig?.subheader ??
-          'Supplier Transaction Report';
+      String subheaderText = docConfig?.subheader ?? 'Supplier Transaction Report';
       bytes += generator.text(subheaderText,
           styles: PosStyles(
               fontType: fontType,
@@ -691,8 +687,7 @@ class SupplierTransactionReportThermalPrinter {
     List<int> bytes = [];
 
     if (displayConfig?['showFooter']?.visible == true) {
-      final footerText = (displayConfig?['showFooter']?.value as String?) ??
-          billDocumentConfig?.footer ??
+      final footerText = billDocumentConfig?.footer ??
           'This is a computer-generated document. No signature is required.';
       
       bytes += generator.hr();
