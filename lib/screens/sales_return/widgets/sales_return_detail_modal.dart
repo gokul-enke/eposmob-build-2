@@ -7,8 +7,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 class SalesReturnDetailModal extends StatelessWidget {
   final SalesReturnOrder order;
 
-  const SalesReturnDetailModal({Key? key, required this.order})
-      : super(key: key);
+  const SalesReturnDetailModal({super.key, required this.order});
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +120,7 @@ class SalesReturnDetailModal extends StatelessWidget {
                       rows: order.items.map((item) {
                         return DataRow(cells: [
                           DataCell(Text(
-                            item.cartItem.product.name,
+                            item.cartItem.product?.name ?? 'Unknown Product',
                             style: const TextStyle(
                               fontWeight: FontWeight.w500,
                               color: Colors.black,
